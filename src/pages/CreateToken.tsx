@@ -6,10 +6,8 @@ import {
   Transaction,
   SystemProgram,
   Keypair,
-  sendAndConfirmTransaction,
 } from '@solana/web3.js';
 import {
-  createMint,
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
   createMintToInstruction,
