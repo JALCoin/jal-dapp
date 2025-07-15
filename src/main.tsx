@@ -1,7 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { AppProviders } from './AppProviders';
+import './index.css';
 
+// Polyfills for Buffer and process in browser
 if (!(window as any).Buffer) {
   import('buffer').then(({ Buffer }) => {
     (window as any).Buffer = Buffer;
@@ -16,6 +19,8 @@ if (!(window as any).process) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <AppProviders>
+      <App />
+    </AppProviders>
   </React.StrictMode>
 );
