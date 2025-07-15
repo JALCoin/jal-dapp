@@ -1,5 +1,5 @@
-// src/pages/CreateToken.tsx
-import { FC, useCallback, useState } from 'react';
+import type { FC } from 'react';
+import { useCallback, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import {
   PublicKey,
@@ -27,9 +27,7 @@ export const CreateToken: FC = () => {
     try {
       setLoading(true);
 
-      // 1. Create new Mint account (payer = wallet)
       const mintKeypair = Keypair.generate();
-
       const lamports = await connection.getMinimumBalanceForRentExemption(82);
 
       const createMintIx = SystemProgram.createAccount({
@@ -40,17 +38,6 @@ export const CreateToken: FC = () => {
         programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
       });
 
-      const initMintIx = await createMint({
-        connection,
-        payer: publicKey,
-        mint: mintKeypair.publicKey,
-        decimals: 9,
-        mintAuthority: publicKey,
-        freezeAuthority: publicKey,
-        skipPreflight: false,
-      });
-
-      // 2. Create Associated Token Account for user
       const ata = await getAssociatedTokenAddress(
         mintKeypair.publicKey,
         publicKey
@@ -63,22 +50,19 @@ export const CreateToken: FC = () => {
         mintKeypair.publicKey
       );
 
-      // 3. Mint tokens to user's ATA
       const mintToIx = createMintToInstruction(
         mintKeypair.publicKey,
         ata,
         publicKey,
-        100_000_000_000 // 100 tokens with 9 decimals
+        100_000_000_000
       );
 
-      // 4. Create transaction
       const tx = new Transaction().add(
         createMintIx,
         createATAIx,
         mintToIx
       );
 
-      // 5. Send and sign with wallet + mint keypair
       const sig = await sendTransaction(tx, connection, {
         signers: [mintKeypair],
       });
