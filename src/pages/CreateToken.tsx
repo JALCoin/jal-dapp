@@ -31,7 +31,7 @@ type StepStatus = 'idle' | 'in-progress' | 'done' | 'error';
 
 export const CreateToken: FC = () => {
   const { publicKey, signTransaction } = useWallet();
-  const connection = new Connection("/api/solana", "confirmed");
+  const connection = new Connection("https://jal-dapp.vercel.app/api/solana", "confirmed");
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>(
     Array(steps.length).fill('idle')
   );
