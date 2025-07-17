@@ -28,184 +28,138 @@ const steps = [
   'Confirm Transaction',
 ];
 
-type StepStatus = 'idle' | 'in-progress' | 'done' | 'error';
-
 export const CreateToken: FC = () => {
   const { publicKey, signTransaction } = useWallet();
   const connection = new Connection("https://jal-dapp.vercel.app/api/solana", "confirmed");
 
-  const [stepStatuses, setStepStatuses] = useState<StepStatus[]>(
-    Array(steps.length).fill('idle')
-  );
-  const [mintAddress, setMintAddress] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [mint, setMint] = useState<Keypair | null>(null);
+  const [ata, setAta] = useState<string>('');
+  const [lamports, setLamports] = useState<number>(0);
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [info, setInfo] = useState<string>('');
 
-  const updateStep = (index: number, status: StepStatus) => {
-    setStepStatuses((prev) => {
-      const updated = [...prev];
-      updated[index] = status;
-      return updated;
-    });
-  };
-
-  const handleCreateToken = useCallback(async () => {
+  const runStep = useCallback(async () => {
     if (!publicKey || !signTransaction) return;
 
-    const statuses = Array(steps.length).fill('idle');
-    setStepStatuses(statuses);
     setError(null);
-    setMintAddress(null);
-    setTxSignature(null);
     setLoading(true);
-
     try {
-      // Step 1
-      updateStep(0, 'in-progress');
-      const mint = Keypair.generate();
-      updateStep(0, 'done');
-
-      // Step 2
-      updateStep(1, 'in-progress');
-      const lamports = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
-      updateStep(1, 'done');
-
-      // Step 3
-      updateStep(2, 'in-progress');
-      const createMintIx = SystemProgram.createAccount({
-        fromPubkey: publicKey,
-        newAccountPubkey: mint.publicKey,
-        space: MINT_SIZE,
-        lamports,
-        programId: TOKEN_PROGRAM_ID,
-      });
-      updateStep(2, 'done');
-
-      // Step 4
-      updateStep(3, 'in-progress');
-      const initMintIx = createInitializeMintInstruction(
-        mint.publicKey,
-        9,
-        publicKey,
-        null
-      );
-      updateStep(3, 'done');
-
-      // Step 5
-      updateStep(4, 'in-progress');
-      const ata = await getAssociatedTokenAddress(mint.publicKey, publicKey);
-      updateStep(4, 'done');
-
-      // Step 6
-      updateStep(5, 'in-progress');
-      const createATAIx = createAssociatedTokenAccountInstruction(
-        publicKey,
-        ata,
-        publicKey,
-        mint.publicKey
-      );
-      updateStep(5, 'done');
-
-      // Step 7
-      updateStep(6, 'in-progress');
-      const mintToIx = createMintToInstruction(
-        mint.publicKey,
-        ata,
-        publicKey,
-        1_000_000_000
-      );
-      updateStep(6, 'done');
-
-      // Step 8
-      updateStep(7, 'in-progress');
-      const tx = new Transaction().add(
-        createMintIx,
-        initMintIx,
-        createATAIx,
-        mintToIx
-      );
-
-      const latest = await connection.getLatestBlockhash('finalized');
-      tx.feePayer = publicKey;
-      tx.recentBlockhash = latest.blockhash;
-
-      tx.partialSign(mint);
-      const signedTx = await signTransaction(tx);
-
-      const signature = await sendAndConfirmRawTransaction(connection, signedTx.serialize(), {
-        skipPreflight: false,
-        commitment: 'finalized',
-      });
-
-      setMintAddress(mint.publicKey.toBase58());
-      setTxSignature(signature);
-      updateStep(7, 'done');
-    } catch (err: any) {
-      console.error('Minting failed:', err);
-      setError(err.message || 'Minting failed');
-      for (let i = 0; i < stepStatuses.length; i++) {
-        if (stepStatuses[i] === 'in-progress') updateStep(i, 'error');
+      switch (currentStep) {
+        case 0: {
+          const mintKeypair = Keypair.generate();
+          setMint(mintKeypair);
+          setInfo(`Mint Address: ${mintKeypair.publicKey.toBase58()}`);
+          break;
+        }
+        case 1: {
+          const rent = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
+          setLamports(rent);
+          setInfo(`Rent required: ${rent} lamports`);
+          break;
+        }
+        case 2: {
+          const ix = SystemProgram.createAccount({
+            fromPubkey: publicKey,
+            newAccountPubkey: mint!.publicKey,
+            space: MINT_SIZE,
+            lamports,
+            programId: TOKEN_PROGRAM_ID,
+          });
+          const tx = new Transaction().add(ix);
+          tx.feePayer = publicKey;
+          tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          tx.partialSign(mint!);
+          const signed = await signTransaction(tx);
+          const sig = await sendAndConfirmRawTransaction(connection, signed.serialize());
+          setInfo(`Mint account created. Tx: ${sig}`);
+          break;
+        }
+        case 3: {
+          const ix = createInitializeMintInstruction(mint!.publicKey, 9, publicKey, null);
+          const tx = new Transaction().add(ix);
+          tx.feePayer = publicKey;
+          tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          tx.partialSign(mint!);
+          const signed = await signTransaction(tx);
+          const sig = await sendAndConfirmRawTransaction(connection, signed.serialize());
+          setInfo(`Mint initialized. Tx: ${sig}`);
+          break;
+        }
+        case 4: {
+          const ataAddr = await getAssociatedTokenAddress(mint!.publicKey, publicKey);
+          setAta(ataAddr.toBase58());
+          setInfo(`ATA: ${ataAddr.toBase58()}`);
+          break;
+        }
+        case 5: {
+          const ix = createAssociatedTokenAccountInstruction(publicKey, ata, publicKey, mint!.publicKey);
+          const tx = new Transaction().add(ix);
+          tx.feePayer = publicKey;
+          tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          const signed = await signTransaction(tx);
+          const sig = await sendAndConfirmRawTransaction(connection, signed.serialize());
+          setInfo(`ATA created. Tx: ${sig}`);
+          break;
+        }
+        case 6: {
+          const ix = createMintToInstruction(mint!.publicKey, ata, publicKey, 1_000_000_000);
+          const tx = new Transaction().add(ix);
+          tx.feePayer = publicKey;
+          tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          const signed = await signTransaction(tx);
+          const sig = await sendAndConfirmRawTransaction(connection, signed.serialize());
+          setInfo(`Tokens minted. Tx: ${sig}`);
+          break;
+        }
+        case 7: {
+          setTxSignature(`Completed. Mint: ${mint!.publicKey.toBase58()}`);
+          setInfo(`✅ Token Minted Successfully!`);
+          break;
+        }
+        default:
+          break;
       }
+      setCurrentStep((prev) => prev + 1);
+    } catch (err: any) {
+      console.error('Error at step', currentStep, err);
+      setError(err.message || 'Step failed');
     } finally {
       setLoading(false);
     }
-  }, [connection, publicKey, signTransaction]);
+  }, [currentStep, publicKey, signTransaction, mint, lamports, ata]);
 
   return (
     <div className="p-6 max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Create SPL Token</h1>
+      <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
 
-      <div className="space-y-2">
-        {steps.map((step, i) => (
-          <div key={i} className="flex items-center space-x-2">
-            <div className={`h-3 w-3 rounded-full
-              ${stepStatuses[i] === 'done' ? 'bg-green-500' :
-                stepStatuses[i] === 'in-progress' ? 'bg-yellow-400 animate-pulse' :
-                stepStatuses[i] === 'error' ? 'bg-red-500' :
-                'bg-gray-300'}`}></div>
-            <p className="text-sm">{step}</p>
-          </div>
-        ))}
-      </div>
+      {info && <p className="text-sm bg-gray-100 p-2 rounded">{info}</p>}
+
+      {error && <p className="text-red-600 text-sm">Error: {error}</p>}
 
       <button
-        onClick={handleCreateToken}
-        disabled={!publicKey || loading}
+        onClick={runStep}
+        disabled={!publicKey || loading || currentStep >= steps.length}
         className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
       >
-        {loading ? 'Creating Token...' : 'Mint Token'}
+        {loading ? 'Processing...' : currentStep >= steps.length ? 'All Done' : 'Next Step ➡️'}
       </button>
 
-      {mintAddress && (
-        <div className="text-green-600 break-all text-sm">
-          <p className="font-medium">✅ Mint Address:</p>
-          <a
-            href={`https://explorer.solana.com/address/${mintAddress}?cluster=mainnet`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            {mintAddress}
-          </a>
-        </div>
-      )}
-
       {txSignature && (
-        <div className="text-blue-600 break-all text-sm">
-          <p className="font-medium">🔗 Transaction Signature:</p>
+        <div className="text-green-600 text-sm break-words">
+          <p>{txSignature}</p>
           <a
-            href={`https://explorer.solana.com/tx/${txSignature}?cluster=mainnet`}
+            href={`https://explorer.solana.com/address/${mint!.publicKey.toBase58()}?cluster=mainnet`}
             target="_blank"
             rel="noopener noreferrer"
             className="underline"
           >
-            {txSignature}
+            View on Solana Explorer
           </a>
         </div>
       )}
-
-      {error && <p className="text-red-600 text-sm">{error}</p>}
     </div>
   );
 };
