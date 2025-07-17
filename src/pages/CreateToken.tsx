@@ -133,9 +133,21 @@ export const CreateToken: FC = () => {
         preflightCommitment: 'finalized',
       });
 
-      await connection.confirmTransaction({ signature: sig, ...latest }, 'finalized');
-      updateStep(7, 'done');
+      // ✅ Polling-based confirmation (avoids WS issues)
+      const confirmation = await connection.confirmTransaction(
+        {
+          signature: sig,
+          blockhash: latest.blockhash,
+          lastValidBlockHeight: latest.lastValidBlockHeight,
+        },
+        'finalized'
+      );
 
+      if (confirmation.value.err) {
+        throw new Error("Transaction failed: " + JSON.stringify(confirmation.value.err));
+      }
+
+      updateStep(7, 'done');
       setMintAddress(mint.publicKey.toBase58());
     } catch (err: any) {
       console.error('Minting failed:', err);
