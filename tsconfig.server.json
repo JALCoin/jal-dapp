@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "lib": ["ES2020"],
+    "types": ["node"]
+  },
+  "include": ["index.js", "solanaProxy.js"]
+}

@@ -7,7 +7,7 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 export const AppProviders: FC<{ children: React.ReactNode }> = ({ children }) => {
-  const endpoint = useMemo(() => 'https://api.mainnet-beta.solana.com', []);
+  const endpoint = useMemo(() => 'http://localhost:3001/api/solana', []);
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
   const onError = (error: any) => console.error('Wallet error:', error);
 
