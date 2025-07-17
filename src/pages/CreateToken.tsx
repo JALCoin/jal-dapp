@@ -1,7 +1,8 @@
 import type { FC } from 'react';
 import { useCallback, useState } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import {
+  Connection,
   Transaction,
   SystemProgram,
   Keypair,
@@ -29,8 +30,8 @@ const steps = [
 type StepStatus = 'idle' | 'in-progress' | 'done' | 'error';
 
 export const CreateToken: FC = () => {
-  const { connection } = useConnection();
   const { publicKey, signTransaction } = useWallet();
+  const connection = new Connection("/api/solana", "confirmed");
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>(
     Array(steps.length).fill('idle')
   );
