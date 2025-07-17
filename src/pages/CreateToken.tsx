@@ -2,8 +2,6 @@ import type { FC } from 'react';
 import { useCallback, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import {
-  Connection,
-  PublicKey,
   Transaction,
   SystemProgram,
   Keypair,
@@ -32,7 +30,7 @@ type StepStatus = 'idle' | 'in-progress' | 'done' | 'error';
 
 export const CreateToken: FC = () => {
   const { connection } = useConnection();
-  const { publicKey, sendTransaction, signTransaction } = useWallet();
+  const { publicKey, signTransaction } = useWallet();
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>(
     Array(steps.length).fill('idle')
   );
@@ -110,7 +108,7 @@ export const CreateToken: FC = () => {
         mint.publicKey,
         ata,
         publicKey,
-        1_000_000_000 // 1 token with 9 decimals
+        1_000_000_000
       );
       updateStep(6, 'done');
 
