@@ -153,7 +153,7 @@ export const CreateToken: FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-6 transition-all duration-500 ease-in-out">
+    <div className="page-wrapper">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
         <button onClick={resetFlow} className="text-xs underline text-red-500">Reset</button>
