@@ -1,3 +1,5 @@
+// ✅ JAL CreateToken Flow (Step-by-Step, Resumable, Animated)
+
 import type { FC } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -31,7 +33,7 @@ const steps = [
 
 export const CreateToken: FC = () => {
   const { publicKey, signTransaction } = useWallet();
-  const connection = new Connection("https://jal-dapp.vercel.app/api/solana", "confirmed");
+  const connection = new Connection('https://jal-dapp.vercel.app/api/solana', 'confirmed');
 
   const [currentStep, setCurrentStep] = useState<number>(() => Number(localStorage.getItem('currentStep')) || 0);
   const [mint, setMint] = useState<Keypair | null>(null);
@@ -46,6 +48,13 @@ export const CreateToken: FC = () => {
     localStorage.setItem('currentStep', currentStep.toString());
   }, [currentStep]);
 
+  const generateMintKeypair = () => {
+    const mintKeypair = Keypair.generate();
+    setMint(mintKeypair);
+    setInfo(`Mint Address: ${mintKeypair.publicKey.toBase58()}`);
+    setCurrentStep((prev) => prev + 1);
+  };
+
   const runStep = useCallback(async () => {
     if (!publicKey || !signTransaction) return;
 
@@ -53,12 +62,6 @@ export const CreateToken: FC = () => {
     setLoading(true);
     try {
       switch (currentStep) {
-        case 0: {
-          const mintKeypair = Keypair.generate();
-          setMint(mintKeypair);
-          setInfo(`Mint Address: ${mintKeypair.publicKey.toBase58()}`);
-          break;
-        }
         case 1: {
           const rent = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
           setLamports(rent);
@@ -124,8 +127,6 @@ export const CreateToken: FC = () => {
           setInfo(`✅ Token Minted Successfully!`);
           break;
         }
-        default:
-          break;
       }
       setCurrentStep((prev) => prev + 1);
     } catch (err: any) {
@@ -152,7 +153,7 @@ export const CreateToken: FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-6">
+    <div className="p-6 max-w-xl mx-auto space-y-6 transition-all duration-500 ease-in-out">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
         <button onClick={resetFlow} className="text-xs underline text-red-500">Reset</button>
@@ -160,16 +161,18 @@ export const CreateToken: FC = () => {
 
       <div className="flex space-x-1 mb-4">
         {steps.map((_, i) => (
-          <div key={i} className={`h-2 w-full rounded-full ${
-            i === currentStep ? 'bg-yellow-400 animate-pulse' :
-            i < currentStep ? 'bg-green-500' : 'bg-gray-300'
-          }`} />
+          <div
+            key={i}
+            className={`h-2 w-full rounded-full transition-all duration-300 ${
+              i === currentStep ? 'bg-yellow-400 animate-pulse' :
+              i < currentStep ? 'bg-green-500' : 'bg-gray-300'
+            }`}
+          />
         ))}
       </div>
 
-      {info && <p className="text-sm bg-gray-100 p-2 rounded animate-fade-in">{info}</p>}
-
-      {error && <p className="text-red-600 text-sm animate-fade-in">Error: {error}</p>}
+      {info && <p className="text-sm bg-gray-100 p-2 rounded animate-fade-in transition-opacity duration-300">{info}</p>}
+      {error && <p className="text-red-600 text-sm animate-fade-in transition-opacity duration-300">Error: {error}</p>}
 
       <div className="flex space-x-4">
         <button
@@ -179,13 +182,23 @@ export const CreateToken: FC = () => {
         >
           ⬅ Back
         </button>
-        <button
-          onClick={runStep}
-          disabled={!publicKey || loading || currentStep >= steps.length}
-          className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
-        >
-          {loading ? 'Processing...' : currentStep >= steps.length ? 'All Done' : 'Next Step ➡️'}
-        </button>
+
+        {currentStep === 0 ? (
+          <button
+            onClick={generateMintKeypair}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
+          >
+            🔐 Generate Mint Keypair
+          </button>
+        ) : (
+          <button
+            onClick={runStep}
+            disabled={!publicKey || loading || currentStep >= steps.length}
+            className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : currentStep >= steps.length ? 'All Done' : 'Next Step ➡️'}
+          </button>
+        )}
       </div>
 
       {txSignature && (
