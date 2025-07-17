@@ -1,8 +1,7 @@
-// pages/api/solana.ts
-import type { VercelRequest, VercelResponse } from 'vercel';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
   try {
