@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import {
   Connection,
@@ -33,7 +33,7 @@ export const CreateToken: FC = () => {
   const { publicKey, signTransaction } = useWallet();
   const connection = new Connection("https://jal-dapp.vercel.app/api/solana", "confirmed");
 
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState<number>(() => Number(localStorage.getItem('currentStep')) || 0);
   const [mint, setMint] = useState<Keypair | null>(null);
   const [ata, setAta] = useState<PublicKey | null>(null);
   const [lamports, setLamports] = useState<number>(0);
@@ -41,6 +41,10 @@ export const CreateToken: FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState<string>('');
+
+  useEffect(() => {
+    localStorage.setItem('currentStep', currentStep.toString());
+  }, [currentStep]);
 
   const runStep = useCallback(async () => {
     if (!publicKey || !signTransaction) return;
@@ -132,21 +136,57 @@ export const CreateToken: FC = () => {
     }
   }, [currentStep, publicKey, signTransaction, mint, lamports, ata]);
 
+  const resetFlow = () => {
+    setCurrentStep(0);
+    setMint(null);
+    setAta(null);
+    setLamports(0);
+    setTxSignature(null);
+    setError(null);
+    setInfo('');
+    localStorage.removeItem('currentStep');
+  };
+
+  const goBack = () => {
+    if (currentStep > 0) setCurrentStep((prev) => prev - 1);
+  };
+
   return (
     <div className="p-6 max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
+        <button onClick={resetFlow} className="text-xs underline text-red-500">Reset</button>
+      </div>
 
-      {info && <p className="text-sm bg-gray-100 p-2 rounded">{info}</p>}
+      <div className="flex space-x-1 mb-4">
+        {steps.map((_, i) => (
+          <div key={i} className={`h-2 w-full rounded-full ${
+            i === currentStep ? 'bg-yellow-400 animate-pulse' :
+            i < currentStep ? 'bg-green-500' : 'bg-gray-300'
+          }`} />
+        ))}
+      </div>
 
-      {error && <p className="text-red-600 text-sm">Error: {error}</p>}
+      {info && <p className="text-sm bg-gray-100 p-2 rounded animate-fade-in">{info}</p>}
 
-      <button
-        onClick={runStep}
-        disabled={!publicKey || loading || currentStep >= steps.length}
-        className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
-      >
-        {loading ? 'Processing...' : currentStep >= steps.length ? 'All Done' : 'Next Step ➡️'}
-      </button>
+      {error && <p className="text-red-600 text-sm animate-fade-in">Error: {error}</p>}
+
+      <div className="flex space-x-4">
+        <button
+          onClick={goBack}
+          disabled={currentStep === 0 || loading}
+          className="px-4 py-2 bg-gray-500 text-white rounded disabled:opacity-50"
+        >
+          ⬅ Back
+        </button>
+        <button
+          onClick={runStep}
+          disabled={!publicKey || loading || currentStep >= steps.length}
+          className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
+        >
+          {loading ? 'Processing...' : currentStep >= steps.length ? 'All Done' : 'Next Step ➡️'}
+        </button>
+      </div>
 
       {txSignature && (
         <div className="text-green-600 text-sm break-words">
