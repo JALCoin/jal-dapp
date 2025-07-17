@@ -38,6 +38,7 @@ export const CreateToken: FC = () => {
     Array(steps.length).fill('idle')
   );
   const [mintAddress, setMintAddress] = useState<string | null>(null);
+  const [txSignature, setTxSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +57,7 @@ export const CreateToken: FC = () => {
     setStepStatuses(statuses);
     setError(null);
     setMintAddress(null);
+    setTxSignature(null);
     setLoading(true);
 
     try {
@@ -131,13 +133,14 @@ export const CreateToken: FC = () => {
       tx.partialSign(mint);
       const signedTx = await signTransaction(tx);
 
-      const sig = await sendAndConfirmRawTransaction(connection, signedTx.serialize(), {
+      const signature = await sendAndConfirmRawTransaction(connection, signedTx.serialize(), {
         skipPreflight: false,
         commitment: 'finalized',
       });
 
-      updateStep(7, 'done');
       setMintAddress(mint.publicKey.toBase58());
+      setTxSignature(signature);
+      updateStep(7, 'done');
     } catch (err: any) {
       console.error('Minting failed:', err);
       setError(err.message || 'Minting failed');
@@ -184,6 +187,20 @@ export const CreateToken: FC = () => {
             className="underline"
           >
             {mintAddress}
+          </a>
+        </div>
+      )}
+
+      {txSignature && (
+        <div className="text-blue-600 break-all text-sm">
+          <p className="font-medium">🔗 Transaction Signature:</p>
+          <a
+            href={`https://explorer.solana.com/tx/${txSignature}?cluster=mainnet`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            {txSignature}
           </a>
         </div>
       )}
