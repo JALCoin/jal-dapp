@@ -32,6 +32,7 @@ type StepStatus = 'idle' | 'in-progress' | 'done' | 'error';
 export const CreateToken: FC = () => {
   const { publicKey, signTransaction } = useWallet();
   const connection = new Connection("https://jal-dapp.vercel.app/api/solana", "confirmed");
+
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>(
     Array(steps.length).fill('idle')
   );
@@ -57,17 +58,17 @@ export const CreateToken: FC = () => {
     setLoading(true);
 
     try {
-      // Step 1: Generate Mint Keypair
+      // Step 1
       updateStep(0, 'in-progress');
       const mint = Keypair.generate();
       updateStep(0, 'done');
 
-      // Step 2: Calculate Rent
+      // Step 2
       updateStep(1, 'in-progress');
       const lamports = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
       updateStep(1, 'done');
 
-      // Step 3: Create Mint Account
+      // Step 3
       updateStep(2, 'in-progress');
       const createMintIx = SystemProgram.createAccount({
         fromPubkey: publicKey,
@@ -78,7 +79,7 @@ export const CreateToken: FC = () => {
       });
       updateStep(2, 'done');
 
-      // Step 4: Initialize Mint
+      // Step 4
       updateStep(3, 'in-progress');
       const initMintIx = createInitializeMintInstruction(
         mint.publicKey,
@@ -88,12 +89,12 @@ export const CreateToken: FC = () => {
       );
       updateStep(3, 'done');
 
-      // Step 5: Derive ATA
+      // Step 5
       updateStep(4, 'in-progress');
       const ata = await getAssociatedTokenAddress(mint.publicKey, publicKey);
       updateStep(4, 'done');
 
-      // Step 6: Create ATA
+      // Step 6
       updateStep(5, 'in-progress');
       const createATAIx = createAssociatedTokenAccountInstruction(
         publicKey,
@@ -103,7 +104,7 @@ export const CreateToken: FC = () => {
       );
       updateStep(5, 'done');
 
-      // Step 7: Mint Tokens
+      // Step 7
       updateStep(6, 'in-progress');
       const mintToIx = createMintToInstruction(
         mint.publicKey,
@@ -113,7 +114,7 @@ export const CreateToken: FC = () => {
       );
       updateStep(6, 'done');
 
-      // Step 8: Finalize Transaction
+      // Step 8
       updateStep(7, 'in-progress');
       const tx = new Transaction().add(
         createMintIx,
@@ -121,13 +122,18 @@ export const CreateToken: FC = () => {
         createATAIx,
         mintToIx
       );
+
+      const latest = await connection.getLatestBlockhash('finalized');
       tx.feePayer = publicKey;
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+      tx.recentBlockhash = latest.blockhash;
 
       tx.partialSign(mint);
       const signedTx = await signTransaction(tx);
-      const sig = await connection.sendRawTransaction(signedTx.serialize());
-      await connection.confirmTransaction(sig, 'confirmed');
+      const sig = await connection.sendRawTransaction(signedTx.serialize(), {
+        preflightCommitment: 'finalized',
+      });
+
+      await connection.confirmTransaction({ signature: sig, ...latest }, 'finalized');
       updateStep(7, 'done');
 
       setMintAddress(mint.publicKey.toBase58());
