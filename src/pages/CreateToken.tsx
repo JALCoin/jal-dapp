@@ -6,6 +6,7 @@ import {
   Transaction,
   SystemProgram,
   Keypair,
+  sendAndConfirmRawTransaction,
 } from '@solana/web3.js';
 import {
   MINT_SIZE,
@@ -129,23 +130,11 @@ export const CreateToken: FC = () => {
 
       tx.partialSign(mint);
       const signedTx = await signTransaction(tx);
-      const sig = await connection.sendRawTransaction(signedTx.serialize(), {
-        preflightCommitment: 'finalized',
+
+      const sig = await sendAndConfirmRawTransaction(connection, signedTx.serialize(), {
+        skipPreflight: false,
+        commitment: 'finalized',
       });
-
-      // ✅ Polling-based confirmation (avoids WS issues)
-      const confirmation = await connection.confirmTransaction(
-        {
-          signature: sig,
-          blockhash: latest.blockhash,
-          lastValidBlockHeight: latest.lastValidBlockHeight,
-        },
-        'finalized'
-      );
-
-      if (confirmation.value.err) {
-        throw new Error("Transaction failed: " + JSON.stringify(confirmation.value.err));
-      }
 
       updateStep(7, 'done');
       setMintAddress(mint.publicKey.toBase58());
