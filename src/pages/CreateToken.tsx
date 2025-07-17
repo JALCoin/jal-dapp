@@ -7,6 +7,7 @@ import {
   SystemProgram,
   Keypair,
   sendAndConfirmRawTransaction,
+  PublicKey,
 } from '@solana/web3.js';
 import {
   MINT_SIZE,
@@ -34,7 +35,7 @@ export const CreateToken: FC = () => {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [mint, setMint] = useState<Keypair | null>(null);
-  const [ata, setAta] = useState<string>('');
+  const [ata, setAta] = useState<PublicKey | null>(null);
   const [lamports, setLamports] = useState<number>(0);
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,12 +91,12 @@ export const CreateToken: FC = () => {
         }
         case 4: {
           const ataAddr = await getAssociatedTokenAddress(mint!.publicKey, publicKey);
-          setAta(ataAddr.toBase58());
+          setAta(ataAddr);
           setInfo(`ATA: ${ataAddr.toBase58()}`);
           break;
         }
         case 5: {
-          const ix = createAssociatedTokenAccountInstruction(publicKey, ata, publicKey, mint!.publicKey);
+          const ix = createAssociatedTokenAccountInstruction(publicKey, ata!, publicKey, mint!.publicKey);
           const tx = new Transaction().add(ix);
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
@@ -105,7 +106,7 @@ export const CreateToken: FC = () => {
           break;
         }
         case 6: {
-          const ix = createMintToInstruction(mint!.publicKey, ata, publicKey, 1_000_000_000);
+          const ix = createMintToInstruction(mint!.publicKey, ata!, publicKey, 1_000_000_000);
           const tx = new Transaction().add(ix);
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
