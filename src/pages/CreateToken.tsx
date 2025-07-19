@@ -68,6 +68,7 @@ export const CreateToken: FC = () => {
           const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
           setTxSig(sig);
           log(`📤 Created mint account: ${mintAccount.publicKey.toBase58()}`);
+          log(`🔗 Tx Signature: ${sig}`);
           break;
         }
 
@@ -76,7 +77,8 @@ export const CreateToken: FC = () => {
             createInitializeMintInstruction(mint!, 9, publicKey, null)
           );
           const sig = await sendTransaction(tx, connection);
-          log(`✅ Mint initialized: ${sig}`);
+          log(`✅ Mint initialized`);
+          log(`🔗 Tx Signature: ${sig}`);
           break;
         }
 
@@ -89,6 +91,7 @@ export const CreateToken: FC = () => {
           );
           const sig = await sendTransaction(tx, connection);
           log(`📦 ATA created: ${ataAddress.toBase58()}`);
+          log(`🔗 Tx Signature: ${sig}`);
           break;
         }
 
@@ -98,7 +101,8 @@ export const CreateToken: FC = () => {
           );
           const sig = await sendTransaction(tx, connection);
           setTxSig(sig);
-          log(`✅ Minted tokens to ATA: ${sig}`);
+          log(`✅ Minted tokens to ATA`);
+          log(`🔗 Tx Signature: ${sig}`);
           break;
         }
 
