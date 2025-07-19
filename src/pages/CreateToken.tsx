@@ -100,9 +100,8 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
-          const signed = await signTransaction(tx);
-          const raw = signed.serialize();
-          const sig = await connection.sendRawTransaction( raw);
+          const signedTx = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
@@ -113,7 +112,7 @@ export const CreateToken: FC = () => {
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
           const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signed.serialize());
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
@@ -235,6 +234,13 @@ export const CreateToken: FC = () => {
           </a>
         </div>
       )}
+    </div>
+
+      <div className="bg-black text-white text-xs p-3 rounded mt-4 max-h-48 overflow-y-auto font-mono">
+        <p className="mb-1 font-bold text-green-400">🪵 Transaction Log</p>
+        <p>{info}</p>
+        {error && <p className="text-red-400 mt-2">{error}</p>}
+      </div>
     </div>
   );
 };
