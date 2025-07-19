@@ -1,3 +1,5 @@
+// ✅ JAL CreateToken Flow (Full Logging + Step Summary)
+
 import type { FC } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -6,7 +8,7 @@ import {
   Transaction,
   SystemProgram,
   Keypair,
-  PublicKey
+  PublicKey,
 } from '@solana/web3.js';
 import {
   MINT_SIZE,
@@ -39,40 +41,38 @@ export const CreateToken: FC = () => {
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [log, setLog] = useState<string[]>([]);
-  const [info, setInfo] = useState<string>(''); // latest message
+  const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
     localStorage.setItem('currentStep', currentStep.toString());
   }, [currentStep]);
 
-  const logMessage = (msg: string) => {
-    setLog((prev) => [...prev, msg]);
-    setInfo(msg);
+  const log = (msg: string) => {
+    setLogs((prev) => [...prev, msg]);
   };
 
   const confirmTx = async (sig: string) => {
-    logMessage(`📤 Sent: ${sig}`);
+    log(`Transaction submitted. Sig: ${sig}`);
     const start = Date.now();
     const timeout = 30000;
 
     while (Date.now() - start < timeout) {
       const { value } = await connection.getSignatureStatus(sig);
       if (value?.confirmationStatus === 'confirmed' || value?.confirmationStatus === 'finalized') {
-        logMessage(`✅ Confirmed: ${sig}`);
+        log(`✅ Confirmed. Sig: ${sig}`);
         return sig;
       }
       await new Promise(res => setTimeout(res, 1000));
     }
 
-    throw new Error(`⏱ Timeout: Tx not confirmed in 30s — check ${sig} on Explorer.`);
+    throw new Error(`Transaction not confirmed in 30s. Check: ${sig}`);
   };
 
   const generateMintKeypair = () => {
     const mintKeypair = Keypair.generate();
     setMint(mintKeypair);
-    logMessage(`🔐 Mint Keypair Generated: ${mintKeypair.publicKey.toBase58()}`);
-    setCurrentStep((prev) => prev + 1);
+    log(`🔐 Mint Keypair Generated: ${mintKeypair.publicKey.toBase58()}`);
+    setCurrentStep(1);
   };
 
   const runStep = useCallback(async () => {
@@ -89,7 +89,7 @@ export const CreateToken: FC = () => {
         case 1: {
           const rent = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
           setLamports(rent);
-          logMessage(`💸 Rent Exemption: ${rent} lamports`);
+          log(`📦 Rent Exemption: ${rent} lamports`);
           break;
         }
         case 2: {
@@ -104,8 +104,8 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
-          const signedTx = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signedTx.serialize());
+          const signed = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signed.serialize());
           await confirmTx(sig);
           break;
         }
@@ -115,15 +115,15 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
-          const signedTx = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signedTx.serialize());
+          const signed = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signed.serialize());
           await confirmTx(sig);
           break;
         }
         case 4: {
           const ataAddr = await getAssociatedTokenAddress(mint!.publicKey, publicKey);
           setAta(ataAddr);
-          logMessage(`📦 ATA Derived: ${ataAddr.toBase58()}`);
+          log(`📍 Derived ATA: ${ataAddr.toBase58()}`);
           break;
         }
         case 5: {
@@ -131,8 +131,8 @@ export const CreateToken: FC = () => {
           const tx = new Transaction().add(ix);
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-          const signedTx = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signedTx.serialize());
+          const signed = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signed.serialize());
           await confirmTx(sig);
           break;
         }
@@ -141,23 +141,23 @@ export const CreateToken: FC = () => {
           const tx = new Transaction().add(ix);
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-          const signedTx = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signedTx.serialize());
+          const signed = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signed.serialize());
           await confirmTx(sig);
           break;
         }
         case 7: {
-          const msg = `✅ Token Minted: ${mint!.publicKey.toBase58()}`;
-          setTxSignature(msg);
-          logMessage(msg);
+          const finalMint = mint!.publicKey.toBase58();
+          setTxSignature(finalMint);
+          log(`✅ Token Minted: ${finalMint}`);
           break;
         }
       }
       setCurrentStep((prev) => prev + 1);
     } catch (err: any) {
       console.error('Error at step', currentStep, err);
-      setError(err.message || 'Step failed');
-      logMessage(`❌ Error: ${err.message}`);
+      setError(err.message || 'Unknown Error');
+      log(`❌ Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -170,8 +170,7 @@ export const CreateToken: FC = () => {
     setLamports(0);
     setTxSignature(null);
     setError(null);
-    setInfo('');
-    setLog([]);
+    setLogs([]);
     localStorage.removeItem('currentStep');
   };
 
@@ -180,13 +179,13 @@ export const CreateToken: FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-6 transition-all duration-500 ease-in-out">
+    <div className="p-6 max-w-xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
         <button onClick={resetFlow} className="text-xs underline text-red-500">Reset</button>
       </div>
 
-      <div className="flex space-x-1 mb-4">
+      <div className="flex space-x-1 mb-2">
         {steps.map((_, i) => (
           <div
             key={i}
@@ -198,8 +197,7 @@ export const CreateToken: FC = () => {
         ))}
       </div>
 
-      {info && <p className="text-sm bg-gray-100 p-2 rounded animate-fade-in transition-opacity duration-300">{info}</p>}
-      {error && <p className="text-red-600 text-sm animate-fade-in transition-opacity duration-300">Error: {error}</p>}
+      {error && <p className="text-sm text-red-600">Error: {error}</p>}
 
       <div className="flex space-x-4">
         <button
@@ -209,13 +207,12 @@ export const CreateToken: FC = () => {
         >
           ⬅ Back
         </button>
-
         {currentStep === 0 ? (
           <button
             onClick={generateMintKeypair}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
           >
-            🔐 Generate Mint Keypair
+            🔐 Generate Mint
           </button>
         ) : (
           <button
@@ -232,23 +229,24 @@ export const CreateToken: FC = () => {
         <div className="text-green-600 text-sm break-words">
           <p>{txSignature}</p>
           <a
-            href={`https://explorer.solana.com/address/${mint!.publicKey.toBase58()}?cluster=mainnet`}
+            href={`https://explorer.solana.com/address/${txSignature}?cluster=mainnet`}
+            className="underline"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline"
           >
             View on Solana Explorer
           </a>
         </div>
       )}
 
-      <div className="bg-black text-white text-xs p-3 rounded mt-4 max-h-48 overflow-y-auto font-mono">
-        <p className="mb-1 font-bold text-green-400">🪵 Transaction Log</p>
-        {log.map((entry, idx) => (
-          <p key={idx}>{entry}</p>
-        ))}
-        {error && <p className="text-red-400 mt-2">{error}</p>}
-      </div>
+      {logs.length > 0 && (
+        <div className="bg-black text-white text-xs p-3 rounded mt-4 max-h-64 overflow-y-auto font-mono space-y-1">
+          <p className="font-bold text-green-400 mb-1">📜 Transaction Log</p>
+          {logs.map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
