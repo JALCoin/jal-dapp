@@ -29,7 +29,7 @@ const steps = [
 ];
 
 export const CreateToken: FC = () => {
-  const { publicKey, signTransaction } = useWallet();
+  const { publicKey, signAllTransactions } = useWallet();
   const connection = new Connection('https://jal-dapp.vercel.app/api/solana', 'confirmed');
 
   const [currentStep, setCurrentStep] = useState(() => Number(localStorage.getItem('currentStep')) || 0);
@@ -72,7 +72,7 @@ export const CreateToken: FC = () => {
   };
 
   const runStep = useCallback(async () => {
-    if (!publicKey || !signTransaction) return;
+    if (!publicKey || !signAllTransactions) return;
     if (!mint && currentStep > 0) {
       setError('Mint keypair is missing');
       return;
@@ -102,9 +102,10 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-          tx.partialSign(mint!); // Sign with mint before Phantom
-          const fullySigned = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(fullySigned.serialize());
+          tx.partialSign(mint!);
+          const [signedTx] = await signAllTransactions([tx]);
+
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
@@ -115,9 +116,10 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-          tx.partialSign(mint!); // Sign with mint before Phantom
-          const fullySigned = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(fullySigned.serialize());
+          tx.partialSign(mint!);
+          const [signedTx] = await signAllTransactions([tx]);
+
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
@@ -134,7 +136,7 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-          const signedTx = await signTransaction(tx);
+          const [signedTx] = await signAllTransactions([tx]);
           const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
@@ -146,7 +148,7 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-          const signedTx = await signTransaction(tx);
+          const [signedTx] = await signAllTransactions([tx]);
           const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
@@ -164,7 +166,7 @@ export const CreateToken: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentStep, mint, ata, lamports, publicKey, signTransaction]);
+  }, [currentStep, mint, ata, lamports, publicKey, signAllTransactions]);
 
   const resetFlow = () => {
     setCurrentStep(0);
