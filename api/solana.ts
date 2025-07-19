@@ -8,7 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { data } = await axios.post(
-      'https://api.mainnet-beta.solana.com',
+      'https://solana-proxy-production.up.railway.app',
       req.body,
       {
         headers: {
@@ -16,12 +16,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       }
     );
+
     return res.status(200).json(data);
   } catch (error: any) {
-    console.error('[RPC Proxy Error]', error?.response?.data || error.message);
+    console.error('[RPC Proxy Error]', error?.response?.data || error?.message);
     return res.status(500).json({
       error: 'Mainnet RPC Proxy failed',
-      detail: error?.response?.data || error.message,
+      detail: error?.response?.data || error?.message,
     });
   }
 }
