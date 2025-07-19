@@ -104,7 +104,7 @@ export const CreateToken: FC = () => {
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
           const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction($1);
+          const sig = await connection.sendRawTransaction(signed.serialize());
           await confirmTx(sig);
           break;
         }
@@ -120,7 +120,7 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           const signed = await signTransaction(tx);
-          const sig = await sendRawTransaction(connection, signed.serialize());
+          const sig = await connection.sendRawTransaction(signed.serialize());
           await confirmTx(sig);
           break;
         }
