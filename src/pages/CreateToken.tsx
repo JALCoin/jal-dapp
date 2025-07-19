@@ -241,15 +241,5 @@ export const CreateToken: FC = () => {
         {error && <p className="text-red-400 mt-2">{error}</p>}
       </div>
   );
-};
-
-    </>
-  );
-};
-
-</div>
-    </>
-  );
-};
 
 export default CreateToken;
