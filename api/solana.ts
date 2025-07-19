@@ -1,40 +1,20 @@
-export const config = {
-  runtime: 'edge', // optional: enables edge function on Vercel
-};
+import type { VercelRequest, VercelResponse } from 'vercel';
+import axios from 'axios';
 
-export default async function handler(req: Request): Promise<Response> {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 });
+    return res.status(405).send('Method Not Allowed');
   }
 
   try {
-    const body = await req.json();
-
-    const solanaRes = await fetch('https://api.mainnet-beta.solana.com', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'jal-sol-client', // ✅ some Solana RPCs require this
-        'Accept': '*/*',
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!solanaRes.ok) {
-      const errBody = await solanaRes.text();
-      console.error('Solana RPC failed:', solanaRes.status, errBody);
-      return new Response(errBody, { status: solanaRes.status });
-    }
-
-    const result = await solanaRes.json();
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (err: any) {
-    console.error('Proxy error:', err.message || err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal Error' }), {
-      status: 500,
-    });
+    const { data } = await axios.post(
+      'https://api.mainnet-beta.solana.com',
+      req.body,
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    res.status(200).json(data);
+  } catch (error: any) {
+    console.error('RPC Proxy Error:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Mainnet RPC Proxy failed', detail: error?.response?.data });
   }
 }
