@@ -8,7 +8,7 @@ import {
   Transaction,
   SystemProgram,
   Keypair,
-  PublicKey
+  PublicKey,
 } from '@solana/web3.js';
 import {
   MINT_SIZE,
@@ -111,7 +111,7 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
-          const signed = await signTransaction(tx);
+          const signedTx = await signTransaction(tx);
           const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
@@ -127,8 +127,8 @@ export const CreateToken: FC = () => {
           const tx = new Transaction().add(ix);
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-          const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signed.serialize());
+          const signedTx = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
@@ -137,8 +137,8 @@ export const CreateToken: FC = () => {
           const tx = new Transaction().add(ix);
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-          const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signed.serialize());
+          const signedTx = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
@@ -173,7 +173,6 @@ export const CreateToken: FC = () => {
   };
 
   return (
-    <>
     <div className="p-6 max-w-xl mx-auto space-y-6 transition-all duration-500 ease-in-out">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
@@ -235,11 +234,14 @@ export const CreateToken: FC = () => {
           </a>
         </div>
       )}
-    <div className="bg-black text-white text-xs p-3 rounded mt-4 max-h-48 overflow-y-auto font-mono">
+
+      <div className="bg-black text-white text-xs p-3 rounded mt-4 max-h-48 overflow-y-auto font-mono">
         <p className="mb-1 font-bold text-green-400">🪵 Transaction Log</p>
         <p>{info}</p>
         {error && <p className="text-red-400 mt-2">{error}</p>}
       </div>
+    </div>
   );
+};
 
 export default CreateToken;
