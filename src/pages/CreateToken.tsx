@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import type { FC, FormEvent } from 'react';
 import { useCallback, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import {
@@ -16,6 +16,7 @@ import {
   createAssociatedTokenAccountInstruction,
   createInitializeMintInstruction,
   createMintToInstruction,
+  getMint,
 } from '@solana/spl-token';
 
 const steps = [
@@ -37,6 +38,8 @@ export const CreateToken: FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchResult, setSearchResult] = useState<string | null>(null);
 
   const log = (msg: string) => setLogs((prev) => [...prev, msg]);
 
@@ -134,6 +137,18 @@ export const CreateToken: FC = () => {
     setError(null);
   };
 
+  const handleSearch = async (e: FormEvent) => {
+    e.preventDefault();
+    setSearchResult(null);
+    try {
+      const pubkey = new PublicKey(searchInput);
+      const mintInfo = await getMint(connection, pubkey);
+      setSearchResult(`✅ Found mint with ${mintInfo.supply.toString()} total supply`);
+    } catch (e) {
+      setSearchResult('❌ Invalid or non-existent mint');
+    }
+  };
+
   return (
     <div className="p-6 max-w-xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
@@ -163,6 +178,19 @@ export const CreateToken: FC = () => {
           View Transaction
         </a>
       )}
+
+      <form onSubmit={handleSearch} className="pt-6 space-y-2">
+        <p className="text-sm font-bold">🔍 Search for Mint</p>
+        <input
+          type="text"
+          className="w-full px-2 py-1 border rounded text-xs"
+          placeholder="Enter mint address"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+        <button type="submit" className="bg-gray-800 text-white px-2 py-1 rounded text-xs">Search</button>
+        {searchResult && <p className="text-xs">{searchResult}</p>}
+      </form>
 
       {logs.length > 0 && (
         <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">
