@@ -3,7 +3,13 @@
 import type { FC } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import {$1$2} from '@solana/web3.js';
+import {
+  Connection,
+  Transaction,
+  SystemProgram,
+  Keypair,
+  PublicKey
+} from '@solana/web3.js';
 import {
   MINT_SIZE,
   TOKEN_PROGRAM_ID,
@@ -98,7 +104,7 @@ export const CreateToken: FC = () => {
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
           const signed = await signTransaction(tx);
-          const sig = await sendRawTransaction(connection, signed.serialize());
+          const sig = await connection.sendRawTransaction($1);
           await confirmTx(sig);
           break;
         }
