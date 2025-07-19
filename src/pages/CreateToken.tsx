@@ -1,7 +1,13 @@
 import type { FC } from 'react';
 import { useCallback, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from '@solana/web3.js';
 import {
   TOKEN_PROGRAM_ID,
   MINT_SIZE,
@@ -42,7 +48,6 @@ export const CreateToken: FC = () => {
     try {
       switch (currentStep) {
         case 0: {
-          const mintKeypair = window.crypto.subtle.randomUUID(); // Just to trigger re-renders
           const lamports = await getMinimumBalanceForRentExemptMint(connection);
           const mintAccount = Keypair.generate();
           setMint(mintAccount.publicKey);
@@ -60,8 +65,8 @@ export const CreateToken: FC = () => {
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mintAccount);
 
-          const signedTx = await sendTransaction(tx, connection, { signers: [mintAccount] });
-          setTxSig(signedTx);
+          const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
+          setTxSig(sig);
           log(`📤 Created mint account: ${mintAccount.publicKey.toBase58()}`);
           break;
         }
@@ -124,8 +129,12 @@ export const CreateToken: FC = () => {
   return (
     <div className="p-6 max-w-xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep] || 'Done'}</h1>
-        <button onClick={resetFlow} className="text-xs text-red-500 underline">Reset</button>
+        <h1 className="text-2xl font-bold">
+          Step {currentStep + 1}: {steps[currentStep] || 'Done'}
+        </h1>
+        <button onClick={resetFlow} className="text-xs text-red-500 underline">
+          Reset
+        </button>
       </div>
 
       {error && <p className="text-red-600 text-sm">❌ {error}</p>}
