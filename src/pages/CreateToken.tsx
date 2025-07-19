@@ -247,4 +247,9 @@ export const CreateToken: FC = () => {
   );
 };
 
+</div>
+    </>
+  );
+};
+
 export default CreateToken;
