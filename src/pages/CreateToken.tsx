@@ -241,7 +241,7 @@ export const CreateToken: FC = () => {
         <p>{info}</p>
         {error && <p className="text-red-400 mt-2">{error}</p>}
       </div>
-    </div>
+</div>
   );
 };
 
