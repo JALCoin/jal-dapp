@@ -28,7 +28,7 @@ const steps = [
 
 export const CreateToken: FC = () => {
   const { publicKey, sendTransaction } = useWallet();
-  const connection = new Connection('/api/solana', 'confirmed');
+  const connection = new Connection('https://jal-dapp.vercel.app/api/solana', 'confirmed');
 
   const [currentStep, setCurrentStep] = useState(0);
   const [mint, setMint] = useState<PublicKey | null>(null);
