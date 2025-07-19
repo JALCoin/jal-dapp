@@ -8,7 +8,7 @@ import {
   Transaction,
   SystemProgram,
   Keypair,
-  sendAndConfirmRawTransaction,
+  sendRawTransaction,
   PublicKey,
 } from '@solana/web3.js';
 import {
@@ -48,6 +48,14 @@ export const CreateToken: FC = () => {
     localStorage.setItem('currentStep', currentStep.toString());
   }, [currentStep]);
 
+  const confirmTx = async (sig: string) => {
+    setInfo(`Transaction submitted. Signature: ${sig}`);
+    const confirmation = await connection.confirmTransaction(sig, 'confirmed');
+    if (confirmation.value.err) throw new Error('Transaction failed');
+    setInfo(`✅ Confirmed. Tx: ${sig}`);
+    return sig;
+  };
+
   const generateMintKeypair = () => {
     const mintKeypair = Keypair.generate();
     setMint(mintKeypair);
@@ -57,6 +65,10 @@ export const CreateToken: FC = () => {
 
   const runStep = useCallback(async () => {
     if (!publicKey || !signTransaction) return;
+    if (!mint && currentStep > 0) {
+      setError('Mint keypair is missing');
+      return;
+    }
 
     setError(null);
     setLoading(true);
@@ -81,8 +93,9 @@ export const CreateToken: FC = () => {
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
           const signed = await signTransaction(tx);
-          const sig = await sendAndConfirmRawTransaction(connection, signed.serialize());
-          setInfo(`Mint account created. Tx: ${sig}`);
+          const raw = signed.serialize();
+          const sig = await sendRawTransaction(connection, raw);
+          await confirmTx(sig);
           break;
         }
         case 3: {
@@ -92,8 +105,8 @@ export const CreateToken: FC = () => {
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
           const signed = await signTransaction(tx);
-          const sig = await sendAndConfirmRawTransaction(connection, signed.serialize());
-          setInfo(`Mint initialized. Tx: ${sig}`);
+          const sig = await sendRawTransaction(connection, signed.serialize());
+          await confirmTx(sig);
           break;
         }
         case 4: {
@@ -108,8 +121,8 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           const signed = await signTransaction(tx);
-          const sig = await sendAndConfirmRawTransaction(connection, signed.serialize());
-          setInfo(`ATA created. Tx: ${sig}`);
+          const sig = await sendRawTransaction(connection, signed.serialize());
+          await confirmTx(sig);
           break;
         }
         case 6: {
@@ -118,8 +131,8 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           const signed = await signTransaction(tx);
-          const sig = await sendAndConfirmRawTransaction(connection, signed.serialize());
-          setInfo(`Tokens minted. Tx: ${sig}`);
+          const sig = await sendRawTransaction(connection, signed.serialize());
+          await confirmTx(sig);
           break;
         }
         case 7: {
@@ -153,7 +166,7 @@ export const CreateToken: FC = () => {
   };
 
   return (
-    <div className="page-wrapper">
+    <div className="p-6 max-w-xl mx-auto space-y-6 transition-all duration-500 ease-in-out">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
         <button onClick={resetFlow} className="text-xs underline text-red-500">Reset</button>
