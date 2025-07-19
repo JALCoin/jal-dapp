@@ -113,10 +113,13 @@ const CreateToken: FC = () => {
         }
 
         case 4: {
-          log(`🎉 Token creation complete!`);
-          break;
-        }
-      }
+  if (mint && ata) {
+    localStorage.setItem('mint', mint.toBase58());
+    localStorage.setItem('ata', ata.toBase58());
+  }
+  log(`🎉 Token creation complete!`);
+  break;
+}
 
       setStep((s) => s + 1);
     } catch (err: any) {
