@@ -1,4 +1,4 @@
-import type { FC, FormEvent } from 'react';
+import type { FC } from 'react';
 import { useCallback, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import {
@@ -16,8 +16,8 @@ import {
   createAssociatedTokenAccountInstruction,
   createInitializeMintInstruction,
   createMintToInstruction,
-  getMint,
 } from '@solana/spl-token';
+import { useRouter } from 'next/router';
 
 const steps = [
   'Create Mint Account',
@@ -30,6 +30,7 @@ const steps = [
 export const CreateToken: FC = () => {
   const { publicKey, sendTransaction } = useWallet();
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
+  const router = useRouter();
 
   const [step, setStep] = useState(0);
   const [mint, setMint] = useState<PublicKey | null>(null);
@@ -38,8 +39,6 @@ export const CreateToken: FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [searchResult, setSearchResult] = useState<string | null>(null);
 
   const log = (msg: string) => setLogs((prev) => [...prev, msg]);
 
@@ -137,16 +136,8 @@ export const CreateToken: FC = () => {
     setError(null);
   };
 
-  const handleSearch = async (e: FormEvent) => {
-    e.preventDefault();
-    setSearchResult(null);
-    try {
-      const pubkey = new PublicKey(searchInput);
-      const mintInfo = await getMint(connection, pubkey);
-      setSearchResult(`✅ Found mint with ${mintInfo.supply.toString()} total supply`);
-    } catch (e) {
-      setSearchResult('❌ Invalid or non-existent mint');
-    }
+  const goToDashboard = () => {
+    router.push('/dashboard');
   };
 
   return (
@@ -158,39 +149,28 @@ export const CreateToken: FC = () => {
 
       {error && <p className="text-red-600 text-sm">❌ {error}</p>}
 
-      <button
-        onClick={runStep}
-        disabled={loading || step >= steps.length}
-        className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
-      >
-        {loading ? 'Processing...' : step >= steps.length ? 'All Done' : 'Next Step ➡️'}
-      </button>
+      {step < steps.length ? (
+        <button
+          onClick={runStep}
+          disabled={loading}
+          className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
+        >
+          {loading ? 'Processing...' : 'Next Step ➡️'}
+        </button>
+      ) : (
+        <button
+          onClick={goToDashboard}
+          className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800"
+        >
+          All Done
+        </button>
+      )}
 
       {mint && <p className="text-xs text-green-500 break-words">Mint: {mint.toBase58()}</p>}
       {ata && <p className="text-xs text-green-500 break-words">ATA: {ata.toBase58()}</p>}
       {txSig && (
-        <a
-          href={`https://explorer.solana.com/tx/${txSig}?cluster=mainnet`}
-          className="text-xs text-blue-400 underline"
-          target="_blank"
-          rel="noreferrer"
-        >
-          View Transaction
-        </a>
+        <p className="text-xs text-blue-400 break-words">Transaction: {txSig}</p>
       )}
-
-      <form onSubmit={handleSearch} className="pt-6 space-y-2">
-        <p className="text-sm font-bold">🔍 Search for Mint</p>
-        <input
-          type="text"
-          className="w-full px-2 py-1 border rounded text-xs"
-          placeholder="Enter mint address"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-        <button type="submit" className="bg-gray-800 text-white px-2 py-1 rounded text-xs">Search</button>
-        {searchResult && <p className="text-xs">{searchResult}</p>}
-      </form>
 
       {logs.length > 0 && (
         <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">
