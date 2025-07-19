@@ -28,25 +28,25 @@ const steps = [
 
 export const CreateToken: FC = () => {
   const { publicKey, sendTransaction } = useWallet();
-  const connection = new Connection('https://jal-dapp.vercel.app/api/solana', 'confirmed');
+  const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
-  const [currentStep, setCurrentStep] = useState(0);
+  const [step, setStep] = useState(0);
   const [mint, setMint] = useState<PublicKey | null>(null);
   const [ata, setAta] = useState<PublicKey | null>(null);
   const [txSig, setTxSig] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const log = (msg: string) => setLogs((prev) => [...prev, msg]);
 
   const runStep = useCallback(async () => {
     if (!publicKey || !sendTransaction) return;
-    setError(null);
     setLoading(true);
+    setError(null);
 
     try {
-      switch (currentStep) {
+      switch (step) {
         case 0: {
           const lamports = await getMinimumBalanceForRentExemptMint(connection);
           const mintAccount = Keypair.generate();
@@ -61,48 +61,52 @@ export const CreateToken: FC = () => {
               programId: TOKEN_PROGRAM_ID,
             })
           );
+
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mintAccount);
 
           const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
           setTxSig(sig);
-          log(`📤 Created mint account: ${mintAccount.publicKey.toBase58()}`);
-          log(`🔗 Tx Signature: ${sig}`);
+          log(`📤 Mint account created: ${mintAccount.publicKey.toBase58()}`);
+          log(`🔗 Tx: ${sig}`);
           break;
         }
 
         case 1: {
+          if (!mint) throw new Error('Mint account not set');
           const tx = new Transaction().add(
-            createInitializeMintInstruction(mint!, 9, publicKey, null)
+            createInitializeMintInstruction(mint, 9, publicKey, null)
           );
           const sig = await sendTransaction(tx, connection);
           log(`✅ Mint initialized`);
-          log(`🔗 Tx Signature: ${sig}`);
+          log(`🔗 Tx: ${sig}`);
           break;
         }
 
         case 2: {
-          const ataAddress = await getAssociatedTokenAddress(mint!, publicKey);
+          if (!mint) throw new Error('Mint account not set');
+          const ataAddress = await getAssociatedTokenAddress(mint, publicKey);
           setAta(ataAddress);
 
           const tx = new Transaction().add(
-            createAssociatedTokenAccountInstruction(publicKey, ataAddress, publicKey, mint!)
+            createAssociatedTokenAccountInstruction(publicKey, ataAddress, publicKey, mint)
           );
           const sig = await sendTransaction(tx, connection);
           log(`📦 ATA created: ${ataAddress.toBase58()}`);
-          log(`🔗 Tx Signature: ${sig}`);
+          log(`🔗 Tx: ${sig}`);
           break;
         }
 
         case 3: {
+          if (!mint || !ata) throw new Error('Mint or ATA not set');
           const tx = new Transaction().add(
-            createMintToInstruction(mint!, ata!, publicKey, 1_000_000_000)
+            createMintToInstruction(mint, ata, publicKey, 1_000_000_000)
           );
           const sig = await sendTransaction(tx, connection);
           setTxSig(sig);
-          log(`✅ Minted tokens to ATA`);
-          log(`🔗 Tx Signature: ${sig}`);
+          log(`✅ Tokens minted`);
+          log(`🔗 Tx: ${sig}`);
           break;
         }
 
@@ -112,54 +116,46 @@ export const CreateToken: FC = () => {
         }
       }
 
-      setCurrentStep((prev) => prev + 1);
+      setStep((s) => s + 1);
     } catch (err: any) {
       setError(err.message);
-      log(`❌ Error: ${err.message}`);
+      log(`❌ ${err.message}`);
     } finally {
       setLoading(false);
     }
-  }, [connection, currentStep, publicKey, mint, ata, sendTransaction]);
+  }, [step, mint, ata, publicKey, sendTransaction]);
 
-  const resetFlow = () => {
-    setCurrentStep(0);
+  const reset = () => {
+    setStep(0);
     setMint(null);
     setAta(null);
     setTxSig(null);
-    setError(null);
     setLogs([]);
+    setError(null);
   };
 
   return (
     <div className="p-6 max-w-xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">
-          Step {currentStep + 1}: {steps[currentStep] || 'Done'}
-        </h1>
-        <button onClick={resetFlow} className="text-xs text-red-500 underline">
-          Reset
-        </button>
+        <h1 className="text-2xl font-bold">Step {step + 1}: {steps[step] || 'Done'}</h1>
+        <button onClick={reset} className="text-xs text-red-500 underline">Reset</button>
       </div>
 
       {error && <p className="text-red-600 text-sm">❌ {error}</p>}
 
       <button
         onClick={runStep}
-        disabled={loading || currentStep >= steps.length}
-        className="bg-black px-4 py-2 text-white rounded hover:bg-gray-800 disabled:opacity-50"
+        disabled={loading || step >= steps.length}
+        className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
       >
-        {loading ? 'Processing...' : currentStep >= steps.length ? 'All Done' : 'Next Step ➡️'}
+        {loading ? 'Processing...' : step >= steps.length ? 'All Done' : 'Next Step ➡️'}
       </button>
 
-      {mint && (
-        <p className="text-xs text-green-500 break-words">Mint: {mint.toBase58()}</p>
-      )}
-      {ata && (
-        <p className="text-xs text-green-500 break-words">ATA: {ata.toBase58()}</p>
-      )}
+      {mint && <p className="text-xs text-green-500 break-words">Mint: {mint.toBase58()}</p>}
+      {ata && <p className="text-xs text-green-500 break-words">ATA: {ata.toBase58()}</p>}
       {txSig && (
         <a
-          href={`https://explorer.solana.com/tx/${txSig}?cluster=devnet`}
+          href={`https://explorer.solana.com/tx/${txSig}?cluster=mainnet`}
           className="text-xs text-blue-400 underline"
           target="_blank"
           rel="noreferrer"
@@ -171,9 +167,7 @@ export const CreateToken: FC = () => {
       {logs.length > 0 && (
         <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">
           <p className="text-green-400 font-bold mb-2">🪵 Transaction Log</p>
-          {logs.map((entry, i) => (
-            <p key={i}>{entry}</p>
-          ))}
+          {logs.map((msg, i) => <p key={i}>{msg}</p>)}
         </div>
       )}
     </div>
