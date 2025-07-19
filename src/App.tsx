@@ -1,6 +1,6 @@
-// src/App.tsx
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import CreateToken from './pages/CreateToken';
+import Dashboard from './pages/Dashboard'; // ✅ added
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { AppProviders } from './AppProviders';
 
@@ -22,6 +22,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/create-token" element={<CreateToken />} />
+            <Route path="/dashboard" element={<Dashboard />} /> {/* ✅ added */}
           </Routes>
         </main>
       </Router>

@@ -17,7 +17,7 @@ import {
   createInitializeMintInstruction,
   createMintToInstruction,
 } from '@solana/spl-token';
-import { useRouter } from 'next/router';
+import { useNavigate } from 'react-router-dom';
 
 const steps = [
   'Create Mint Account',
@@ -27,10 +27,10 @@ const steps = [
   'Done',
 ];
 
-export const CreateToken: FC = () => {
+const CreateToken: FC = () => {
   const { publicKey, sendTransaction } = useWallet();
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
   const [mint, setMint] = useState<PublicKey | null>(null);
@@ -137,7 +137,7 @@ export const CreateToken: FC = () => {
   };
 
   const goToDashboard = () => {
-    router.push('/dashboard');
+    navigate('/dashboard');
   };
 
   return (
