@@ -1,5 +1,3 @@
-// ✅ JAL CreateToken Flow (Full Logging + Step Summary)
-
 import type { FC } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -24,7 +22,7 @@ const steps = [
   'Calculate Rent Exemption',
   'Create Mint Account',
   'Initialize Mint',
-  'Derive Associated Token Account (ATA)',
+  'Derive ATA',
   'Create ATA',
   'Mint Tokens',
   'Confirm Transaction',
@@ -34,7 +32,7 @@ export const CreateToken: FC = () => {
   const { publicKey, signTransaction } = useWallet();
   const connection = new Connection('https://jal-dapp.vercel.app/api/solana', 'confirmed');
 
-  const [currentStep, setCurrentStep] = useState<number>(() => Number(localStorage.getItem('currentStep')) || 0);
+  const [currentStep, setCurrentStep] = useState(() => Number(localStorage.getItem('currentStep')) || 0);
   const [mint, setMint] = useState<Keypair | null>(null);
   const [ata, setAta] = useState<PublicKey | null>(null);
   const [lamports, setLamports] = useState<number>(0);
@@ -52,26 +50,26 @@ export const CreateToken: FC = () => {
   };
 
   const confirmTx = async (sig: string) => {
-    log(`Transaction submitted. Sig: ${sig}`);
+    log(`📤 Sent: ${sig}`);
     const start = Date.now();
     const timeout = 30000;
 
     while (Date.now() - start < timeout) {
       const { value } = await connection.getSignatureStatus(sig);
       if (value?.confirmationStatus === 'confirmed' || value?.confirmationStatus === 'finalized') {
-        log(`✅ Confirmed. Sig: ${sig}`);
+        log(`✅ Confirmed: ${sig}`);
         return sig;
       }
       await new Promise(res => setTimeout(res, 1000));
     }
 
-    throw new Error(`Transaction not confirmed in 30s. Check: ${sig}`);
+    throw new Error(`Timeout. Not confirmed in 30s: ${sig}`);
   };
 
   const generateMintKeypair = () => {
     const mintKeypair = Keypair.generate();
     setMint(mintKeypair);
-    log(`🔐 Mint Keypair Generated: ${mintKeypair.publicKey.toBase58()}`);
+    log(`🔐 Mint Generated: ${mintKeypair.publicKey.toBase58()}`);
     setCurrentStep(1);
   };
 
@@ -84,84 +82,87 @@ export const CreateToken: FC = () => {
 
     setError(null);
     setLoading(true);
+
     try {
       switch (currentStep) {
         case 1: {
           const rent = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
           setLamports(rent);
-          log(`📦 Rent Exemption: ${rent} lamports`);
+          log(`💸 Rent Exemption: ${rent} lamports`);
           break;
         }
         case 2: {
-          const ix = SystemProgram.createAccount({
-            fromPubkey: publicKey,
-            newAccountPubkey: mint!.publicKey,
-            space: MINT_SIZE,
-            lamports,
-            programId: TOKEN_PROGRAM_ID,
-          });
-          const tx = new Transaction().add(ix);
+          const tx = new Transaction().add(
+            SystemProgram.createAccount({
+              fromPubkey: publicKey,
+              newAccountPubkey: mint!.publicKey,
+              space: MINT_SIZE,
+              lamports,
+              programId: TOKEN_PROGRAM_ID,
+            })
+          );
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
-          const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signed.serialize());
+          const signedTx = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
         case 3: {
-          const ix = createInitializeMintInstruction(mint!.publicKey, 9, publicKey, null);
-          const tx = new Transaction().add(ix);
+          const tx = new Transaction().add(
+            createInitializeMintInstruction(mint!.publicKey, 9, publicKey, null)
+          );
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
-          const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signed.serialize());
+          const signedTx = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
         case 4: {
           const ataAddr = await getAssociatedTokenAddress(mint!.publicKey, publicKey);
           setAta(ataAddr);
-          log(`📍 Derived ATA: ${ataAddr.toBase58()}`);
+          log(`📦 ATA Derived: ${ataAddr.toBase58()}`);
           break;
         }
         case 5: {
-          const ix = createAssociatedTokenAccountInstruction(publicKey, ata!, publicKey, mint!.publicKey);
-          const tx = new Transaction().add(ix);
+          const tx = new Transaction().add(
+            createAssociatedTokenAccountInstruction(publicKey, ata!, publicKey, mint!.publicKey)
+          );
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-          const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signed.serialize());
+          const signedTx = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
         case 6: {
-          const ix = createMintToInstruction(mint!.publicKey, ata!, publicKey, 1_000_000_000);
-          const tx = new Transaction().add(ix);
+          const tx = new Transaction().add(
+            createMintToInstruction(mint!.publicKey, ata!, publicKey, 1_000_000_000)
+          );
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-          const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signed.serialize());
+          const signedTx = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
           await confirmTx(sig);
           break;
         }
         case 7: {
-          const finalMint = mint!.publicKey.toBase58();
-          setTxSignature(finalMint);
-          log(`✅ Token Minted: ${finalMint}`);
+          setTxSignature(mint!.publicKey.toBase58());
+          log(`✅ Token Minted: ${mint!.publicKey.toBase58()}`);
           break;
         }
       }
       setCurrentStep((prev) => prev + 1);
     } catch (err: any) {
-      console.error('Error at step', currentStep, err);
-      setError(err.message || 'Unknown Error');
+      setError(err.message);
       log(`❌ Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
-  }, [currentStep, publicKey, signTransaction, mint, lamports, ata]);
+  }, [currentStep, mint, ata, lamports, publicKey, signTransaction]);
 
   const resetFlow = () => {
     setCurrentStep(0);
@@ -182,43 +183,40 @@ export const CreateToken: FC = () => {
     <div className="p-6 max-w-xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
-        <button onClick={resetFlow} className="text-xs underline text-red-500">Reset</button>
+        <button onClick={resetFlow} className="text-xs text-red-500 underline">Reset</button>
       </div>
 
-      <div className="flex space-x-1 mb-2">
+      <div className="flex space-x-1 mb-3">
         {steps.map((_, i) => (
-          <div
-            key={i}
-            className={`h-2 w-full rounded-full transition-all duration-300 ${
-              i === currentStep ? 'bg-yellow-400 animate-pulse' :
-              i < currentStep ? 'bg-green-500' : 'bg-gray-300'
-            }`}
-          />
+          <div key={i} className={`h-2 w-full rounded-full ${
+            i === currentStep ? 'bg-yellow-400 animate-pulse' :
+            i < currentStep ? 'bg-green-500' : 'bg-gray-300'
+          }`} />
         ))}
       </div>
 
-      {error && <p className="text-sm text-red-600">Error: {error}</p>}
+      {error && <p className="text-red-600 text-sm">❌ {error}</p>}
 
-      <div className="flex space-x-4">
+      <div className="flex gap-4">
         <button
           onClick={goBack}
           disabled={currentStep === 0 || loading}
-          className="px-4 py-2 bg-gray-500 text-white rounded disabled:opacity-50"
+          className="bg-gray-600 px-4 py-2 text-white rounded disabled:opacity-50"
         >
           ⬅ Back
         </button>
         {currentStep === 0 ? (
           <button
             onClick={generateMintKeypair}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
+            className="bg-blue-600 px-4 py-2 text-white rounded"
           >
-            🔐 Generate Mint
+            🔐 Generate Mint Keypair
           </button>
         ) : (
           <button
             onClick={runStep}
-            disabled={!publicKey || loading || currentStep >= steps.length}
-            className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
+            disabled={loading || !publicKey || currentStep >= steps.length}
+            className="bg-black px-4 py-2 text-white rounded hover:bg-gray-800 disabled:opacity-50"
           >
             {loading ? 'Processing...' : currentStep >= steps.length ? 'All Done' : 'Next Step ➡️'}
           </button>
@@ -234,16 +232,16 @@ export const CreateToken: FC = () => {
             target="_blank"
             rel="noopener noreferrer"
           >
-            View on Solana Explorer
+            View on Explorer
           </a>
         </div>
       )}
 
       {logs.length > 0 && (
-        <div className="bg-black text-white text-xs p-3 rounded mt-4 max-h-64 overflow-y-auto font-mono space-y-1">
-          <p className="font-bold text-green-400 mb-1">📜 Transaction Log</p>
-          {logs.map((line, i) => (
-            <p key={i}>{line}</p>
+        <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">
+          <p className="text-green-400 font-bold mb-2">🪵 Transaction Log</p>
+          {logs.map((entry, i) => (
+            <p key={i}>{entry}</p>
           ))}
         </div>
       )}
