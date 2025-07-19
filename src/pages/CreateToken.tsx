@@ -45,9 +45,7 @@ export const CreateToken: FC = () => {
     localStorage.setItem('currentStep', currentStep.toString());
   }, [currentStep]);
 
-  const log = (msg: string) => {
-    setLogs((prev) => [...prev, msg]);
-  };
+  const log = (msg: string) => setLogs((prev) => [...prev, msg]);
 
   const confirmTx = async (sig: string) => {
     log(`📤 Sent: ${sig}`);
@@ -104,8 +102,8 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
-          const signedTx = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signedTx.serialize());
+          const userSigned = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(userSigned.serialize());
           await confirmTx(sig);
           break;
         }
@@ -116,8 +114,8 @@ export const CreateToken: FC = () => {
           tx.feePayer = publicKey;
           tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           tx.partialSign(mint!);
-          const signedTx = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signedTx.serialize());
+          const userSigned = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(userSigned.serialize());
           await confirmTx(sig);
           break;
         }
