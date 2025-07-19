@@ -173,6 +173,7 @@ export const CreateToken: FC = () => {
   };
 
   return (
+    <>
     <div className="p-6 max-w-xl mx-auto space-y-6 transition-all duration-500 ease-in-out">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep]}</h1>
@@ -239,6 +240,10 @@ export const CreateToken: FC = () => {
         <p>{info}</p>
         {error && <p className="text-red-400 mt-2">{error}</p>}
       </div>
+  );
+};
+
+    </>
   );
 };
 
