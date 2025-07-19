@@ -1,5 +1,3 @@
-// ✅ JAL CreateToken Flow (Step-by-Step, Resumable, Animated)
-
 import type { FC } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -8,7 +6,7 @@ import {
   Transaction,
   SystemProgram,
   Keypair,
-  PublicKey,
+  PublicKey
 } from '@solana/web3.js';
 import {
   MINT_SIZE,
@@ -41,33 +39,39 @@ export const CreateToken: FC = () => {
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [info, setInfo] = useState<string>('');
+  const [log, setLog] = useState<string[]>([]);
+  const [info, setInfo] = useState<string>(''); // latest message
 
   useEffect(() => {
     localStorage.setItem('currentStep', currentStep.toString());
   }, [currentStep]);
 
+  const logMessage = (msg: string) => {
+    setLog((prev) => [...prev, msg]);
+    setInfo(msg);
+  };
+
   const confirmTx = async (sig: string) => {
-    setInfo(`Transaction submitted. Signature: ${sig}`);
+    logMessage(`📤 Sent: ${sig}`);
     const start = Date.now();
     const timeout = 30000;
 
     while (Date.now() - start < timeout) {
       const { value } = await connection.getSignatureStatus(sig);
       if (value?.confirmationStatus === 'confirmed' || value?.confirmationStatus === 'finalized') {
-        setInfo(`✅ Confirmed. Tx: ${sig}`);
+        logMessage(`✅ Confirmed: ${sig}`);
         return sig;
       }
       await new Promise(res => setTimeout(res, 1000));
     }
 
-    throw new Error(`Transaction was not confirmed in 30 seconds. Check signature ${sig} on Solana Explorer.`);
+    throw new Error(`⏱ Timeout: Tx not confirmed in 30s — check ${sig} on Explorer.`);
   };
 
   const generateMintKeypair = () => {
     const mintKeypair = Keypair.generate();
     setMint(mintKeypair);
-    setInfo(`Mint Address: ${mintKeypair.publicKey.toBase58()}`);
+    logMessage(`🔐 Mint Keypair Generated: ${mintKeypair.publicKey.toBase58()}`);
     setCurrentStep((prev) => prev + 1);
   };
 
@@ -85,7 +89,7 @@ export const CreateToken: FC = () => {
         case 1: {
           const rent = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
           setLamports(rent);
-          setInfo(`Rent required: ${rent} lamports`);
+          logMessage(`💸 Rent Exemption: ${rent} lamports`);
           break;
         }
         case 2: {
@@ -119,7 +123,7 @@ export const CreateToken: FC = () => {
         case 4: {
           const ataAddr = await getAssociatedTokenAddress(mint!.publicKey, publicKey);
           setAta(ataAddr);
-          setInfo(`ATA: ${ataAddr.toBase58()}`);
+          logMessage(`📦 ATA Derived: ${ataAddr.toBase58()}`);
           break;
         }
         case 5: {
@@ -143,8 +147,9 @@ export const CreateToken: FC = () => {
           break;
         }
         case 7: {
-          setTxSignature(`Completed. Mint: ${mint!.publicKey.toBase58()}`);
-          setInfo(`✅ Token Minted Successfully!`);
+          const msg = `✅ Token Minted: ${mint!.publicKey.toBase58()}`;
+          setTxSignature(msg);
+          logMessage(msg);
           break;
         }
       }
@@ -152,6 +157,7 @@ export const CreateToken: FC = () => {
     } catch (err: any) {
       console.error('Error at step', currentStep, err);
       setError(err.message || 'Step failed');
+      logMessage(`❌ Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -165,6 +171,7 @@ export const CreateToken: FC = () => {
     setTxSignature(null);
     setError(null);
     setInfo('');
+    setLog([]);
     localStorage.removeItem('currentStep');
   };
 
@@ -237,7 +244,9 @@ export const CreateToken: FC = () => {
 
       <div className="bg-black text-white text-xs p-3 rounded mt-4 max-h-48 overflow-y-auto font-mono">
         <p className="mb-1 font-bold text-green-400">🪵 Transaction Log</p>
-        <p>{info}</p>
+        {log.map((entry, idx) => (
+          <p key={idx}>{entry}</p>
+        ))}
         {error && <p className="text-red-400 mt-2">{error}</p>}
       </div>
     </div>
