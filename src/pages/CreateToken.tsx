@@ -1,16 +1,21 @@
 import type { FC } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, Transaction } from '@solana/web3.js';
 import {
-  createMint,
-  getOrCreateAssociatedTokenAccount,
-  mintTo,
+  TOKEN_PROGRAM_ID,
+  MINT_SIZE,
+  getMinimumBalanceForRentExemptMint,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  createInitializeMintInstruction,
+  createMintToInstruction,
 } from '@solana/spl-token';
 
 const steps = [
-  'Create Mint',
-  'Create Associated Token Account (ATA)',
+  'Create Mint Account',
+  'Initialize Mint',
+  'Create ATA',
   'Mint Tokens',
   'Done',
 ];
@@ -22,7 +27,7 @@ export const CreateToken: FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [mint, setMint] = useState<PublicKey | null>(null);
   const [ata, setAta] = useState<PublicKey | null>(null);
-  const [txSignature, setTxSignature] = useState<string | null>(null);
+  const [txSig, setTxSig] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -37,43 +42,63 @@ export const CreateToken: FC = () => {
     try {
       switch (currentStep) {
         case 0: {
-          const mintAddress = await createMint(
-            connection,
-            publicKey, // fee payer
-            publicKey, // mint authority
-            null,      // no freeze authority
-            9          // decimals
+          const mintKeypair = window.crypto.subtle.randomUUID(); // Just to trigger re-renders
+          const lamports = await getMinimumBalanceForRentExemptMint(connection);
+          const mintAccount = Keypair.generate();
+          setMint(mintAccount.publicKey);
+
+          const tx = new Transaction().add(
+            SystemProgram.createAccount({
+              fromPubkey: publicKey,
+              newAccountPubkey: mintAccount.publicKey,
+              space: MINT_SIZE,
+              lamports,
+              programId: TOKEN_PROGRAM_ID,
+            })
           );
-          setMint(mintAddress);
-          log(`🪙 Mint created: ${mintAddress.toBase58()}`);
+          tx.feePayer = publicKey;
+          tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          tx.partialSign(mintAccount);
+
+          const signedTx = await sendTransaction(tx, connection, { signers: [mintAccount] });
+          setTxSig(signedTx);
+          log(`📤 Created mint account: ${mintAccount.publicKey.toBase58()}`);
           break;
         }
+
         case 1: {
-          const ataAccount = await getOrCreateAssociatedTokenAccount(
-            connection,
-            publicKey,
-            mint!,
-            publicKey
+          const tx = new Transaction().add(
+            createInitializeMintInstruction(mint!, 9, publicKey, null)
           );
-          setAta(ataAccount.address);
-          log(`📦 ATA created: ${ataAccount.address.toBase58()}`);
+          const sig = await sendTransaction(tx, connection);
+          log(`✅ Mint initialized: ${sig}`);
           break;
         }
+
         case 2: {
-          const sig = await mintTo(
-            connection,
-            publicKey,
-            mint!,
-            ata!,
-            publicKey,
-            1_000_000_000 // 1B tokens (with 9 decimals)
+          const ataAddress = await getAssociatedTokenAddress(mint!, publicKey);
+          setAta(ataAddress);
+
+          const tx = new Transaction().add(
+            createAssociatedTokenAccountInstruction(publicKey, ataAddress, publicKey, mint!)
           );
-          setTxSignature(sig);
-          log(`✅ Minted 1B tokens: ${sig}`);
+          const sig = await sendTransaction(tx, connection);
+          log(`📦 ATA created: ${ataAddress.toBase58()}`);
           break;
         }
+
         case 3: {
-          log(`🎉 Token setup complete`);
+          const tx = new Transaction().add(
+            createMintToInstruction(mint!, ata!, publicKey, 1_000_000_000)
+          );
+          const sig = await sendTransaction(tx, connection);
+          setTxSig(sig);
+          log(`✅ Minted tokens to ATA: ${sig}`);
+          break;
+        }
+
+        case 4: {
+          log(`🎉 Token creation complete!`);
           break;
         }
       }
@@ -85,13 +110,13 @@ export const CreateToken: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [connection, currentStep, mint, ata, publicKey, sendTransaction]);
+  }, [connection, currentStep, publicKey, mint, ata, sendTransaction]);
 
   const resetFlow = () => {
     setCurrentStep(0);
     setMint(null);
     setAta(null);
-    setTxSignature(null);
+    setTxSig(null);
     setError(null);
     setLogs([]);
   };
@@ -101,15 +126,6 @@ export const CreateToken: FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Step {currentStep + 1}: {steps[currentStep] || 'Done'}</h1>
         <button onClick={resetFlow} className="text-xs text-red-500 underline">Reset</button>
-      </div>
-
-      <div className="flex space-x-1 mb-3">
-        {steps.map((_, i) => (
-          <div key={i} className={`h-2 w-full rounded-full ${
-            i === currentStep ? 'bg-yellow-400 animate-pulse' :
-            i < currentStep ? 'bg-green-500' : 'bg-gray-300'
-          }`} />
-        ))}
       </div>
 
       {error && <p className="text-red-600 text-sm">❌ {error}</p>}
@@ -123,19 +139,17 @@ export const CreateToken: FC = () => {
       </button>
 
       {mint && (
-        <p className="text-xs text-green-500 break-words">Mint Address: {mint.toBase58()}</p>
+        <p className="text-xs text-green-500 break-words">Mint: {mint.toBase58()}</p>
       )}
-
       {ata && (
-        <p className="text-xs text-green-500 break-words">Token Account: {ata.toBase58()}</p>
+        <p className="text-xs text-green-500 break-words">ATA: {ata.toBase58()}</p>
       )}
-
-      {txSignature && (
+      {txSig && (
         <a
-          href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`https://explorer.solana.com/tx/${txSig}?cluster=devnet`}
           className="text-xs text-blue-400 underline"
+          target="_blank"
+          rel="noreferrer"
         >
           View Transaction
         </a>
