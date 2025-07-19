@@ -49,10 +49,19 @@ export const CreateToken: FC = () => {
 
   const confirmTx = async (sig: string) => {
     setInfo(`Transaction submitted. Signature: ${sig}`);
-    const confirmation = await connection.confirmTransaction(sig, 'confirmed');
-    if (confirmation.value.err) throw new Error('Transaction failed');
-    setInfo(`✅ Confirmed. Tx: ${sig}`);
-    return sig;
+    const start = Date.now();
+    const timeout = 30000;
+
+    while (Date.now() - start < timeout) {
+      const { value } = await connection.getSignatureStatus(sig);
+      if (value?.confirmationStatus === 'confirmed' || value?.confirmationStatus === 'finalized') {
+        setInfo(`✅ Confirmed. Tx: ${sig}`);
+        return sig;
+      }
+      await new Promise(res => setTimeout(res, 1000));
+    }
+
+    throw new Error(`Transaction was not confirmed in 30 seconds. Check signature ${sig} on Solana Explorer.`);
   };
 
   const generateMintKeypair = () => {
