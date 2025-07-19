@@ -113,15 +113,16 @@ const CreateToken: FC = () => {
         }
 
         case 4: {
-  if (mint && ata) {
-    localStorage.setItem('mint', mint.toBase58());
-    localStorage.setItem('ata', ata.toBase58());
-  }
-  log(`🎉 Token creation complete!`);
-  break;
-}
+          if (mint && ata) {
+            localStorage.setItem('mint', mint.toBase58());
+            localStorage.setItem('ata', ata.toBase58());
+          }
+          log(`🎉 Token creation complete!`);
+          break;
+        }
+      }
 
-      setStep((s) => s + 1);
+      setStep((s) => s + 1); // ✅ FIXED: Now correctly inside the try block
     } catch (err: any) {
       setError(err.message);
       log(`❌ ${err.message}`);
@@ -171,9 +172,7 @@ const CreateToken: FC = () => {
 
       {mint && <p className="text-xs text-green-500 break-words">Mint: {mint.toBase58()}</p>}
       {ata && <p className="text-xs text-green-500 break-words">ATA: {ata.toBase58()}</p>}
-      {txSig && (
-        <p className="text-xs text-blue-400 break-words">Transaction: {txSig}</p>
-      )}
+      {txSig && <p className="text-xs text-blue-400 break-words">Transaction: {txSig}</p>}
 
       {logs.length > 0 && (
         <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">
