@@ -68,26 +68,27 @@ header .wallet-button {
   margin-top: 0.5rem;
 }
 
-/* Main area */
+/* Main content area */
 main {
   flex: 1;
   width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   padding: 2rem 1rem;
   box-sizing: border-box;
   overflow-x: hidden;
 }
 
-/* Container */
+/* Content container */
 .container {
   width: 100%;
   max-width: 640px;
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  padding-bottom: 5rem; /* spacing below the button */
+  margin-top: 3rem;      /* key fix */
+  margin-bottom: 6rem;   /* space under button */
 }
 
 /* Typography */
@@ -180,6 +181,7 @@ input:focus, textarea:focus {
   }
 
   .container {
-    padding: 0;
+    margin-top: 2rem;
+    margin-bottom: 5rem;
   }
 }
