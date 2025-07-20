@@ -29,8 +29,8 @@ function Header() {
         alt="JAL Vault Logo"
         className="w-36 h-auto object-contain"
       />
-      <div className="flex flex-col items-center gap-4">
-        <nav className="flex gap-6 text-black font-semibold text-sm justify-center">
+      <div className="w-full flex flex-col items-center gap-4">
+        <nav className="flex gap-6 text-black font-semibold text-sm">
           <Link to="/" className="hover:underline">Home</Link>
           <Link to="/create-token" className="hover:underline">Create Token</Link>
         </nav>
