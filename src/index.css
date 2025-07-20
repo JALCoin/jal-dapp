@@ -15,7 +15,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Root flow */
 html, body, #root {
   margin: 0;
   padding: 0;

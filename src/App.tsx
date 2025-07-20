@@ -8,17 +8,12 @@ function App() {
   return (
     <AppProviders>
       <Router>
-        <div className="flex flex-col items-center text-center py-6">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-32 h-32 object-contain mb-4"
-          >
-            <source src="/jal-logo.mp4" type="video/mp4" />
-          </video>
-
+        <header className="flex flex-col items-center text-center py-6 gap-4">
+          <img
+            src="/JALSOL1.gif"
+            alt="JAL Vault Logo"
+            className="w-32 h-32 object-contain"
+          />
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
             <nav className="flex gap-6 text-black font-semibold text-sm">
               <Link to="/" className="hover:underline">Home</Link>
@@ -26,7 +21,7 @@ function App() {
             </nav>
             <WalletMultiButton />
           </div>
-        </div>
+        </header>
 
         <main>
           <Routes>
@@ -48,10 +43,7 @@ function Home() {
         <p className="text-lg text-black">
           Build your vault. Transact with time. The future doesn’t ask—it mints.
         </p>
-        <Link
-          to="/create-token"
-          className="button"
-        >
+        <Link to="/create-token" className="button">
           Begin Creation ↗
         </Link>
       </div>
