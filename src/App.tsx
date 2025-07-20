@@ -32,9 +32,33 @@ function App() {
 
 function Home() {
   return (
-    <div className="text-center mt-16">
-      <h1 className="text-4xl font-bold mb-4">Welcome to JAL Token Creator</h1>
-      <p className="text-lg text-gray-700">Use the navigation above to mint your own SPL token on Solana.</p>
+    <div className="relative flex flex-col items-center justify-center min-h-screen text-center overflow-hidden bg-[#0b0f0e]">
+      {/* Digital pulse animation */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute top-0 left-0 w-full h-full object-cover opacity-20 z-0"
+      >
+        <source src="/JALSOL1.gif" type="video/mp4" />
+      </video>
+
+      {/* Content */}
+      <div className="z-10 relative space-y-6 px-4">
+        <h1 className="text-5xl font-extrabold text-white tracking-wide">
+          JAL Token Creator
+        </h1>
+        <p className="text-md text-emerald-400 max-w-xl mx-auto">
+          Build your vault. Transact with time. The future doesn’t ask—it mints.
+        </p>
+        <Link
+          to="/create-token"
+          className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition"
+        >
+          Begin Creation ↗
+        </Link>
+      </div>
     </div>
   );
 }
