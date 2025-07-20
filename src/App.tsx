@@ -31,9 +31,10 @@ function Header() {
       />
       <div className="w-full flex flex-col items-center gap-4">
         <nav className="flex gap-6 text-black font-semibold text-sm">
-          <Link to="/" className="hover:underline">Home</Link>
-          <Link to="/create-token" className="hover:underline">Create Token</Link>
-        </nav>
+  <Link to="/" className="hover:underline">Home</Link>
+  <Link to="/create-token" className="hover:underline">Create Token</Link>
+  <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+</nav>
         <div className="flex justify-center">
           <WalletMultiButton />
         </div>

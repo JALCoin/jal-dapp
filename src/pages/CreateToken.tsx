@@ -122,7 +122,7 @@ const CreateToken: FC = () => {
         }
       }
 
-      setStep((s) => s + 1); // ✅ FIXED: Now correctly inside the try block
+      setStep((s) => s + 1);
     } catch (err: any) {
       setError(err.message);
       log(`❌ ${err.message}`);
@@ -162,17 +162,36 @@ const CreateToken: FC = () => {
           {loading ? 'Processing...' : 'Next Step ➡️'}
         </button>
       ) : (
-        <button
-          onClick={goToDashboard}
-          className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800"
-        >
-          All Done
-        </button>
+        <div className="space-y-4">
+          <div className="text-xs text-green-500 break-words space-y-1">
+            <p>
+              Mint: {mint?.toBase58()}
+              <button
+                className="ml-2 text-blue-400 underline"
+                onClick={() => mint && navigator.clipboard.writeText(mint.toBase58())}
+              >
+                Copy
+              </button>
+            </p>
+            <p>
+              <a
+                href={`https://solscan.io/token/${mint?.toBase58()}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline"
+              >
+                View on Explorer ↗
+              </a>
+            </p>
+            <button
+              onClick={goToDashboard}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded mt-2"
+            >
+              View in Dashboard
+            </button>
+          </div>
+        </div>
       )}
-
-      {mint && <p className="text-xs text-green-500 break-words">Mint: {mint.toBase58()}</p>}
-      {ata && <p className="text-xs text-green-500 break-words">ATA: {ata.toBase58()}</p>}
-      {txSig && <p className="text-xs text-blue-400 break-words">Transaction: {txSig}</p>}
 
       {logs.length > 0 && (
         <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">

@@ -1,69 +1,91 @@
-import { FC, useEffect, useState } from 'react';
+// src/pages/Dashboard.tsx
+import type { FC } from 'react';
+import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { getMint } from '@solana/spl-token';
+import {
+  getParsedTokenAccountsByOwner,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
+import { Link } from 'react-router-dom';
+
+interface TokenInfo {
+  mint: string;
+  amount: string;
+  decimals: number;
+  isFinalized: boolean; // placeholder for future metadata check
+}
 
 const Dashboard: FC = () => {
   const { publicKey } = useWallet();
-  const [mintAddress, setMintAddress] = useState<string | null>(null);
-  const [ataAddress, setAtaAddress] = useState<string | null>(null);
-  const [supply, setSupply] = useState<string | null>(null);
-  const [decimals, setDecimals] = useState<number | null>(null);
-  const [authority, setAuthority] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<TokenInfo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
   useEffect(() => {
-    const storedMint = localStorage.getItem('mint');
-    const storedAta = localStorage.getItem('ata');
-    setMintAddress(storedMint);
-    setAtaAddress(storedAta);
+    const fetchTokens = async () => {
+      if (!publicKey) return;
 
-    if (storedMint) {
-      const fetchMintData = async () => {
-        try {
-          const mintInfo = await getMint(connection, new PublicKey(storedMint));
-          setSupply(mintInfo.supply.toString());
-          setDecimals(mintInfo.decimals);
-          setAuthority(mintInfo.mintAuthority?.toBase58() ?? 'None');
-        } catch (e) {
-          console.error('Failed to fetch mint info', e);
-        }
-      };
+      setLoading(true);
+      try {
+        const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
+          programId: TOKEN_PROGRAM_ID,
+        });
 
-      fetchMintData();
-    }
-  }, []);
+        const parsed: TokenInfo[] = response.value.map((accountInfo) => {
+          const info = accountInfo.account.data.parsed.info;
+          return {
+            mint: info.mint,
+            amount: info.tokenAmount.uiAmountString,
+            decimals: info.tokenAmount.decimals,
+            isFinalized: false, // ← future: check Token Metadata Program here
+          };
+        });
+
+        setTokens(parsed);
+      } catch (err) {
+        console.error('Error fetching tokens:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTokens();
+  }, [publicKey]);
 
   return (
-    <main className="container">
-      <h1 className="text-3xl font-bold mb-6">📊 Your Token Overview</h1>
+    <div className="min-h-screen bg-black text-white p-6">
+      <h1 className="text-3xl font-bold mb-6">Your Tokens</h1>
 
-      {publicKey && (
-        <p><strong>Connected Wallet:</strong> {publicKey.toBase58()}</p>
+      {loading ? (
+        <p>Loading token accounts...</p>
+      ) : tokens.length === 0 ? (
+        <p>No tokens found for this wallet.</p>
+      ) : (
+        <div className="space-y-4">
+          {tokens.map((token, idx) => (
+            <div
+              key={idx}
+              className="border border-gray-700 p-4 rounded-lg flex justify-between items-center"
+            >
+              <div>
+                <p className="font-mono text-sm text-green-400">Mint: {token.mint}</p>
+                <p className="text-sm">Amount: {token.amount}</p>
+              </div>
+              {!token.isFinalized && (
+                <Link
+                  to={`/finalize/${token.mint}`}
+                  className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md text-white text-sm"
+                >
+                  Finalize
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
       )}
-
-      {mintAddress && (
-        <>
-          <p><strong>Mint Address:</strong> {mintAddress}</p>
-          <p><strong>ATA:</strong> {ataAddress}</p>
-        </>
-      )}
-
-      {supply && decimals !== null && (
-        <>
-          <p><strong>Total Supply:</strong> {supply}</p>
-          <p><strong>Decimals:</strong> {decimals}</p>
-          <p><strong>Mint Authority:</strong> {authority}</p>
-        </>
-      )}
-
-      <hr className="my-6" />
-
-      <button disabled className="button opacity-50 cursor-not-allowed">
-        🔒 Finalize as NFT (coming next)
-      </button>
-    </main>
+    </div>
   );
 };
 
