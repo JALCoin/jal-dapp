@@ -2,11 +2,11 @@
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
 import {
-  getParsedTokenAccountsByOwner,
-  TOKEN_PROGRAM_ID,
-} from '@solana/spl-token';
+  Connection,
+  getParsedTokenAccountsByOwner, // ✅ Moved from spl-token to web3.js
+} from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token'; // ✅ Only this stays from spl-token
 import { Link } from 'react-router-dom';
 
 interface TokenInfo {
@@ -29,7 +29,7 @@ const Dashboard: FC = () => {
 
       setLoading(true);
       try {
-        const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
+        const response = await getParsedTokenAccountsByOwner(connection, publicKey, {
           programId: TOKEN_PROGRAM_ID,
         });
 
