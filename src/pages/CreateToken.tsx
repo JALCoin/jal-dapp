@@ -35,7 +35,6 @@ const CreateToken: FC = () => {
   const [step, setStep] = useState(0);
   const [mint, setMint] = useState<PublicKey | null>(null);
   const [ata, setAta] = useState<PublicKey | null>(null);
-  const [txSig, setTxSig] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +68,6 @@ const CreateToken: FC = () => {
           tx.partialSign(mintAccount);
 
           const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
-          setTxSig(sig);
           log(`📤 Mint account created: ${mintAccount.publicKey.toBase58()}`);
           log(`🔗 Tx: ${sig}`);
           break;
@@ -106,7 +104,6 @@ const CreateToken: FC = () => {
             createMintToInstruction(mint, ata, publicKey, 1_000_000_000)
           );
           const sig = await sendTransaction(tx, connection);
-          setTxSig(sig);
           log(`✅ Tokens minted`);
           log(`🔗 Tx: ${sig}`);
           break;
@@ -135,7 +132,6 @@ const CreateToken: FC = () => {
     setStep(0);
     setMint(null);
     setAta(null);
-    setTxSig(null);
     setLogs([]);
     setError(null);
   };

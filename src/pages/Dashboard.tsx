@@ -1,12 +1,8 @@
-// src/pages/Dashboard.tsx
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import {
-  Connection,
-  getParsedTokenAccountsByOwner, // ✅ Moved from spl-token to web3.js
-} from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token'; // ✅ Only this stays from spl-token
+import { Connection } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Link } from 'react-router-dom';
 
 interface TokenInfo {
@@ -29,17 +25,17 @@ const Dashboard: FC = () => {
 
       setLoading(true);
       try {
-        const response = await getParsedTokenAccountsByOwner(connection, publicKey, {
+        const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
           programId: TOKEN_PROGRAM_ID,
         });
 
-        const parsed: TokenInfo[] = response.value.map((accountInfo) => {
+        const parsed: TokenInfo[] = response.value.map((accountInfo: any) => {
           const info = accountInfo.account.data.parsed.info;
           return {
             mint: info.mint,
             amount: info.tokenAmount.uiAmountString,
             decimals: info.tokenAmount.decimals,
-            isFinalized: false, // ← future: check Token Metadata Program here
+            isFinalized: false,
           };
         });
 
