@@ -22,20 +22,58 @@ html, body, #root {
   background-color: var(--jal-bg);
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
-/* Scroll-safe area */
+/* Header layout */
+header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  gap: 2rem;
+}
+
+/* Center nav + wallet */
+header nav {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+header nav a {
+  color: black;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: underline;
+}
+
+header nav a:hover {
+  color: #111;
+}
+
+/* Wallet button block */
+header .wallet-button {
+  display: flex;
+  justify-content: center;
+}
+
+/* Main content area */
 main {
   flex: 1;
   width: 100%;
   display: flex;
   justify-content: center;
+  align-items: center;
   padding: 2rem 1rem;
   box-sizing: border-box;
   overflow-x: hidden;
 }
 
-/* Content container */
+/* General container */
 .container {
   width: 100%;
   max-width: 640px;
@@ -48,7 +86,6 @@ main {
 h1 {
   font-size: 2.5rem;
   font-weight: 800;
-  color: var(--jal-text);
   margin: 0;
   text-align: center;
 }
@@ -83,16 +120,6 @@ button:focus, .button:focus {
   outline: 2px solid var(--jal-glow);
 }
 
-/* Links */
-a {
-  color: black;
-  text-decoration: underline;
-}
-
-a:hover {
-  color: #111;
-}
-
 /* Inputs */
 input, textarea {
   background-color: white;
@@ -125,5 +152,10 @@ input:focus, textarea:focus {
 
   .container {
     padding: 0;
+  }
+
+  header nav {
+    flex-direction: column;
+    align-items: center;
   }
 }
