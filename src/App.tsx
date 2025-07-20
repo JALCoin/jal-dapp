@@ -8,21 +8,7 @@ function App() {
   return (
     <AppProviders>
       <Router>
-        <header className="flex flex-col items-center text-center py-6 gap-4">
-          <img
-            src="/JALSOL1.gif"
-            alt="JAL Vault Logo"
-            className="w-32 h-32 object-contain"
-          />
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-            <nav className="flex gap-6 text-black font-semibold text-sm">
-              <Link to="/" className="hover:underline">Home</Link>
-              <Link to="/create-token" className="hover:underline">Create Token</Link>
-            </nav>
-            <WalletMultiButton />
-          </div>
-        </header>
-
+        <Header />
         <main>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -32,6 +18,25 @@ function App() {
         </main>
       </Router>
     </AppProviders>
+  );
+}
+
+function Header() {
+  return (
+    <header className="flex flex-col items-center text-center py-6 gap-4">
+      <img
+        src="/JALSOL1.gif"
+        alt="JAL Vault Logo"
+        className="w-36 h-auto object-contain"
+      />
+      <div className="flex flex-col items-center gap-3">
+        <nav className="flex gap-6 text-black font-semibold text-sm">
+          <Link to="/" className="hover:underline">Home</Link>
+          <Link to="/create-token" className="hover:underline">Create Token</Link>
+        </nav>
+        <WalletMultiButton />
+      </div>
+    </header>
   );
 }
 
