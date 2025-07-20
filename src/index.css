@@ -19,14 +19,18 @@ body, #root {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
   background-color: var(--jal-bg);
-  display: flex;
-  flex-direction: column;
+  overflow-x: hidden;
 }
 
 main {
-  flex: 1;
   width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
 }
 
 .page-wrapper {
@@ -35,8 +39,9 @@ main {
   align-items: center;
   text-align: center;
   gap: 2rem;
-  padding: 3rem 1.5rem;
   max-width: 720px;
+  width: 100%;
+  padding: 3rem 1.5rem;
   margin: 0 auto;
 }
 
@@ -87,7 +92,7 @@ a:hover {
   color: #0dd79d;
 }
 
-/* Inputs (future-proof) */
+/* Inputs */
 input, textarea {
   background-color: #1a1a1a;
   color: white;
@@ -103,14 +108,26 @@ input:focus, textarea:focus {
   border-color: var(--jal-green);
 }
 
+/* Media + logo alignment */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
 /* Responsive */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   h1 {
     font-size: 2.25rem;
   }
 
   p {
     font-size: 1rem;
+  }
+
+  main {
+    padding: 1.5rem;
   }
 
   .page-wrapper {
