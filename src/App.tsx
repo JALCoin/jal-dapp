@@ -32,28 +32,33 @@ function App() {
 
 function Home() {
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen text-center overflow-hidden bg-[#0b0f0e]">
-      {/* Brand GIF as motion background */}
-      <img
-        src="/JALSOL1.gif"
-        alt="digital motion"
-        className="absolute top-0 left-0 w-full h-full object-cover opacity-20 z-0"
-      />
+    <div className="min-h-screen bg-[#0b0f0e] flex flex-col justify-center items-center px-4">
+      <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-10">
+        
+        {/* Logo side */}
+        <div className="w-full md:w-1/2 flex justify-center">
+          <img
+            src="/JALSOL1.gif"
+            alt="JAL SOL"
+            className="max-w-full h-auto rounded-lg shadow-xl"
+          />
+        </div>
 
-      {/* Content */}
-      <div className="z-10 relative space-y-6 px-4">
-        <h1 className="text-5xl font-extrabold text-white tracking-wide">
-          JAL Token Creator
-        </h1>
-        <p className="text-md text-[#11f1a7] max-w-xl mx-auto">
-          Build your vault. Transact with time. The future doesn’t ask—it mints.
-        </p>
-        <Link
-          to="/create-token"
-          className="px-6 py-3 bg-[#11f1a7] hover:bg-emerald-400 text-black font-semibold rounded-lg transition"
-        >
-          Begin Creation ↗
-        </Link>
+        {/* Text + Action side */}
+        <div className="w-full md:w-1/2 text-center md:text-left space-y-6">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white">
+            JAL Token Creator
+          </h1>
+          <p className="text-lg text-[#11f1a7]">
+            Build your vault. Transact with time. The future doesn’t ask—it mints.
+          </p>
+          <Link
+            to="/create-token"
+            className="inline-block bg-[#11f1a7] hover:bg-emerald-400 text-black font-semibold py-3 px-6 rounded-lg transition"
+          >
+            Begin Creation ↗
+          </Link>
+        </div>
       </div>
     </div>
   );
