@@ -1,8 +1,8 @@
 :root {
   --jal-green: #11f1a7;
-  --jal-bg: #0b0f0e;
-  --jal-text: #ffffff;
-  --jal-muted: rgba(255, 255, 255, 0.6);
+  --jal-bg: #11f1a7;
+  --jal-text: #000000;
+  --jal-muted: rgba(0, 0, 0, 0.6);
   --jal-glow: #0ffdd4;
 
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -19,39 +19,33 @@ body, #root {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
   background-color: var(--jal-bg);
-  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 main {
+  flex: 1;
   width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 2rem;
+  padding: 2rem 1rem;
 }
 
-.page-wrapper {
+.container {
+  width: 100%;
+  max-width: 640px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
   gap: 2rem;
-  max-width: 720px;
-  width: 100%;
-  padding: 3rem 1.5rem;
-  margin: 0 auto;
 }
 
 /* Typography */
 h1 {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 800;
   color: var(--jal-text);
   margin: 0;
-  letter-spacing: -0.02em;
 }
 
 p {
@@ -63,8 +57,8 @@ p {
 
 /* Buttons */
 button, .button {
-  background-color: var(--jal-green);
-  color: black;
+  background-color: black;
+  color: var(--jal-green);
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
@@ -75,7 +69,7 @@ button, .button {
 }
 
 button:hover, .button:hover {
-  background-color: #0dd79d;
+  background-color: #222;
 }
 
 button:focus, .button:focus {
@@ -84,18 +78,18 @@ button:focus, .button:focus {
 
 /* Links */
 a {
-  color: var(--jal-green);
-  text-decoration: none;
+  color: black;
+  text-decoration: underline;
 }
 
 a:hover {
-  color: #0dd79d;
+  color: #111;
 }
 
 /* Inputs */
 input, textarea {
-  background-color: #1a1a1a;
-  color: white;
+  background-color: white;
+  color: black;
   border: 1px solid #333;
   padding: 0.75rem;
   border-radius: 6px;
@@ -104,33 +98,21 @@ input, textarea {
 }
 
 input:focus, textarea:focus {
-  outline: 2px solid var(--jal-green);
-  border-color: var(--jal-green);
+  outline: 2px solid black;
+  border-color: black;
 }
 
-/* Media + logo alignment */
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  object-fit: contain;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
+/* Mobile Adjustments */
+@media (max-width: 600px) {
   h1 {
-    font-size: 2.25rem;
+    font-size: 2rem;
   }
 
   p {
     font-size: 1rem;
   }
 
-  main {
-    padding: 1.5rem;
-  }
-
-  .page-wrapper {
-    padding: 2rem 1rem;
+  .container {
+    padding: 1.5rem 1rem;
   }
 }

@@ -32,36 +32,25 @@ function App() {
 
 function Home() {
   return (
-    <div className="min-h-screen bg-[#0b0f0e] flex flex-col justify-center items-center px-4">
-      <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-10">
-        
-        {/* Logo side */}
-        <div className="w-full md:w-1/2 flex justify-center">
-          <img
-            src="/JALSOL1.gif"
-            alt="JAL SOL"
-            className="max-w-full h-auto rounded-lg shadow-xl"
-          />
-        </div>
-
-        {/* Text + Action side */}
-        <div className="w-full md:w-1/2 text-center md:text-left space-y-6">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white">
-            JAL Token Creator
-          </h1>
-          <p className="text-lg text-[#11f1a7]">
-            Build your vault. Transact with time. The future doesn’t ask—it mints.
-          </p>
-          <Link
-            to="/create-token"
-            className="inline-block bg-[#11f1a7] hover:bg-emerald-400 text-black font-semibold py-3 px-6 rounded-lg transition"
-          >
-            Begin Creation ↗
-          </Link>
-        </div>
+    <main className="bg-[#11f1a7] min-h-screen w-full flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md flex flex-col items-center text-center gap-8">
+        <img
+          src="/JALSOL1.gif"
+          alt="JAL Vault"
+          className="logo animated"
+        />
+        <h1 className="text-4xl font-extrabold text-black">JAL Token Creator</h1>
+        <p className="text-lg text-black">
+          Build your vault. Transact with time. The future doesn’t ask—it mints.
+        </p>
+        <Link
+          to="/create-token"
+          className="button"
+        >
+          Begin Creation ↗
+        </Link>
       </div>
-    </div>
+    </main>
   );
 }
-
 export default App;
