@@ -25,7 +25,7 @@ html, body, #root {
   align-items: center;
 }
 
-/* Header */
+/* Header layout */
 header {
   width: 100%;
   display: flex;
@@ -38,22 +38,23 @@ header {
 
 header img {
   width: 100%;
-  max-width: 200px;
+  max-width: 320px; /* increased for visibility */
   height: auto;
   object-fit: contain;
 }
 
+/* Nav + wallet */
 header nav {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 header nav a {
   color: black;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1rem;
   text-decoration: underline;
 }
 
@@ -67,7 +68,7 @@ header .wallet-button {
   margin-top: 0.5rem;
 }
 
-/* Main content area */
+/* Main area */
 main {
   flex: 1;
   width: 100%;
@@ -90,14 +91,14 @@ main {
 
 /* Typography */
 h1 {
-  font-size: 2.5rem;
+  font-size: 2.75rem;
   font-weight: 800;
   margin: 0;
   text-align: center;
 }
 
 p {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   color: var(--jal-muted);
   margin: 0;
   line-height: 1.6;
@@ -142,7 +143,7 @@ input:focus, textarea:focus {
   border-color: black;
 }
 
-/* Mobile */
+/* Responsive */
 @media (max-width: 600px) {
   h1 {
     font-size: 2rem;
@@ -158,12 +159,13 @@ input:focus, textarea:focus {
   }
 
   header img {
-    max-width: 140px;
+    max-width: 200px;
   }
 
   nav {
     flex-direction: column;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 1rem;
   }
 
   .wallet-button {
