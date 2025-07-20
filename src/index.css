@@ -15,7 +15,8 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body, #root {
+/* Root flow */
+html, body, #root {
   margin: 0;
   padding: 0;
   min-height: 100vh;
@@ -24,14 +25,18 @@ body, #root {
   flex-direction: column;
 }
 
+/* Scroll-safe area */
 main {
   flex: 1;
   width: 100%;
   display: flex;
   justify-content: center;
   padding: 2rem 1rem;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
+/* Content container */
 .container {
   width: 100%;
   max-width: 640px;
@@ -46,6 +51,7 @@ h1 {
   font-weight: 800;
   color: var(--jal-text);
   margin: 0;
+  text-align: center;
 }
 
 p {
@@ -53,6 +59,7 @@ p {
   color: var(--jal-muted);
   margin: 0;
   line-height: 1.6;
+  text-align: center;
 }
 
 /* Buttons */
@@ -66,6 +73,7 @@ button, .button {
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  text-align: center;
 }
 
 button:hover, .button:hover {
@@ -102,7 +110,7 @@ input:focus, textarea:focus {
   border-color: black;
 }
 
-/* Mobile Adjustments */
+/* Responsive */
 @media (max-width: 600px) {
   h1 {
     font-size: 2rem;
@@ -112,7 +120,11 @@ input:focus, textarea:focus {
     font-size: 1rem;
   }
 
-  .container {
+  main {
     padding: 1.5rem 1rem;
+  }
+
+  .container {
+    padding: 0;
   }
 }
