@@ -23,18 +23,20 @@ function App() {
 
 function Header() {
   return (
-    <header className="flex flex-col items-center text-center py-6 gap-4">
+    <header className="flex flex-col items-center text-center py-6 gap-6">
       <img
         src="/JALSOL1.gif"
         alt="JAL Vault Logo"
         className="w-36 h-auto object-contain"
       />
-      <div className="flex flex-col items-center gap-3">
-        <nav className="flex gap-6 text-black font-semibold text-sm">
+      <div className="flex flex-col items-center gap-4">
+        <nav className="flex gap-6 text-black font-semibold text-sm justify-center">
           <Link to="/" className="hover:underline">Home</Link>
           <Link to="/create-token" className="hover:underline">Create Token</Link>
         </nav>
-        <WalletMultiButton />
+        <div className="flex justify-center">
+          <WalletMultiButton />
+        </div>
       </div>
     </header>
   );
