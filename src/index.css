@@ -38,7 +38,7 @@ header {
 
 header img {
   width: 100%;
-  max-width: 320px; /* increased for visibility */
+  max-width: 620px; /* increased for visibility */
   height: auto;
   object-fit: contain;
 }
