@@ -1,12 +1,15 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --jal-green: #11f1a7;
+  --jal-bg: #0b0f0e;
+  --jal-text: #ffffff;
+  --jal-muted: rgba(255, 255, 255, 0.6);
+  --jal-glow: #0ffdd4;
+
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-weight: 400;
   line-height: 1.5;
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
+  background-color: var(--jal-bg);
+  color: var(--jal-text);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -14,80 +17,103 @@
 
 body, #root {
   margin: 0;
+  padding: 0;
   min-height: 100vh;
+  background-color: var(--jal-bg);
   display: flex;
   flex-direction: column;
-  background-color: inherit;
 }
 
-/* Page layout */
 main {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
 }
 
-/* App wrapper for pages */
 .page-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 1.5rem;
-  max-width: 640px;
-  width: 100%;
-  padding: 2rem;
+  gap: 2rem;
+  padding: 3rem 1.5rem;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
-/* UI elements */
+/* Typography */
 h1 {
-  font-size: 2rem;
-  font-weight: bold;
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--jal-text);
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
-button {
+p {
+  font-size: 1.125rem;
+  color: var(--jal-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Buttons */
+button, .button {
+  background-color: var(--jal-green);
+  color: black;
+  padding: 0.75rem 1.5rem;
   font-size: 1rem;
-  font-weight: 500;
-  padding: 0.6em 1.2em;
+  font-weight: 600;
+  border: none;
   border-radius: 8px;
-  border: 1px solid transparent;
-  background-color: #1a1a1a;
-  color: white;
   cursor: pointer;
-  transition: border-color 0.25s, background-color 0.25s;
+  transition: background-color 0.3s ease;
 }
 
-button:hover {
-  border-color: #646cff;
+button:hover, .button:hover {
+  background-color: #0dd79d;
 }
 
-button:focus {
-  outline: 4px auto -webkit-focus-ring-color;
+button:focus, .button:focus {
+  outline: 2px solid var(--jal-glow);
 }
 
+/* Links */
 a {
-  color: #646cff;
+  color: var(--jal-green);
   text-decoration: none;
 }
 
 a:hover {
-  color: #535bf2;
+  color: #0dd79d;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+/* Inputs (future-proof) */
+input, textarea {
+  background-color: #1a1a1a;
+  color: white;
+  border: 1px solid #333;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  width: 100%;
+}
+
+input:focus, textarea:focus {
+  outline: 2px solid var(--jal-green);
+  border-color: var(--jal-green);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  h1 {
+    font-size: 2.25rem;
   }
 
-  button {
-    background-color: #f9f9f9;
-    color: black;
+  p {
+    font-size: 1rem;
   }
 
-  a:hover {
-    color: #747bff;
+  .page-wrapper {
+    padding: 2rem 1rem;
   }
 }
