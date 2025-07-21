@@ -77,9 +77,31 @@ const Dashboard: FC = () => {
             {tokens.map((token, idx) => (
               <div key={idx} className="token-card">
                 <div className="token-info">
-                  <p><strong>Mint:</strong> <span className="mono">{token.mint}</span></p>
-                  <p><strong>Amount:</strong> {token.amount}</p>
+                  <p className="token-mint">
+                    <strong>Mint:</strong>{' '}
+                    <span className="mono">{token.mint}</span>
+                    <button
+                      className="copy-btn"
+                      onClick={() => navigator.clipboard.writeText(token.mint)}
+                      title="Copy Mint Address"
+                    >
+                      📋
+                    </button>
+                  </p>
+                  <p>
+                    <strong>Amount:</strong> {token.amount}
+                  </p>
                 </div>
+
+                <a
+                  href={`https://solscan.io/token/${token.mint}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="explorer-link"
+                >
+                  View on Solscan ↗
+                </a>
+
                 {!token.isFinalized && (
                   <Link to={`/finalize/${token.mint}`} className="button">
                     Finalize

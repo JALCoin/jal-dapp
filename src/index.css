@@ -213,6 +213,37 @@ input:focus, textarea:focus {
   color: #222;
 }
 
+/* Mint address + copy icon */
+.token-mint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.copy-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  color: var(--jal-text);
+  transition: transform 0.2s ease;
+}
+
+.copy-btn:hover {
+  transform: scale(1.2);
+}
+
+/* External link */
+.explorer-link {
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  color: var(--jal-muted);
+  text-decoration: underline;
+  display: inline-block;
+}
+
 .token-card .button {
   margin-top: 0.75rem;
   width: fit-content;
