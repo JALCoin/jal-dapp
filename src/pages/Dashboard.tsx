@@ -73,21 +73,21 @@ const Dashboard: FC = () => {
         ) : tokens.length === 0 ? (
           <p>No tokens created by this wallet.</p>
         ) : (
-          tokens.map((token, idx) => (
-            <div key={idx} style={{ borderTop: '1px solid rgba(0,0,0,0.2)', paddingTop: '1rem' }}>
-              <p style={{ wordBreak: 'break-word' }}>
-                <strong>Mint:</strong> {token.mint}
-              </p>
-              <p>
-                <strong>Amount:</strong> {token.amount}
-              </p>
-              {!token.isFinalized && (
-                <Link to={`/finalize/${token.mint}`} className="button">
-                  Finalize
-                </Link>
-              )}
-            </div>
-          ))
+          <div className="token-list">
+            {tokens.map((token, idx) => (
+              <div key={idx} className="token-card">
+                <div className="token-info">
+                  <p><strong>Mint:</strong> <span className="mono">{token.mint}</span></p>
+                  <p><strong>Amount:</strong> {token.amount}</p>
+                </div>
+                {!token.isFinalized && (
+                  <Link to={`/finalize/${token.mint}`} className="button">
+                    Finalize
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </main>
