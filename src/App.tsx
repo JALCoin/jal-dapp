@@ -23,19 +23,18 @@ function App() {
 
 function Header() {
   return (
-    <header className="flex flex-col items-center text-center py-6 gap-6">
+    <header>
       <img
         src="/JALSOL1.gif"
         alt="JAL Vault Logo"
-        className="w-36 h-auto object-contain"
       />
-      <div className="w-full flex flex-col items-center gap-4">
-        <nav className="flex gap-6 text-black font-semibold text-sm">
-  <Link to="/" className="hover:underline">Home</Link>
-  <Link to="/create-token" className="hover:underline">Create Token</Link>
-  <Link to="/dashboard" className="hover:underline">Dashboard</Link>
-</nav>
-        <div className="flex justify-center">
+      <div>
+        <nav>
+          <Link to="/">Home</Link>
+          <Link to="/create-token">Create Token</Link>
+          <Link to="/dashboard">Dashboard</Link>
+        </nav>
+        <div className="wallet-button">
           <WalletMultiButton />
         </div>
       </div>
@@ -45,12 +44,10 @@ function Header() {
 
 function Home() {
   return (
-    <main className="bg-[#11f1a7] min-h-screen w-full flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md flex flex-col items-center text-center gap-8">
-        <h1 className="text-4xl font-extrabold text-black">JAL Token Creator</h1>
-        <p className="text-lg text-black">
-          Build your vault. Transact with time. The future doesn’t ask—it mints.
-        </p>
+    <main>
+      <div className="container">
+        <h1>JAL Token Creator</h1>
+        <p>Build your vault. Transact with time. The future doesn’t ask—it mints.</p>
         <Link to="/create-token" className="button">
           Begin Creation ↗
         </Link>

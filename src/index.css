@@ -41,6 +41,7 @@ header img {
   max-width: 720px;
   height: auto;
   object-fit: contain;
+  filter: drop-shadow(0 0 8px var(--jal-glow));
 }
 
 /* Nav + wallet */
@@ -87,8 +88,8 @@ main {
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  margin-top: 3rem;      /* key fix */
-  margin-bottom: 6rem;   /* space under button */
+  margin-top: 3rem;
+  margin-bottom: 6rem;
 }
 
 /* Typography */
@@ -120,6 +121,7 @@ button, .button {
   transition: background-color 0.3s ease;
   text-align: center;
   margin-top: 1rem;
+  text-decoration: none;
 }
 
 button:hover, .button:hover {
