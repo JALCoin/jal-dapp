@@ -23,6 +23,22 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* Subtle floating watermark */
+body::after {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: url('/JALSOL1.gif') no-repeat center center;
+  background-size: 500px;
+  opacity: 0.04;
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* Header layout */
@@ -34,6 +50,7 @@ header {
   text-align: center;
   padding: 2rem 1rem;
   gap: 2rem;
+  z-index: 1;
 }
 
 header img {
@@ -42,6 +59,18 @@ header img {
   height: auto;
   object-fit: contain;
   filter: drop-shadow(0 0 8px var(--jal-glow));
+  animation: pulse 3s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 6px var(--jal-glow));
+  }
+  50% {
+    transform: scale(1.015);
+    filter: drop-shadow(0 0 14px var(--jal-glow));
+  }
 }
 
 /* Nav + wallet */
@@ -79,6 +108,8 @@ main {
   padding: 2rem 1rem;
   box-sizing: border-box;
   overflow-x: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 /* Content container */
@@ -90,6 +121,8 @@ main {
   gap: 2rem;
   margin-top: 3rem;
   margin-bottom: 6rem;
+  position: relative;
+  z-index: 1;
 }
 
 /* Typography */
@@ -118,7 +151,7 @@ button, .button {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
   text-align: center;
   margin-top: 1rem;
   text-decoration: none;
@@ -126,6 +159,7 @@ button, .button {
 
 button:hover, .button:hover {
   background-color: #222;
+  box-shadow: 0 0 8px var(--jal-glow), 0 0 16px var(--jal-glow);
 }
 
 button:focus, .button:focus {
