@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Link } from 'react-router-dom';
 
@@ -9,7 +9,7 @@ interface TokenInfo {
   mint: string;
   amount: string;
   decimals: number;
-  isFinalized: boolean; // placeholder for future metadata check
+  isFinalized: boolean;
 }
 
 const Dashboard: FC = () => {
@@ -29,19 +29,33 @@ const Dashboard: FC = () => {
           programId: TOKEN_PROGRAM_ID,
         });
 
-        const parsed: TokenInfo[] = response.value.map((accountInfo: any) => {
-          const info = accountInfo.account.data.parsed.info;
-          return {
-            mint: info.mint,
-            amount: info.tokenAmount.uiAmountString,
-            decimals: info.tokenAmount.decimals,
-            isFinalized: false,
-          };
-        });
+        const candidateMints = response.value.map((acc: any) => acc.account.data.parsed.info.mint);
 
-        setTokens(parsed);
+        const filteredTokens: TokenInfo[] = [];
+
+        for (const mint of candidateMints) {
+          const mintPubkey = new PublicKey(mint);
+          const mintInfo = await connection.getParsedAccountInfo(mintPubkey);
+          const parsed = (mintInfo.value?.data as any)?.parsed?.info;
+
+          if (parsed?.mintAuthority === publicKey.toBase58()) {
+            const tokenAccount = response.value.find((acc: any) =>
+              acc.account.data.parsed.info.mint === mint
+            );
+            const tokenInfo = tokenAccount?.account.data.parsed.info;
+
+            filteredTokens.push({
+              mint,
+              amount: tokenInfo.tokenAmount.uiAmountString,
+              decimals: tokenInfo.tokenAmount.decimals,
+              isFinalized: false,
+            });
+          }
+        }
+
+        setTokens(filteredTokens);
       } catch (err) {
-        console.error('Error fetching tokens:', err);
+        console.error('Error filtering tokens:', err);
       } finally {
         setLoading(false);
       }
@@ -52,12 +66,12 @@ const Dashboard: FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
-      <h1 className="text-3xl font-bold mb-6">Your Tokens</h1>
+      <h1 className="text-3xl font-bold mb-6">Your Created Tokens</h1>
 
       {loading ? (
         <p>Loading token accounts...</p>
       ) : tokens.length === 0 ? (
-        <p>No tokens found for this wallet.</p>
+        <p>No tokens created by this wallet.</p>
       ) : (
         <div className="space-y-4">
           {tokens.map((token, idx) => (
