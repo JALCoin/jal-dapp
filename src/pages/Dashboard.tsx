@@ -63,40 +63,46 @@ const Dashboard: FC = () => {
 
     fetchTokens();
   }, [publicKey]);
-
-  return (
-    <div className="min-h-screen bg-black text-white p-6">
-      <h1 className="text-3xl font-bold mb-6">Your Created Tokens</h1>
+return (
+  <div className="min-h-screen bg-black text-white px-4 py-8">
+    <div className="max-w-4xl mx-auto space-y-8">
+      <h1 className="text-3xl font-bold text-center">Your Created Tokens</h1>
 
       {loading ? (
-        <p>Loading token accounts...</p>
+        <p className="text-center">Loading token accounts...</p>
       ) : tokens.length === 0 ? (
-        <p>No tokens created by this wallet.</p>
+        <p className="text-center text-gray-400">No tokens created by this wallet.</p>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {tokens.map((token, idx) => (
             <div
               key={idx}
-              className="border border-gray-700 p-4 rounded-lg flex justify-between items-center"
+              className="bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col justify-between shadow"
             >
-              <div>
-                <p className="font-mono text-sm text-green-400">Mint: {token.mint}</p>
-                <p className="text-sm">Amount: {token.amount}</p>
+              <div className="space-y-1">
+                <p className="text-sm font-mono text-green-400 break-words">
+                  <span className="font-semibold text-white">Mint:</span> {token.mint}
+                </p>
+                <p className="text-sm">
+                  <span className="font-semibold">Amount:</span> {token.amount}
+                </p>
               </div>
               {!token.isFinalized && (
-                <Link
-                  to={`/finalize/${token.mint}`}
-                  className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md text-white text-sm"
-                >
-                  Finalize
-                </Link>
+                <div className="mt-4">
+                  <Link
+                    to={`/finalize/${token.mint}`}
+                    className="inline-block bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-white text-sm text-center w-full"
+                  >
+                    Finalize
+                  </Link>
+                </div>
               )}
             </div>
           ))}
         </div>
       )}
     </div>
-  );
-};
+  </div>
+);
 
 export default Dashboard;
