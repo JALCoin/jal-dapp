@@ -2,22 +2,19 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import CreateToken from './pages/CreateToken';
 import Dashboard from './pages/Dashboard';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { AppProviders } from './AppProviders';
 
 function App() {
   return (
-    <AppProviders>
-      <Router>
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/create-token" element={<CreateToken />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-          </Routes>
-        </main>
-      </Router>
-    </AppProviders>
+    <Router>
+      <Header />
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/create-token" element={<CreateToken />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
+      </main>
+    </Router>
   );
 }
 
