@@ -6,7 +6,6 @@ export interface FinalizeData {
   symbol: string;
   description: string;
   imageFile: File | null;
-  lighthouseApiKey: string;
 }
 
 interface FinalizeProps {
@@ -20,15 +19,13 @@ const FinalizeTokenAsNFT: FC<FinalizeProps> = ({ mint, onClose, onSubmit }) => {
   const [symbol, setSymbol] = useState('');
   const [description, setDescription] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [lighthouseApiKey, setLighthouseApiKey] = useState('');
 
   return (
     <div style={overlayStyle}>
       <div className="container" style={modalStyle}>
         <h1>Finalize Token</h1>
         <p style={{ marginBottom: '1.5rem' }}>
-          <strong>Mint:</strong>{' '}
-          <span style={{ wordBreak: 'break-word' }}>{mint}</span>
+          <strong>Mint:</strong> <span style={{ wordBreak: 'break-word' }}>{mint}</span>
         </p>
 
         <div style={formStyle}>
@@ -58,24 +55,9 @@ const FinalizeTokenAsNFT: FC<FinalizeProps> = ({ mint, onClose, onSubmit }) => {
             onChange={(e) => setImageFile(e.target.files?.[0] || null)}
           />
 
-          <input
-            type="password"
-            placeholder="Lighthouse API Key"
-            value={lighthouseApiKey}
-            onChange={(e) => setLighthouseApiKey(e.target.value)}
-          />
-
           <button
             className="button"
-            onClick={() =>
-              onSubmit({
-                name,
-                symbol,
-                description,
-                imageFile,
-                lighthouseApiKey,
-              })
-            }
+            onClick={() => onSubmit({ name, symbol, description, imageFile })}
           >
             Upload & Finalize
           </button>

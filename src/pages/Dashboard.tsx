@@ -5,7 +5,6 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import type { FinalizeData } from '../components/FinalizeTokenAsNFT';
 import FinalizeTokenAsNFT from '../components/FinalizeTokenAsNFT';
-import { attachMetadata } from '../utils/attachMetadata';
 
 interface TokenInfo {
   mint: string;
@@ -15,7 +14,7 @@ interface TokenInfo {
 }
 
 const Dashboard: FC = () => {
-  const wallet = useWallet();
+  const { publicKey } = useWallet();
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -25,11 +24,11 @@ const Dashboard: FC = () => {
 
   useEffect(() => {
     const fetchTokens = async () => {
-      if (!wallet.publicKey) return;
+      if (!publicKey) return;
 
       setLoading(true);
       try {
-        const response = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
+        const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
           programId: TOKEN_PROGRAM_ID,
         });
 
@@ -41,9 +40,9 @@ const Dashboard: FC = () => {
           const mintInfo = await connection.getParsedAccountInfo(mintPubkey);
           const parsed = (mintInfo.value?.data as any)?.parsed?.info;
 
-          if (parsed?.mintAuthority === wallet.publicKey.toBase58()) {
-            const tokenAccount = response.value.find(
-              (acc: any) => acc.account.data.parsed.info.mint === mint
+          if (parsed?.mintAuthority === publicKey.toBase58()) {
+            const tokenAccount = response.value.find((acc: any) =>
+              acc.account.data.parsed.info.mint === mint
             );
             const tokenInfo = tokenAccount?.account.data.parsed.info;
 
@@ -65,28 +64,13 @@ const Dashboard: FC = () => {
     };
 
     fetchTokens();
-  }, [wallet.publicKey]);
+  }, [publicKey]);
 
   const handleFinalizeSubmit = async (data: FinalizeData) => {
-    if (!selectedMint || !wallet.publicKey || !wallet.signTransaction) return;
+    console.log('Finalization request for', selectedMint, data);
 
-    try {
-      const result = await attachMetadata({
-        data,
-        mint: selectedMint,
-        wallet,
-        connection,
-        lighthouseApiKey: data.lighthouseApiKey,
-      });
-
-      console.log('✅ Finalized:', result);
-      alert(`Metadata written!\nURI: ${result.metadataUri}`);
-    } catch (err) {
-      console.error('❌ Finalization failed:', err);
-      alert('Finalization failed. Check console.');
-    } finally {
-      setShowModal(false);
-    }
+    // 🔜 attachMetadata logic goes here
+    setShowModal(false);
   };
 
   return (
