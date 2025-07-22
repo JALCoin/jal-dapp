@@ -1,18 +1,17 @@
-// src/components/FinalizeTokenAsNFT.tsx
 import type { FC } from 'react';
 import { useState } from 'react';
-
-interface FinalizeProps {
-  mint: string;
-  onClose: () => void;
-  onSubmit: (metadata: FinalizeData) => void;
-}
 
 export interface FinalizeData {
   name: string;
   symbol: string;
   description: string;
   imageFile: File | null;
+}
+
+interface FinalizeProps {
+  mint: string;
+  onClose: () => void;
+  onSubmit: (metadata: FinalizeData) => void;
 }
 
 const FinalizeTokenAsNFT: FC<FinalizeProps> = ({ mint, onClose, onSubmit }) => {
@@ -25,38 +24,56 @@ const FinalizeTokenAsNFT: FC<FinalizeProps> = ({ mint, onClose, onSubmit }) => {
     <div style={overlayStyle}>
       <div className="container" style={modalStyle}>
         <h1>Finalize Token</h1>
-        <p>Mint: {mint}</p>
+        <p style={{ marginBottom: '1.5rem' }}>
+          <strong>Mint:</strong> <span style={{ wordBreak: 'break-word' }}>{mint}</span>
+        </p>
 
-        <input
-          type="text"
-          placeholder="Token Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Token Symbol"
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
-        />
-        <textarea
-          placeholder="Token Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-        />
+        <div style={formStyle}>
+          <input
+            type="text"
+            placeholder="Token Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-        <button className="button" onClick={() => onSubmit({ name, symbol, description, imageFile })}>
-          Upload & Finalize
-        </button>
+          <input
+            type="text"
+            placeholder="Token Symbol"
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+          />
 
-        <button className="button" style={{ backgroundColor: '#222', marginTop: '1rem' }} onClick={onClose}>
-          Cancel
-        </button>
+          <textarea
+            placeholder="Token Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+          />
+
+          <button
+            className="button"
+            onClick={() => onSubmit({ name, symbol, description, imageFile })}
+          >
+            Upload & Finalize
+          </button>
+
+          <button
+            className="button"
+            style={{
+              backgroundColor: '#222',
+              color: 'white',
+              marginTop: '1rem',
+            }}
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -82,6 +99,13 @@ const modalStyle: React.CSSProperties = {
   borderRadius: '12px',
   width: '100%',
   maxWidth: '560px',
+  boxShadow: '0 0 20px rgba(0,0,0,0.25)',
+};
+
+const formStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1rem',
 };
 
 export default FinalizeTokenAsNFT;
