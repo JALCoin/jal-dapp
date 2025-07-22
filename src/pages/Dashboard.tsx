@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { Link } from 'react-router-dom';
+import FinalizeTokenAsNFT, { FinalizeData } from '../components/FinalizeTokenAsNFT';
 
 interface TokenInfo {
   mint: string;
@@ -16,6 +16,9 @@ const Dashboard: FC = () => {
   const { publicKey } = useWallet();
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [showModal, setShowModal] = useState(false);
+  const [selectedMint, setSelectedMint] = useState<string | null>(null);
 
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
@@ -63,6 +66,13 @@ const Dashboard: FC = () => {
     fetchTokens();
   }, [publicKey]);
 
+  const handleFinalizeSubmit = async (data: FinalizeData) => {
+    console.log('Finalization request for', selectedMint, data);
+
+    // Next step: attachMetadata.ts (will be injected here)
+    setShowModal(false);
+  };
+
   return (
     <main>
       <div className="container">
@@ -103,15 +113,29 @@ const Dashboard: FC = () => {
                 </a>
 
                 {!token.isFinalized && (
-                  <Link to={`/finalize/${token.mint}`} className="button">
+                  <button
+                    className="button"
+                    onClick={() => {
+                      setSelectedMint(token.mint);
+                      setShowModal(true);
+                    }}
+                  >
                     Finalize
-                  </Link>
+                  </button>
                 )}
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {showModal && selectedMint && (
+        <FinalizeTokenAsNFT
+          mint={selectedMint}
+          onClose={() => setShowModal(false)}
+          onSubmit={handleFinalizeSubmit}
+        />
+      )}
     </main>
   );
 };
