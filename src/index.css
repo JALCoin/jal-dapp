@@ -175,11 +175,43 @@ input, textarea {
   border-radius: 6px;
   font-size: 1rem;
   width: 100%;
+  box-sizing: border-box;
 }
 
 input:focus, textarea:focus {
   outline: 2px solid black;
   border-color: black;
+}
+
+/* Finalization modal layout */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 5vh;
+}
+
+.modal-box {
+  background-color: var(--jal-bg);
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 560px;
+  width: 100%;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.25);
+  z-index: 10000;
+}
+
+/* Finalize modal layout inside container */
+.modal-box input,
+.modal-box textarea {
+  margin-bottom: 1rem;
 }
 
 /* Token dashboard styles */
@@ -286,5 +318,9 @@ input:focus, textarea:focus {
   .container {
     margin-top: 2rem;
     margin-bottom: 5rem;
+  }
+
+  .modal-box {
+    margin: 0 1rem;
   }
 }
