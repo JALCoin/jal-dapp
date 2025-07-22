@@ -1,5 +1,8 @@
 import { Connection } from '@solana/web3.js';
-import { createMetadataAccountV3, findMetadataPda } from '@metaplex-foundation/mpl-token-metadata';
+import {
+  createMetadataAccountV3,
+  findMetadataPda,
+} from '@metaplex-foundation/mpl-token-metadata';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-adapters';
 import { publicKey } from '@metaplex-foundation/umi';
@@ -7,51 +10,52 @@ import type { WalletContextState } from '@solana/wallet-adapter-react';
 import lighthouse from '@lighthouse-web3/sdk';
 import type { FinalizeData } from '../components/FinalizeTokenAsNFT';
 
+interface AttachMetadataArgs {
+  data: FinalizeData;
+  mint: string;
+  wallet: WalletContextState;
+  connection: Connection;
+  lighthouseApiKey: string;
+}
+
 export async function attachMetadata({
   data,
   mint,
   wallet,
   connection,
   lighthouseApiKey,
-}: {
-  data: FinalizeData;
-  mint: string;
-  wallet: WalletContextState;
-  connection: Connection;
-  lighthouseApiKey: string;
-}) {
+}: AttachMetadataArgs): Promise<{ metadataUri: string; imageUrl: string }> {
   if (!wallet.publicKey || !wallet.signTransaction) {
     throw new Error('Wallet not connected');
   }
 
-  // 1. Upload image file to Lighthouse
+  // Step 1: Upload image to Lighthouse
   const imageUpload = await lighthouse.upload(
     data.imageFile!,
     lighthouseApiKey,
     false,
     (progress: number) => console.log(`Uploading image: ${progress}%`)
   );
-
   const imageUrl = `https://gateway.lighthouse.storage/ipfs/${imageUpload.data.Hash}`;
 
-  // 2. Construct metadata.json content
-  const metadataContent = JSON.stringify({
+  // Step 2: Build metadata.json content
+  const metadataJson = JSON.stringify({
     name: data.name,
     symbol: data.symbol,
     description: data.description,
     image: imageUrl,
   });
 
-  // 3. Upload metadata.json to Lighthouse
-  const metadataUpload = await lighthouse.uploadText(metadataContent, lighthouseApiKey);
+  // Step 3: Upload metadata.json
+  const metadataUpload = await lighthouse.uploadText(metadataJson, lighthouseApiKey);
   const metadataUri = `https://gateway.lighthouse.storage/ipfs/${metadataUpload.data.Hash}`;
 
-  // 4. Set up Umi and PDA
+  // Step 4: Set up Umi and PDA
   const umi = createUmi(connection.rpcEndpoint).use(walletAdapterIdentity(wallet as any));
   const mintPublicKey = publicKey(mint);
   const metadataPda = findMetadataPda(umi, { mint: mintPublicKey });
 
-  // 5. Create metadata account
+  // Step 5: Create metadata account
   await createMetadataAccountV3(umi, {
     metadata: metadataPda,
     mint: mintPublicKey,
@@ -74,6 +78,7 @@ export async function attachMetadata({
       uses: null,
     },
     isMutable: true,
+    collectionDetails: null,
   }).sendAndConfirm(umi);
 
   return {

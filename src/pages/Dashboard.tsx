@@ -42,8 +42,8 @@ const Dashboard: FC = () => {
           const parsed = (mintInfo.value?.data as any)?.parsed?.info;
 
           if (parsed?.mintAuthority === wallet.publicKey.toBase58()) {
-            const tokenAccount = response.value.find((acc: any) =>
-              acc.account.data.parsed.info.mint === mint
+            const tokenAccount = response.value.find(
+              (acc: any) => acc.account.data.parsed.info.mint === mint
             );
             const tokenInfo = tokenAccount?.account.data.parsed.info;
 
@@ -80,7 +80,7 @@ const Dashboard: FC = () => {
       });
 
       console.log('✅ Finalized:', result);
-      alert(`Metadata written!\nTx: ${result.txSignature}`);
+      alert(`Metadata written!\nURI: ${result.metadataUri}`);
     } catch (err) {
       console.error('❌ Finalization failed:', err);
       alert('Finalization failed. Check console.');
