@@ -27,19 +27,18 @@ export async function attachMetadata({
     throw new Error('Wallet not connected');
   }
 
-  // 1. Upload image to Lighthouse
+  // 1. Upload image to Lighthouse with proper progress callback
   const imageUpload = await lighthouse.upload(
     data.imageFile!,
     lighthouseApiKey,
     undefined,
-    (progress: { percentage: number }) =>
-      console.log(`Uploading image: ${progress.percentage}%`)
+    (progressData) => console.log(`Uploading image: ${progressData.progress}%`)
   );
 
   const imageUrl = `https://gateway.lighthouse.storage/ipfs/${imageUpload.data.Hash}`;
 
-  // 2. Construct metadata JSON
-  const metadataJson = JSON.stringify({
+  // 2. Prepare metadata content
+  const metadataContent = JSON.stringify({
     name: data.name,
     symbol: data.symbol,
     description: data.description,
@@ -47,20 +46,20 @@ export async function attachMetadata({
   });
 
   // 3. Upload metadata.json to Lighthouse
-  const metadataUpload = await lighthouse.uploadText(metadataJson, lighthouseApiKey);
+  const metadataUpload = await lighthouse.uploadText(metadataContent, lighthouseApiKey);
   const metadataUri = `https://gateway.lighthouse.storage/ipfs/${metadataUpload.data.Hash}`;
 
-  // 4. Setup Umi + PDA
+  // 4. Set up Umi and find metadata PDA
   const umi = createUmi(connection.rpcEndpoint).use(
     walletAdapterIdentity(wallet as any)
   );
-  const mintKey = publicKey(mint);
-  const metadataPda = findMetadataPda(umi, { mint: mintKey });
+  const mintPublicKey = publicKey(mint);
+  const metadataPda = findMetadataPda(umi, { mint: mintPublicKey });
 
-  // 5. Create metadata onchain
+  // 5. Create metadata account on chain
   await createMetadataAccountV3(umi, {
     metadata: metadataPda,
-    mint: mintKey,
+    mint: mintPublicKey,
     mintAuthority: umi.identity,
     updateAuthority: umi.identity,
     payer: umi.identity,
