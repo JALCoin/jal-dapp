@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import CreateToken from './pages/CreateToken';
 import Dashboard from './pages/Dashboard';
-import FinalizeTokenAsNFT from './pages/FinalizeTokenAsNFT';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { AppProviders } from './AppProviders';
 
@@ -15,7 +14,6 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/create-token" element={<CreateToken />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/finalize/:mint" element={<FinalizeTokenAsNFT />} />
           </Routes>
         </main>
       </Router>
