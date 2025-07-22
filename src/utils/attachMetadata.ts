@@ -1,8 +1,8 @@
 import { Connection, PublicKey, Transaction } from '@solana/web3.js';
 import {
   createCreateMetadataAccountV3Instruction,
-  DataV2,
-  PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
+  type CreateMetadataAccountArgsV3,
+  PROGRAM_ID as METADATA_PROGRAM_ID,
 } from '@metaplex-foundation/mpl-token-metadata';
 import type { WalletContextState } from '@solana/wallet-adapter-react';
 import lighthouse from '@lighthouse-web3/sdk';
@@ -36,53 +36,55 @@ export async function attachMetadata({
 
   const imageUrl = `https://gateway.lighthouse.storage/ipfs/${imageUpload.data.Hash}`;
 
-  // 2. Build metadata JSON structure
-  const metadata: DataV2 = {
+  // 2. Prepare metadata JSON
+  const metadataJSON = {
     name: data.name,
     symbol: data.symbol,
-    uri: '', // to be filled after metadata upload
-    sellerFeeBasisPoints: 0,
-    creators: [
-      {
-        address: wallet.publicKey.toBase58(),
-        verified: true,
-        share: 100,
-      },
-    ],
-    collection: null,
-    uses: null,
+    description: data.description,
+    image: imageUrl,
   };
 
-  // 3. Create metadata JSON blob and upload to Lighthouse
-  const blob = new Blob(
-    [
-      JSON.stringify({
-        name: metadata.name,
-        symbol: metadata.symbol,
-        description: data.description,
-        image: imageUrl,
-      }),
-    ],
-    { type: 'application/json' }
-  );
+  const metadataBlob = new Blob([JSON.stringify(metadataJSON)], {
+    type: 'application/json',
+  });
 
-  const metadataUpload = await lighthouse.uploadText(await blob.text(), lighthouseApiKey);
-
+  const metadataText = await metadataBlob.text();
+  const metadataUpload = await lighthouse.uploadText(metadataText, lighthouseApiKey);
   const metadataUri = `https://gateway.lighthouse.storage/ipfs/${metadataUpload.data.Hash}`;
-  metadata.uri = metadataUri;
 
-  // 4. Derive PDA for metadata account
+  // 3. Prepare metadata account args
+  const metadataArgs: CreateMetadataAccountArgsV3 = {
+    data: {
+      name: data.name,
+      symbol: data.symbol,
+      uri: metadataUri,
+      sellerFeeBasisPoints: 0,
+      creators: [
+        {
+          address: wallet.publicKey.toBase58(),
+          verified: true,
+          share: 100,
+        },
+      ],
+      collection: null,
+      uses: null,
+    },
+    isMutable: true,
+    collectionDetails: null,
+  };
+
+  // 4. Derive PDA
   const mintKey = new PublicKey(mint);
   const [metadataPDA] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('metadata'),
-      TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+      METADATA_PROGRAM_ID.toBuffer(),
       mintKey.toBuffer(),
     ],
-    TOKEN_METADATA_PROGRAM_ID
+    METADATA_PROGRAM_ID
   );
 
-  // 5. Create metadata instruction
+  // 5. Build transaction
   const ix = createCreateMetadataAccountV3Instruction(
     {
       metadata: metadataPDA,
@@ -91,16 +93,9 @@ export async function attachMetadata({
       payer: wallet.publicKey,
       updateAuthority: wallet.publicKey,
     },
-    {
-      createMetadataAccountArgsV3: {
-        data: metadata,
-        isMutable: true,
-        collectionDetails: null,
-      },
-    }
+    { createMetadataAccountArgsV3: metadataArgs }
   );
 
-  // 6. Submit transaction
   const tx = new Transaction().add(ix);
   tx.feePayer = wallet.publicKey;
   tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
