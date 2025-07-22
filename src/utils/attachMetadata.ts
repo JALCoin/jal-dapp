@@ -1,7 +1,8 @@
-import { Connection, PublicKey } from '@solana/web3.js';
-import { createMetadataAccountV3 } from '@metaplex-foundation/mpl-token-metadata';
+import { Connection } from '@solana/web3.js';
+import { createMetadataAccountV3, findMetadataPda } from '@metaplex-foundation/mpl-token-metadata';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-adapters';
+import { publicKey } from '@metaplex-foundation/umi';
 import type { WalletContextState } from '@solana/wallet-adapter-react';
 import lighthouse from '@lighthouse-web3/sdk';
 import type { FinalizeData } from '../components/FinalizeTokenAsNFT';
@@ -27,9 +28,8 @@ export async function attachMetadata({
   const imageUpload = await lighthouse.upload(
     data.imageFile!,
     lighthouseApiKey,
-    undefined,
-    undefined,
-    (progress) => console.log(`Uploading image: ${progress}%`)
+    false,
+    (progress: number) => console.log(`Uploading image: ${progress}%`)
   );
 
   const imageUrl = `https://gateway.lighthouse.storage/ipfs/${imageUpload.data.Hash}`;
@@ -46,12 +46,15 @@ export async function attachMetadata({
   const metadataUpload = await lighthouse.uploadText(metadataContent, lighthouseApiKey);
   const metadataUri = `https://gateway.lighthouse.storage/ipfs/${metadataUpload.data.Hash}`;
 
-  // 4. Create metadata onchain using Umi
-  const mintKey = new PublicKey(mint);
+  // 4. Set up Umi and PDA
   const umi = createUmi(connection.rpcEndpoint).use(walletAdapterIdentity(wallet as any));
+  const mintPublicKey = publicKey(mint);
+  const metadataPda = findMetadataPda(umi, { mint: mintPublicKey });
 
+  // 5. Create metadata account
   await createMetadataAccountV3(umi, {
-    mint: mintKey,
+    metadata: metadataPda,
+    mint: mintPublicKey,
     mintAuthority: umi.identity,
     updateAuthority: umi.identity,
     payer: umi.identity,
