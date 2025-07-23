@@ -27,7 +27,7 @@ html, body, #root {
   z-index: 1;
 }
 
-/* Floating background watermark */
+/* Subtle floating watermark */
 body::after {
   content: '';
   position: fixed;
@@ -41,7 +41,7 @@ body::after {
   pointer-events: none;
 }
 
-/* Header */
+/* Header layout */
 header {
   width: 100%;
   display: flex;
@@ -57,6 +57,7 @@ header img {
   width: 100%;
   max-width: 720px;
   height: auto;
+  object-fit: contain;
   filter: drop-shadow(0 0 8px var(--jal-glow));
   animation: pulse 3s infinite ease-in-out;
 }
@@ -72,33 +73,32 @@ header img {
   }
 }
 
-/* Navigation */
-nav {
+/* Nav + wallet */
+header nav {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 1.5rem;
 }
 
-nav a {
+header nav a {
   color: black;
   font-weight: 600;
   font-size: 1rem;
   text-decoration: underline;
 }
 
-nav a:hover {
+header nav a:hover {
   color: #111;
 }
 
-/* Wallet button */
-.wallet-button {
+header .wallet-button {
   display: flex;
   justify-content: center;
   margin-top: 0.5rem;
 }
 
-/* Main content layout */
+/* Main content area */
 main {
   flex: 1;
   width: 100%;
@@ -107,10 +107,12 @@ main {
   align-items: flex-start;
   padding: 2rem 1rem;
   box-sizing: border-box;
+  overflow-x: hidden;
   position: relative;
   z-index: 1;
 }
 
+/* Content container */
 .container {
   width: 100%;
   max-width: 640px;
@@ -119,58 +121,53 @@ main {
   gap: 2rem;
   margin-top: 3rem;
   margin-bottom: 6rem;
+  position: relative;
+  z-index: 1;
 }
 
 /* Typography */
 h1 {
-  font-size: 2.5rem;
+  font-size: 2.75rem;
   font-weight: 800;
+  margin: 0;
   text-align: center;
 }
 
-h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
 p {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   color: var(--jal-muted);
+  margin: 0;
+  line-height: 1.6;
   text-align: center;
 }
 
 /* Buttons */
-button,
-.button {
+button, .button {
   background-color: black;
   color: var(--jal-green);
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  transition: all 0.3s ease;
   text-align: center;
   margin-top: 1rem;
   text-decoration: none;
-  transition: all 0.3s ease;
 }
 
-button:hover,
-.button:hover {
+button:hover, .button:hover {
   background-color: #222;
   box-shadow: 0 0 8px var(--jal-glow), 0 0 16px var(--jal-glow);
 }
 
-button:focus,
-.button:focus {
+button:focus, .button:focus {
   outline: 2px solid var(--jal-glow);
 }
 
 /* Inputs */
-input,
-textarea {
+input, textarea {
   background-color: white;
   color: black;
   border: 1px solid #333;
@@ -181,63 +178,156 @@ textarea {
   box-sizing: border-box;
 }
 
-input:focus,
-textarea:focus {
+input:focus, textarea:focus {
   outline: 2px solid black;
   border-color: black;
 }
 
-/* Token cards */
+/* Finalization modal layout */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 5vh;
+}
+
+.modal-box {
+  background-color: var(--jal-bg);
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 560px;
+  width: 100%;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.25);
+  z-index: 10000;
+}
+
+/* Finalize modal layout inside container */
+.modal-box input,
+.modal-box textarea {
+  margin-bottom: 1rem;
+}
+
+/* Token dashboard styles */
 .token-list {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  margin-top: 2rem;
 }
 
 .token-card {
+  padding: 1rem 1.5rem;
   background: white;
-  color: black;
   border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.token-info {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  word-break: break-word;
 }
 
-.token-mint {
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  word-break: break-all;
+.token-info p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 
 .token-info .mono {
   font-family: monospace;
   font-size: 0.85rem;
+  color: #222;
+}
+
+/* Mint address + copy icon */
+.token-mint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .copy-btn {
-  background: none;
+  background: transparent;
   border: none;
-  font-size: 1rem;
   cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  color: var(--jal-text);
+  transition: transform 0.2s ease;
 }
 
+.copy-btn:hover {
+  transform: scale(1.2);
+}
+
+/* External link */
 .explorer-link {
   font-size: 0.85rem;
-  text-decoration: underline;
+  margin-top: 0.25rem;
   color: var(--jal-muted);
+  text-decoration: underline;
+  display: inline-block;
 }
 
-/* Instruction panel */
+.token-card .button {
+  margin-top: 0.75rem;
+  width: fit-content;
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  p {
+    font-size: 1rem;
+  }
+
+  header {
+    gap: 1.5rem;
+    padding: 1.5rem 1rem;
+  }
+
+  header img {
+    max-width: 260px;
+  }
+
+  nav {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .wallet-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  main {
+    padding: 1.5rem 1rem;
+  }
+
+  .container {
+    margin-top: 2rem;
+    margin-bottom: 5rem;
+  }
+
+  .modal-box {
+    margin: 0 1rem;
+  }
+}
+/* Turn Into Currency Instruction Panel */
 .instruction-panel {
   position: fixed;
-  top: 140px;
+  top: 160px;
   right: 40px;
   background: white;
   color: black;
@@ -245,47 +335,48 @@ textarea:focus {
   border-radius: 12px;
   max-width: 360px;
   width: 90%;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-  z-index: 100;
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+  font-size: 0.95rem;
 }
 
 .instruction-panel h2 {
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 700;
   margin-bottom: 1rem;
 }
 
 .instruction-panel ol {
   list-style: decimal inside;
   padding-left: 0;
-  font-size: 0.95rem;
-  color: #222;
+  margin: 0;
 }
 
 .instruction-panel li {
   margin-bottom: 0.75rem;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .instruction-panel li a {
-  color: #0077cc;
+  color: #007acc;
   text-decoration: underline;
+  font-weight: 500;
 }
 
 .instruction-panel li a:hover {
-  color: #004499;
+  color: #004799;
 }
 
 .instruction-panel code {
-  background: #f0f0f0;
-  padding: 0.15rem 0.4rem;
+  background: #f2f2f2;
+  padding: 0.2rem 0.4rem;
   border-radius: 4px;
   font-size: 0.85rem;
 }
 
 .instruction-panel ul {
   list-style: disc;
-  padding-left: 1.25rem;
+  margin-left: 1.5rem;
   margin-top: 0.5rem;
 }
 
@@ -304,8 +395,8 @@ textarea:focus {
 
 .instruction-panel .close-btn {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
+  top: 10px;
+  right: 12px;
   background: black;
   color: white;
   border: none;
@@ -320,25 +411,13 @@ textarea:focus {
   background-color: #333;
 }
 
-/* Responsive */
+/* Responsive placement */
 @media (max-width: 768px) {
   .instruction-panel {
     position: relative;
-    top: auto;
     right: auto;
+    top: auto;
     margin: 2rem auto;
-    max-width: 95%;
-  }
-
-  header img {
-    max-width: 260px;
-  }
-
-  h1 {
-    font-size: 2rem;
-  }
-
-  main {
-    padding: 1.5rem 1rem;
   }
 }
+
