@@ -324,31 +324,46 @@ input:focus, textarea:focus {
     margin: 0 1rem;
   }
 }
-/* Turn Into Currency Instruction Panel */
-.instruction-panel {
+/* Turn Into Currency Instruction Overlay */
+.instruction-overlay {
   position: fixed;
-  top: 160px;
-  right: 40px;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Instruction panel box */
+.instruction-panel {
   background: white;
   color: black;
   padding: 1.75rem;
   border-radius: 12px;
-  max-width: 360px;
+  max-width: 420px;
   width: 90%;
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.25);
-  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  z-index: 10000;
   font-size: 0.95rem;
+  position: relative;
+  animation: scaleIn 0.25s ease-out forwards;
 }
 
+/* Title */
 .instruction-panel h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 1.25rem;
+  text-align: center;
 }
 
+/* List */
 .instruction-panel ol {
   list-style: decimal inside;
-  padding-left: 0;
+  padding: 0;
   margin: 0;
 }
 
@@ -367,6 +382,7 @@ input:focus, textarea:focus {
   color: #004799;
 }
 
+/* Inline code */
 .instruction-panel code {
   background: #f2f2f2;
   padding: 0.2rem 0.4rem;
@@ -374,6 +390,7 @@ input:focus, textarea:focus {
   font-size: 0.85rem;
 }
 
+/* Nested list */
 .instruction-panel ul {
   list-style: disc;
   margin-left: 1.5rem;
@@ -386,13 +403,17 @@ input:focus, textarea:focus {
   margin-bottom: 0.25rem;
 }
 
+/* Footer note */
 .instruction-panel .note {
   font-size: 0.85rem;
-  margin-top: 1rem;
+  margin-top: 1.25rem;
   color: var(--jal-muted);
   text-align: center;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
 }
 
+/* Close button */
 .instruction-panel .close-btn {
   position: absolute;
   top: 10px;
@@ -405,19 +426,39 @@ input:focus, textarea:focus {
   height: 28px;
   font-size: 1rem;
   cursor: pointer;
+  transition: background 0.2s ease;
 }
 
 .instruction-panel .close-btn:hover {
-  background-color: #333;
+  background-color: #222;
 }
 
-/* Responsive placement */
+/* Responsive fallback */
 @media (max-width: 768px) {
+  .instruction-overlay {
+    align-items: flex-start;
+    padding-top: 10vh;
+  }
+
   .instruction-panel {
-    position: relative;
-    right: auto;
-    top: auto;
-    margin: 2rem auto;
+    margin: 0 1rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
