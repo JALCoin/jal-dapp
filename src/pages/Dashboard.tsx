@@ -5,7 +5,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import type { FinalizeData } from '../components/FinalizeTokenAsNFT';
 import FinalizeTokenAsNFT from '../components/FinalizeTokenAsNFT';
-import attachMetadata from '../utils/attachMetadata';
+import { attachMetadata } from '../utils/attachMetadata';
 
 interface TokenInfo {
   mint: string;
@@ -15,7 +15,9 @@ interface TokenInfo {
 }
 
 const Dashboard: FC = () => {
-  const { publicKey, wallet } = useWallet();
+  const wallet = useWallet();
+  const publicKey = wallet.publicKey;
+
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -68,14 +70,14 @@ const Dashboard: FC = () => {
   }, [publicKey]);
 
   const handleFinalizeSubmit = async ({ metadataUri }: FinalizeData) => {
-    if (!selectedMint || !wallet?.publicKey) return;
+    if (!selectedMint || !wallet.publicKey) return;
 
     try {
       await attachMetadata({
         mint: selectedMint,
         metadataUri,
         wallet,
-        connection
+        connection,
       });
 
       console.log('✅ Finalized:', selectedMint);
