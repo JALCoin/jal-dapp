@@ -8,9 +8,7 @@ type TokenData = {
 };
 
 const Dashboard: FC = () => {
-  const { publicKey } = useWallet();
   const [tokens, setTokens] = useState<TokenData[]>([]);
-  const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
@@ -26,7 +24,6 @@ const Dashboard: FC = () => {
   }, []);
 
   const handleTurnIntoCurrency = (mint: string) => {
-    setSelectedMint(mint);
     setShowInstructions(true);
   };
 
