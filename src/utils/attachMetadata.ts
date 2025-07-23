@@ -1,4 +1,4 @@
-import { Connection } from '@solana/web3.js';
+// src/utils/attachMetadata.ts
 import {
   createMetadataAccountV3,
   findMetadataPda,
@@ -7,44 +7,22 @@ import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-adapters';
 import { publicKey } from '@metaplex-foundation/umi';
 import type { WalletContextState } from '@solana/wallet-adapter-react';
-import lighthouse from '@lighthouse-web3/sdk';
-import type { FinalizeData } from '../components/FinalizeTokenAsNFT';
+import { Connection } from '@solana/web3.js';
 
 export async function attachMetadata({
-  data,
+  metadataUri,
   mint,
   wallet,
   connection,
-  lighthouseApiKey,
 }: {
-  data: FinalizeData;
+  metadataUri: string;
   mint: string;
   wallet: WalletContextState;
   connection: Connection;
-  lighthouseApiKey: string;
 }) {
   if (!wallet.publicKey || !wallet.signTransaction) {
     throw new Error('Wallet not connected');
   }
-
-  const imageUpload = await lighthouse.upload(
-    data.imageFile!,
-    lighthouseApiKey,
-    undefined,
-    (progress) => console.log(`Uploading image: ${progress.progress}%`)
-  );
-
-  const imageUrl = `https://gateway.lighthouse.storage/ipfs/${imageUpload.data.Hash}`;
-
-  const metadataContent = JSON.stringify({
-    name: data.name,
-    symbol: data.symbol,
-    description: data.description,
-    image: imageUrl,
-  });
-
-  const metadataUpload = await lighthouse.uploadText(metadataContent, lighthouseApiKey);
-  const metadataUri = `https://gateway.lighthouse.storage/ipfs/${metadataUpload.data.Hash}`;
 
   const umi = createUmi(connection.rpcEndpoint).use(walletAdapterIdentity(wallet as any));
   const mintPublicKey = publicKey(mint);
@@ -57,23 +35,15 @@ export async function attachMetadata({
     updateAuthority: umi.identity,
     payer: umi.identity,
     data: {
-      name: data.name,
-      symbol: data.symbol,
+      name: ' ',
+      symbol: ' ',
       uri: metadataUri,
       sellerFeeBasisPoints: 0,
-      creators: [
-        {
-          address: umi.identity.publicKey,
-          verified: true,
-          share: 100,
-        },
-      ],
+      creators: null,
       collection: null,
       uses: null,
     },
     isMutable: true,
     collectionDetails: null,
   }).sendAndConfirm(umi);
-
-  return { metadataUri, imageUrl };
 }
