@@ -27,7 +27,7 @@ html, body, #root {
   z-index: 1;
 }
 
-/* Subtle floating watermark */
+/* Floating background watermark */
 body::after {
   content: '';
   position: fixed;
@@ -41,7 +41,7 @@ body::after {
   pointer-events: none;
 }
 
-/* Header layout */
+/* Header */
 header {
   width: 100%;
   display: flex;
@@ -57,7 +57,6 @@ header img {
   width: 100%;
   max-width: 720px;
   height: auto;
-  object-fit: contain;
   filter: drop-shadow(0 0 8px var(--jal-glow));
   animation: pulse 3s infinite ease-in-out;
 }
@@ -73,32 +72,33 @@ header img {
   }
 }
 
-/* Nav + wallet */
-header nav {
+/* Navigation */
+nav {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 1.5rem;
 }
 
-header nav a {
+nav a {
   color: black;
   font-weight: 600;
   font-size: 1rem;
   text-decoration: underline;
 }
 
-header nav a:hover {
+nav a:hover {
   color: #111;
 }
 
-header .wallet-button {
+/* Wallet button */
+.wallet-button {
   display: flex;
   justify-content: center;
   margin-top: 0.5rem;
 }
 
-/* Main content area */
+/* Main content layout */
 main {
   flex: 1;
   width: 100%;
@@ -107,12 +107,10 @@ main {
   align-items: flex-start;
   padding: 2rem 1rem;
   box-sizing: border-box;
-  overflow-x: hidden;
   position: relative;
   z-index: 1;
 }
 
-/* Content container */
 .container {
   width: 100%;
   max-width: 640px;
@@ -121,53 +119,58 @@ main {
   gap: 2rem;
   margin-top: 3rem;
   margin-bottom: 6rem;
-  position: relative;
-  z-index: 1;
 }
 
 /* Typography */
 h1 {
-  font-size: 2.75rem;
+  font-size: 2.5rem;
   font-weight: 800;
-  margin: 0;
   text-align: center;
 }
 
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
 p {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   color: var(--jal-muted);
-  margin: 0;
-  line-height: 1.6;
   text-align: center;
 }
 
 /* Buttons */
-button, .button {
+button,
+.button {
   background-color: black;
   color: var(--jal-green);
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   font-size: 1rem;
   font-weight: 600;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
   text-align: center;
   margin-top: 1rem;
   text-decoration: none;
+  transition: all 0.3s ease;
 }
 
-button:hover, .button:hover {
+button:hover,
+.button:hover {
   background-color: #222;
   box-shadow: 0 0 8px var(--jal-glow), 0 0 16px var(--jal-glow);
 }
 
-button:focus, .button:focus {
+button:focus,
+.button:focus {
   outline: 2px solid var(--jal-glow);
 }
 
 /* Inputs */
-input, textarea {
+input,
+textarea {
   background-color: white;
   color: black;
   border: 1px solid #333;
@@ -178,149 +181,164 @@ input, textarea {
   box-sizing: border-box;
 }
 
-input:focus, textarea:focus {
+input:focus,
+textarea:focus {
   outline: 2px solid black;
   border-color: black;
 }
 
-/* Finalization modal layout */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 5vh;
-}
-
-.modal-box {
-  background-color: var(--jal-bg);
-  padding: 2rem;
-  border-radius: 12px;
-  max-width: 560px;
-  width: 100%;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.25);
-  z-index: 10000;
-}
-
-/* Finalize modal layout inside container */
-.modal-box input,
-.modal-box textarea {
-  margin-bottom: 1rem;
-}
-
-/* Token dashboard styles */
+/* Token cards */
 .token-list {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  margin-top: 2rem;
 }
 
 .token-card {
-  padding: 1rem 1.5rem;
   background: white;
+  color: black;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.token-info {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  word-break: break-word;
 }
 
-.token-info p {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.4;
+.token-mint {
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  word-break: break-all;
 }
 
 .token-info .mono {
   font-family: monospace;
   font-size: 0.85rem;
-  color: #222;
-}
-
-/* Mint address + copy icon */
-.token-mint {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .copy-btn {
-  background: transparent;
+  background: none;
   border: none;
-  cursor: pointer;
   font-size: 1rem;
-  padding: 0;
-  color: var(--jal-text);
-  transition: transform 0.2s ease;
+  cursor: pointer;
 }
 
-.copy-btn:hover {
-  transform: scale(1.2);
-}
-
-/* External link */
 .explorer-link {
   font-size: 0.85rem;
-  margin-top: 0.25rem;
-  color: var(--jal-muted);
   text-decoration: underline;
-  display: inline-block;
+  color: var(--jal-muted);
 }
 
-.token-card .button {
-  margin-top: 0.75rem;
-  width: fit-content;
+/* Instruction panel */
+.instruction-panel {
+  position: fixed;
+  top: 140px;
+  right: 40px;
+  background: white;
+  color: black;
+  padding: 1.75rem;
+  border-radius: 12px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
 }
 
-/* Mobile Responsive */
-@media (max-width: 600px) {
-  h1 {
-    font-size: 2rem;
-  }
+.instruction-panel h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
 
-  p {
-    font-size: 1rem;
-  }
+.instruction-panel ol {
+  list-style: decimal inside;
+  padding-left: 0;
+  font-size: 0.95rem;
+  color: #222;
+}
 
-  header {
-    gap: 1.5rem;
-    padding: 1.5rem 1rem;
+.instruction-panel li {
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.instruction-panel li a {
+  color: #0077cc;
+  text-decoration: underline;
+}
+
+.instruction-panel li a:hover {
+  color: #004499;
+}
+
+.instruction-panel code {
+  background: #f0f0f0;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.instruction-panel ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.instruction-panel ul li {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.instruction-panel .note {
+  font-size: 0.85rem;
+  margin-top: 1rem;
+  color: var(--jal-muted);
+  text-align: center;
+}
+
+.instruction-panel .close-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: black;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.instruction-panel .close-btn:hover {
+  background-color: #333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .instruction-panel {
+    position: relative;
+    top: auto;
+    right: auto;
+    margin: 2rem auto;
+    max-width: 95%;
   }
 
   header img {
     max-width: 260px;
   }
 
-  nav {
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .wallet-button {
-    width: 100%;
-    justify-content: center;
+  h1 {
+    font-size: 2rem;
   }
 
   main {
     padding: 1.5rem 1rem;
-  }
-
-  .container {
-    margin-top: 2rem;
-    margin-bottom: 5rem;
-  }
-
-  .modal-box {
-    margin: 0 1rem;
   }
 }
