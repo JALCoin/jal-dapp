@@ -1,6 +1,5 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
 
 type TokenData = {
   mint: string;
@@ -15,15 +14,14 @@ const Dashboard: FC = () => {
     const stored = localStorage.getItem("createdTokens");
     if (stored) {
       try {
-        const parsed: TokenData[] = JSON.parse(stored);
-        setTokens(parsed);
+        setTokens(JSON.parse(stored));
       } catch {
         setTokens([]);
       }
     }
   }, []);
 
-  const handleTurnIntoCurrency = (mint: string) => {
+  const handleTurnIntoCurrency = () => {
     setShowInstructions(true);
   };
 
@@ -50,7 +48,7 @@ const Dashboard: FC = () => {
               View on Solscan ↗
             </a>
             <button
-              onClick={() => handleTurnIntoCurrency(token.mint)}
+              onClick={handleTurnIntoCurrency}
               className="mt-4 bg-black text-white py-2 px-4 rounded hover:bg-gray-800 transition"
             >
               Turn Into Currency
