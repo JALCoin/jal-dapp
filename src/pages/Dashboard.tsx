@@ -2,21 +2,26 @@ import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
-interface TokenData {
+type TokenData = {
   mint: string;
   amount: number;
-}
+};
 
 const Dashboard: FC = () => {
-  const { publicKey: _publicKey } = useWallet();
+  const { publicKey } = useWallet();
   const [tokens, setTokens] = useState<TokenData[]>([]);
+  const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [_selectedMint, setSelectedMint] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("createdTokens");
     if (stored) {
-      setTokens(JSON.parse(stored));
+      try {
+        const parsed: TokenData[] = JSON.parse(stored);
+        setTokens(parsed);
+      } catch {
+        setTokens([]);
+      }
     }
   }, []);
 
