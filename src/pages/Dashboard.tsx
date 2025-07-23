@@ -5,6 +5,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import type { FinalizeData } from '../components/FinalizeTokenAsNFT';
 import FinalizeTokenAsNFT from '../components/FinalizeTokenAsNFT';
+import attachMetadata from '../utils/attachMetadata';
 
 interface TokenInfo {
   mint: string;
@@ -14,7 +15,7 @@ interface TokenInfo {
 }
 
 const Dashboard: FC = () => {
-  const { publicKey } = useWallet();
+  const { publicKey, wallet } = useWallet();
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -57,7 +58,7 @@ const Dashboard: FC = () => {
 
         setTokens(filteredTokens);
       } catch (err) {
-        console.error('Error filtering tokens:', err);
+        console.error('Error fetching tokens:', err);
       } finally {
         setLoading(false);
       }
@@ -66,11 +67,23 @@ const Dashboard: FC = () => {
     fetchTokens();
   }, [publicKey]);
 
-  const handleFinalizeSubmit = async (data: FinalizeData) => {
-    console.log('Finalization request for', selectedMint, data);
+  const handleFinalizeSubmit = async ({ metadataUri }: FinalizeData) => {
+    if (!selectedMint || !wallet?.publicKey) return;
 
-    // 🔜 attachMetadata logic goes here
-    setShowModal(false);
+    try {
+      await attachMetadata({
+        mint: selectedMint,
+        metadataUri,
+        wallet,
+        connection
+      });
+
+      console.log('✅ Finalized:', selectedMint);
+    } catch (err) {
+      console.error('❌ Metadata Finalization Failed:', err);
+    } finally {
+      setShowModal(false);
+    }
   };
 
   return (

@@ -2,110 +2,86 @@ import type { FC } from 'react';
 import { useState } from 'react';
 
 export interface FinalizeData {
-  name: string;
-  symbol: string;
-  description: string;
-  imageFile: File | null;
+  metadataUri: string;
 }
 
 interface FinalizeProps {
   mint: string;
   onClose: () => void;
-  onSubmit: (metadata: FinalizeData) => void;
+  onSubmit: (data: FinalizeData) => void;
 }
 
 const FinalizeTokenAsNFT: FC<FinalizeProps> = ({ mint, onClose, onSubmit }) => {
-  const [name, setName] = useState('');
-  const [symbol, setSymbol] = useState('');
-  const [description, setDescription] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [metadataUri, setMetadataUri] = useState('');
 
   return (
-    <div style={overlayStyle}>
-      <div className="container" style={modalStyle}>
+    <div className="modal-overlay">
+      <div className="modal-box container">
         <h1>Finalize Token</h1>
-        <p style={{ marginBottom: '1.5rem' }}>
-          <strong>Mint:</strong> <span style={{ wordBreak: 'break-word' }}>{mint}</span>
-        </p>
+        <p><strong>Mint:</strong> {mint}</p>
 
-        <div style={formStyle}>
-          <input
-            type="text"
-            placeholder="Token Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-
-          <input
-            type="text"
-            placeholder="Token Symbol"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-          />
-
-          <textarea
-            placeholder="Token Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-          />
-
-          <button
-            className="button"
-            onClick={() => onSubmit({ name, symbol, description, imageFile })}
-          >
-            Upload & Finalize
-          </button>
-
-          <button
-            className="button"
-            style={{
-              backgroundColor: '#222',
-              color: 'white',
-              marginTop: '1rem',
-            }}
-            onClick={onClose}
-          >
-            Cancel
-          </button>
+        <div style={{ textAlign: 'left', fontSize: '0.95rem', marginTop: '1.5rem' }}>
+          <p><strong>Instructions:</strong></p>
+          <ol style={{ paddingLeft: '1.2rem' }}>
+            <li>
+              Sign in at <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a> and create an account.
+            </li>
+            <li>
+              Upload your token logo image and copy the returned <code>ipfs://...</code> image link.
+            </li>
+            <li>
+              Create a <code>metadata.json</code> file with the following content:
+              <pre style={{
+                background: '#111',
+                color: '#0ffdd4',
+                padding: '0.75rem',
+                borderRadius: '6px',
+                marginTop: '0.5rem',
+                fontSize: '0.85rem',
+                whiteSpace: 'pre-wrap'
+              }}>
+{`{
+  "name": "Your Token Name",
+  "symbol": "SYMBOL",
+  "description": "Your token description",
+  "image": "ipfs://your-image-hash"
+}`}
+              </pre>
+            </li>
+            <li>
+              Upload <code>metadata.json</code> to Lighthouse and copy the returned URI.
+            </li>
+            <li>
+              Paste the URI below to finalize your token on-chain.
+            </li>
+          </ol>
         </div>
+
+        <input
+          type="text"
+          placeholder="Paste metadata URI (ipfs://...)"
+          value={metadataUri}
+          onChange={(e) => setMetadataUri(e.target.value)}
+        />
+
+        <button
+          className="button"
+          onClick={() => onSubmit({ metadataUri })}
+          disabled={!metadataUri}
+        >
+          Finalize Metadata
+        </button>
+
+        <button
+          className="button"
+          style={{ backgroundColor: '#222', color: 'white' }}
+          onClick={onClose}
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
-};
-
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100vw',
-  height: '100vh',
-  backgroundColor: 'rgba(0,0,0,0.5)',
-  zIndex: 9999,
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'flex-start',
-  paddingTop: '5vh',
-};
-
-const modalStyle: React.CSSProperties = {
-  backgroundColor: 'var(--jal-bg)',
-  padding: '2rem',
-  borderRadius: '12px',
-  width: '100%',
-  maxWidth: '560px',
-  boxShadow: '0 0 20px rgba(0,0,0,0.25)',
-};
-
-const formStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1rem',
 };
 
 export default FinalizeTokenAsNFT;
