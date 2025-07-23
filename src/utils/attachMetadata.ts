@@ -1,43 +1,40 @@
-import { Connection } from '@solana/web3.js';
 import {
   createMetadataAccountV3,
   findMetadataPda,
 } from '@metaplex-foundation/mpl-token-metadata';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-adapters';
-import { publicKey as umiPublicKey } from '@metaplex-foundation/umi';
+import { publicKey } from '@metaplex-foundation/umi';
 import type { WalletContextState } from '@solana/wallet-adapter-react';
 
 export async function attachMetadata({
-  mint,
   metadataUri,
-  connection,
+  mint,
   wallet,
 }: {
-  mint: string;
   metadataUri: string;
-  connection: Connection;
+  mint: string;
   wallet: WalletContextState;
 }) {
   if (!wallet.publicKey || !wallet.signTransaction) {
-    throw new Error('Wallet not connected or missing signer.');
+    throw new Error('Wallet not connected');
   }
 
-  const umi = createUmi(connection.rpcEndpoint).use(
+  const umi = createUmi('https://api.mainnet-beta.solana.com').use(
     walletAdapterIdentity(wallet as any)
   );
 
-  const mintPubkey = umiPublicKey(mint);
-  const metadataPda = findMetadataPda(umi, { mint: mintPubkey });
+  const mintPublicKey = publicKey(mint);
+  const metadataPda = findMetadataPda(umi, { mint: mintPublicKey });
 
   await createMetadataAccountV3(umi, {
     metadata: metadataPda,
-    mint: mintPubkey,
+    mint: mintPublicKey,
     mintAuthority: umi.identity,
     updateAuthority: umi.identity,
     payer: umi.identity,
     data: {
-      name: 'Token',
+      name: '', // left blank – metadata lives at the URI
       symbol: '',
       uri: metadataUri,
       sellerFeeBasisPoints: 0,
@@ -55,5 +52,5 @@ export async function attachMetadata({
     collectionDetails: null,
   }).sendAndConfirm(umi);
 
-  return { success: true, metadataUri };
+  return { metadataUri };
 }
