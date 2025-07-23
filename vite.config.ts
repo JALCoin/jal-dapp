@@ -1,35 +1,34 @@
+// vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
-import { fileURLToPath } from 'url';
-import path from 'path';
-
-// Required for resolving __dirname in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import rollupNodePolyFill from 'rollup-plugin-node-polyfills';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      util: 'rollup-plugin-node-polyfills/polyfills/util',
+      sys: 'util',
+      events: 'rollup-plugin-node-polyfills/polyfills/events',
+      stream: 'rollup-plugin-node-polyfills/polyfills/stream',
+      path: 'rollup-plugin-node-polyfills/polyfills/path',
+      buffer: 'rollup-plugin-node-polyfills/polyfills/buffer-es6',
+      process: 'rollup-plugin-node-polyfills/polyfills/process-es6',
+    },
+  },
   optimizeDeps: {
     esbuildOptions: {
       define: {
         global: 'globalThis',
       },
-      plugins: [
-        NodeGlobalsPolyfillPlugin({
-          buffer: true,
-          process: true,
-        }),
-      ],
     },
   },
-  resolve: {
-    alias: {
-      buffer: path.resolve(__dirname, 'node_modules/buffer/'),
-      process: path.resolve(__dirname, 'node_modules/process/browser.js'),
+  build: {
+    rollupOptions: {
+      plugins: [rollupNodePolyFill()],
     },
-  },
-  define: {
-    'process.env': {}, // Prevent undefined errors in some packages
   },
 });
