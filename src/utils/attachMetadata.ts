@@ -1,49 +1,59 @@
-// src/utils/attachMetadata.ts
+import { Connection, PublicKey } from '@solana/web3.js';
 import {
   createMetadataAccountV3,
   findMetadataPda,
 } from '@metaplex-foundation/mpl-token-metadata';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-adapters';
-import { publicKey } from '@metaplex-foundation/umi';
+import { publicKey as umiPublicKey } from '@metaplex-foundation/umi';
 import type { WalletContextState } from '@solana/wallet-adapter-react';
-import { Connection } from '@solana/web3.js';
 
 export async function attachMetadata({
-  metadataUri,
   mint,
-  wallet,
+  metadataUri,
   connection,
+  wallet,
 }: {
-  metadataUri: string;
   mint: string;
-  wallet: WalletContextState;
+  metadataUri: string;
   connection: Connection;
+  wallet: WalletContextState;
 }) {
   if (!wallet.publicKey || !wallet.signTransaction) {
-    throw new Error('Wallet not connected');
+    throw new Error('Wallet not connected or missing signer.');
   }
 
-  const umi = createUmi(connection.rpcEndpoint).use(walletAdapterIdentity(wallet as any));
-  const mintPublicKey = publicKey(mint);
-  const metadataPda = findMetadataPda(umi, { mint: mintPublicKey });
+  const umi = createUmi(connection.rpcEndpoint).use(
+    walletAdapterIdentity(wallet as any)
+  );
+
+  const mintPubkey = umiPublicKey(mint);
+  const metadataPda = findMetadataPda(umi, { mint: mintPubkey });
 
   await createMetadataAccountV3(umi, {
     metadata: metadataPda,
-    mint: mintPublicKey,
+    mint: mintPubkey,
     mintAuthority: umi.identity,
     updateAuthority: umi.identity,
     payer: umi.identity,
     data: {
-      name: ' ',
-      symbol: ' ',
+      name: 'Token',
+      symbol: '',
       uri: metadataUri,
       sellerFeeBasisPoints: 0,
-      creators: null,
+      creators: [
+        {
+          address: umi.identity.publicKey,
+          verified: true,
+          share: 100,
+        },
+      ],
       collection: null,
       uses: null,
     },
     isMutable: true,
     collectionDetails: null,
   }).sendAndConfirm(umi);
+
+  return { success: true, metadataUri };
 }
