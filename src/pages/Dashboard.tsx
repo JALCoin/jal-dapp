@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import FinalizeTokenAsNFT, { FinalizeData } from '../components/FinalizeTokenAsNFT';
+import FinalizeTokenAsNFT from '../components/FinalizeTokenAsNFT';
+import type { FinalizeData } from '../components/FinalizeTokenAsNFT';
 import { attachMetadata } from '../utils/attachMetadata';
 
 interface TokenInfo {
