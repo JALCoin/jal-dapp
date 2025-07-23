@@ -1,3 +1,4 @@
+import { Connection } from '@solana/web3.js';
 import {
   createMetadataAccountV3,
   findMetadataPda,
