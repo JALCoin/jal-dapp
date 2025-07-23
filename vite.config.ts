@@ -1,12 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
-import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
   define: {
-    global: 'globalThis', // ✅ Required by many node-style libraries in browser
+    global: 'globalThis', // ✅ required for some libraries
   },
   resolve: {
     alias: {
