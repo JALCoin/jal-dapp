@@ -5,11 +5,11 @@ import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
 export default defineConfig({
   plugins: [react()],
   define: {
-    global: 'globalThis', // ✅ required for some libraries
+    global: 'globalThis',
   },
   resolve: {
     alias: {
-      process: 'process/browser',
+      process: 'process/browser.js',
       stream: 'stream-browserify',
       zlib: 'browserify-zlib',
       util: 'util',
