@@ -3,9 +3,8 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import FinalizeTokenAsNFT from '../components/FinalizeTokenAsNFT';
 import type { FinalizeData } from '../components/FinalizeTokenAsNFT';
-import { attachMetadata } from '../utils/attachMetadata';
+import FinalizeTokenAsNFT from '../components/FinalizeTokenAsNFT';
 
 interface TokenInfo {
   mint: string;
@@ -15,76 +14,74 @@ interface TokenInfo {
 }
 
 const Dashboard: FC = () => {
-  const wallet = useWallet();
+  const { publicKey } = useWallet();
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
 
-  const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+  const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
   useEffect(() => {
     const fetchTokens = async () => {
-      if (!wallet.publicKey) return;
-      setLoading(true);
+      if (!publicKey) return;
 
+      setLoading(true);
       try {
-        const response = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
+        const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
           programId: TOKEN_PROGRAM_ID,
         });
 
-        const filtered: TokenInfo[] = [];
-        for (const acc of response.value) {
-          const info = acc.account.data.parsed.info;
-          const mint = info.mint;
-          const mintInfo = await connection.getParsedAccountInfo(new PublicKey(mint));
+        const candidateMints = response.value.map((acc: any) => acc.account.data.parsed.info.mint);
+        const filteredTokens: TokenInfo[] = [];
+
+        for (const mint of candidateMints) {
+          const mintPubkey = new PublicKey(mint);
+          const mintInfo = await connection.getParsedAccountInfo(mintPubkey);
           const parsed = (mintInfo.value?.data as any)?.parsed?.info;
 
-          if (parsed?.mintAuthority === wallet.publicKey.toBase58()) {
-            filtered.push({
+          if (parsed?.mintAuthority === publicKey.toBase58()) {
+            const tokenAccount = response.value.find((acc: any) =>
+              acc.account.data.parsed.info.mint === mint
+            );
+            const tokenInfo = tokenAccount?.account.data.parsed.info;
+
+            filteredTokens.push({
               mint,
-              amount: info.tokenAmount.uiAmountString,
-              decimals: info.tokenAmount.decimals,
+              amount: tokenInfo.tokenAmount.uiAmountString,
+              decimals: tokenInfo.tokenAmount.decimals,
               isFinalized: false,
             });
           }
         }
 
-        setTokens(filtered);
+        setTokens(filteredTokens);
       } catch (err) {
-        console.error(err);
+        console.error('Error filtering tokens:', err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchTokens();
-  }, [wallet.publicKey]);
+  }, [publicKey]);
 
-  const handleFinalizeSubmit = async ({ metadataUri }: FinalizeData) => {
-    if (!selectedMint || !wallet.publicKey) return;
-    try {
-      await attachMetadata({
-        mint: selectedMint,
-        metadataUri,
-        wallet,
-      });
-      console.log(`✅ Metadata attached to ${selectedMint}`);
-    } catch (err) {
-      console.error('❌ Finalization failed', err);
-    } finally {
-      setShowModal(false);
-    }
+  const handleFinalizeSubmit = async (data: FinalizeData) => {
+    console.log('Finalization request for', selectedMint, data);
+
+    // 🔜 attachMetadata logic goes here
+    setShowModal(false);
   };
 
   return (
     <main>
       <div className="container">
         <h1>Your Created Tokens</h1>
+
         {loading ? (
           <p>Loading token accounts...</p>
         ) : tokens.length === 0 ? (
-          <p>No tokens found.</p>
+          <p>No tokens created by this wallet.</p>
         ) : (
           <div className="token-list">
             {tokens.map((token, idx) => (
@@ -101,23 +98,28 @@ const Dashboard: FC = () => {
                       📋
                     </button>
                   </p>
-                  <p><strong>Amount:</strong> {token.amount}</p>
+                  <p>
+                    <strong>Amount:</strong> {token.amount}
+                  </p>
                 </div>
 
                 <a
-                  className="explorer-link"
                   href={`https://solscan.io/token/${token.mint}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="explorer-link"
                 >
                   View on Solscan ↗
                 </a>
 
                 {!token.isFinalized && (
-                  <button className="button" onClick={() => {
-                    setSelectedMint(token.mint);
-                    setShowModal(true);
-                  }}>
+                  <button
+                    className="button"
+                    onClick={() => {
+                      setSelectedMint(token.mint);
+                      setShowModal(true);
+                    }}
+                  >
                     Finalize
                   </button>
                 )}
