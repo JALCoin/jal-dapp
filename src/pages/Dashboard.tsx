@@ -8,15 +8,12 @@ interface TokenInfo {
   mint: string;
   amount: string;
   decimals: number;
-  isFinalized: boolean;
 }
 
 const Dashboard: FC = () => {
   const { publicKey } = useWallet();
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedMint, setSelectedMint] = useState<string | null>(null);
 
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
@@ -48,7 +45,6 @@ const Dashboard: FC = () => {
               mint,
               amount: tokenInfo.tokenAmount.uiAmountString,
               decimals: tokenInfo.tokenAmount.decimals,
-              isFinalized: false,
             });
           }
         }
@@ -63,13 +59,6 @@ const Dashboard: FC = () => {
 
     fetchTokens();
   }, [publicKey]);
-
-  const handleFinalizeSubmit = async (data: FinalizeData) => {
-    console.log('Finalization request for', selectedMint, data);
-
-    // 🔜 attachMetadata logic goes here
-    setShowModal(false);
-  };
 
   return (
     <main>
@@ -110,30 +99,19 @@ const Dashboard: FC = () => {
                   View on Solscan ↗
                 </a>
 
-                {!token.isFinalized && (
-                  <button
-                    className="button"
-                    onClick={() => {
-                      setSelectedMint(token.mint);
-                      setShowModal(true);
-                    }}
-                  >
-                    Finalize
-                  </button>
-                )}
+                <a
+                  className="button"
+                  href={`https://lighthouse.storage/`} // or link to your Turn Into Currency docs/UI
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Turn Into Currency
+                </a>
               </div>
             ))}
           </div>
         )}
       </div>
-
-      {showModal && selectedMint && (
-        <FinalizeTokenAsNFT
-          mint={selectedMint}
-          onClose={() => setShowModal(false)}
-          onSubmit={handleFinalizeSubmit}
-        />
-      )}
     </main>
   );
 };
