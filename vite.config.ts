@@ -9,8 +9,8 @@ export default defineConfig({
       stream: 'stream-browserify',
       crypto: 'crypto-browserify',
       path: 'path-browserify',
-      buffer: 'buffer',
-      process: 'process/browser',
+      buffer: 'buffer/',
+      process: 'process/browser.js', // ✅ fix here!
     },
   },
   optimizeDeps: {
