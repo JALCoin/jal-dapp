@@ -136,9 +136,9 @@ const Dashboard: FC = () => {
       </div>
 
       {showInstructions && (
-        <div className="currency-overlay">
-          <div className="currency-modal">
-            <button onClick={() => setShowInstructions(false)} className="currency-close">×</button>
+        <div className="instruction-backdrop">
+          <div className="instruction-panel">
+            <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
             <h2>Turn Into Currency</h2>
             <ol>
               <li>
