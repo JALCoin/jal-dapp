@@ -1,22 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      stream: 'rollup-plugin-node-polyfills/polyfills/stream',
-      util: 'rollup-plugin-node-polyfills/polyfills/util',
-      buffer: 'rollup-plugin-node-polyfills/polyfills/buffer-es6',
-    },
+    alias: {}, // No Node polyfills needed for browser build
   },
   optimizeDeps: {
-    include: ['buffer', 'stream', 'util'],
+    include: [], // Remove polyfills from dependency optimization
   },
   build: {
     rollupOptions: {
-      plugins: [rollupNodePolyFill()],
+      plugins: [], // Removed rollupNodePolyFill()
     },
   },
 });
