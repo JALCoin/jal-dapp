@@ -10,7 +10,6 @@ interface FinalizeParams {
   metadataUri: string;
   name: string;
   symbol: string;
-  description: string;
   wallet: WalletContextState;
   connection: Connection;
 }
@@ -20,7 +19,6 @@ export const finalizeTokenMetadata = async ({
   metadataUri,
   name,
   symbol,
-  description,
   wallet,
   connection,
 }: FinalizeParams) => {
