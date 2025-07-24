@@ -35,7 +35,7 @@ export const finalizeTokenMetadata = async ({
       name,
       symbol,
       sellerFeeBasisPoints: 0,
-      mintAddress: mint,
+      mint,
       isMutable: true,
     });
 
