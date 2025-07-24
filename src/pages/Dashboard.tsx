@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { Metadata, PROGRAM_ID as METADATA_PROGRAM_ID, PnftEditionMarkerAccountData } from '@metaplex-foundation/mpl-token-metadata';
-import finalizeMetadata from '../utils/finalizeMetadata';
+import { PROGRAM_ID as METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
+import { finalizeMetadata } from '../utils/finalizeMetadata';
 
 interface TokenInfo {
   mint: string;
@@ -45,7 +45,6 @@ const Dashboard: FC = () => {
             );
             const tokenInfo = tokenAccount?.account.data.parsed.info;
 
-            // Check if metadata already exists
             const [metadataPDA] = await PublicKey.findProgramAddress(
               [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer()],
               METADATA_PROGRAM_ID
