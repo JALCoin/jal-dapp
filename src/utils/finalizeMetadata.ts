@@ -30,12 +30,13 @@ export const finalizeTokenMetadata = async ({
     const mint = new PublicKey(mintAddress);
     const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(wallet));
 
-    const { nft } = await metaplex.nfts().createFromMint({
-      mintAddress: mint,
+    const { nft } = await metaplex.nfts().create({
       uri: metadataUri,
       name,
       symbol,
       sellerFeeBasisPoints: 0,
+      mintAddress: mint,
+      updateAuthority: wallet.publicKey,
       isMutable: true,
     });
 
