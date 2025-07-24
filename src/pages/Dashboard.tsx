@@ -114,26 +114,35 @@ const Dashboard: FC = () => {
       </div>
 
 {showInstructions && (
-  <div className="instruction-backdrop">
-    <div className="instruction-panel">
+  <div className="currency-overlay">
+    <div className="currency-modal">
       <button
         onClick={() => setShowInstructions(false)}
-        className="close-btn"
+        className="currency-close"
+        aria-label="Close instructions"
       >
         ×
       </button>
-      <h2>Turn Into Currency</h2>
-      <ol>
+
+      <h2 className="text-xl font-bold mb-4 text-center">Turn Into Currency</h2>
+
+      <ol className="list-decimal text-sm space-y-3 text-left pl-5">
         <li>
           Go to{" "}
-          <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
+          <a
+            href="https://www.lighthouse.storage/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline font-medium"
+          >
             lighthouse.storage
           </a>{" "}
           and create an account.
         </li>
         <li>
-          Upload your <code>metadata.json</code> file including:
-          <ul>
+          Upload your{" "}
+          <code className="bg-gray-100 px-1 py-0.5 rounded text-sm">metadata.json</code> file including:
+          <ul className="list-disc mt-2 ml-6 space-y-1 text-[13px]">
             <li><strong>name</strong></li>
             <li><strong>symbol</strong></li>
             <li><strong>description</strong></li>
@@ -143,7 +152,8 @@ const Dashboard: FC = () => {
         <li>Copy the returned metadata URI.</li>
         <li>Come back and paste it in the next step (coming soon).</li>
       </ol>
-      <p className="note">
+
+      <p className="note text-xs text-center text-gray-500 border-t mt-6 pt-4">
         This step transforms your token into an on-chain asset with identity.
       </p>
     </div>

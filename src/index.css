@@ -329,7 +329,7 @@ input:focus, textarea:focus {
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -342,18 +342,18 @@ input:focus, textarea:focus {
   color: black;
   padding: 2rem;
   border-radius: 16px;
-  width: 100%;
   max-width: 540px;
+  width: 90%;
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
-  animation: scaleIn 0.3s ease-out forwards;
   position: relative;
   font-size: 0.95rem;
+  animation: scaleIn 0.25s ease-out forwards;
 }
 
 .instruction-panel h2 {
   font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   text-align: center;
 }
 
@@ -379,8 +379,8 @@ input:focus, textarea:focus {
 }
 
 .instruction-panel code {
-  background: #f2f2f2;
-  padding: 0.2rem 0.4rem;
+  background: #f3f3f3;
+  padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.85rem;
 }
@@ -421,26 +421,23 @@ input:focus, textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s ease;
 }
 
 .instruction-panel .close-btn:hover {
   background-color: #222;
 }
 
-/* Animation Keyframes */
+/* Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.96);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
