@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import finalizeMetadata from '../utils/finalizeMetadata';
 
 interface TokenInfo {
   mint: string;
@@ -11,15 +12,10 @@ interface TokenInfo {
 }
 
 const Dashboard: FC = () => {
-  const { publicKey } = useWallet();
+  const { publicKey, signTransaction } = useWallet();
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showInstructions, setShowInstructions] = useState(false);
-
-  const [imageUri, setImageUri] = useState('');
-  const [name, setName] = useState('');
-  const [symbol, setSymbol] = useState('');
-  const [description, setDescription] = useState('');
+  const [uriInputs, setUriInputs] = useState<{ [mint: string]: string }>({});
 
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
@@ -66,25 +62,27 @@ const Dashboard: FC = () => {
     fetchTokens();
   }, [publicKey]);
 
-  const handleTurnIntoCurrency = () => {
-    setShowInstructions(true);
+  const handleUriChange = (mint: string, value: string) => {
+    setUriInputs((prev) => ({ ...prev, [mint]: value }));
   };
 
-  const handleDownloadMetadata = () => {
-    const metadata = {
-      name,
-      symbol,
-      description,
-      image: imageUri,
-    };
+  const handleFinalize = async (mint: string) => {
+    try {
+      const metadataUri = uriInputs[mint];
+      if (!metadataUri) return alert('Please provide a metadata URI first.');
 
-    const file = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'metadata.json';
-    a.click();
-    URL.revokeObjectURL(url);
+      await finalizeMetadata({
+        connection,
+        wallet: { publicKey, signTransaction },
+        mint: new PublicKey(mint),
+        metadataUri,
+      });
+
+      alert('Metadata finalized!');
+    } catch (err) {
+      console.error('Error finalizing metadata:', err);
+      alert('Failed to finalize metadata.');
+    }
   };
 
   return (
@@ -108,9 +106,7 @@ const Dashboard: FC = () => {
                       className="copy-btn"
                       onClick={() => navigator.clipboard.writeText(token.mint)}
                       title="Copy Mint Address"
-                    >
-                      📋
-                    </button>
+                    >📋</button>
                   </p>
                   <p>
                     <strong>Amount:</strong> {token.amount}
@@ -122,87 +118,23 @@ const Dashboard: FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="explorer-link"
-                >
-                  View on Solscan ↗
-                </a>
+                >View on Solscan ↗</a>
 
-                <button className="button" onClick={handleTurnIntoCurrency}>
-                  Turn Into Currency
+                <input
+                  className="currency-input"
+                  placeholder="ipfs://..."
+                  value={uriInputs[token.mint] || ''}
+                  onChange={(e) => handleUriChange(token.mint, e.target.value)}
+                />
+
+                <button className="button" onClick={() => handleFinalize(token.mint)}>
+                  Finalize Metadata
                 </button>
               </div>
             ))}
           </div>
         )}
       </div>
-
- {showInstructions && (
-  <div className="instruction-backdrop">
-    <div className="instruction-panel">
-      <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
-      <h2>Turn Into Currency</h2>
-      <ol>
-        <li>
-          Go to{' '}
-          <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
-            lighthouse.storage
-          </a>{' '}
-          and click <strong>“Get Started”</strong>.
-          <ul>
-            <li>Connect your <strong>Phantom wallet</strong></li>
-            <li>Confirm your <strong>email address</strong> to activate the account</li>
-            <li>Once inside, click <strong>“Upload New” → “Upload File”</strong> in the left sidebar</li>
-            <li>Select and upload your <strong>token image</strong> (PNG recommended)</li>
-          </ul>
-          After upload completes, copy the <code>ipfs://</code> or <code>https://gateway.lighthouse.storage/ipfs/...</code> link from the file details panel on the right.
-        </li>
-
-        <li>
-          Paste your image URI:
-          <input
-            className="currency-input"
-            placeholder="ipfs://..."
-            value={imageUri}
-            onChange={(e) => setImageUri(e.target.value)}
-          />
-        </li>
-
-        <li>
-          Fill out your token identity:
-          <div className="currency-form">
-            <input
-              placeholder="Token Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <input
-              placeholder="Symbol"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-            />
-            <textarea
-              placeholder="Description"
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            <button className="button" onClick={handleDownloadMetadata}>
-              Download metadata.json
-            </button>
-          </div>
-        </li>
-
-        <li>
-          Upload your <code>metadata.json</code> file to Lighthouse just like the image.  
-          Copy the <strong>IPFS URI</strong> for finalization in the next step.
-        </li>
-      </ol>
-
-      <p className="note">
-        This metadata URI will become your token’s permanent identity on Solana.
-      </p>
-    </div>
-  </div>
-)}
     </main>
   );
 };
