@@ -37,8 +37,8 @@ const Dashboard: FC = () => {
           const parsed = (mintInfo.value?.data as any)?.parsed?.info;
 
           if (parsed?.mintAuthority === publicKey.toBase58()) {
-            const tokenAccount = response.value.find((acc: any) =>
-              acc.account.data.parsed.info.mint === mint
+            const tokenAccount = response.value.find(
+              (acc: any) => acc.account.data.parsed.info.mint === mint
             );
             const tokenInfo = tokenAccount?.account.data.parsed.info;
 
@@ -113,43 +113,47 @@ const Dashboard: FC = () => {
         )}
       </div>
 
-{showInstructions && (
-  <div className="instruction-backdrop">
-    <div className="instruction-panel">
-      <button
-        onClick={() => setShowInstructions(false)}
-        className="close-btn"
-      >
-        ×
-      </button>
-      <h2>Turn Into Currency</h2>
-      <ol>
-        <li>
-          Go to{" "}
-          <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
-            lighthouse.storage
-          </a>{" "}
-          and create an account.
-        </li>
-        <li>
-          Upload your <code>metadata.json</code> file including:
-          <ul>
-            <li><strong>name</strong></li>
-            <li><strong>symbol</strong></li>
-            <li><strong>description</strong></li>
-            <li><strong>image</strong> (IPFS URI)</li>
-          </ul>
-        </li>
-        <li>Copy the returned metadata URI.</li>
-        <li>Come back and paste it in the next step (coming soon).</li>
-      </ol>
-      <p className="note">
-        This step transforms your token into an on-chain asset with identity.
-      </p>
-    </div>
-  </div>
-)}
-)}    </main>
+      {showInstructions && (
+        <div className="instruction-backdrop">
+          <div className="instruction-panel">
+            <button
+              onClick={() => setShowInstructions(false)}
+              className="close-btn"
+            >
+              ×
+            </button>
+            <h2>Turn Into Currency</h2>
+            <ol>
+              <li>
+                Go to{' '}
+                <a
+                  href="https://www.lighthouse.storage/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  lighthouse.storage
+                </a>{' '}
+                and create an account.
+              </li>
+              <li>
+                Upload your <code>metadata.json</code> file including:
+                <ul>
+                  <li><strong>name</strong></li>
+                  <li><strong>symbol</strong></li>
+                  <li><strong>description</strong></li>
+                  <li><strong>image</strong> (IPFS URI)</li>
+                </ul>
+              </li>
+              <li>Copy the returned metadata URI.</li>
+              <li>Come back and paste it in the next step (coming soon).</li>
+            </ol>
+            <p className="note">
+              This step transforms your token into an on-chain asset with identity.
+            </p>
+          </div>
+        </div>
+      )}
+    </main>
   );
 };
 
