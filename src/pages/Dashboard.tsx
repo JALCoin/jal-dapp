@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Metadata, PROGRAM_ID as METADATA_PROGRAM_ID, PnftEditionMarkerAccountData } from '@metaplex-foundation/mpl-token-metadata';
 import finalizeMetadata from '../utils/finalizeMetadata';
 
 interface TokenInfo {
   mint: string;
   amount: string;
   decimals: number;
+  finalized: boolean;
 }
 
 const Dashboard: FC = () => {
@@ -43,10 +45,20 @@ const Dashboard: FC = () => {
             );
             const tokenInfo = tokenAccount?.account.data.parsed.info;
 
+            // Check if metadata already exists
+            const [metadataPDA] = await PublicKey.findProgramAddress(
+              [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer()],
+              METADATA_PROGRAM_ID
+            );
+
+            const accountInfo = await connection.getAccountInfo(metadataPDA);
+            const finalized = accountInfo !== null;
+
             filteredTokens.push({
               mint,
               amount: tokenInfo.tokenAmount.uiAmountString,
               decimals: tokenInfo.tokenAmount.decimals,
+              finalized,
             });
           }
         }
@@ -79,6 +91,7 @@ const Dashboard: FC = () => {
       });
 
       alert('Metadata finalized!');
+      setTokens((prev) => prev.map((t) => t.mint === mint ? { ...t, finalized: true } : t));
     } catch (err) {
       console.error('Error finalizing metadata:', err);
       alert('Failed to finalize metadata.');
@@ -111,6 +124,10 @@ const Dashboard: FC = () => {
                   <p>
                     <strong>Amount:</strong> {token.amount}
                   </p>
+                  <p>
+                    <strong>Status:</strong>{' '}
+                    {token.finalized ? '✅ Finalized' : '❌ Not finalized'}
+                  </p>
                 </div>
 
                 <a
@@ -125,9 +142,14 @@ const Dashboard: FC = () => {
                   placeholder="ipfs://..."
                   value={uriInputs[token.mint] || ''}
                   onChange={(e) => handleUriChange(token.mint, e.target.value)}
+                  disabled={token.finalized}
                 />
 
-                <button className="button" onClick={() => handleFinalize(token.mint)}>
+                <button
+                  className="button"
+                  onClick={() => handleFinalize(token.mint)}
+                  disabled={token.finalized}
+                >
                   Finalize Metadata
                 </button>
               </div>
