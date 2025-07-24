@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
 import { finalizeTokenMetadata } from '../utils/finalizeMetadata';
 
 interface TokenInfo {
@@ -14,20 +13,21 @@ interface TokenInfo {
 }
 
 const Dashboard: FC = () => {
-  const { publicKey, signTransaction } = useWallet();
+  const wallet = useWallet();
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uriInputs, setUriInputs] = useState<{ [mint: string]: string }>({});
+  const [nameInputs, setNameInputs] = useState<{ [mint: string]: string }>({});
+  const [symbolInputs, setSymbolInputs] = useState<{ [mint: string]: string }>({});
 
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
   useEffect(() => {
     const fetchTokens = async () => {
-      if (!publicKey) return;
-
+      if (!wallet.publicKey) return;
       setLoading(true);
       try {
-        const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
+        const response = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
           programId: TOKEN_PROGRAM_ID,
         });
 
@@ -39,19 +39,13 @@ const Dashboard: FC = () => {
           const mintInfo = await connection.getParsedAccountInfo(mintPubkey);
           const parsed = (mintInfo.value?.data as any)?.parsed?.info;
 
-          if (parsed?.mintAuthority === publicKey.toBase58()) {
+          if (parsed?.mintAuthority === wallet.publicKey.toBase58()) {
             const tokenAccount = response.value.find(
               (acc: any) => acc.account.data.parsed.info.mint === mint
             );
             const tokenInfo = tokenAccount?.account.data.parsed.info;
 
-            const [metadataPDA] = await PublicKey.findProgramAddress(
-              [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer()],
-              METADATA_PROGRAM_ID
-            );
-
-            const accountInfo = await connection.getAccountInfo(metadataPDA);
-            const finalized = accountInfo !== null;
+            const finalized = false; // Skip metadata PDA check for now
 
             filteredTokens.push({
               mint,
@@ -71,29 +65,38 @@ const Dashboard: FC = () => {
     };
 
     fetchTokens();
-  }, [publicKey]);
+  }, [wallet.publicKey]);
 
-  const handleUriChange = (mint: string, value: string) => {
-    setUriInputs((prev) => ({ ...prev, [mint]: value }));
+  const handleInputChange = (
+    mint: string,
+    field: 'uri' | 'name' | 'symbol',
+    value: string
+  ) => {
+    if (field === 'uri') setUriInputs((prev) => ({ ...prev, [mint]: value }));
+    if (field === 'name') setNameInputs((prev) => ({ ...prev, [mint]: value }));
+    if (field === 'symbol') setSymbolInputs((prev) => ({ ...prev, [mint]: value }));
   };
 
   const handleFinalize = async (mint: string) => {
     try {
       const metadataUri = uriInputs[mint];
-      if (!metadataUri) return alert('Please provide a metadata URI first.');
+      const name = nameInputs[mint];
+      const symbol = symbolInputs[mint];
+      if (!metadataUri || !name || !symbol) return alert('Please fill in all fields.');
 
       await finalizeTokenMetadata({
         connection,
-        wallet: { publicKey, signTransaction },
-        mint: new PublicKey(mint),
+        wallet,
+        mintAddress: mint,
         metadataUri,
+        name,
+        symbol,
       });
 
-      alert('Metadata finalized!');
-      setTokens((prev) => prev.map((t) => t.mint === mint ? { ...t, finalized: true } : t));
+      alert('✅ Metadata finalized.');
+      setTokens((prev) => prev.map((t) => (t.mint === mint ? { ...t, finalized: true } : t)));
     } catch (err) {
-      console.error('Error finalizing metadata:', err);
-      alert('Failed to finalize metadata.');
+      alert('❌ Finalization failed.');
     }
   };
 
@@ -111,14 +114,8 @@ const Dashboard: FC = () => {
             {tokens.map((token, idx) => (
               <div key={idx} className="token-card">
                 <div className="token-info">
-                  <p className="token-mint">
-                    <strong>Mint:</strong>{' '}
-                    <span className="mono">{token.mint}</span>
-                    <button
-                      className="copy-btn"
-                      onClick={() => navigator.clipboard.writeText(token.mint)}
-                      title="Copy Mint Address"
-                    >📋</button>
+                  <p>
+                    <strong>Mint:</strong> <span>{token.mint}</span>
                   </p>
                   <p>
                     <strong>Amount:</strong> {token.amount}
@@ -129,23 +126,26 @@ const Dashboard: FC = () => {
                   </p>
                 </div>
 
-                <a
-                  href={`https://solscan.io/token/${token.mint}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="explorer-link"
-                >View on Solscan ↗</a>
-
                 <input
-                  className="currency-input"
+                  placeholder="Token Name"
+                  value={nameInputs[token.mint] || ''}
+                  onChange={(e) => handleInputChange(token.mint, 'name', e.target.value)}
+                  disabled={token.finalized}
+                />
+                <input
+                  placeholder="Symbol"
+                  value={symbolInputs[token.mint] || ''}
+                  onChange={(e) => handleInputChange(token.mint, 'symbol', e.target.value)}
+                  disabled={token.finalized}
+                />
+                <input
                   placeholder="ipfs://..."
                   value={uriInputs[token.mint] || ''}
-                  onChange={(e) => handleUriChange(token.mint, e.target.value)}
+                  onChange={(e) => handleInputChange(token.mint, 'uri', e.target.value)}
                   disabled={token.finalized}
                 />
 
                 <button
-                  className="button"
                   onClick={() => handleFinalize(token.mint)}
                   disabled={token.finalized}
                 >
