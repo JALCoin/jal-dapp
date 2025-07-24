@@ -3,10 +3,9 @@ import {
   walletAdapterIdentity,
 } from '@metaplex-foundation/js';
 import type { WalletContextState } from '@solana/wallet-adapter-react';
-import { PublicKey, Connection } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 
 interface FinalizeParams {
-  mintAddress: string;
   metadataUri: string;
   name: string;
   symbol: string;
@@ -15,7 +14,6 @@ interface FinalizeParams {
 }
 
 export const finalizeTokenMetadata = async ({
-  mintAddress,
   metadataUri,
   name,
   symbol,
@@ -27,7 +25,6 @@ export const finalizeTokenMetadata = async ({
   }
 
   try {
-    const mint = new PublicKey(mintAddress);
     const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(wallet));
 
     const { nft } = await metaplex.nfts().create({
@@ -35,7 +32,6 @@ export const finalizeTokenMetadata = async ({
       name,
       symbol,
       sellerFeeBasisPoints: 0,
-      mintAddress: mint,
       isMutable: true,
     });
 
