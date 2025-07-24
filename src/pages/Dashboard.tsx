@@ -135,62 +135,73 @@ const Dashboard: FC = () => {
         )}
       </div>
 
-      {showInstructions && (
-        <div className="instruction-backdrop">
-          <div className="instruction-panel">
-            <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
-            <h2>Turn Into Currency</h2>
-            <ol>
-              <li>
-                Go to{' '}
-                <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
-                  lighthouse.storage
-                </a>{' '}
-                and upload your image (PNG recommended). Copy the returned IPFS URI.
-              </li>
-              <li>
-                Paste your image URI:
-                <input
-                  className="currency-input"
-                  placeholder="ipfs://..."
-                  value={imageUri}
-                  onChange={(e) => setImageUri(e.target.value)}
-                />
-              </li>
-              <li>
-                Fill out your token identity:
-                <div className="currency-form">
-                  <input
-                    placeholder="Token Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  <input
-                    placeholder="Symbol"
-                    value={symbol}
-                    onChange={(e) => setSymbol(e.target.value)}
-                  />
-                  <textarea
-                    placeholder="Description"
-                    rows={3}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                  <button className="button" onClick={handleDownloadMetadata}>
-                    Download metadata.json
-                  </button>
-                </div>
-              </li>
-              <li>
-                Upload your metadata.json file to Lighthouse and copy the returned URI.
-              </li>
-            </ol>
-            <p className="note">
-              This metadata URI will become your token’s identity on Solana.
-            </p>
+ {showInstructions && (
+  <div className="instruction-backdrop">
+    <div className="instruction-panel">
+      <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
+      <h2>Turn Into Currency</h2>
+      <ol>
+        <li>
+          Go to{' '}
+          <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
+            lighthouse.storage
+          </a>{' '}
+          and click <strong>“Get Started”</strong>.
+          <ul>
+            <li>Connect your <strong>Phantom wallet</strong></li>
+            <li>Verify your <strong>email address</strong> when prompted</li>
+            <li>Then click <strong>“Upload New”</strong> on the dashboard sidebar</li>
+          </ul>
+          Upload your <strong>token image</strong> (PNG recommended), then copy the returned <code>ipfs://</code> URI.
+        </li>
+
+        <li>
+          Paste your image URI:
+          <input
+            className="currency-input"
+            placeholder="ipfs://..."
+            value={imageUri}
+            onChange={(e) => setImageUri(e.target.value)}
+          />
+        </li>
+
+        <li>
+          Fill out your token identity:
+          <div className="currency-form">
+            <input
+              placeholder="Token Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <input
+              placeholder="Symbol"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+            />
+            <textarea
+              placeholder="Description"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <button className="button" onClick={handleDownloadMetadata}>
+              Download metadata.json
+            </button>
           </div>
-        </div>
-      )}
+        </li>
+
+        <li>
+          Upload your <code>metadata.json</code> file to Lighthouse and copy the returned URI.
+        </li>
+      </ol>
+
+      <p className="note">
+        This metadata URI will become your token’s permanent identity on Solana.
+      </p>
+    </div>
+  </div>
+)}
+
     </main>
   );
 };
