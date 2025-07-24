@@ -324,7 +324,7 @@ input:focus, textarea:focus {
     margin: 0 1rem;
   }
 }
-/* Turn Into Currency Instruction Modal */
+/* Turn Into Currency Modal Overlay */
 .instruction-backdrop {
   position: fixed;
   inset: 0;
@@ -335,56 +335,67 @@ input:focus, textarea:focus {
   align-items: center;
   z-index: 9999;
   animation: fadeIn 0.3s ease-out forwards;
+  padding: 1rem;
 }
 
+/* Modal Container */
 .instruction-panel {
-  background: white;
+  background-color: white;
   color: black;
   padding: 2rem;
   border-radius: 16px;
   width: 100%;
-  max-width: 540px;
+  max-width: 560px;
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
   animation: scaleIn 0.3s ease-out forwards;
   position: relative;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
+/* Modal Header */
 .instruction-panel h2 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 700;
-  margin-bottom: 1.5rem;
   text-align: center;
+  margin: 0;
 }
 
+/* Step-by-step List */
 .instruction-panel ol {
   list-style: decimal inside;
-  padding-left: 0;
+  padding: 0;
   margin: 0;
 }
 
 .instruction-panel li {
-  margin-bottom: 1rem;
-  line-height: 1.6;
+  margin-bottom: 1.25rem;
 }
 
 .instruction-panel li a {
   color: #007acc;
+  font-weight: 600;
   text-decoration: underline;
-  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
 .instruction-panel li a:hover {
   color: #004799;
 }
 
+/* Inline Code Highlight */
 .instruction-panel code {
   background: #f2f2f2;
-  padding: 0.2rem 0.4rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-family: monospace;
+  font-size: 0.875rem;
 }
 
+/* Inner unordered lists (if needed) */
 .instruction-panel ul {
   list-style: disc;
   margin-left: 1.5rem;
@@ -392,20 +403,22 @@ input:focus, textarea:focus {
 }
 
 .instruction-panel ul li {
-  font-weight: 600;
-  font-size: 0.85rem;
-  margin-bottom: 0.25rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  margin-bottom: 0.4rem;
 }
 
+/* Closing Note */
 .instruction-panel .note {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   margin-top: 1.5rem;
+  padding-top: 1rem;
   color: var(--jal-muted);
   text-align: center;
   border-top: 1px solid #ddd;
-  padding-top: 1rem;
 }
 
+/* Close Button */
 .instruction-panel .close-btn {
   position: absolute;
   top: 12px;
@@ -414,38 +427,29 @@ input:focus, textarea:focus {
   color: white;
   border: none;
   border-radius: 6px;
-  width: 28px;
-  height: 28px;
-  font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  font-size: 1.1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.2s ease;
 }
 
 .instruction-panel .close-btn:hover {
   background-color: #222;
 }
 
-/* Animation Keyframes */
+/* Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* Responsive */
@@ -453,6 +457,7 @@ input:focus, textarea:focus {
   .instruction-panel {
     padding: 1.25rem;
     border-radius: 12px;
+    font-size: 0.95rem;
+    gap: 1rem;
   }
 }
-
