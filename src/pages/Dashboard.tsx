@@ -77,28 +77,28 @@ const Dashboard: FC = () => {
     if (field === 'symbol') setSymbolInputs((prev) => ({ ...prev, [mint]: value }));
   };
 
-  const handleFinalize = async (mint: string) => {
-    try {
-      const metadataUri = uriInputs[mint];
-      const name = nameInputs[mint];
-      const symbol = symbolInputs[mint];
-      if (!metadataUri || !name || !symbol) return alert('Please fill in all fields.');
+const handleFinalize = async (mint: string) => {
+  try {
+    const metadataUri = uriInputs[mint];
+    const name = nameInputs[mint];
+    const symbol = symbolInputs[mint];
+    if (!metadataUri || !name || !symbol) return alert('Please fill in all fields.');
 
-      await finalizeTokenMetadata({
-        connection,
-        wallet,
-        mintAddress: mint,
-        metadataUri,
-        name,
-        symbol,
-      });
+    await finalizeTokenMetadata({
+      connection,
+      wallet,
+      metadataUri, // ✅ keep
+      name,        // ✅ keep
+      symbol       // ✅ keep
+      // ❌ REMOVE mintAddress
+    });
 
-      alert('✅ Metadata finalized.');
-      setTokens((prev) => prev.map((t) => (t.mint === mint ? { ...t, finalized: true } : t)));
-    } catch (err) {
-      alert('❌ Finalization failed.');
-    }
-  };
+    alert('✅ Metadata finalized.');
+    setTokens((prev) => prev.map((t) => (t.mint === mint ? { ...t, finalized: true } : t)));
+  } catch (err) {
+    alert('❌ Finalization failed.');
+  }
+};
 
   return (
     <main>
