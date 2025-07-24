@@ -32,7 +32,7 @@ export const finalizeTokenMetadata = async ({
     const mint = new PublicKey(mintAddress);
     const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(wallet));
 
-    const { uri } = await metaplex.nfts().create({
+    const { nft } = await metaplex.nfts().create({
       uri: metadataUri,
       name,
       symbol,
@@ -42,8 +42,8 @@ export const finalizeTokenMetadata = async ({
       isMutable: true,
     });
 
-    console.log('✅ Metadata finalized at:', uri);
-    return uri;
+    console.log('✅ Metadata finalized at:', nft.uri);
+    return nft.uri;
   } catch (err) {
     console.error('❌ Finalization failed:', err);
     throw err;
