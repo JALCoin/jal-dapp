@@ -16,6 +16,11 @@ const Dashboard: FC = () => {
   const [loading, setLoading] = useState(true);
   const [showInstructions, setShowInstructions] = useState(false);
 
+  const [imageUri, setImageUri] = useState('');
+  const [name, setName] = useState('');
+  const [symbol, setSymbol] = useState('');
+  const [description, setDescription] = useState('');
+
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
   useEffect(() => {
@@ -63,6 +68,23 @@ const Dashboard: FC = () => {
 
   const handleTurnIntoCurrency = () => {
     setShowInstructions(true);
+  };
+
+  const handleDownloadMetadata = () => {
+    const metadata = {
+      name,
+      symbol,
+      description,
+      image: imageUri,
+    };
+
+    const file = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'metadata.json';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -114,42 +136,41 @@ const Dashboard: FC = () => {
       </div>
 
       {showInstructions && (
-        <div className="instruction-backdrop">
-          <div className="instruction-panel">
-            <button
-              onClick={() => setShowInstructions(false)}
-              className="close-btn"
-            >
-              ×
-            </button>
+        <div className="currency-overlay">
+          <div className="currency-modal">
+            <button onClick={() => setShowInstructions(false)} className="currency-close">×</button>
             <h2>Turn Into Currency</h2>
             <ol>
               <li>
                 Go to{' '}
-                <a
-                  href="https://www.lighthouse.storage/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
                   lighthouse.storage
                 </a>{' '}
-                and create an account.
+                and upload your image (PNG recommended). Copy the returned IPFS URI.
               </li>
               <li>
-                Upload your <code>metadata.json</code> file including:
-                <ul>
-                  <li><strong>name</strong></li>
-                  <li><strong>symbol</strong></li>
-                  <li><strong>description</strong></li>
-                  <li><strong>image</strong> (IPFS URI)</li>
-                </ul>
+                Paste your image URI:
+                <input
+                  className="currency-input"
+                  placeholder="ipfs://..."
+                  value={imageUri}
+                  onChange={(e) => setImageUri(e.target.value)}
+                />
               </li>
-              <li>Copy the returned metadata URI.</li>
-              <li>Come back and paste it in the next step (coming soon).</li>
+              <li>
+                Fill out your token identity:
+                <div className="currency-form">
+                  <input placeholder="Token Name" value={name} onChange={(e) => setName(e.target.value)} />
+                  <input placeholder="Symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} />
+                  <textarea placeholder="Description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+                  <button className="button" onClick={handleDownloadMetadata}>Download metadata.json</button>
+                </div>
+              </li>
+              <li>
+                Upload your metadata.json file to Lighthouse and copy the returned URI.
+              </li>
             </ol>
-            <p className="note">
-              This step transforms your token into an on-chain asset with identity.
-            </p>
+            <p className="note">This metadata URI will become your token’s identity on Solana.</p>
           </div>
         </div>
       )}
