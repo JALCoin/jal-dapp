@@ -36,7 +36,6 @@ export const finalizeTokenMetadata = async ({
       symbol,
       sellerFeeBasisPoints: 0,
       mintAddress: mint,
-      updateAuthority: wallet.publicKey,
       isMutable: true,
     });
 
