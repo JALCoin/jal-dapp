@@ -160,17 +160,34 @@ const Dashboard: FC = () => {
               <li>
                 Fill out your token identity:
                 <div className="currency-form">
-                  <input placeholder="Token Name" value={name} onChange={(e) => setName(e.target.value)} />
-                  <input placeholder="Symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} />
-                  <textarea placeholder="Description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-                  <button className="button" onClick={handleDownloadMetadata}>Download metadata.json</button>
+                  <input
+                    placeholder="Token Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <input
+                    placeholder="Symbol"
+                    value={symbol}
+                    onChange={(e) => setSymbol(e.target.value)}
+                  />
+                  <textarea
+                    placeholder="Description"
+                    rows={3}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                  <button className="button" onClick={handleDownloadMetadata}>
+                    Download metadata.json
+                  </button>
                 </div>
               </li>
               <li>
                 Upload your metadata.json file to Lighthouse and copy the returned URI.
               </li>
             </ol>
-            <p className="note">This metadata URI will become your token’s identity on Solana.</p>
+            <p className="note">
+              This metadata URI will become your token’s identity on Solana.
+            </p>
           </div>
         </div>
       )}
