@@ -1,40 +1,31 @@
-import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
-import polyfillNode from 'rollup-plugin-polyfill-node';
 import path from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // Polyfills
+      stream: 'rollup-plugin-node-polyfills/polyfills/stream',
+      crypto: 'rollup-plugin-node-polyfills/polyfills/crypto-browserify',
+      path: 'rollup-plugin-node-polyfills/polyfills/path',
+      buffer: 'rollup-plugin-node-polyfills/polyfills/buffer-es6',
+      process: 'rollup-plugin-node-polyfills/polyfills/process-es6',
+    },
+  },
   optimizeDeps: {
-    include: ['buffer', 'process', 'stream', 'crypto'],
     esbuildOptions: {
       define: {
         global: 'globalThis',
       },
-      plugins: [
-        NodeGlobalsPolyfillPlugin({
-          buffer: true,
-          process: true,
-        }),
-      ],
-    },
-  },
-  resolve: {
-    alias: {
-      buffer: path.resolve(__dirname, 'node_modules/buffer/'),
-      process: path.resolve(__dirname, 'node_modules/process/browser.js'),
-      stream: 'stream-browserify',
-      crypto: 'crypto-browserify',
+      inject: [require.resolve('rollup-plugin-node-polyfills/polyfills/global')],
     },
   },
   build: {
     rollupOptions: {
-      plugins: [polyfillNode()],
+      plugins: [rollupNodePolyFill()],
     },
   },
 });
