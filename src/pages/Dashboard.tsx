@@ -3,31 +3,33 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { finalizeTokenMetadata } from '../utils/finalizeMetadata';
 
 interface TokenInfo {
   mint: string;
   amount: string;
   decimals: number;
-  finalized: boolean;
 }
 
 const Dashboard: FC = () => {
-  const wallet = useWallet();
+  const { publicKey } = useWallet();
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uriInputs, setUriInputs] = useState<{ [mint: string]: string }>({});
-  const [nameInputs, setNameInputs] = useState<{ [mint: string]: string }>({});
-  const [symbolInputs, setSymbolInputs] = useState<{ [mint: string]: string }>({});
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  const [imageUri, setImageUri] = useState('');
+  const [name, setName] = useState('');
+  const [symbol, setSymbol] = useState('');
+  const [description, setDescription] = useState('');
 
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
   useEffect(() => {
     const fetchTokens = async () => {
-      if (!wallet.publicKey) return;
+      if (!publicKey) return;
+
       setLoading(true);
       try {
-        const response = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
+        const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
           programId: TOKEN_PROGRAM_ID,
         });
 
@@ -39,19 +41,16 @@ const Dashboard: FC = () => {
           const mintInfo = await connection.getParsedAccountInfo(mintPubkey);
           const parsed = (mintInfo.value?.data as any)?.parsed?.info;
 
-          if (parsed?.mintAuthority === wallet.publicKey.toBase58()) {
+          if (parsed?.mintAuthority === publicKey.toBase58()) {
             const tokenAccount = response.value.find(
               (acc: any) => acc.account.data.parsed.info.mint === mint
             );
             const tokenInfo = tokenAccount?.account.data.parsed.info;
 
-            const finalized = false; // Skip metadata PDA check for now
-
             filteredTokens.push({
               mint,
               amount: tokenInfo.tokenAmount.uiAmountString,
               decimals: tokenInfo.tokenAmount.decimals,
-              finalized,
             });
           }
         }
@@ -65,40 +64,28 @@ const Dashboard: FC = () => {
     };
 
     fetchTokens();
-  }, [wallet.publicKey]);
+  }, [publicKey]);
 
-  const handleInputChange = (
-    mint: string,
-    field: 'uri' | 'name' | 'symbol',
-    value: string
-  ) => {
-    if (field === 'uri') setUriInputs((prev) => ({ ...prev, [mint]: value }));
-    if (field === 'name') setNameInputs((prev) => ({ ...prev, [mint]: value }));
-    if (field === 'symbol') setSymbolInputs((prev) => ({ ...prev, [mint]: value }));
+  const handleTurnIntoCurrency = () => {
+    setShowInstructions(true);
   };
 
-const handleFinalize = async (mint: string) => {
-  try {
-    const metadataUri = uriInputs[mint];
-    const name = nameInputs[mint];
-    const symbol = symbolInputs[mint];
-    if (!metadataUri || !name || !symbol) return alert('Please fill in all fields.');
+  const handleDownloadMetadata = () => {
+    const metadata = {
+      name,
+      symbol,
+      description,
+      image: imageUri,
+    };
 
-    await finalizeTokenMetadata({
-      connection,
-      wallet,
-      metadataUri, // ✅ keep
-      name,        // ✅ keep
-      symbol       // ✅ keep
-      // ❌ REMOVE mintAddress
-    });
-
-    alert('✅ Metadata finalized.');
-    setTokens((prev) => prev.map((t) => (t.mint === mint ? { ...t, finalized: true } : t)));
-  } catch (err) {
-    alert('❌ Finalization failed.');
-  }
-};
+    const file = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'metadata.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <main>
@@ -114,48 +101,108 @@ const handleFinalize = async (mint: string) => {
             {tokens.map((token, idx) => (
               <div key={idx} className="token-card">
                 <div className="token-info">
-                  <p>
-                    <strong>Mint:</strong> <span>{token.mint}</span>
+                  <p className="token-mint">
+                    <strong>Mint:</strong>{' '}
+                    <span className="mono">{token.mint}</span>
+                    <button
+                      className="copy-btn"
+                      onClick={() => navigator.clipboard.writeText(token.mint)}
+                      title="Copy Mint Address"
+                    >
+                      📋
+                    </button>
                   </p>
                   <p>
                     <strong>Amount:</strong> {token.amount}
                   </p>
-                  <p>
-                    <strong>Status:</strong>{' '}
-                    {token.finalized ? '✅ Finalized' : '❌ Not finalized'}
-                  </p>
                 </div>
 
-                <input
-                  placeholder="Token Name"
-                  value={nameInputs[token.mint] || ''}
-                  onChange={(e) => handleInputChange(token.mint, 'name', e.target.value)}
-                  disabled={token.finalized}
-                />
-                <input
-                  placeholder="Symbol"
-                  value={symbolInputs[token.mint] || ''}
-                  onChange={(e) => handleInputChange(token.mint, 'symbol', e.target.value)}
-                  disabled={token.finalized}
-                />
-                <input
-                  placeholder="ipfs://..."
-                  value={uriInputs[token.mint] || ''}
-                  onChange={(e) => handleInputChange(token.mint, 'uri', e.target.value)}
-                  disabled={token.finalized}
-                />
-
-                <button
-                  onClick={() => handleFinalize(token.mint)}
-                  disabled={token.finalized}
+                <a
+                  href={`https://solscan.io/token/${token.mint}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="explorer-link"
                 >
-                  Finalize Metadata
+                  View on Solscan ↗
+                </a>
+
+                <button className="button" onClick={handleTurnIntoCurrency}>
+                  Turn Into Currency
                 </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+{showInstructions && (
+  <div className="instruction-backdrop">
+    <div className="instruction-panel">
+      <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
+      <h2>Turn Into Currency</h2>
+      <ol>
+        <li>
+          Go to{' '}
+          <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
+            lighthouse.storage
+          </a>{' '}
+          and click <strong>“Get Started”</strong>.
+          <ul>
+            <li>Connect your <strong>Phantom wallet</strong></li>
+            <li>Confirm your <strong>email address</strong> to activate the account</li>
+            <li>Once inside, click <strong>“Upload New” → “Upload File”</strong> in the left sidebar</li>
+            <li>Select and upload your <strong>token image</strong> (PNG recommended)</li>
+          </ul>
+          After upload completes, copy the <code>ipfs://</code> or <code>https://gateway.lighthouse.storage/ipfs/...</code> link from the file details panel on the right.
+        </li>
+
+        <li>
+          Paste your image URI:
+          <input
+            className="currency-input"
+            placeholder="ipfs://..."
+            value={imageUri}
+            onChange={(e) => setImageUri(e.target.value)}
+          />
+        </li>
+
+        <li>
+          Fill out your token identity:
+          <div className="currency-form">
+            <input
+              placeholder="Token Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <input
+              placeholder="Symbol"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+            />
+            <textarea
+              placeholder="Description"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <button className="button" onClick={handleDownloadMetadata}>
+              Download metadata.json
+            </button>
+          </div>
+        </li>
+
+        <li>
+          Upload your <code>metadata.json</code> file to Lighthouse just like the image.  
+          Copy the <strong>IPFS URI</strong> for finalization in the next step.
+        </li>
+      </ol>
+
+      <p className="note">
+        This metadata URI will become your token’s permanent identity on Solana.
+      </p>
+    </div>
+  </div>
+)}
     </main>
   );
 };
