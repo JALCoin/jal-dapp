@@ -10,7 +10,7 @@ export default defineConfig({
       crypto: 'crypto-browserify',
       path: 'path-browserify',
       buffer: 'buffer/',
-      process: 'process/browser', // ✅ <-- fixed here
+      process: 'process/browser', // ✅ THIS IS THE FIX
     },
   },
   optimizeDeps: {
