@@ -6,19 +6,13 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      stream: 'stream-browserify',
-      crypto: 'crypto-browserify',
-      path: 'path-browserify',
-      buffer: 'buffer/',
-      process: 'process/browser',
+      stream: 'rollup-plugin-node-polyfills/polyfills/stream',
+      util: 'rollup-plugin-node-polyfills/polyfills/util',
+      buffer: 'rollup-plugin-node-polyfills/polyfills/buffer-es6',
     },
   },
   optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: 'globalThis',
-      },
-    },
+    include: ['buffer', 'stream', 'util'],
   },
   build: {
     rollupOptions: {
