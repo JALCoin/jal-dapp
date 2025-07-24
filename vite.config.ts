@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
@@ -10,7 +11,7 @@ export default defineConfig({
       crypto: 'crypto-browserify',
       path: 'path-browserify',
       buffer: 'buffer/',
-      process: 'process/browser', // ✅ CORRECT
+      process: 'process/browser', // ✅ no trailing slash
     },
   },
   optimizeDeps: {
