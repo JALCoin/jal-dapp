@@ -149,10 +149,11 @@ const Dashboard: FC = () => {
           and click <strong>“Get Started”</strong>.
           <ul>
             <li>Connect your <strong>Phantom wallet</strong></li>
-            <li>Verify your <strong>email address</strong> when prompted</li>
-            <li>Then click <strong>“Upload New”</strong> on the dashboard sidebar</li>
+            <li>Confirm your <strong>email address</strong> to activate the account</li>
+            <li>Once inside, click <strong>“Upload New” → “Upload File”</strong> in the left sidebar</li>
+            <li>Select and upload your <strong>token image</strong> (PNG recommended)</li>
           </ul>
-          Upload your <strong>token image</strong> (PNG recommended), then copy the returned <code>ipfs://</code> URI.
+          After upload completes, copy the <code>ipfs://</code> or <code>https://gateway.lighthouse.storage/ipfs/...</code> link from the file details panel on the right.
         </li>
 
         <li>
@@ -191,7 +192,8 @@ const Dashboard: FC = () => {
         </li>
 
         <li>
-          Upload your <code>metadata.json</code> file to Lighthouse and copy the returned URI.
+          Upload your <code>metadata.json</code> file to Lighthouse just like the image.  
+          Copy the <strong>IPFS URI</strong> for finalization in the next step.
         </li>
       </ol>
 
@@ -201,7 +203,6 @@ const Dashboard: FC = () => {
     </div>
   </div>
 )}
-
     </main>
   );
 };
