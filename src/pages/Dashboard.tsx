@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { PROGRAM_ID as METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
-import { finalizeMetadata } from '../utils/finalizeMetadata';
+import { METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
+import { finalizeTokenMetadata } from '../utils/finalizeMetadata';
 
 interface TokenInfo {
   mint: string;
@@ -82,7 +82,7 @@ const Dashboard: FC = () => {
       const metadataUri = uriInputs[mint];
       if (!metadataUri) return alert('Please provide a metadata URI first.');
 
-      await finalizeMetadata({
+      await finalizeTokenMetadata({
         connection,
         wallet: { publicKey, signTransaction },
         mint: new PublicKey(mint),

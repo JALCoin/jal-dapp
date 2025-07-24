@@ -1,15 +1,9 @@
 import {
   Metaplex,
-  keypairIdentity,
   walletAdapterIdentity,
-  toMetaplexFileFromBrowser,
 } from '@metaplex-foundation/js';
-import {
-  PublicKey,
-  Connection,
-  clusterApiUrl,
-} from '@solana/web3.js';
-import { WalletContextState } from '@solana/wallet-adapter-react';
+import type { WalletContextState } from '@solana/wallet-adapter-react';
+import { PublicKey, Connection } from '@solana/web3.js';
 
 interface FinalizeParams {
   mintAddress: string;
@@ -38,20 +32,18 @@ export const finalizeTokenMetadata = async ({
     const mint = new PublicKey(mintAddress);
     const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(wallet));
 
-    const { uri: metadataURI } = await metaplex
-      .nfts()
-      .create({
-        uri: metadataUri,
-        name,
-        symbol,
-        sellerFeeBasisPoints: 0, // 0 = no royalty
-        mintAddress: mint,
-        updateAuthority: wallet.publicKey,
-        isMutable: true,
-      });
+    const { uri } = await metaplex.nfts().create({
+      uri: metadataUri,
+      name,
+      symbol,
+      sellerFeeBasisPoints: 0,
+      mintAddress: mint,
+      updateAuthority: wallet.publicKey,
+      isMutable: true,
+    });
 
-    console.log('✅ Metadata finalized at:', metadataURI);
-    return metadataURI;
+    console.log('✅ Metadata finalized at:', uri);
+    return uri;
   } catch (err) {
     console.error('❌ Finalization failed:', err);
     throw err;
