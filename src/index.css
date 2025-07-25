@@ -1,3 +1,4 @@
+
 :root {
   --jal-green: #11f1a7;
   --jal-bg: #11f1a7;
@@ -27,7 +28,6 @@ html, body, #root {
   z-index: 1;
 }
 
-/* Subtle floating watermark */
 body::after {
   content: '';
   position: fixed;
@@ -41,7 +41,6 @@ body::after {
   pointer-events: none;
 }
 
-/* Header layout */
 header {
   width: 100%;
   display: flex;
@@ -73,7 +72,6 @@ header img {
   }
 }
 
-/* Nav + wallet */
 header nav {
   display: flex;
   flex-wrap: wrap;
@@ -98,7 +96,6 @@ header .wallet-button {
   margin-top: 0.5rem;
 }
 
-/* Main content area */
 main {
   flex: 1;
   width: 100%;
@@ -112,7 +109,6 @@ main {
   z-index: 1;
 }
 
-/* Content container */
 .container {
   width: 100%;
   max-width: 640px;
@@ -125,7 +121,6 @@ main {
   z-index: 1;
 }
 
-/* Typography */
 h1 {
   font-size: 2.75rem;
   font-weight: 800;
@@ -141,7 +136,6 @@ p {
   text-align: center;
 }
 
-/* Buttons */
 button, .button {
   background-color: black;
   color: var(--jal-green);
@@ -166,7 +160,6 @@ button:focus, .button:focus {
   outline: 2px solid var(--jal-glow);
 }
 
-/* Inputs */
 input, textarea {
   background-color: white;
   color: black;
@@ -183,7 +176,6 @@ input:focus, textarea:focus {
   border-color: black;
 }
 
-/* Finalization modal layout */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -208,13 +200,11 @@ input:focus, textarea:focus {
   z-index: 10000;
 }
 
-/* Finalize modal layout inside container */
 .modal-box input,
 .modal-box textarea {
   margin-bottom: 1rem;
 }
 
-/* Token dashboard styles */
 .token-list {
   display: flex;
   flex-direction: column;
@@ -245,7 +235,6 @@ input:focus, textarea:focus {
   color: #222;
 }
 
-/* Mint address + copy icon */
 .token-mint {
   display: flex;
   align-items: center;
@@ -267,7 +256,6 @@ input:focus, textarea:focus {
   transform: scale(1.2);
 }
 
-/* External link */
 .explorer-link {
   font-size: 0.85rem;
   margin-top: 0.25rem;
@@ -281,50 +269,42 @@ input:focus, textarea:focus {
   width: fit-content;
 }
 
-/* Mobile Responsive */
 @media (max-width: 600px) {
   h1 {
     font-size: 2rem;
   }
-
   p {
     font-size: 1rem;
   }
-
   header {
     gap: 1.5rem;
     padding: 1.5rem 1rem;
   }
-
   header img {
     max-width: 260px;
   }
-
   nav {
     flex-direction: column;
     align-items: center;
     gap: 1rem;
   }
-
   .wallet-button {
     width: 100%;
     justify-content: center;
   }
-
   main {
     padding: 1.5rem 1rem;
   }
-
   .container {
     margin-top: 2rem;
     margin-bottom: 5rem;
   }
-
   .modal-box {
     margin: 0 1rem;
   }
 }
-/* Turn Into Currency Modal Overlay */
+
+/* Turn Into Currency Modal Styles (Fixed for 4K Screens) */
 .instruction-backdrop {
   position: fixed;
   inset: 0;
@@ -335,10 +315,10 @@ input:focus, textarea:focus {
   align-items: center;
   z-index: 9999;
   animation: fadeIn 0.3s ease-out forwards;
-  padding: 1rem;
+  padding: 2rem;
+  overflow-y: auto;
 }
 
-/* Modal Container */
 .instruction-panel {
   background-color: white;
   color: black;
@@ -346,6 +326,8 @@ input:focus, textarea:focus {
   border-radius: 16px;
   width: 100%;
   max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
   animation: scaleIn 0.3s ease-out forwards;
   position: relative;
@@ -356,7 +338,6 @@ input:focus, textarea:focus {
   gap: 1.5rem;
 }
 
-/* Modal Header */
 .instruction-panel h2 {
   font-size: 1.6rem;
   font-weight: 700;
@@ -364,7 +345,6 @@ input:focus, textarea:focus {
   margin: 0;
 }
 
-/* Step-by-step List */
 .instruction-panel ol {
   list-style: decimal inside;
   padding: 0;
@@ -386,7 +366,6 @@ input:focus, textarea:focus {
   color: #004799;
 }
 
-/* Inline Code Highlight */
 .instruction-panel code {
   background: #f2f2f2;
   padding: 0.2rem 0.5rem;
@@ -395,7 +374,6 @@ input:focus, textarea:focus {
   font-size: 0.875rem;
 }
 
-/* Inner unordered lists (if needed) */
 .instruction-panel ul {
   list-style: disc;
   margin-left: 1.5rem;
@@ -408,7 +386,6 @@ input:focus, textarea:focus {
   margin-bottom: 0.4rem;
 }
 
-/* Closing Note */
 .instruction-panel .note {
   font-size: 0.85rem;
   margin-top: 1.5rem;
@@ -418,7 +395,6 @@ input:focus, textarea:focus {
   border-top: 1px solid #ddd;
 }
 
-/* Close Button */
 .instruction-panel .close-btn {
   position: absolute;
   top: 12px;
@@ -441,7 +417,6 @@ input:focus, textarea:focus {
   background-color: #222;
 }
 
-/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -452,7 +427,6 @@ input:focus, textarea:focus {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Responsive */
 @media (max-width: 640px) {
   .instruction-panel {
     padding: 1.25rem;
