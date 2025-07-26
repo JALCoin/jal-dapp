@@ -1,22 +1,18 @@
-import {
-  createMetadataAccountV3,
-  DataV2,
-} from '@metaplex-foundation/mpl-token-metadata';
+import { createMetadataAccountV3 } from '@metaplex-foundation/mpl-token-metadata';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
-import { PublicKey, Connection } from '@solana/web3.js';
-import { KeypairSigner } from '@metaplex-foundation/umi';
+import { publicKey, none } from '@metaplex-foundation/umi';
+import type { KeypairSigner } from '@metaplex-foundation/umi';
+import type { PublicKey as Web3PublicKey } from '@solana/web3.js';
 
 interface Params {
-  connection: Connection;
   signer: KeypairSigner;
-  mintAddress: PublicKey;
+  mintAddress: Web3PublicKey;
   metadataUri: string;
   name: string;
   symbol: string;
 }
 
 export async function finalizeTokenMetadata({
-  connection,
   signer,
   mintAddress,
   metadataUri,
@@ -24,22 +20,21 @@ export async function finalizeTokenMetadata({
   symbol,
 }: Params): Promise<string> {
   const umi = createUmi('https://api.mainnet-beta.solana.com').use(signer);
+  const mint = publicKey(mintAddress.toBase58());
 
-  const metadata: DataV2 = {
-    name,
-    symbol,
-    uri: metadataUri,
-    sellerFeeBasisPoints: 0,
-    creators: null,
-    collection: null,
-    uses: null,
-  };
-
-  const tx = await createMetadataAccountV3(umi, {
-    mint: mintAddress,
-    data: metadata,
+  const { signature } = await createMetadataAccountV3(umi, {
+    mint,
+    data: {
+      name,
+      symbol,
+      uri: metadataUri,
+      sellerFeeBasisPoints: 0,
+      creators: none(),
+      collection: none(),
+      uses: none(),
+    },
     isMutable: false,
   }).sendAndConfirm(umi);
 
-  return tx.signature;
+  return signature;
 }

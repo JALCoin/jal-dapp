@@ -63,15 +63,14 @@ const TokenFinalizerModal: FC<Props> = ({
       if (!wallet?.adapter) throw new Error('Wallet adapter not found');
       const signer = createSignerFromWalletAdapter(wallet.adapter);
 
-      const signature = await finalizeTokenMetadata({
-        connection,
-        signer,
-        mintAddress: new PublicKey(mint),
-        metadataUri,
-        name,
-        symbol,
-      });
-      setTxSignature(signature.toString());
+const signature = await finalizeTokenMetadata({
+  signer,
+  mintAddress: new PublicKey(mint),
+  metadataUri,
+  name,
+  symbol,
+});
+setTxSignature(signature);
 
       const verified = await verifyTokenMetadataAttached(connection, new PublicKey(mint));
       if (!verified?.isAttached) throw new Error('Metadata could not be verified on-chain.');
