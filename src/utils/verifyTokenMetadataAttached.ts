@@ -1,6 +1,8 @@
+// src/utils/verifyTokenMetadataAttached.ts
 import {
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
-  Metadata,
+  findMetadataPda,
+  fetchMetadata,
 } from '@metaplex-foundation/mpl-token-metadata';
 import { Connection, PublicKey } from '@solana/web3.js';
 
@@ -15,19 +17,11 @@ export async function verifyTokenMetadataAttached(
   rawData?: any;
 }> {
   try {
-    const [metadataPda] = await PublicKey.findProgramAddress(
-      [
-        Buffer.from('metadata'),
-        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-        mintAddress.toBuffer(),
-      ],
-      TOKEN_METADATA_PROGRAM_ID
-    );
+    const metadataPda = findMetadataPda(mintAddress);
 
-    const accountInfo = await connection.getAccountInfo(metadataPda);
-    if (!accountInfo) return { isAttached: false };
+    const metadata = await fetchMetadata(connection, metadataPda);
+    if (!metadata) return { isAttached: false };
 
-    const [metadata] = Metadata.deserialize(accountInfo.data);
     return {
       isAttached: true,
       name: metadata.data.name,

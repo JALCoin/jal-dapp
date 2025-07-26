@@ -1,15 +1,12 @@
 // src/utils/finalizeTokenMetadata.ts
 import {
-  createMetadataAccountV3Instruction,
+  createCreateMetadataAccountV2Instruction,
   createUpdateMetadataAccountV2Instruction,
+  findMetadataPda,
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
 } from '@metaplex-foundation/mpl-token-metadata';
 import type { DataV2 } from '@metaplex-foundation/mpl-token-metadata';
-import {
-  Connection,
-  PublicKey,
-  Transaction,
-} from '@solana/web3.js';
+import { Connection, PublicKey, Transaction } from '@solana/web3.js';
 
 interface FinalizeMetadataParams {
   connection: Connection;
@@ -34,14 +31,7 @@ export async function finalizeTokenMetadata({
   name,
   symbol,
 }: FinalizeMetadataParams): Promise<string> {
-  const [metadataPda] = await PublicKey.findProgramAddress(
-    [
-      Buffer.from('metadata'),
-      TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-      mintAddress.toBuffer(),
-    ],
-    TOKEN_METADATA_PROGRAM_ID
-  );
+  const metadataPda = findMetadataPda(mintAddress);
 
   const metadata: DataV2 = {
     name,
@@ -53,9 +43,8 @@ export async function finalizeTokenMetadata({
     uses: null,
   };
 
-  const buildTransaction = async (update: boolean) => {
+  const buildTransaction = async (update: boolean): Promise<Transaction> => {
     const tx = new Transaction();
-
     const ix = update
       ? createUpdateMetadataAccountV2Instruction(
           {
@@ -71,7 +60,7 @@ export async function finalizeTokenMetadata({
             },
           }
         )
-      : createMetadataAccountV3Instruction(
+      : createCreateMetadataAccountV2Instruction(
           {
             metadata: metadataPda,
             mint: mintAddress,
@@ -80,10 +69,9 @@ export async function finalizeTokenMetadata({
             updateAuthority: walletPublicKey,
           },
           {
-            createMetadataAccountArgsV3: {
+            createMetadataAccountArgsV2: {
               data: metadata,
               isMutable: true,
-              collectionDetails: null,
             },
           }
         );
@@ -92,26 +80,20 @@ export async function finalizeTokenMetadata({
     const { blockhash } = await connection.getLatestBlockhash();
     tx.feePayer = walletPublicKey;
     tx.recentBlockhash = blockhash;
-
     return tx;
   };
 
-  const trySend = async (tx: Transaction): Promise<string> => {
-    return await sendTransaction(tx, connection, { skipPreflight: true });
-  };
-
-  // First try: create
-  const createTx = await buildTransaction(false);
   try {
-    return await trySend(createTx);
-  } catch (err: any) {
-    const msg = err.message || '';
+    const createTx = await buildTransaction(false);
+    return await sendTransaction(createTx, connection, { skipPreflight: true });
+  } catch (e: any) {
+    const msg = e.message || '';
     const isAlreadyInitialized = msg.includes('0x4b') || msg.includes('Error Number: 75');
 
-    if (!isAlreadyInitialized) throw err;
+    if (!isAlreadyInitialized) throw e;
 
     console.warn('Metadata already exists. Attempting to update...');
     const updateTx = await buildTransaction(true);
-    return await trySend(updateTx);
+    return await sendTransaction(updateTx, connection, { skipPreflight: true });
   }
 }
