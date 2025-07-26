@@ -1,11 +1,13 @@
 import type { DataV2 } from '@metaplex-foundation/mpl-token-metadata';
-import { createCreateMetadataAccountV2Instruction } from '@metaplex-foundation/mpl-token-metadata';
+import {
+  createCreateMetadataAccountV2Instruction,
+  PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
+} from '@metaplex-foundation/mpl-token-metadata';
 import {
   Connection,
   PublicKey,
   Transaction,
 } from '@solana/web3.js';
-import { PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
 
 interface FinalizeMetadataParams {
   connection: Connection;
@@ -63,15 +65,17 @@ export async function finalizeTokenMetadata({
 
   const tx = new Transaction().add(ix);
   tx.feePayer = walletPublicKey;
-  tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+  tx.recentBlockhash = blockhash;
 
   const signature = await sendTransaction(tx, connection);
 
-  const latestBlockhash = await connection.getLatestBlockhash('finalized');
   await connection.confirmTransaction(
     {
       signature,
-      ...latestBlockhash,
+      blockhash,
+      lastValidBlockHeight,
     },
     'finalized'
   );
