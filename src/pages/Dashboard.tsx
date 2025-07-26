@@ -18,7 +18,6 @@ const Dashboard: FC = () => {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInstructions, setShowInstructions] = useState(false);
-
   const [imageUri, setImageUri] = useState('');
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
@@ -30,44 +29,33 @@ const Dashboard: FC = () => {
   useEffect(() => {
     const fetchTokens = async () => {
       if (!publicKey) return;
-
       setLoading(true);
+
       try {
         const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
           programId: TOKEN_PROGRAM_ID,
         });
 
-        const candidateMints = response.value
-          .sort((a: any, b: any) =>
-            b.account.lamports - a.account.lamports ||
-            b.pubkey.toBase58().localeCompare(a.pubkey.toBase58())
-          )
-          .map((acc: any) => acc.account.data.parsed.info.mint);
+        const tokens: TokenInfo[] = [];
 
-        const filteredTokens: TokenInfo[] = [];
-
-        for (const mint of candidateMints) {
-          const mintPubkey = new PublicKey(mint);
-          const mintInfo = await connection.getParsedAccountInfo(mintPubkey);
+        for (const acc of response.value) {
+          const mintAddress = acc.account.data.parsed.info.mint;
+          const mintInfo = await connection.getParsedAccountInfo(new PublicKey(mintAddress));
           const parsed = (mintInfo.value?.data as any)?.parsed?.info;
 
           if (parsed?.mintAuthority === publicKey.toBase58()) {
-            const tokenAccount = response.value.find(
-              (acc: any) => acc.account.data.parsed.info.mint === mint
-            );
-            const tokenInfo = tokenAccount?.account.data.parsed.info;
-
-            filteredTokens.push({
-              mint,
+            const tokenInfo = acc.account.data.parsed.info;
+            tokens.push({
+              mint: mintAddress,
               amount: tokenInfo.tokenAmount.uiAmountString,
               decimals: tokenInfo.tokenAmount.decimals,
             });
           }
         }
 
-        setTokens(filteredTokens);
+        setTokens(tokens);
       } catch (err) {
-        console.error('Error filtering tokens:', err);
+        console.error('Token fetch error:', err);
       } finally {
         setLoading(false);
       }
@@ -85,16 +73,17 @@ const Dashboard: FC = () => {
     const metadata = { name, symbol, description, image: imageUri };
     const file = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'metadata.json';
-    a.click();
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'metadata.json';
+    link.click();
     URL.revokeObjectURL(url);
   };
 
   const handleAttachMetadata = async () => {
     if (!selectedMint || !publicKey || !sendTransaction || !metadataUri || !name || !symbol) {
-      alert('Missing required data to finalize metadata.');
+      alert('❌ Missing required data to attach metadata.');
       return;
     }
 
@@ -133,9 +122,7 @@ const Dashboard: FC = () => {
             {tokens.map((token, idx) => (
               <div key={idx} className="token-card">
                 <div className="token-info">
-                  <p className="token-mint">
-                    <strong>Mint:</strong>{' '}
-                    <span className="mono">{token.mint}</span>
+                  <p><strong>Mint:</strong> <span className="mono">{token.mint}</span>
                     <button
                       className="copy-btn"
                       onClick={() => navigator.clipboard.writeText(token.mint)}
@@ -209,7 +196,7 @@ const Dashboard: FC = () => {
                 </div>
               </li>
               <li>
-                Upload metadata.json to Lighthouse, paste the final IPFS URI:
+                Upload `metadata.json` to Lighthouse, paste the final IPFS URI:
                 <input
                   className="currency-input"
                   placeholder="ipfs://..."
