@@ -23,7 +23,7 @@ export async function finalizeTokenMetadata({
 
   const mint = publicKey(mintAddress.toBase58());
 
-  const builder = createMetadataAccountV3(umi, {
+  const { signature } = await createMetadataAccountV3(umi, {
     mint,
     mintAuthority: signer,
     payer: signer,
@@ -36,11 +36,9 @@ export async function finalizeTokenMetadata({
       creators: none(),
       collection: none(),
       uses: none(),
-      collectionDetails: none(), // ✅ REQUIRED BY TYPE
     },
     isMutable: false,
-  });
+  }).sendAndConfirm(umi);
 
-  const response = await builder.sendAndConfirm(umi);
-  return response.signature.toString(); // ✅ Convert to string
+  return signature.toString();
 }
