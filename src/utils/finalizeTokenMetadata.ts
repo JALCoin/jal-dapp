@@ -1,66 +1,62 @@
-import { PublicKey, Connection, Transaction, clusterApiUrl } from '@solana/web3.js';
 import {
   createCreateMetadataAccountV3Instruction,
-  DataV2,
+  PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
 } from '@metaplex-foundation/mpl-token-metadata';
-import { TOKEN_METADATA_PROGRAM_ID } from './ids';
+import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+import { none } from '@metaplex-foundation/umi';
+import type { WalletContextState } from '@solana/wallet-adapter-react';
 
-export const finalizeTokenMetadata = async ({
-  connection,
-  walletPublicKey,
-  sendTransaction,
-  mintAddress,
-  metadataUri,
-  name,
-  symbol,
-}: {
-  connection: Connection;
-  walletPublicKey: PublicKey;
-  sendTransaction: (tx: Transaction, conn: Connection) => Promise<string>;
-  mintAddress: PublicKey;
-  metadataUri: string;
-  name: string;
-  symbol: string;
-}) => {
-  const metadataPDA = (
-    await PublicKey.findProgramAddressSync(
-      [
-        Buffer.from('metadata'),
-        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-        mintAddress.toBuffer(),
-      ],
-      TOKEN_METADATA_PROGRAM_ID
-    )
-  )[0];
+export async function finalizeTokenMetadata(
+  connection: Connection,
+  wallet: WalletContextState,
+  mint: PublicKey,
+  metadataUri: string,
+  name: string,
+  symbol: string
+) {
+  if (!wallet.publicKey || !wallet.signTransaction) {
+    throw new Error('Wallet not connected');
+  }
 
-  const metadataData: DataV2 = {
-    name,
-    symbol,
-    uri: metadataUri,
-    sellerFeeBasisPoints: 0,
-    creators: null,
-    collection: null,
-    uses: null,
-  };
+  const [metadataPda] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('metadata'),
+      TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+      mint.toBuffer(),
+    ],
+    TOKEN_METADATA_PROGRAM_ID
+  );
 
-  const ix = createCreateMetadataAccountV3Instruction(
+  const metadataInstruction = createCreateMetadataAccountV3Instruction(
     {
-      metadata: metadataPDA,
-      mint: mintAddress,
-      mintAuthority: walletPublicKey,
-      payer: walletPublicKey,
-      updateAuthority: walletPublicKey,
+      metadata: metadataPda,
+      mint,
+      mintAuthority: wallet.publicKey,
+      payer: wallet.publicKey,
+      updateAuthority: wallet.publicKey,
     },
     {
       createMetadataAccountArgsV3: {
-        data: metadataData,
-        isMutable: true,
-        collectionDetails: null,
+        data: {
+          name,
+          symbol,
+          uri: metadataUri,
+          sellerFeeBasisPoints: 0,
+          creators: none(),
+          collection: none(),
+          uses: none(),
+        },
+        isMutable: false,
       },
     }
   );
 
-  const tx = new Transaction().add(ix);
-  const sig = await sendTransaction(tx, connection);
+  const tx = new Transaction().add(metadataInstruction);
+  tx.feePayer = wallet.publicKey;
+  tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+  const signed = await wallet.signTransaction(tx);
+  const sig = await connection.sendRawTransaction(signed.serialize());
+  await connection.confirmTransaction(sig, 'confirmed');
   return sig;
-};
+}

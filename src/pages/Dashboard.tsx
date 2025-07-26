@@ -9,6 +9,7 @@ interface TokenInfo {
   mint: string;
   amount: string;
   decimals: number;
+  symbol?: string; // optional for now
 }
 
 const Dashboard: FC = () => {
