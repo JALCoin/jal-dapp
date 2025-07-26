@@ -1,41 +1,43 @@
 import {
-  PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
+  DataV2,
   createCreateMetadataAccountV3Instruction,
+  PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID
 } from '@metaplex-foundation/mpl-token-metadata';
 import {
   Connection,
   PublicKey,
   Transaction,
-  sendAndConfirmTransaction,
+  TransactionInstruction
 } from '@solana/web3.js';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
 
-export const finalizeTokenMetadata = async (
-  connection: Connection,
-  walletPublicKey: PublicKey,
-  mint: PublicKey,
-  metadataUri: string,
-  name: string,
-  symbol: string
-) => {
-  const [metadataPda] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('metadata'),
-      TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-      mint.toBuffer(),
-    ],
-    TOKEN_METADATA_PROGRAM_ID
-  );
+/**
+ * Finalizes token metadata on-chain via Phantom wallet.
+ */
+export async function finalizeTokenMetadata({
+  connection,
+  walletPublicKey,
+  sendTransaction,
+  mintAddress,
+  metadataUri,
+  name,
+  symbol
+}: {
+  connection: Connection;
+  walletPublicKey: PublicKey;
+  sendTransaction: (transaction: Transaction, connection: Connection) => Promise<string>;
+  mintAddress: PublicKey;
+  metadataUri: string;
+  name: string;
+  symbol: string;
+}): Promise<string> {
+  const metadataSeeds = [
+    Buffer.from('metadata'),
+    TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+    mintAddress.toBuffer(),
+  ];
+  const [metadataPda] = await PublicKey.findProgramAddress(metadataSeeds, TOKEN_METADATA_PROGRAM_ID);
 
-  const accounts = {
-    metadata: metadataPda,
-    mint,
-    mintAuthority: walletPublicKey,
-    payer: walletPublicKey,
-    updateAuthority: walletPublicKey,
-  };
-
-  const data = {
+  const metadataData: DataV2 = {
     name,
     symbol,
     uri: metadataUri,
@@ -45,21 +47,31 @@ export const finalizeTokenMetadata = async (
     uses: null,
   };
 
-  const ix = createCreateMetadataAccountV3Instruction(
-    accounts,
+  const ix: TransactionInstruction = createCreateMetadataAccountV3Instruction(
+    {
+      metadata: metadataPda,
+      mint: mintAddress,
+      mintAuthority: walletPublicKey,
+      payer: walletPublicKey,
+      updateAuthority: walletPublicKey,
+    },
     {
       createMetadataAccountArgsV3: {
-        data,
+        data: metadataData,
         isMutable: true,
         collectionDetails: null,
-      },
+      }
     }
   );
 
   const tx = new Transaction().add(ix);
-  const sig = await sendAndConfirmTransaction(connection, tx, [
-    { publicKey: walletPublicKey, signTransaction: async () => tx }, // Wallet adapter will handle this in frontend
-  ]);
+  tx.feePayer = walletPublicKey;
 
-  return sig;
-};
+  const latestBlockhash = await connection.getLatestBlockhash();
+  tx.recentBlockhash = latestBlockhash.blockhash;
+
+  const signature = await sendTransaction(tx, connection);
+  await connection.confirmTransaction(signature, 'confirmed');
+
+  return signature;
+}

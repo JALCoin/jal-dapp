@@ -97,15 +97,15 @@ const Dashboard: FC = () => {
     }
 
     try {
-      const sig = await finalizeTokenMetadata({
-        connection,
-        walletPublicKey: publicKey,
-        sendTransaction,
-        mintAddress: new PublicKey(mint),
-        metadataUri,
-        name,
-        symbol,
-      });
+const sig = await finalizeTokenMetadata(
+  connection,
+  publicKey,
+  sendTransaction,
+  new PublicKey(mint),
+  metadataUri,
+  name,
+  symbol
+);
 
       alert(`✅ Metadata attached! Tx: ${sig}`);
     } catch (err) {
