@@ -1,5 +1,5 @@
+import type { DataV2 } from '@metaplex-foundation/mpl-token-metadata';
 import {
-  DataV2,
   createCreateMetadataAccountV2Instruction,
 } from '@metaplex-foundation/mpl-token-metadata';
 import {
