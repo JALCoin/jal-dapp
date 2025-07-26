@@ -3,8 +3,8 @@ import {
   createCreateMetadataAccountV2Instruction,
   createUpdateMetadataAccountV2Instruction,
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
-  DataV2,
 } from '@metaplex-foundation/mpl-token-metadata';
+import type { DataV2 } from '@metaplex-foundation/mpl-token-metadata';
 import {
   Connection,
   PublicKey,
