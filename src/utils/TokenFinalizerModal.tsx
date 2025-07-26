@@ -14,20 +14,40 @@ interface Props {
     options?: { skipPreflight?: boolean }
   ) => Promise<string>;
   onClose: () => void;
+  templateMetadata?: {
+    name?: string;
+    symbol?: string;
+    description?: string;
+    image?: string;
+  };
 }
 
-const TokenFinalizerModal: FC<Props> = ({ mint, connection, walletPublicKey, sendTransaction, onClose }) => {
-  const [imageUri, setImageUri] = useState('');
-  const [name, setName] = useState('');
-  const [symbol, setSymbol] = useState('');
-  const [description, setDescription] = useState('');
+const TokenFinalizerModal: FC<Props> = ({ mint, connection, walletPublicKey, sendTransaction, onClose, templateMetadata }) => {
+  const [imageUri, setImageUri] = useState(templateMetadata?.image || '');
+  const [name, setName] = useState(templateMetadata?.name || '');
+  const [symbol, setSymbol] = useState(templateMetadata?.symbol || '');
+  const [description, setDescription] = useState(templateMetadata?.description || '');
   const [metadataUri, setMetadataUri] = useState('');
   const [attaching, setAttaching] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [txSignature, setTxSignature] = useState<string | null>(null);
 
   const handleDownloadMetadata = () => {
-    const metadata = { name, symbol, description, image: imageUri };
+    const metadata = {
+      name,
+      symbol,
+      description,
+      image: imageUri,
+      properties: {
+        files: [
+          {
+            uri: imageUri,
+            type: 'image/png',
+          },
+        ],
+        category: 'image',
+      },
+    };
     const file = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(file);
     const link = document.createElement('a');
