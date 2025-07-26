@@ -22,7 +22,7 @@ export async function finalizeTokenMetadata({
   const umi = createUmi('https://api.mainnet-beta.solana.com').use(signerIdentity(signer));
   const mint = publicKey(mintAddress.toBase58());
 
-  const { signature } = await createMetadataAccountV3(umi, {
+  const builder = createMetadataAccountV3(umi, {
     mint,
     mintAuthority: signer,
     payer: signer,
@@ -37,8 +37,9 @@ export async function finalizeTokenMetadata({
       uses: none(),
     },
     isMutable: false,
-    collectionDetails: none(), // ✅ This must be TOP LEVEL
-  }).sendAndConfirm(umi);
+    collectionDetails: none(), // ✅ Required by Metaplex 3.4.0+
+  });
 
+  const { signature } = await builder.sendAndConfirm(umi);
   return signature.toString();
 }

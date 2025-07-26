@@ -26,14 +26,17 @@ const TokenFinalizerModal: FC<Props> = ({
 }) => {
   const { wallet } = useWallet();
 
-  const [imageUri, setImageUri] = useState(templateMetadata?.image || '');
-  const [name, setName] = useState(templateMetadata?.name || '');
-  const [symbol, setSymbol] = useState(templateMetadata?.symbol || '');
-  const [description, setDescription] = useState(templateMetadata?.description || '');
+  const [imageUri, setImageUri] = useState(templateMetadata?.image ?? '');
+  const [name, setName] = useState(templateMetadata?.name ?? '');
+  const [symbol, setSymbol] = useState(templateMetadata?.symbol ?? '');
+  const [description, setDescription] = useState(templateMetadata?.description ?? '');
   const [metadataUri, setMetadataUri] = useState('');
   const [attaching, setAttaching] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [txSignature, setTxSignature] = useState<string | null>(null);
+
+  // If wallet is not ready, don't render modal at all
+  if (!wallet?.adapter || !mint || !connection) return null;
 
   const handleDownloadMetadata = () => {
     const metadata = {
@@ -46,24 +49,22 @@ const TokenFinalizerModal: FC<Props> = ({
         category: 'image',
       },
     };
-    const file = new Blob([JSON.stringify(metadata, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(file);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'metadata.json';
-    link.click();
+
+    const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'metadata.json';
+    a.click();
     URL.revokeObjectURL(url);
   };
 
   const handleAttachMetadata = async () => {
     setAttaching(true);
     setStatus('idle');
-    try {
-      if (!wallet?.adapter) throw new Error('Wallet adapter not found');
-      const signer = createSignerFromWalletAdapter(wallet.adapter); // ✅ Umi-compatible Signer
 
+    try {
+      const signer = createSignerFromWalletAdapter(wallet.adapter);
       const signature = await finalizeTokenMetadata({
         signer,
         mintAddress: new PublicKey(mint),
@@ -75,11 +76,11 @@ const TokenFinalizerModal: FC<Props> = ({
       setTxSignature(signature);
 
       const verified = await verifyTokenMetadataAttached(connection, new PublicKey(mint));
-      if (!verified?.isAttached) throw new Error('Metadata could not be verified on-chain.');
+      if (!verified?.isAttached) throw new Error('Metadata could not be verified.');
 
       setStatus('success');
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error('Attach error:', error);
       setStatus('error');
     } finally {
       setAttaching(false);
@@ -89,17 +90,18 @@ const TokenFinalizerModal: FC<Props> = ({
   return (
     <div className="instruction-backdrop">
       <div className="instruction-panel">
-        <button onClick={onClose} className="close-btn">×</button>
+        <button className="close-btn" onClick={onClose}>×</button>
         <h2>Turn Into Currency</h2>
         <ol>
           <li>
             Upload your <strong>token image</strong> to{' '}
-            <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a>
+            <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
+              lighthouse.storage
+            </a>
           </li>
           <li>
             Paste your image URI:
             <input
-              className="currency-input"
               value={imageUri}
               onChange={(e) => setImageUri(e.target.value)}
               placeholder="ipfs://..."
@@ -107,20 +109,29 @@ const TokenFinalizerModal: FC<Props> = ({
           </li>
           <li>
             Fill out your token identity:
-            <input placeholder="Token Name" value={name} onChange={(e) => setName(e.target.value)} />
-            <input placeholder="Symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} />
+            <input
+              placeholder="Token Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <input
+              placeholder="Symbol"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+            />
             <textarea
               placeholder="Description"
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-            <button className="button" onClick={handleDownloadMetadata}>Download metadata.json</button>
+            <button className="button" onClick={handleDownloadMetadata}>
+              Download metadata.json
+            </button>
           </li>
           <li>
             Upload your metadata.json and paste the IPFS URI:
             <input
-              className="currency-input"
               value={metadataUri}
               onChange={(e) => setMetadataUri(e.target.value)}
               placeholder="ipfs://..."
@@ -131,7 +142,7 @@ const TokenFinalizerModal: FC<Props> = ({
               {attaching ? 'Attaching...' : `Attach Metadata to ${mint.slice(0, 4)}...`}
             </button>
             <p className="note">
-              ⚠️ Please approve the Phantom wallet popup immediately after clicking. If you delay, the transaction may fail.
+              ⚠️ Approve the Phantom popup immediately after clicking. Delays may cause transaction failure.
             </p>
           </li>
         </ol>
@@ -157,7 +168,7 @@ const TokenFinalizerModal: FC<Props> = ({
         )}
 
         <p className="note mt-3">
-          Once attached, this metadata will be permanently stored on-chain for your token.
+          Once attached, this metadata will be permanently stored on-chain.
         </p>
       </div>
     </div>
