@@ -20,7 +20,6 @@ export async function finalizeTokenMetadata({
   symbol,
 }: Params): Promise<string> {
   const umi = createUmi('https://api.mainnet-beta.solana.com').use(signerIdentity(signer));
-
   const mint = publicKey(mintAddress.toBase58());
 
   const { signature } = await createMetadataAccountV3(umi, {
@@ -38,6 +37,7 @@ export async function finalizeTokenMetadata({
       uses: none(),
     },
     isMutable: false,
+    collectionDetails: none(), // ✅ This must be TOP LEVEL
   }).sendAndConfirm(umi);
 
   return signature.toString();
