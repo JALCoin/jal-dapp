@@ -2,7 +2,6 @@ import type { FC } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import CreateToken from './pages/CreateToken';
 import Dashboard from './pages/Dashboard';
-import TurnIntoCurrency from './pages/TurnIntoCurrency';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { AppProviders } from './AppProviders';
 
@@ -16,7 +15,6 @@ const App: FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/create-token" element={<CreateToken />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/turn-into-currency" element={<TurnIntoCurrency />} />
           </Routes>
         </main>
       </Router>
@@ -32,7 +30,6 @@ const Header: FC = () => (
         <Link to="/">Home</Link>
         <Link to="/create-token">Create Token</Link>
         <Link to="/dashboard">Dashboard</Link>
-        <Link to="/turn-into-currency">Turn Into Currency</Link>
       </nav>
       <div className="wallet-button">
         <WalletMultiButton />
