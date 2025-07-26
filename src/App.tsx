@@ -1,59 +1,36 @@
+import { FC } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import CreateToken from './pages/CreateToken';
 import Dashboard from './pages/Dashboard';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { AppProviders } from './AppProviders';
+import TurnIntoCurrency from './pages/TurnIntoCurrency';
 
-function App() {
-  return (
-    <AppProviders>
-      <Router>
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/create-token" element={<CreateToken />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-          </Routes>
-        </main>
-      </Router>
-    </AppProviders>
-  );
-}
+const Home: FC = () => (
+  <main>
+    <div className="container">
+      <h1>Turn Tokens Into Currency</h1>
+      <p>Welcome to the JAL/SOL Token Creator. You can mint your own Solana tokens, and finalize them as real currency with metadata.</p>
 
-function Header() {
-  return (
-    <header>
-      <img
-        src="/JALSOL1.gif"
-        alt="JAL Vault Logo"
-      />
-      <div>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/create-token">Create Token</Link>
-          <Link to="/dashboard">Dashboard</Link>
-        </nav>
-        <div className="wallet-button">
-          <WalletMultiButton />
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+        <Link to="/create-token" className="button">Create Token</Link>
+        <Link to="/dashboard" className="button">My Tokens</Link>
+        <WalletMultiButton />
       </div>
-    </header>
-  );
-}
+    </div>
+  </main>
+);
 
-function Home() {
+const App: FC = () => {
   return (
-    <main>
-      <div className="container">
-        <h1>JAL Token Creator</h1>
-        <p>Build your vault. Transact with time. The future doesn’t ask—it mints.</p>
-        <Link to="/create-token" className="button">
-          Begin Creation ↗
-        </Link>
-      </div>
-    </main>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/create-token" element={<CreateToken />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/turn-into-currency" element={<TurnIntoCurrency />} />
+      </Routes>
+    </Router>
   );
-}
+};
 
 export default App;
