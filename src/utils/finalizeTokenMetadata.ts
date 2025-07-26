@@ -1,7 +1,6 @@
 import {
   DataV2,
-  createCreateMetadataAccountV3Instruction,
-  PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
+  createCreateMetadataAccountV2Instruction,
 } from '@metaplex-foundation/mpl-token-metadata';
 import {
   Connection,
@@ -10,9 +9,6 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 
-/**
- * Finalizes token metadata on-chain via Phantom wallet.
- */
 export async function finalizeTokenMetadata({
   connection,
   walletPublicKey,
@@ -30,7 +26,11 @@ export async function finalizeTokenMetadata({
   name: string;
   symbol: string;
 }): Promise<string> {
-  const [metadataPda] = await PublicKey.findProgramAddress(
+  const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
+    'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
+  );
+
+  const [metadataPDA] = await PublicKey.findProgramAddress(
     [
       Buffer.from('metadata'),
       TOKEN_METADATA_PROGRAM_ID.toBuffer(),
@@ -39,7 +39,7 @@ export async function finalizeTokenMetadata({
     TOKEN_METADATA_PROGRAM_ID
   );
 
-  const metadataData: DataV2 = {
+  const data: DataV2 = {
     name,
     symbol,
     uri: metadataUri,
@@ -49,19 +49,18 @@ export async function finalizeTokenMetadata({
     uses: null,
   };
 
-  const ix: TransactionInstruction = createCreateMetadataAccountV3Instruction(
+  const ix: TransactionInstruction = createCreateMetadataAccountV2Instruction(
     {
-      metadata: metadataPda,
+      metadata: metadataPDA,
       mint: mintAddress,
       mintAuthority: walletPublicKey,
       payer: walletPublicKey,
       updateAuthority: walletPublicKey,
     },
     {
-      createMetadataAccountArgsV3: {
-        data: metadataData,
+      createMetadataAccountArgsV2: {
+        data,
         isMutable: true,
-        collectionDetails: null,
       },
     }
   );
@@ -69,11 +68,11 @@ export async function finalizeTokenMetadata({
   const tx = new Transaction().add(ix);
   tx.feePayer = walletPublicKey;
 
-  const latestBlockhash = await connection.getLatestBlockhash();
-  tx.recentBlockhash = latestBlockhash.blockhash;
+  const { blockhash } = await connection.getLatestBlockhash();
+  tx.recentBlockhash = blockhash;
 
-  const signature = await sendTransaction(tx, connection);
-  await connection.confirmTransaction(signature, 'confirmed');
+  const sig = await sendTransaction(tx, connection);
+  await connection.confirmTransaction(sig, 'confirmed');
 
-  return signature;
+  return sig;
 }
