@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
@@ -12,8 +12,11 @@ interface TokenInfo {
 }
 
 const Dashboard: FC = () => {
-const { publicKey } = useWallet();
-  const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
+  const { publicKey } = useWallet();
+  const connection = useMemo(
+    () => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'),
+    []
+  );
 
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +59,7 @@ const { publicKey } = useWallet();
     };
 
     fetchTokens();
-  }, [publicKey]);
+  }, [publicKey, connection]);
 
   const handleTurnIntoCurrency = (mint: string) => {
     setSelectedMint(mint);
@@ -74,15 +77,18 @@ const { publicKey } = useWallet();
           <p>No tokens created by this wallet.</p>
         ) : (
           <div className="token-list">
-            {tokens.map((token, idx) => (
-              <div key={idx} className="token-card">
+            {tokens.map((token) => (
+              <div key={token.mint} className="token-card">
                 <div className="token-info">
-                  <p><strong>Mint:</strong> <span className="mono">{token.mint}</span>
+                  <p>
+                    <strong>Mint:</strong> <span className="mono">{token.mint}</span>
                     <button
                       className="copy-btn"
                       onClick={() => navigator.clipboard.writeText(token.mint)}
                       title="Copy Mint Address"
-                    >📋</button>
+                    >
+                      📋
+                    </button>
                   </p>
                   <p><strong>Amount:</strong> {token.amount}</p>
                 </div>
@@ -92,7 +98,9 @@ const { publicKey } = useWallet();
                   target="_blank"
                   rel="noopener noreferrer"
                   className="explorer-link"
-                >View on Solscan ↗</a>
+                >
+                  View on Solscan ↗
+                </a>
 
                 <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
                   Turn Into Currency
@@ -104,18 +112,18 @@ const { publicKey } = useWallet();
       </div>
 
       {showFinalizer && selectedMint && (
-  <TokenFinalizerModal
-    mint={selectedMint}
-    connection={connection}
-    onClose={() => setShowFinalizer(false)}
-    templateMetadata={{
-      name: 'JAL',
-      symbol: 'JAL',
-      description: 'JAL is a token that unlocks utility in the Solana vault ecosystem.',
-      image: 'https://gateway.lighthouse.storage/ipfs/<YOUR_IMAGE_CID>/logo.png',
-    }}
-  />
-)}
+        <TokenFinalizerModal
+          mint={selectedMint}
+          connection={connection}
+          onClose={() => setShowFinalizer(false)}
+          templateMetadata={{
+            name: 'JAL',
+            symbol: 'JAL',
+            description: 'JAL is a token that unlocks utility in the Solana vault ecosystem.',
+            image: 'https://placehold.co/512x512.png?text=JAL',
+          }}
+        />
+      )}
     </main>
   );
 };
