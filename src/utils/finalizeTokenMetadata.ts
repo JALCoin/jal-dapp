@@ -32,6 +32,21 @@ export async function finalizeTokenMetadata({
   name,
   symbol,
 }: FinalizeMetadataParams): Promise<string> {
+  // Metaplex V2 Limits
+  const MAX_NAME = 32;
+  const MAX_SYMBOL = 10;
+  const MAX_URI = 200;
+
+  const trimmedName = name.trim().slice(0, MAX_NAME);
+  const trimmedSymbol = symbol.trim().slice(0, MAX_SYMBOL);
+  const trimmedUri = metadataUri.trim().slice(0, MAX_URI);
+
+  // Log for debugging
+  console.log('Finalizing metadata with:');
+  console.log('  Name:', trimmedName, '| Length:', trimmedName.length);
+  console.log('  Symbol:', trimmedSymbol, '| Length:', trimmedSymbol.length);
+  console.log('  URI:', trimmedUri, '| Length:', trimmedUri.length);
+
   const [metadataPda] = await PublicKey.findProgramAddress(
     [
       Buffer.from('metadata'),
@@ -42,9 +57,9 @@ export async function finalizeTokenMetadata({
   );
 
   const metadata: DataV2 = {
-    name,
-    symbol,
-    uri: metadataUri,
+    name: trimmedName,
+    symbol: trimmedSymbol,
+    uri: trimmedUri,
     sellerFeeBasisPoints: 0,
     creators: null,
     collection: null,
