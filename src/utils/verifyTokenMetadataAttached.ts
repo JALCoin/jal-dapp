@@ -1,9 +1,10 @@
-import { createUmi, publicKey } from '@metaplex-foundation/umi-bundle-defaults';
+import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
+import { publicKey } from '@metaplex-foundation/umi';
 import { fetchMetadataFromSeeds } from '@metaplex-foundation/mpl-token-metadata';
 import type { PublicKey as Web3PublicKey } from '@solana/web3.js';
 
 export async function verifyTokenMetadataAttached(
-  _: any,
+  _: unknown,
   mintAddress: Web3PublicKey
 ): Promise<{
   isAttached: boolean;
@@ -25,8 +26,8 @@ export async function verifyTokenMetadataAttached(
       uri: metadata.uri,
       rawData: metadata,
     };
-  } catch (err) {
-    console.error('Metadata fetch failed:', err);
+  } catch (error) {
+    console.error('Metadata fetch failed', error);
     return { isAttached: false };
   }
 }
