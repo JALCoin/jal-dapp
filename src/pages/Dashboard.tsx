@@ -104,20 +104,18 @@ const Dashboard: FC = () => {
       </div>
 
       {showFinalizer && selectedMint && (
-        <TokenFinalizerModal
-          mint={selectedMint}
-          connection={connection}
-          walletPublicKey={publicKey!}
-          sendTransaction={sendTransaction!}
-          onClose={() => setShowFinalizer(false)}
-          templateMetadata={{
-            name: 'JAL',
-            symbol: 'JAL',
-            description: 'JAL is a token that unlocks utility in the Solana vault ecosystem.',
-            image: 'https://gateway.lighthouse.storage/ipfs/<YOUR_IMAGE_CID>/logo.png'
-          }}
-        />
-      )}
+  <TokenFinalizerModal
+    mint={selectedMint}
+    connection={connection}
+    onClose={() => setShowFinalizer(false)}
+    templateMetadata={{
+      name: 'JAL',
+      symbol: 'JAL',
+      description: 'JAL is a token that unlocks utility in the Solana vault ecosystem.',
+      image: 'https://gateway.lighthouse.storage/ipfs/<YOUR_IMAGE_CID>/logo.png',
+    }}
+  />
+)}
     </main>
   );
 };

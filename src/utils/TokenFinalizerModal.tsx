@@ -9,7 +9,6 @@ import { useWallet } from '@solana/wallet-adapter-react';
 interface Props {
   mint: string;
   connection: Connection;
-  walletPublicKey: PublicKey;
   onClose: () => void;
   templateMetadata?: {
     name?: string;
@@ -19,7 +18,12 @@ interface Props {
   };
 }
 
-const TokenFinalizerModal: FC<Props> = ({ mint, connection, walletPublicKey, onClose, templateMetadata }) => {
+const TokenFinalizerModal: FC<Props> = ({
+  mint,
+  connection,
+  onClose,
+  templateMetadata,
+}) => {
   const { wallet } = useWallet();
   const [imageUri, setImageUri] = useState(templateMetadata?.image || '');
   const [name, setName] = useState(templateMetadata?.name || '');
@@ -37,16 +41,13 @@ const TokenFinalizerModal: FC<Props> = ({ mint, connection, walletPublicKey, onC
       description,
       image: imageUri,
       properties: {
-        files: [
-          {
-            uri: imageUri,
-            type: 'image/png',
-          },
-        ],
+        files: [{ uri: imageUri, type: 'image/png' }],
         category: 'image',
       },
     };
-    const file = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+    const file = new Blob([JSON.stringify(metadata, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(file);
     const link = document.createElement('a');
     link.href = url;
@@ -70,7 +71,7 @@ const TokenFinalizerModal: FC<Props> = ({ mint, connection, walletPublicKey, onC
         name,
         symbol,
       });
-      setTxSignature(signature);
+      setTxSignature(signature.toString());
 
       const verified = await verifyTokenMetadataAttached(connection, new PublicKey(mint));
       if (!verified?.isAttached) throw new Error('Metadata could not be verified on-chain.');
