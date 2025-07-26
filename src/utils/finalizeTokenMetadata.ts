@@ -1,6 +1,6 @@
 // src/utils/finalizeTokenMetadata.ts
 import {
-  createCreateMetadataAccountV2Instruction,
+  createMetadataAccountV3Instruction,
   createUpdateMetadataAccountV2Instruction,
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
 } from '@metaplex-foundation/mpl-token-metadata';
@@ -56,7 +56,7 @@ export async function finalizeTokenMetadata({
   const buildTransaction = async (update: boolean) => {
     const tx = new Transaction();
 
-    const instruction = update
+    const ix = update
       ? createUpdateMetadataAccountV2Instruction(
           {
             metadata: metadataPda,
@@ -71,7 +71,7 @@ export async function finalizeTokenMetadata({
             },
           }
         )
-      : createCreateMetadataAccountV2Instruction(
+      : createMetadataAccountV3Instruction(
           {
             metadata: metadataPda,
             mint: mintAddress,
@@ -80,14 +80,15 @@ export async function finalizeTokenMetadata({
             updateAuthority: walletPublicKey,
           },
           {
-            createMetadataAccountArgsV2: {
+            createMetadataAccountArgsV3: {
               data: metadata,
               isMutable: true,
+              collectionDetails: null,
             },
           }
         );
 
-    tx.add(instruction);
+    tx.add(ix);
     const { blockhash } = await connection.getLatestBlockhash();
     tx.feePayer = walletPublicKey;
     tx.recentBlockhash = blockhash;
