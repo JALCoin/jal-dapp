@@ -4,16 +4,15 @@ import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
 
 export default defineConfig({
   plugins: [react()],
-  define: {
-    global: 'globalThis',
-  },
   optimizeDeps: {
     include: ['buffer', 'process'],
   },
   build: {
-    sourcemap: true,
     rollupOptions: {
       plugins: [rollupNodePolyFill()],
     },
+  },
+  define: {
+    global: {},
   },
 });
