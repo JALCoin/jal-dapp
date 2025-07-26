@@ -25,6 +25,7 @@ const TokenFinalizerModal: FC<Props> = ({
   templateMetadata,
 }) => {
   const { wallet } = useWallet();
+
   const [imageUri, setImageUri] = useState(templateMetadata?.image || '');
   const [name, setName] = useState(templateMetadata?.name || '');
   const [symbol, setSymbol] = useState(templateMetadata?.symbol || '');
@@ -61,16 +62,17 @@ const TokenFinalizerModal: FC<Props> = ({
     setStatus('idle');
     try {
       if (!wallet?.adapter) throw new Error('Wallet adapter not found');
-      const signer = createSignerFromWalletAdapter(wallet.adapter);
+      const signer = createSignerFromWalletAdapter(wallet.adapter); // ✅ Umi-compatible Signer
 
-const signature = await finalizeTokenMetadata({
-  signer,
-  mintAddress: new PublicKey(mint),
-  metadataUri,
-  name,
-  symbol,
-});
-setTxSignature(signature);
+      const signature = await finalizeTokenMetadata({
+        signer,
+        mintAddress: new PublicKey(mint),
+        metadataUri,
+        name,
+        symbol,
+      });
+
+      setTxSignature(signature);
 
       const verified = await verifyTokenMetadataAttached(connection, new PublicKey(mint));
       if (!verified?.isAttached) throw new Error('Metadata could not be verified on-chain.');
@@ -96,18 +98,33 @@ setTxSignature(signature);
           </li>
           <li>
             Paste your image URI:
-            <input className="currency-input" value={imageUri} onChange={(e) => setImageUri(e.target.value)} placeholder="ipfs://..." />
+            <input
+              className="currency-input"
+              value={imageUri}
+              onChange={(e) => setImageUri(e.target.value)}
+              placeholder="ipfs://..."
+            />
           </li>
           <li>
             Fill out your token identity:
             <input placeholder="Token Name" value={name} onChange={(e) => setName(e.target.value)} />
             <input placeholder="Symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} />
-            <textarea placeholder="Description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+            <textarea
+              placeholder="Description"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
             <button className="button" onClick={handleDownloadMetadata}>Download metadata.json</button>
           </li>
           <li>
             Upload your metadata.json and paste the IPFS URI:
-            <input className="currency-input" value={metadataUri} onChange={(e) => setMetadataUri(e.target.value)} placeholder="ipfs://..." />
+            <input
+              className="currency-input"
+              value={metadataUri}
+              onChange={(e) => setMetadataUri(e.target.value)}
+              placeholder="ipfs://..."
+            />
           </li>
           <li>
             <button className="button" disabled={attaching} onClick={handleAttachMetadata}>
