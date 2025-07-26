@@ -100,9 +100,10 @@ const CreateToken: FC = () => {
 
         case 3: {
           if (!mint || !ata) throw new Error('Mint or ATA not set');
-          const tx = new Transaction().add(
-            createMintToInstruction(mint, ata, publicKey, 1_000_000_000)
-          );
+const amount = BigInt("1000000000000000000"); // 1B tokens with 9 decimals
+const tx = new Transaction().add(
+  createMintToInstruction(mint, ata, publicKey, amount)
+);
           const sig = await sendTransaction(tx, connection);
           log(`✅ Tokens minted`);
           log(`🔗 Tx: ${sig}`);
