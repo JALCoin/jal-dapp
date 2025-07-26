@@ -9,7 +9,6 @@ interface TokenInfo {
   mint: string;
   amount: string;
   decimals: number;
-  symbol?: string;
 }
 
 const Dashboard: FC = () => {
@@ -26,6 +25,7 @@ const Dashboard: FC = () => {
   const [description, setDescription] = useState('');
   const [metadataUri, setMetadataUri] = useState('');
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
+  const [attaching, setAttaching] = useState(false);
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -98,6 +98,7 @@ const Dashboard: FC = () => {
       return;
     }
 
+    setAttaching(true);
     try {
       const sig = await finalizeTokenMetadata({
         connection,
@@ -113,6 +114,8 @@ const Dashboard: FC = () => {
     } catch (err) {
       console.error('Attach metadata error:', err);
       alert('❌ Failed to attach metadata. Check console for details.');
+    } finally {
+      setAttaching(false);
     }
   };
 
@@ -169,15 +172,9 @@ const Dashboard: FC = () => {
             <h2>Turn Into Currency</h2>
             <ol>
               <li>
-                Go to <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a> → <strong>Get Started</strong>
-                <ul>
-                  <li>Connect your <strong>Phantom wallet</strong></li>
-                  <li>Confirm your <strong>email</strong></li>
-                  <li>Upload your token image (PNG recommended)</li>
-                </ul>
-                Copy the resulting <code>ipfs://...</code> URI.
+                Upload your <strong>token image</strong> to{' '}
+                <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a>
               </li>
-
               <li>
                 Paste your image URI:
                 <input
@@ -187,7 +184,6 @@ const Dashboard: FC = () => {
                   onChange={(e) => setImageUri(e.target.value)}
                 />
               </li>
-
               <li>
                 Fill out your token identity:
                 <div className="currency-form">
@@ -212,9 +208,8 @@ const Dashboard: FC = () => {
                   </button>
                 </div>
               </li>
-
               <li>
-                Upload your <code>metadata.json</code> to Lighthouse and paste the IPFS URI:
+                Upload metadata.json to Lighthouse, paste the final IPFS URI:
                 <input
                   className="currency-input"
                   placeholder="ipfs://..."
@@ -222,10 +217,9 @@ const Dashboard: FC = () => {
                   onChange={(e) => setMetadataUri(e.target.value)}
                 />
               </li>
-
               <li>
-                <button className="button" onClick={handleAttachMetadata}>
-                  Attach Metadata to {selectedMint.slice(0, 4)}...
+                <button className="button" disabled={attaching} onClick={handleAttachMetadata}>
+                  {attaching ? 'Attaching...' : `Attach Metadata to ${selectedMint.slice(0, 4)}...`}
                 </button>
               </li>
             </ol>
