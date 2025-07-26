@@ -3,16 +3,13 @@ import { useState } from 'react';
 import { PublicKey, Connection } from '@solana/web3.js';
 import { finalizeTokenMetadata } from '../utils/finalizeTokenMetadata';
 import { verifyTokenMetadataAttached } from '../utils/verifyTokenMetadataAttached';
+import { createSignerFromWalletAdapter } from '@metaplex-foundation/umi-signer-wallet-adapters';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 interface Props {
   mint: string;
   connection: Connection;
   walletPublicKey: PublicKey;
-  sendTransaction: (
-    transaction: any,
-    connection: Connection,
-    options?: { skipPreflight?: boolean }
-  ) => Promise<string>;
   onClose: () => void;
   templateMetadata?: {
     name?: string;
@@ -22,7 +19,8 @@ interface Props {
   };
 }
 
-const TokenFinalizerModal: FC<Props> = ({ mint, connection, walletPublicKey, sendTransaction, onClose, templateMetadata }) => {
+const TokenFinalizerModal: FC<Props> = ({ mint, connection, walletPublicKey, onClose, templateMetadata }) => {
+  const { wallet } = useWallet();
   const [imageUri, setImageUri] = useState(templateMetadata?.image || '');
   const [name, setName] = useState(templateMetadata?.name || '');
   const [symbol, setSymbol] = useState(templateMetadata?.symbol || '');
@@ -61,10 +59,12 @@ const TokenFinalizerModal: FC<Props> = ({ mint, connection, walletPublicKey, sen
     setAttaching(true);
     setStatus('idle');
     try {
+      if (!wallet?.adapter) throw new Error('Wallet adapter not found');
+      const signer = createSignerFromWalletAdapter(wallet.adapter);
+
       const signature = await finalizeTokenMetadata({
         connection,
-        sendTransaction,
-        walletPublicKey,
+        signer,
         mintAddress: new PublicKey(mint),
         metadataUri,
         name,
