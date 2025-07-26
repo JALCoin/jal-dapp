@@ -105,9 +105,7 @@ const sig = await finalizeTokenMetadata({
   metadataUri,
   name,
   symbol,
-  description, // now required as part of on-chain metadata
 });
-
       alert(`✅ Metadata attached! Tx: ${sig}`);
     } catch (err) {
       console.error('Attach metadata error:', err);
