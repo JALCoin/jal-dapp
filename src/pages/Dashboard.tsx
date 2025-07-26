@@ -152,69 +152,75 @@ const Dashboard: FC = () => {
         )}
       </div>
 
-      {showInstructions && selectedMint && (
-        <div className="instruction-backdrop">
-          <div className="instruction-panel">
-            <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
-            <h2>Turn Into Currency</h2>
-            <ol>
-              <li>
-                Upload your <strong>token image</strong> to{' '}
-                <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a>
-              </li>
-              <li>
-                Paste your image URI:
-                <input
-                  className="currency-input"
-                  placeholder="ipfs://..."
-                  value={imageUri}
-                  onChange={(e) => setImageUri(e.target.value)}
-                />
-              </li>
-              <li>
-                Fill out your token identity:
-                <div className="currency-form">
-                  <input
-                    placeholder="Token Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  <input
-                    placeholder="Symbol"
-                    value={symbol}
-                    onChange={(e) => setSymbol(e.target.value)}
-                  />
-                  <textarea
-                    placeholder="Description"
-                    rows={3}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                  <button className="button" onClick={handleDownloadMetadata}>
-                    Download metadata.json
-                  </button>
-                </div>
-              </li>
-              <li>
-                Upload `metadata.json` to Lighthouse, paste the final IPFS URI:
-                <input
-                  className="currency-input"
-                  placeholder="ipfs://..."
-                  value={metadataUri}
-                  onChange={(e) => setMetadataUri(e.target.value)}
-                />
-              </li>
-              <li>
-                <button className="button" disabled={attaching} onClick={handleAttachMetadata}>
-                  {attaching ? 'Attaching...' : `Attach Metadata to ${selectedMint.slice(0, 4)}...`}
-                </button>
-              </li>
-            </ol>
-
-            <p className="note">This metadata will become your token’s permanent identity on Solana.</p>
+{showInstructions && selectedMint && (
+  <div className="instruction-backdrop">
+    <div className="instruction-panel">
+      <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
+      <h2>Turn Into Currency</h2>
+      <ol>
+        <li>
+          Upload your <strong>token image</strong> to{' '}
+          <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a>
+        </li>
+        <li>
+          Paste your image URI:
+          <input
+            className="currency-input"
+            placeholder="ipfs://..."
+            value={imageUri}
+            onChange={(e) => setImageUri(e.target.value)}
+          />
+        </li>
+        <li>
+          Fill out your token identity:
+          <div className="currency-form">
+            <input
+              placeholder="Token Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <input
+              placeholder="Symbol"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+            />
+            <textarea
+              placeholder="Description"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <button className="button" onClick={handleDownloadMetadata}>
+              Download metadata.json
+            </button>
           </div>
-        </div>
-      )}
+        </li>
+        <li>
+          Upload your <code>metadata.json</code> file to Lighthouse and paste the IPFS URI:
+          <input
+            className="currency-input"
+            placeholder="ipfs://..."
+            value={metadataUri}
+            onChange={(e) => setMetadataUri(e.target.value)}
+          />
+        </li>
+        <li>
+          <button className="button" disabled={attaching} onClick={handleAttachMetadata}>
+            {attaching ? 'Attaching...' : `Attach Metadata to ${selectedMint.slice(0, 4)}...`}
+          </button>
+          <p className="note" style={{ marginTop: '0.5rem' }}>
+            ⚠️ Please approve the Phantom wallet popup immediately after clicking. <br />
+            If you delay, the transaction will fail due to blockhash expiration.
+          </p>
+        </li>
+      </ol>
+
+      <p className="note">
+        Once attached, this metadata will be permanently stored on-chain for your token.
+      </p>
+    </div>
+  </div>
+)}
     </main>
   );
 };
