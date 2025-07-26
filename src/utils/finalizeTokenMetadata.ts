@@ -1,37 +1,40 @@
 // src/utils/finalizeTokenMetadata.ts
 import {
   createUmi,
-  signerIdentity,
   publicKey,
+  signerIdentity,
+  type Umi,
+  type Signer,
 } from '@metaplex-foundation/umi';
-import { createMetadataAccountV3, findMetadataPda } from '@metaplex-foundation/mpl-token-metadata';
+import {
+  createMetadataAccountV3,
+  findMetadataPda,
+  type DataV2Args,
+} from '@metaplex-foundation/mpl-token-metadata';
 import { createBundledVrfClient } from '@metaplex-foundation/umi-bundle-defaults';
 import { Connection, PublicKey } from '@solana/web3.js';
 
 interface FinalizeMetadataParams {
   connection: Connection;
-  walletPublicKey: PublicKey;
   mintAddress: PublicKey;
   metadataUri: string;
   name: string;
   symbol: string;
-  // signer must implement UmiSigner from `@metaplex-foundation/umi`
-  signer: any;
+  signer: Signer;
 }
 
 export async function finalizeTokenMetadata({
   connection,
-  walletPublicKey,
   mintAddress,
   metadataUri,
   name,
   symbol,
   signer,
 }: FinalizeMetadataParams): Promise<string> {
-  const umi = createUmi(connection.rpcEndpoint).use(createBundledVrfClient());
+  const umi: Umi = createUmi(connection.rpcEndpoint).use(createBundledVrfClient());
   umi.use(signerIdentity(signer));
 
-  const metadata = {
+  const metadata: DataV2Args = {
     name,
     symbol,
     uri: metadataUri,
@@ -41,16 +44,18 @@ export async function finalizeTokenMetadata({
     uses: null,
   };
 
-  const metadataPda = findMetadataPda(umi, publicKey(mintAddress.toBase58()));
+  const mint = publicKey(mintAddress.toBase58());
+  const metadataPda = findMetadataPda(umi, mint);
 
   const { signature } = await createMetadataAccountV3(umi, {
     metadata: metadataPda,
-    mint: publicKey(mintAddress.toBase58()),
+    mint,
     mintAuthority: signer,
     updateAuthority: signer,
     payer: signer,
     data: metadata,
     isMutable: true,
+    collectionDetails: null,
   }).sendAndConfirm(umi);
 
   return signature;
