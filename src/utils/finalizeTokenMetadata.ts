@@ -28,6 +28,7 @@ export async function finalizeTokenMetadata({
   name,
   symbol,
 }: FinalizeMetadataParams): Promise<string> {
+  // Derive PDA for metadata account
   const [metadataPda] = await PublicKey.findProgramAddress(
     [
       Buffer.from('metadata'),
@@ -37,7 +38,8 @@ export async function finalizeTokenMetadata({
     TOKEN_METADATA_PROGRAM_ID
   );
 
-  const metadataData: DataV2 = {
+  // Construct the metadata object
+  const metadata: DataV2 = {
     name,
     symbol,
     uri: metadataUri,
@@ -47,7 +49,8 @@ export async function finalizeTokenMetadata({
     uses: null,
   };
 
-  const ix = createCreateMetadataAccountV2Instruction(
+  // Build the metadata instruction
+  const instruction = createCreateMetadataAccountV2Instruction(
     {
       metadata: metadataPda,
       mint: mintAddress,
@@ -57,18 +60,20 @@ export async function finalizeTokenMetadata({
     },
     {
       createMetadataAccountArgsV2: {
-        data: metadataData,
+        data: metadata,
         isMutable: true,
       },
     }
   );
 
-  const tx = new Transaction().add(ix);
-  tx.feePayer = walletPublicKey;
-
+  // Get latest blockhash before constructing the transaction
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+
+  const tx = new Transaction().add(instruction);
+  tx.feePayer = walletPublicKey;
   tx.recentBlockhash = blockhash;
 
+  // Send and confirm the transaction in tight sequence
   const signature = await sendTransaction(tx, connection);
 
   await connection.confirmTransaction(
