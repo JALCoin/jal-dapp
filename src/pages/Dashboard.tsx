@@ -12,7 +12,7 @@ interface TokenInfo {
 }
 
 const Dashboard: FC = () => {
-  const { publicKey, sendTransaction } = useWallet();
+const { publicKey } = useWallet();
   const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
 
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
