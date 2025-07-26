@@ -53,10 +53,10 @@ export async function finalizeTokenMetadata({
     uses: null,
   };
 
-  const buildTx = async (useUpdate: boolean) => {
+  const buildTransaction = async (update: boolean) => {
     const tx = new Transaction();
 
-    const ix = useUpdate
+    const instruction = update
       ? createUpdateMetadataAccountV2Instruction(
           {
             metadata: metadataPda,
@@ -87,26 +87,30 @@ export async function finalizeTokenMetadata({
           }
         );
 
-    tx.add(ix);
+    tx.add(instruction);
     const { blockhash } = await connection.getLatestBlockhash();
     tx.feePayer = walletPublicKey;
     tx.recentBlockhash = blockhash;
+
     return tx;
   };
 
-  try {
-    const tx = await buildTx(false); // try to create
+  const trySend = async (tx: Transaction): Promise<string> => {
     return await sendTransaction(tx, connection, { skipPreflight: true });
-  } catch (e: any) {
-    const msg = e.message || '';
-    const alreadyInit = msg.includes('0x4b') || msg.includes('Error Number: 75');
+  };
 
-    if (alreadyInit) {
-      console.warn('Metadata already exists. Updating instead.');
-      const tx = await buildTx(true); // fallback to update
-      return await sendTransaction(tx, connection, { skipPreflight: true });
-    }
+  // First try: create
+  const createTx = await buildTransaction(false);
+  try {
+    return await trySend(createTx);
+  } catch (err: any) {
+    const msg = err.message || '';
+    const isAlreadyInitialized = msg.includes('0x4b') || msg.includes('Error Number: 75');
 
-    throw e;
+    if (!isAlreadyInitialized) throw err;
+
+    console.warn('Metadata already exists. Attempting to update...');
+    const updateTx = await buildTransaction(true);
+    return await trySend(updateTx);
   }
 }
