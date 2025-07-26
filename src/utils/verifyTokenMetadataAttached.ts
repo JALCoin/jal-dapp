@@ -1,10 +1,6 @@
-// src/utils/verifyTokenMetadataAttached.ts
-import {
-  PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
-  findMetadataPda,
-  fetchMetadata,
-} from '@metaplex-foundation/mpl-token-metadata';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
+import { findMetadataPda, fetchMetadataFromSeeds } from '@metaplex-foundation/mpl-token-metadata';
+import { PublicKey, Connection } from '@solana/web3.js';
 
 export async function verifyTokenMetadataAttached(
   connection: Connection,
@@ -17,20 +13,18 @@ export async function verifyTokenMetadataAttached(
   rawData?: any;
 }> {
   try {
-    const metadataPda = findMetadataPda(mintAddress);
-
-    const metadata = await fetchMetadata(connection, metadataPda);
-    if (!metadata) return { isAttached: false };
+    const umi = createUmi('https://api.mainnet-beta.solana.com');
+    const metadata = await fetchMetadataFromSeeds(umi, { mint: mintAddress });
 
     return {
       isAttached: true,
-      name: metadata.data.name,
-      symbol: metadata.data.symbol,
-      uri: metadata.data.uri,
+      name: metadata.name,
+      symbol: metadata.symbol,
+      uri: metadata.uri,
       rawData: metadata,
     };
   } catch (err) {
-    console.error('Metadata verification failed:', err);
+    console.error('Metadata fetch failed:', err);
     return { isAttached: false };
   }
 }
