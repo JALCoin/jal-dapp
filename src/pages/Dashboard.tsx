@@ -4,6 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { finalizeTokenMetadata } from '../utils/finalizeTokenMetadata';
+import { verifyTokenMetadataAttached } from '../utils/verifyTokenMetadataAttached';
 
 interface TokenInfo {
   mint: string;
@@ -25,6 +26,12 @@ const Dashboard: FC = () => {
   const [metadataUri, setMetadataUri] = useState('');
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [attaching, setAttaching] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<null | {
+    isAttached: boolean;
+    name?: string;
+    symbol?: string;
+    uri?: string;
+  }>(null);
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -67,6 +74,7 @@ const Dashboard: FC = () => {
   const handleTurnIntoCurrency = (mint: string) => {
     setSelectedMint(mint);
     setShowInstructions(true);
+    setVerificationResult(null);
   };
 
   const handleDownloadMetadata = () => {
@@ -88,6 +96,8 @@ const Dashboard: FC = () => {
     }
 
     setAttaching(true);
+    setVerificationResult(null);
+
     try {
       const sig = await finalizeTokenMetadata({
         connection,
@@ -99,7 +109,14 @@ const Dashboard: FC = () => {
         symbol,
       });
 
-      alert(`✅ Metadata attached! Tx: ${sig}`);
+      const verify = await verifyTokenMetadataAttached(connection, new PublicKey(selectedMint));
+      setVerificationResult(verify);
+
+      if (verify.isAttached) {
+        alert(`✅ Metadata attached! Tx: ${sig}`);
+      } else {
+        alert(`⚠️ Metadata submitted but could not verify attachment.`);
+      }
     } catch (err) {
       console.error('Attach metadata error:', err);
       alert('❌ Failed to attach metadata. Check console for details.');
@@ -152,75 +169,92 @@ const Dashboard: FC = () => {
         )}
       </div>
 
-{showInstructions && selectedMint && (
-  <div className="instruction-backdrop">
-    <div className="instruction-panel">
-      <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
-      <h2>Turn Into Currency</h2>
-      <ol>
-        <li>
-          Upload your <strong>token image</strong> to{' '}
-          <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a>
-        </li>
-        <li>
-          Paste your image URI:
-          <input
-            className="currency-input"
-            placeholder="ipfs://..."
-            value={imageUri}
-            onChange={(e) => setImageUri(e.target.value)}
-          />
-        </li>
-        <li>
-          Fill out your token identity:
-          <div className="currency-form">
-            <input
-              placeholder="Token Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <input
-              placeholder="Symbol"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-            />
-            <textarea
-              placeholder="Description"
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            <button className="button" onClick={handleDownloadMetadata}>
-              Download metadata.json
-            </button>
-          </div>
-        </li>
-        <li>
-          Upload your <code>metadata.json</code> file to Lighthouse and paste the IPFS URI:
-          <input
-            className="currency-input"
-            placeholder="ipfs://..."
-            value={metadataUri}
-            onChange={(e) => setMetadataUri(e.target.value)}
-          />
-        </li>
-        <li>
-          <button className="button" disabled={attaching} onClick={handleAttachMetadata}>
-            {attaching ? 'Attaching...' : `Attach Metadata to ${selectedMint.slice(0, 4)}...`}
-          </button>
-          <p className="note" style={{ marginTop: '0.5rem' }}>
-            ⚠️ Please approve the Phantom wallet popup immediately after clicking. <br />
-            If you delay, the transaction will fail due to blockhash expiration.
-          </p>
-        </li>
-      </ol>
+      {showInstructions && selectedMint && (
+        <div className="instruction-backdrop">
+          <div className="instruction-panel">
+            <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
+            <h2>Turn Into Currency</h2>
+            <ol>
+              <li>
+                Upload your <strong>token image</strong> to{' '}
+                <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a>
+              </li>
+              <li>
+                Paste your image URI:
+                <input
+                  className="currency-input"
+                  placeholder="ipfs://..."
+                  value={imageUri}
+                  onChange={(e) => setImageUri(e.target.value)}
+                />
+              </li>
+              <li>
+                Fill out your token identity:
+                <div className="currency-form">
+                  <input
+                    placeholder="Token Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <input
+                    placeholder="Symbol"
+                    value={symbol}
+                    onChange={(e) => setSymbol(e.target.value)}
+                  />
+                  <textarea
+                    placeholder="Description"
+                    rows={3}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                  <button className="button" onClick={handleDownloadMetadata}>
+                    Download metadata.json
+                  </button>
+                </div>
+              </li>
+              <li>
+                Upload your <code>metadata.json</code> file to Lighthouse and paste the IPFS URI:
+                <input
+                  className="currency-input"
+                  placeholder="ipfs://..."
+                  value={metadataUri}
+                  onChange={(e) => setMetadataUri(e.target.value)}
+                />
+              </li>
+              <li>
+                <button className="button" disabled={attaching} onClick={handleAttachMetadata}>
+                  {attaching ? 'Attaching...' : `Attach Metadata to ${selectedMint.slice(0, 4)}...`}
+                </button>
+                <p className="note" style={{ marginTop: '0.5rem' }}>
+                  ⚠️ Please approve the Phantom wallet popup immediately after clicking. <br />
+                  If you delay, the transaction will fail due to blockhash expiration.
+                </p>
 
-      <p className="note">
-        Once attached, this metadata will be permanently stored on-chain for your token.
-      </p>
-    </div>
-  </div>
-)}
+                {verificationResult && (
+                  <div className="metadata-verification" style={{ marginTop: '1rem' }}>
+                    {verificationResult.isAttached ? (
+                      <div style={{ color: 'green' }}>
+                        ✅ Verified: Metadata attached<br />
+                        <strong>Name:</strong> {verificationResult.name}<br />
+                        <strong>Symbol:</strong> {verificationResult.symbol}<br />
+                        <strong>URI:</strong> {verificationResult.uri}
+                      </div>
+                    ) : (
+                      <div style={{ color: 'red' }}>
+                        ❌ Metadata could not be verified on-chain.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </li>
+            </ol>
+
+            <p className="note">
+              Once attached, this metadata will be permanently stored on-chain for your token.
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

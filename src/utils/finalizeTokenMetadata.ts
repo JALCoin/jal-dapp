@@ -12,7 +12,11 @@ import {
 interface FinalizeMetadataParams {
   connection: Connection;
   walletPublicKey: PublicKey;
-  sendTransaction: (transaction: Transaction, connection: Connection, options?: any) => Promise<string>;
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection,
+    options?: { skipPreflight?: boolean }
+  ) => Promise<string>;
   mintAddress: PublicKey;
   metadataUri: string;
   name: string;
@@ -47,7 +51,7 @@ export async function finalizeTokenMetadata({
     uses: null,
   };
 
-  const ix = createCreateMetadataAccountV2Instruction(
+  const instruction = createCreateMetadataAccountV2Instruction(
     {
       metadata: metadataPda,
       mint: mintAddress,
@@ -63,29 +67,15 @@ export async function finalizeTokenMetadata({
     }
   );
 
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+  const txBlockhash = await connection.getLatestBlockhash();
 
-  const tx = new Transaction().add(ix);
-  tx.feePayer = walletPublicKey;
-  tx.recentBlockhash = blockhash;
+  const transaction = new Transaction().add(instruction);
+  transaction.feePayer = walletPublicKey;
+  transaction.recentBlockhash = txBlockhash.blockhash;
 
-  const signature = await sendTransaction(tx, connection, {
+  const signature = await sendTransaction(transaction, connection, {
     skipPreflight: true,
   });
-
-  try {
-    await connection.confirmTransaction(
-      {
-        signature,
-        blockhash,
-        lastValidBlockHeight,
-      },
-      'finalized'
-    );
-  } catch (err) {
-    console.error('Confirmation failed:', err);
-    throw new Error('Blockhash expired. Please sign and submit quickly after clicking.');
-  }
 
   return signature;
 }
