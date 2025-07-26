@@ -4,6 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import TokenFinalizerModal from '../utils/TokenFinalizerModal';
+
 interface TokenInfo {
   mint: string;
   amount: string;
@@ -109,6 +110,12 @@ const Dashboard: FC = () => {
           walletPublicKey={publicKey!}
           sendTransaction={sendTransaction!}
           onClose={() => setShowFinalizer(false)}
+          templateMetadata={{
+            name: 'JAL',
+            symbol: 'JAL',
+            description: 'JAL is a token that unlocks utility in the Solana vault ecosystem.',
+            image: 'https://gateway.lighthouse.storage/ipfs/<YOUR_IMAGE_CID>/logo.png'
+          }}
         />
       )}
     </main>
