@@ -9,11 +9,13 @@ interface TokenInfo {
   mint: string;
   amount: string;
   decimals: number;
-  symbol?: string; // optional for now
+  symbol?: string;
 }
 
 const Dashboard: FC = () => {
   const { publicKey, sendTransaction } = useWallet();
+  const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
+
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInstructions, setShowInstructions] = useState(false);
@@ -23,8 +25,7 @@ const Dashboard: FC = () => {
   const [symbol, setSymbol] = useState('');
   const [description, setDescription] = useState('');
   const [metadataUri, setMetadataUri] = useState('');
-
-  const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
+  const [selectedMint, setSelectedMint] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -36,7 +37,13 @@ const Dashboard: FC = () => {
           programId: TOKEN_PROGRAM_ID,
         });
 
-        const candidateMints = response.value.map((acc: any) => acc.account.data.parsed.info.mint);
+        const candidateMints = response.value
+          .sort((a: any, b: any) =>
+            b.account.lamports - a.account.lamports ||
+            b.pubkey.toBase58().localeCompare(a.pubkey.toBase58())
+          )
+          .map((acc: any) => acc.account.data.parsed.info.mint);
+
         const filteredTokens: TokenInfo[] = [];
 
         for (const mint of candidateMints) {
@@ -69,18 +76,13 @@ const Dashboard: FC = () => {
     fetchTokens();
   }, [publicKey]);
 
-  const handleTurnIntoCurrency = () => {
+  const handleTurnIntoCurrency = (mint: string) => {
+    setSelectedMint(mint);
     setShowInstructions(true);
   };
 
   const handleDownloadMetadata = () => {
-    const metadata = {
-      name,
-      symbol,
-      description,
-      image: imageUri,
-    };
-
+    const metadata = { name, symbol, description, image: imageUri };
     const file = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(file);
     const a = document.createElement('a');
@@ -90,22 +92,23 @@ const Dashboard: FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleAttachMetadata = async (mint: string) => {
-    if (!publicKey || !sendTransaction || !metadataUri || !name || !symbol) {
+  const handleAttachMetadata = async () => {
+    if (!selectedMint || !publicKey || !sendTransaction || !metadataUri || !name || !symbol) {
       alert('Missing required data to finalize metadata.');
       return;
     }
 
     try {
-const sig = await finalizeTokenMetadata({
-  connection,
-  sendTransaction,
-  walletPublicKey: publicKey,
-  mintAddress: new PublicKey(mint),
-  metadataUri,
-  name,
-  symbol,
-});
+      const sig = await finalizeTokenMetadata({
+        connection,
+        sendTransaction,
+        walletPublicKey: publicKey,
+        mintAddress: new PublicKey(selectedMint),
+        metadataUri,
+        name,
+        symbol,
+      });
+
       alert(`✅ Metadata attached! Tx: ${sig}`);
     } catch (err) {
       console.error('Attach metadata error:', err);
@@ -138,9 +141,7 @@ const sig = await finalizeTokenMetadata({
                       📋
                     </button>
                   </p>
-                  <p>
-                    <strong>Amount:</strong> {token.amount}
-                  </p>
+                  <p><strong>Amount:</strong> {token.amount}</p>
                 </div>
 
                 <a
@@ -152,7 +153,7 @@ const sig = await finalizeTokenMetadata({
                   View on Solscan ↗
                 </a>
 
-                <button className="button" onClick={handleTurnIntoCurrency}>
+                <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
                   Turn Into Currency
                 </button>
               </div>
@@ -161,25 +162,20 @@ const sig = await finalizeTokenMetadata({
         )}
       </div>
 
-      {showInstructions && (
+      {showInstructions && selectedMint && (
         <div className="instruction-backdrop">
           <div className="instruction-panel">
             <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
             <h2>Turn Into Currency</h2>
             <ol>
               <li>
-                Go to{' '}
-                <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
-                  lighthouse.storage
-                </a>{' '}
-                and click <strong>“Get Started”</strong>.
+                Go to <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a> → <strong>Get Started</strong>
                 <ul>
                   <li>Connect your <strong>Phantom wallet</strong></li>
-                  <li>Confirm your <strong>email address</strong> to activate the account</li>
-                  <li>Once inside, click <strong>“Upload New” → “Upload File”</strong> in the left sidebar</li>
-                  <li>Select and upload your <strong>token image</strong> (PNG recommended)</li>
+                  <li>Confirm your <strong>email</strong></li>
+                  <li>Upload your token image (PNG recommended)</li>
                 </ul>
-                After upload completes, copy the <code>ipfs://</code> or <code>https://gateway.lighthouse.storage/ipfs/...</code> link.
+                Copy the resulting <code>ipfs://...</code> URI.
               </li>
 
               <li>
@@ -218,24 +214,23 @@ const sig = await finalizeTokenMetadata({
               </li>
 
               <li>
-                Upload your <code>metadata.json</code> to Lighthouse and copy the resulting <strong>IPFS URI</strong>.
+                Upload your <code>metadata.json</code> to Lighthouse and paste the IPFS URI:
                 <input
                   className="currency-input"
                   placeholder="ipfs://..."
                   value={metadataUri}
                   onChange={(e) => setMetadataUri(e.target.value)}
                 />
-                {tokens.map((token, idx) => (
-                  <button key={idx} className="button" onClick={() => handleAttachMetadata(token.mint)}>
-                    Attach Metadata to {token.symbol || token.mint.slice(0, 4)}...
-                  </button>
-                ))}
+              </li>
+
+              <li>
+                <button className="button" onClick={handleAttachMetadata}>
+                  Attach Metadata to {selectedMint.slice(0, 4)}...
+                </button>
               </li>
             </ol>
 
-            <p className="note">
-              This metadata URI will become your token’s permanent identity on Solana.
-            </p>
+            <p className="note">This metadata will become your token’s permanent identity on Solana.</p>
           </div>
         </div>
       )}
