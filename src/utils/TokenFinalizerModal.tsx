@@ -73,7 +73,7 @@ const TokenFinalizerModal: FC<Props> = ({ mint, connection, walletPublicKey, sen
       setTxSignature(signature);
 
       const verified = await verifyTokenMetadataAttached(connection, new PublicKey(mint));
-      if (!verified) throw new Error('Metadata could not be verified on-chain.');
+      if (!verified?.isAttached) throw new Error('Metadata could not be verified on-chain.');
 
       setStatus('success');
     } catch (err) {
