@@ -5,6 +5,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { finalizeTokenMetadata } from '../utils/finalizeTokenMetadata';
 import { verifyTokenMetadataAttached } from '../utils/verifyTokenMetadataAttached';
+import TokenFinalizerModal from '../components/TokenFinalizerModal';
 
 interface TokenInfo {
   mint: string;
@@ -18,20 +19,8 @@ const Dashboard: FC = () => {
 
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showInstructions, setShowInstructions] = useState(false);
-  const [imageUri, setImageUri] = useState('');
-  const [name, setName] = useState('');
-  const [symbol, setSymbol] = useState('');
-  const [description, setDescription] = useState('');
-  const [metadataUri, setMetadataUri] = useState('');
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
-  const [attaching, setAttaching] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<null | {
-    isAttached: boolean;
-    name?: string;
-    symbol?: string;
-    uri?: string;
-  }>(null);
+  const [showFinalizer, setShowFinalizer] = useState(false);
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -73,56 +62,7 @@ const Dashboard: FC = () => {
 
   const handleTurnIntoCurrency = (mint: string) => {
     setSelectedMint(mint);
-    setShowInstructions(true);
-    setVerificationResult(null);
-  };
-
-  const handleDownloadMetadata = () => {
-    const metadata = { name, symbol, description, image: imageUri };
-    const file = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(file);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'metadata.json';
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleAttachMetadata = async () => {
-    if (!selectedMint || !publicKey || !sendTransaction || !metadataUri || !name || !symbol) {
-      alert('❌ Missing required data to attach metadata.');
-      return;
-    }
-
-    setAttaching(true);
-    setVerificationResult(null);
-
-    try {
-      const sig = await finalizeTokenMetadata({
-        connection,
-        sendTransaction,
-        walletPublicKey: publicKey,
-        mintAddress: new PublicKey(selectedMint),
-        metadataUri,
-        name,
-        symbol,
-      });
-
-      const verify = await verifyTokenMetadataAttached(connection, new PublicKey(selectedMint));
-      setVerificationResult(verify);
-
-      if (verify.isAttached) {
-        alert(`✅ Metadata attached! Tx: ${sig}`);
-      } else {
-        alert(`⚠️ Metadata submitted but could not verify attachment.`);
-      }
-    } catch (err) {
-      console.error('Attach metadata error:', err);
-      alert('❌ Failed to attach metadata. Check console for details.');
-    } finally {
-      setAttaching(false);
-    }
+    setShowFinalizer(true);
   };
 
   return (
@@ -144,9 +84,7 @@ const Dashboard: FC = () => {
                       className="copy-btn"
                       onClick={() => navigator.clipboard.writeText(token.mint)}
                       title="Copy Mint Address"
-                    >
-                      📋
-                    </button>
+                    >📋</button>
                   </p>
                   <p><strong>Amount:</strong> {token.amount}</p>
                 </div>
@@ -156,9 +94,7 @@ const Dashboard: FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="explorer-link"
-                >
-                  View on Solscan ↗
-                </a>
+                >View on Solscan ↗</a>
 
                 <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
                   Turn Into Currency
@@ -169,91 +105,14 @@ const Dashboard: FC = () => {
         )}
       </div>
 
-      {showInstructions && selectedMint && (
-        <div className="instruction-backdrop">
-          <div className="instruction-panel">
-            <button onClick={() => setShowInstructions(false)} className="close-btn">×</button>
-            <h2>Turn Into Currency</h2>
-            <ol>
-              <li>
-                Upload your <strong>token image</strong> to{' '}
-                <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">lighthouse.storage</a>
-              </li>
-              <li>
-                Paste your image URI:
-                <input
-                  className="currency-input"
-                  placeholder="ipfs://..."
-                  value={imageUri}
-                  onChange={(e) => setImageUri(e.target.value)}
-                />
-              </li>
-              <li>
-                Fill out your token identity:
-                <div className="currency-form">
-                  <input
-                    placeholder="Token Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  <input
-                    placeholder="Symbol"
-                    value={symbol}
-                    onChange={(e) => setSymbol(e.target.value)}
-                  />
-                  <textarea
-                    placeholder="Description"
-                    rows={3}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                  <button className="button" onClick={handleDownloadMetadata}>
-                    Download metadata.json
-                  </button>
-                </div>
-              </li>
-              <li>
-                Upload your <code>metadata.json</code> file to Lighthouse and paste the IPFS URI:
-                <input
-                  className="currency-input"
-                  placeholder="ipfs://..."
-                  value={metadataUri}
-                  onChange={(e) => setMetadataUri(e.target.value)}
-                />
-              </li>
-              <li>
-                <button className="button" disabled={attaching} onClick={handleAttachMetadata}>
-                  {attaching ? 'Attaching...' : `Attach Metadata to ${selectedMint.slice(0, 4)}...`}
-                </button>
-                <p className="note" style={{ marginTop: '0.5rem' }}>
-                  ⚠️ Please approve the Phantom wallet popup immediately after clicking. <br />
-                  If you delay, the transaction will fail due to blockhash expiration.
-                </p>
-
-                {verificationResult && (
-                  <div className="metadata-verification" style={{ marginTop: '1rem' }}>
-                    {verificationResult.isAttached ? (
-                      <div style={{ color: 'green' }}>
-                        ✅ Verified: Metadata attached<br />
-                        <strong>Name:</strong> {verificationResult.name}<br />
-                        <strong>Symbol:</strong> {verificationResult.symbol}<br />
-                        <strong>URI:</strong> {verificationResult.uri}
-                      </div>
-                    ) : (
-                      <div style={{ color: 'red' }}>
-                        ❌ Metadata could not be verified on-chain.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </li>
-            </ol>
-
-            <p className="note">
-              Once attached, this metadata will be permanently stored on-chain for your token.
-            </p>
-          </div>
-        </div>
+      {showFinalizer && selectedMint && (
+        <TokenFinalizerModal
+          mint={selectedMint}
+          connection={connection}
+          walletPublicKey={publicKey!}
+          sendTransaction={sendTransaction!}
+          onClose={() => setShowFinalizer(false)}
+        />
       )}
     </main>
   );
