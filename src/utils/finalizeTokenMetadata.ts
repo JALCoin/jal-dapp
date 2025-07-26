@@ -1,39 +1,37 @@
 // src/utils/finalizeTokenMetadata.ts
 import {
-  createCreateMetadataAccountV2Instruction,
-  createUpdateMetadataAccountV2Instruction,
-  findMetadataPda,
-  PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
-} from '@metaplex-foundation/mpl-token-metadata';
-import type { DataV2 } from '@metaplex-foundation/mpl-token-metadata';
-import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+  createUmi,
+  signerIdentity,
+  publicKey,
+} from '@metaplex-foundation/umi';
+import { createMetadataAccountV3, findMetadataPda } from '@metaplex-foundation/mpl-token-metadata';
+import { createBundledVrfClient } from '@metaplex-foundation/umi-bundle-defaults';
+import { Connection, PublicKey } from '@solana/web3.js';
 
 interface FinalizeMetadataParams {
   connection: Connection;
   walletPublicKey: PublicKey;
-  sendTransaction: (
-    transaction: Transaction,
-    connection: Connection,
-    options?: { skipPreflight?: boolean }
-  ) => Promise<string>;
   mintAddress: PublicKey;
   metadataUri: string;
   name: string;
   symbol: string;
+  // signer must implement UmiSigner from `@metaplex-foundation/umi`
+  signer: any;
 }
 
 export async function finalizeTokenMetadata({
   connection,
   walletPublicKey,
-  sendTransaction,
   mintAddress,
   metadataUri,
   name,
   symbol,
+  signer,
 }: FinalizeMetadataParams): Promise<string> {
-  const metadataPda = findMetadataPda(mintAddress);
+  const umi = createUmi(connection.rpcEndpoint).use(createBundledVrfClient());
+  umi.use(signerIdentity(signer));
 
-  const metadata: DataV2 = {
+  const metadata = {
     name,
     symbol,
     uri: metadataUri,
@@ -43,57 +41,17 @@ export async function finalizeTokenMetadata({
     uses: null,
   };
 
-  const buildTransaction = async (update: boolean): Promise<Transaction> => {
-    const tx = new Transaction();
-    const ix = update
-      ? createUpdateMetadataAccountV2Instruction(
-          {
-            metadata: metadataPda,
-            updateAuthority: walletPublicKey,
-          },
-          {
-            updateMetadataAccountArgsV2: {
-              data: metadata,
-              updateAuthority: walletPublicKey,
-              primarySaleHappened: null,
-              isMutable: true,
-            },
-          }
-        )
-      : createCreateMetadataAccountV2Instruction(
-          {
-            metadata: metadataPda,
-            mint: mintAddress,
-            mintAuthority: walletPublicKey,
-            payer: walletPublicKey,
-            updateAuthority: walletPublicKey,
-          },
-          {
-            createMetadataAccountArgsV2: {
-              data: metadata,
-              isMutable: true,
-            },
-          }
-        );
+  const metadataPda = findMetadataPda(umi, publicKey(mintAddress.toBase58()));
 
-    tx.add(ix);
-    const { blockhash } = await connection.getLatestBlockhash();
-    tx.feePayer = walletPublicKey;
-    tx.recentBlockhash = blockhash;
-    return tx;
-  };
+  const { signature } = await createMetadataAccountV3(umi, {
+    metadata: metadataPda,
+    mint: publicKey(mintAddress.toBase58()),
+    mintAuthority: signer,
+    updateAuthority: signer,
+    payer: signer,
+    data: metadata,
+    isMutable: true,
+  }).sendAndConfirm(umi);
 
-  try {
-    const createTx = await buildTransaction(false);
-    return await sendTransaction(createTx, connection, { skipPreflight: true });
-  } catch (e: any) {
-    const msg = e.message || '';
-    const isAlreadyInitialized = msg.includes('0x4b') || msg.includes('Error Number: 75');
-
-    if (!isAlreadyInitialized) throw e;
-
-    console.warn('Metadata already exists. Attempting to update...');
-    const updateTx = await buildTransaction(true);
-    return await sendTransaction(updateTx, connection, { skipPreflight: true });
-  }
+  return signature;
 }
