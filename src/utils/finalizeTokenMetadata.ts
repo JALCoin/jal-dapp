@@ -21,12 +21,13 @@ export async function finalizeTokenMetadata({
 }: Params): Promise<string> {
   const umi = createUmi('https://api.mainnet-beta.solana.com').use(signerIdentity(signer));
 
-  const mint = publicKey(mintAddress.toBase58());
+  const mint = publicKey(mintAddress.toBase58()); // ✅ Correct conversion
 
-  const { signature } = await createMetadataAccountV3(umi, {
+  const builder = createMetadataAccountV3(umi, {
     mint,
-    mintAuthority: signer.publicKey, // ✅ REQUIRED
-    updateAuthority: signer.publicKey,
+    mintAuthority: signer,
+    payer: signer,
+    updateAuthority: signer,
     data: {
       name,
       symbol,
@@ -37,7 +38,9 @@ export async function finalizeTokenMetadata({
       uses: none(),
     },
     isMutable: false,
-  }).sendAndConfirm(umi);
+  });
 
-  return signature;
+  const response = await builder.sendAndConfirm(umi);
+
+  return response.signature; // ✅ return the raw string
 }
