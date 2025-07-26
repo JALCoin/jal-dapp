@@ -1,35 +1,31 @@
-import type { DataV2 } from '@metaplex-foundation/mpl-token-metadata';
 import {
   createCreateMetadataAccountV2Instruction,
+  DataV2,
 } from '@metaplex-foundation/mpl-token-metadata';
 import {
   Connection,
   PublicKey,
   Transaction,
-  TransactionInstruction,
 } from '@solana/web3.js';
+import { PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
 
 export async function finalizeTokenMetadata({
   connection,
-  walletPublicKey,
   sendTransaction,
+  walletPublicKey,
   mintAddress,
   metadataUri,
   name,
   symbol,
 }: {
   connection: Connection;
+  sendTransaction: any;
   walletPublicKey: PublicKey;
-  sendTransaction: (transaction: Transaction, connection: Connection) => Promise<string>;
   mintAddress: PublicKey;
   metadataUri: string;
   name: string;
   symbol: string;
 }): Promise<string> {
-  const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
-    'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
-  );
-
   const [metadataPDA] = await PublicKey.findProgramAddress(
     [
       Buffer.from('metadata'),
@@ -49,7 +45,7 @@ export async function finalizeTokenMetadata({
     uses: null,
   };
 
-  const ix: TransactionInstruction = createCreateMetadataAccountV2Instruction(
+  const ix = createCreateMetadataAccountV2Instruction(
     {
       metadata: metadataPDA,
       mint: mintAddress,
@@ -65,14 +61,23 @@ export async function finalizeTokenMetadata({
     }
   );
 
-  const tx = new Transaction().add(ix);
-  tx.feePayer = walletPublicKey;
+  const blockhash = await connection.getLatestBlockhash('finalized');
+  const tx = new Transaction({
+    feePayer: walletPublicKey,
+    recentBlockhash: blockhash.blockhash,
+  }).add(ix);
 
-  const { blockhash } = await connection.getLatestBlockhash();
-  tx.recentBlockhash = blockhash;
+  const sig = await sendTransaction(tx, connection, {
+    preflightCommitment: 'confirmed',
+  });
 
-  const sig = await sendTransaction(tx, connection);
-  await connection.confirmTransaction(sig, 'confirmed');
+  await connection.confirmTransaction(
+    {
+      signature: sig,
+      ...blockhash,
+    },
+    'finalized'
+  );
 
   return sig;
 }
