@@ -1,26 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
+import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
 import rollupNodePolyFill from 'rollup-plugin-node-polyfills';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  define: {
-    global: 'globalThis',
-    'process.env': {},
-  },
   resolve: {
     alias: {
-      stream: 'stream-browserify',
+      // Required for polyfilling Node.js modules
       buffer: 'buffer',
+      stream: 'stream-browserify',
       util: 'util',
-      zlib: 'browserify-zlib',
-      path: 'path-browserify',
-      process: resolve(__dirname, 'node_modules/process/browser.js'),
+      process: 'process/browser',
     },
   },
   optimizeDeps: {
@@ -28,15 +21,19 @@ export default defineConfig({
       define: {
         global: 'globalThis',
       },
+      plugins: [
+        NodeGlobalsPolyfillPlugin({
+          buffer: true,
+          process: true,
+        }),
+        NodeModulesPolyfillPlugin(),
+      ],
     },
   },
   build: {
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
     rollupOptions: {
       plugins: [
-        rollupNodePolyFill()  // ✅ THIS is the correct way
+        rollupNodePolyFill(),
       ],
     },
   },
