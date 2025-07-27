@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      buffer: 'buffer',
+      buffer: 'buffer/',
       process: 'process/browser',
       stream: 'stream-browserify',
       util: 'util',
@@ -14,7 +14,7 @@ export default defineConfig({
   },
   define: {
     global: 'globalThis',
-    'process.env': {}, // ✅ Required for buffer/process libs
+    'process.env': {}, // Required for many polyfilled libs
   },
   optimizeDeps: {
     include: ['buffer', 'process', 'stream', 'util'],
@@ -22,6 +22,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       plugins: [rollupNodePolyFill()],
+    },
+    commonjsOptions: {
+      transformMixedEsModules: true,
     },
   },
 });
