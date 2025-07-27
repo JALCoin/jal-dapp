@@ -13,21 +13,6 @@ export default defineConfig({
     global: 'globalThis',
     'process.env': {},
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: 'globalThis',
-      },
-    },
-  },
-  build: {
-    rollupOptions: {
-      plugins: [rollupNodePolyFill()],
-    },
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
-  },
   resolve: {
     alias: {
       stream: 'stream-browserify',
@@ -36,6 +21,21 @@ export default defineConfig({
       zlib: 'browserify-zlib',
       path: 'path-browserify',
       process: resolve(__dirname, 'node_modules/process/browser.js'),
+    },
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      plugins: [rollupNodePolyFill()],
     },
   },
 });
