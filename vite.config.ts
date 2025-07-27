@@ -1,23 +1,37 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
+import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      buffer: 'buffer/',
-      process: 'process/browser',
-      stream: 'stream-browserify',
-      util: 'util',
+      buffer: require.resolve('buffer/'),
+      process: require.resolve('process/browser'),
+      stream: require.resolve('stream-browserify'),
+      util: require.resolve('util'),
     },
   },
   define: {
     global: 'globalThis',
-    'process.env': {}, // Required for many polyfilled libs
+    'process.env': {}, // Required for Buffer and friends
   },
   optimizeDeps: {
-    include: ['buffer', 'process', 'stream', 'util'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+      plugins: [
+        NodeGlobalsPolyfillPlugin({
+          process: true,
+          buffer: true,
+        }),
+        NodeModulesPolyfillPlugin(),
+      ],
+    },
+    include: ['buffer', 'process', 'stream', 'util', '@solana/web3.js', '@solana/spl-token'],
   },
   build: {
     rollupOptions: {

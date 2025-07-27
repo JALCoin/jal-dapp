@@ -1,4 +1,4 @@
-// Polyfills must come FIRST
+// 🧩 Must come FIRST before anything else
 import { Buffer } from 'buffer';
 import process from 'process';
 
