@@ -1,9 +1,4 @@
-// src/main.tsx
-import { Buffer } from 'buffer';
-import process from 'process';
-
-window.Buffer = Buffer;
-window.process = process;
+import './viteBufferFix'; // 👈 comes FIRST, before any wallet, Solana, or React code
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
