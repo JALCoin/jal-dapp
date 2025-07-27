@@ -35,7 +35,9 @@ export default defineConfig({
       transformMixedEsModules: true,
     },
     rollupOptions: {
-      plugins: [rollupNodePolyFill()],
+      plugins: [
+        rollupNodePolyFill()  // ✅ THIS is the correct way
+      ],
     },
   },
 });
