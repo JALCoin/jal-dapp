@@ -13,7 +13,8 @@ export default defineConfig({
     },
   },
   define: {
-    global: 'globalThis', // Required for polyfills to work
+    global: 'globalThis',
+    'process.env': {}, // ✅ Required for buffer/process libs
   },
   optimizeDeps: {
     include: ['buffer', 'process', 'stream', 'util'],
@@ -21,9 +22,6 @@ export default defineConfig({
   build: {
     rollupOptions: {
       plugins: [rollupNodePolyFill()],
-    },
-    commonjsOptions: {
-      transformMixedEsModules: true, // required for stream/util/etc to interop
     },
   },
 });
