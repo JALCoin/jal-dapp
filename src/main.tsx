@@ -1,4 +1,4 @@
-// 🧩 Must come FIRST before anything else
+// src/main.tsx
 import { Buffer } from 'buffer';
 import process from 'process';
 

@@ -1,28 +1,41 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import rollupNodePolyfills from 'rollup-plugin-node-polyfills';
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
+import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
+import rollupNodePolyFill from 'rollup-plugin-node-polyfills';
 
-// Fix: explicitly cast plugin to unknown as Plugin[]
 export default defineConfig({
   plugins: [react()],
-  define: {
-    global: 'globalThis',
-    'process.env': {}, // Required for polyfills
-  },
   resolve: {
     alias: {
       buffer: 'buffer',
-      process: 'process/browser',
       stream: 'stream-browserify',
       util: 'util',
+      process: 'process/browser',
     },
+  },
+  define: {
+    global: 'globalThis',
+    'process.env': {},
   },
   optimizeDeps: {
     include: ['buffer', 'process', 'stream', 'util'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+      plugins: [
+        NodeGlobalsPolyfillPlugin({
+          buffer: true,
+          process: true,
+        }),
+        NodeModulesPolyfillPlugin(),
+      ],
+    },
   },
   build: {
     rollupOptions: {
-      plugins: [rollupNodePolyfills() as unknown as any], // ✅ This bypasses TS typing issues
+      plugins: [rollupNodePolyFill()],
     },
     commonjsOptions: {
       transformMixedEsModules: true,
