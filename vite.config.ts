@@ -1,12 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import rollupNodePolyfills from 'rollup-plugin-node-polyfills'; // ✅ Correct plugin
+import rollupNodePolyfills from 'rollup-plugin-node-polyfills';
 
+// Fix: explicitly cast plugin to unknown as Plugin[]
 export default defineConfig({
   plugins: [react()],
   define: {
     global: 'globalThis',
-    'process.env': {},
+    'process.env': {}, // Required for polyfills
   },
   resolve: {
     alias: {
@@ -21,7 +22,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      plugins: [rollupNodePolyfills()],
+      plugins: [rollupNodePolyfills() as unknown as any], // ✅ This bypasses TS typing issues
     },
     commonjsOptions: {
       transformMixedEsModules: true,
