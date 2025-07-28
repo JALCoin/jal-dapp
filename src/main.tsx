@@ -1,3 +1,4 @@
+// src/main.tsx
 import './viteBufferFix'; // 👈 comes FIRST, before any wallet, Solana, or React code
 
 import React from 'react';
