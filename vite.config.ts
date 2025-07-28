@@ -11,7 +11,7 @@ export default defineConfig({
     alias: {
       buffer: 'buffer',
       stream: 'stream-browserify',
-      process: 'process/browser.js', // ✅ MUST end in `.js` for Vercel compatibility
+      process: 'process/browser', // ✅ DO NOT add .js or trailing slash!
     },
   },
   optimizeDeps: {
