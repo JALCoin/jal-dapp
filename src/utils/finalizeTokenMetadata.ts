@@ -19,7 +19,9 @@ export async function finalizeTokenMetadata({
   name,
   symbol,
 }: Params): Promise<string> {
-  const umi = createUmi('https://api.mainnet-beta.solana.com').use(signerIdentity(signer));
+  const umi = createUmi('https://mainnet.helius-rpc.com/?api-key=53dbb893-4b85-4b5f-bcef-9dc42e5cacb2') // 🔁 Helius RPC
+    .use(signerIdentity(signer));
+
   const mint = publicKey(mintAddress.toBase58());
 
   const builder = createMetadataAccountV3(umi, {
@@ -37,7 +39,7 @@ export async function finalizeTokenMetadata({
       uses: none(),
     },
     isMutable: false,
-    collectionDetails: none(), // ✅ Required by Metaplex 3.4.0+
+    collectionDetails: none(), // Metaplex v3.4.0+
   });
 
   const { signature } = await builder.sendAndConfirm(umi);
