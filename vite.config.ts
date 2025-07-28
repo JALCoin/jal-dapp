@@ -1,32 +1,40 @@
 // vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import rollupNodePolyFill from 'rollup-plugin-node-polyfills';
 import inject from '@rollup/plugin-inject';
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
+import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
 
 export default defineConfig({
-  plugins: [
-    react(),
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
-      stream: 'rollup-plugin-node-polyfills/polyfills/stream',
-      util: 'rollup-plugin-node-polyfills/polyfills/util',
-      buffer: 'rollup-plugin-node-polyfills/polyfills/buffer-es6',
-      process: 'rollup-plugin-node-polyfills/polyfills/process-es6',
+      buffer: 'buffer',
+      stream: 'stream-browserify',
+      process: 'process/browser',
     },
   },
   optimizeDeps: {
-    include: ['buffer', 'process'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+      plugins: [
+        NodeGlobalsPolyfillPlugin({
+          process: true,
+          buffer: true,
+        }),
+        NodeModulesPolyfillPlugin(),
+      ],
+    },
   },
   build: {
     rollupOptions: {
       plugins: [
         inject({
           Buffer: ['buffer', 'Buffer'],
-          process: 'process',
+          process: ['process'],
         }),
-        rollupNodePolyFill(),
       ],
     },
   },
