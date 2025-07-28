@@ -42,6 +42,15 @@ export async function finalizeTokenMetadata({
     collectionDetails: none(),
   });
 
-  const { signature } = await builder.sendAndConfirm(umi);
+  const { signature } = await builder.sendAndConfirm(umi, {
+    send: {
+      skipPreflight: false,
+    },
+    confirm: {
+      commitment: 'finalized',
+      maxRetries: 5,
+    },
+  });
+
   return signature.toString();
 }
