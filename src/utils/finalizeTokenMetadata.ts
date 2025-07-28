@@ -19,7 +19,7 @@ export async function finalizeTokenMetadata({
   name,
   symbol,
 }: Params): Promise<string> {
-  const umi = createUmi('https://mainnet.helius.rpc.com/?api-key=5d3bb893-4b85-45b5-bcef-9dc42e5ac6b2')
+  const umi = createUmi('https://mainnet.helius-rpc.com/?api-key=5d3bb893-4b85-45b5-bcef-9dc42e5ac6b2')
     .use(signerIdentity(signer));
 
   const mint = publicKey(mintAddress.toBase58());

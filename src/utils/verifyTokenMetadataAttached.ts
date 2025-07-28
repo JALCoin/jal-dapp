@@ -14,7 +14,7 @@ export async function verifyTokenMetadataAttached(
   rawData?: any;
 }> {
   try {
-    const umi = createUmi('https://api.mainnet-beta.solana.com');
+    const umi = createUmi('https://mainnet.helius-rpc.com/?api-key=5d3bb893-4b85-45b5-bcef-9dc42e5ac6b2');
     const metadata = await fetchMetadataFromSeeds(umi, {
       mint: publicKey(mintAddress.toBase58()),
     });
@@ -27,7 +27,7 @@ export async function verifyTokenMetadataAttached(
       rawData: metadata,
     };
   } catch (error) {
-    console.error('Metadata fetch failed', error);
+    console.error('❌ Metadata fetch failed:', error);
     return { isAttached: false };
   }
 }

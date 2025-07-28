@@ -35,7 +35,6 @@ const TokenFinalizerModal: FC<Props> = ({
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [txSignature, setTxSignature] = useState<string | null>(null);
 
-  // If wallet is not ready, don't render modal at all
   if (!wallet?.adapter || !mint || !connection) return null;
 
   const handleDownloadMetadata = () => {
@@ -50,7 +49,10 @@ const TokenFinalizerModal: FC<Props> = ({
       },
     };
 
-    const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(metadata, null, 2)], {
+      type: 'application/json',
+    });
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -80,7 +82,7 @@ const TokenFinalizerModal: FC<Props> = ({
 
       setStatus('success');
     } catch (error) {
-      console.error('Attach error:', error);
+      console.error('Attach metadata failed:', error);
       setStatus('error');
     } finally {
       setAttaching(false);
@@ -95,12 +97,16 @@ const TokenFinalizerModal: FC<Props> = ({
         <ol>
           <li>
             Upload your <strong>token image</strong> to{' '}
-            <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://www.lighthouse.storage/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               lighthouse.storage
             </a>
           </li>
           <li>
-            Paste your image URI:
+            Paste the uploaded image URI:
             <input
               value={imageUri}
               onChange={(e) => setImageUri(e.target.value)}
@@ -108,7 +114,7 @@ const TokenFinalizerModal: FC<Props> = ({
             />
           </li>
           <li>
-            Fill out your token identity:
+            Fill in your token identity:
             <input
               placeholder="Token Name"
               value={name}
@@ -130,7 +136,7 @@ const TokenFinalizerModal: FC<Props> = ({
             </button>
           </li>
           <li>
-            Upload your metadata.json and paste the IPFS URI:
+            Upload your `metadata.json` to IPFS and paste the URI:
             <input
               value={metadataUri}
               onChange={(e) => setMetadataUri(e.target.value)}
@@ -142,7 +148,7 @@ const TokenFinalizerModal: FC<Props> = ({
               {attaching ? 'Attaching...' : `Attach Metadata to ${mint.slice(0, 4)}...`}
             </button>
             <p className="note">
-              ⚠️ Approve the Phantom popup immediately after clicking. Delays may cause transaction failure.
+              ⚠️ Approve Phantom immediately after clicking. Delay = failure.
             </p>
           </li>
         </ol>
@@ -163,12 +169,12 @@ const TokenFinalizerModal: FC<Props> = ({
 
         {status === 'error' && (
           <p className="text-red-500 text-sm mt-3">
-            ❌ Metadata could not be verified on-chain.
+            ❌ Failed to attach metadata. Try again or check IPFS URI.
           </p>
         )}
 
         <p className="note mt-3">
-          Once attached, this metadata will be permanently stored on-chain.
+          Once attached, this metadata becomes permanent on-chain.
         </p>
       </div>
     </div>
