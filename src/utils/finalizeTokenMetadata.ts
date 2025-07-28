@@ -42,13 +42,11 @@ export async function finalizeTokenMetadata({
     collectionDetails: none(),
   });
 
+  // Send and confirm the transaction using supported options only
   const { signature } = await builder.sendAndConfirm(umi, {
-    send: {
-      skipPreflight: false,
-    },
     confirm: {
       commitment: 'finalized',
-      maxRetries: 5,
+      skipPreflight: false,
     },
   });
 
