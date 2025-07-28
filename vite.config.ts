@@ -11,7 +11,7 @@ export default defineConfig({
     alias: {
       buffer: 'buffer',
       stream: 'stream-browserify',
-      process: 'process',
+      process: 'process', // ✅ FIX: not 'process/browser'
     },
   },
   optimizeDeps: {
@@ -33,7 +33,7 @@ export default defineConfig({
       plugins: [
         inject({
           Buffer: ['buffer', 'Buffer'],
-          process: ['process'],
+          process: 'process', // ✅ FIX: not array form here
         }),
       ],
     },
