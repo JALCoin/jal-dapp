@@ -97,11 +97,7 @@ const TokenFinalizerModal: FC<Props> = ({
         <ol>
           <li>
             Upload your <strong>token image</strong> to{' '}
-            <a
-              href="https://www.lighthouse.storage/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
               lighthouse.storage
             </a>
           </li>
@@ -154,17 +150,33 @@ const TokenFinalizerModal: FC<Props> = ({
         </ol>
 
         {status === 'success' && txSignature && (
-          <p className="text-green-500 text-sm mt-3">
-            ✅ Metadata verified.{' '}
+          <div className="text-green-500 text-sm mt-3">
+            ✅ Metadata verified.<br />
             <a
               href={`https://solscan.io/tx/${txSignature}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-500 underline"
             >
-              View on Solana ↗
+              View Transaction ↗
+            </a><br />
+            <a
+              href={`https://solscan.io/address/${mint}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 underline"
+            >
+              View Mint ↗
+            </a><br />
+            <a
+              href={`https://ipfs.io/ipfs/${metadataUri.replace('ipfs://', '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 underline text-xs break-all"
+            >
+              Metadata URI ↗
             </a>
-          </p>
+          </div>
         )}
 
         {status === 'error' && (
