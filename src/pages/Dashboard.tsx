@@ -32,10 +32,15 @@ const Dashboard: FC = () => {
     sizeKB?: number;
   }>({});
 
+  // Load hidden mints from localStorage
   useEffect(() => {
-    const savedHidden = localStorage.getItem('hiddenMints');
-    if (savedHidden) {
-      setHiddenMints(JSON.parse(savedHidden));
+    const saved = localStorage.getItem('hiddenMints');
+    if (saved) {
+      try {
+        setHiddenMints(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse hiddenMints:', e);
+      }
     }
   }, []);
 
@@ -53,7 +58,7 @@ const Dashboard: FC = () => {
           programId: TOKEN_PROGRAM_ID,
         });
 
-        const tokens: TokenInfo[] = [];
+        const owned: TokenInfo[] = [];
 
         for (const acc of response.value) {
           const mintAddress = acc.account.data.parsed.info.mint;
@@ -62,7 +67,7 @@ const Dashboard: FC = () => {
 
           if (parsed?.mintAuthority === publicKey.toBase58()) {
             const tokenInfo = acc.account.data.parsed.info;
-            tokens.push({
+            owned.push({
               mint: mintAddress,
               amount: tokenInfo.tokenAmount.uiAmountString,
               decimals: tokenInfo.tokenAmount.decimals,
@@ -70,7 +75,7 @@ const Dashboard: FC = () => {
           }
         }
 
-        setTokens(tokens);
+        setTokens(owned);
       } catch (err) {
         console.error('Token fetch error:', err);
       } finally {
@@ -83,22 +88,22 @@ const Dashboard: FC = () => {
 
   const handleTurnIntoCurrency = async (mint: string) => {
     try {
-      const defaultImageUrl = 'https://gateway.lighthouse.storage/ipfs/bafybeiaw3zuzz25waz56cur5n4xkfnxmpewte5nvlscqenwzpdarlholbu';
-      const response = await fetch(defaultImageUrl);
-      const blob = await response.blob();
+      const imageUrl = 'https://gateway.lighthouse.storage/ipfs/bafybeiaw3zuzz25waz56cur5n4xkfnxmpewte5nvlscqenwzpdarlholbu';
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
 
       const fileSizeKB = +(blob.size / 1024).toFixed(2);
       const mimeType = blob.type;
 
       if (fileSizeKB > 500) {
-        console.warn(`Image size exceeds 500KB (${fileSizeKB}KB).`);
+        console.warn(`Image is ${fileSizeKB}KB, exceeds 500KB.`);
       }
 
       setTemplateMetadata({
         name: 'JAL Coin',
         symbol: 'JAL',
         description: 'JAL is a token that unlocks utility in the Solana vault ecosystem.',
-        image: defaultImageUrl,
+        image: imageUrl,
         mimeType,
         sizeKB: fileSizeKB,
       });
@@ -106,13 +111,15 @@ const Dashboard: FC = () => {
       setSelectedMint(mint);
       setShowFinalizer(true);
     } catch (error) {
-      console.error('Failed to fetch image for metadata:', error);
+      console.error('Metadata image fetch failed:', error);
     }
   };
 
   const handleHideToken = (mint: string) => {
     setHiddenMints((prev) => [...prev, mint]);
   };
+
+  const visibleTokens = tokens.filter((t) => !hiddenMints.includes(t.mint));
 
   return (
     <main>
@@ -121,51 +128,49 @@ const Dashboard: FC = () => {
 
         {loading ? (
           <p>Loading token accounts...</p>
-        ) : tokens.filter(t => !hiddenMints.includes(t.mint)).length === 0 ? (
+        ) : visibleTokens.length === 0 ? (
           <p>No tokens created by this wallet.</p>
         ) : (
           <div className="token-list">
-            {tokens
-              .filter((token) => !hiddenMints.includes(token.mint))
-              .map((token) => (
-                <div key={token.mint} className="token-card relative">
-                  <button
-                    className="absolute top-1 right-2 text-lg text-gray-400 hover:text-red-500"
-                    onClick={() => handleHideToken(token.mint)}
-                    title="Remove from dashboard"
-                  >
-                    ×
-                  </button>
+            {visibleTokens.map((token) => (
+              <div key={token.mint} className="token-card" style={{ position: 'relative' }}>
+                <button
+                  className="delete-btn"
+                  onClick={() => handleHideToken(token.mint)}
+                  title="Remove from dashboard"
+                >
+                  ×
+                </button>
 
-                  <div className="token-info">
-                    <p>
-                      <strong>Mint:</strong>{' '}
-                      <span className="mono">{token.mint}</span>
-                      <button
-                        className="copy-btn"
-                        onClick={() => navigator.clipboard.writeText(token.mint)}
-                        title="Copy Mint Address"
-                      >
-                        📋
-                      </button>
-                    </p>
-                    <p><strong>Amount:</strong> {token.amount}</p>
-                  </div>
-
-                  <a
-                    href={`https://solscan.io/token/${token.mint}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="explorer-link"
-                  >
-                    View on Solscan ↗
-                  </a>
-
-                  <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
-                    Turn Into Currency
-                  </button>
+                <div className="token-info">
+                  <p>
+                    <strong>Mint:</strong>{' '}
+                    <span className="mono">{token.mint}</span>
+                    <button
+                      className="copy-btn"
+                      onClick={() => navigator.clipboard.writeText(token.mint)}
+                      title="Copy Mint Address"
+                    >
+                      📋
+                    </button>
+                  </p>
+                  <p><strong>Amount:</strong> {token.amount}</p>
                 </div>
-              ))}
+
+                <a
+                  href={`https://solscan.io/token/${token.mint}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="explorer-link"
+                >
+                  View on Solscan ↗
+                </a>
+
+                <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
+                  Turn Into Currency
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
