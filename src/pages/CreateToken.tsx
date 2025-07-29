@@ -22,7 +22,7 @@ import { useNavigate } from 'react-router-dom';
 const steps = [
   'Create Mint Account',
   'Initialize Mint',
-  'Create ATA',
+  'Create Associated Token Account',
   'Mint Tokens',
   'Done',
 ];
@@ -69,7 +69,7 @@ const CreateToken: FC = () => {
 
           const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
           log(`📤 Mint account created: ${mintAccount.publicKey.toBase58()}`);
-          log(`🔗 Tx: ${sig}`);
+          log(`🔗 Tx: https://solscan.io/tx/${sig}`);
           break;
         }
 
@@ -80,7 +80,7 @@ const CreateToken: FC = () => {
           );
           const sig = await sendTransaction(tx, connection);
           log(`✅ Mint initialized`);
-          log(`🔗 Tx: ${sig}`);
+          log(`🔗 Tx: https://solscan.io/tx/${sig}`);
           break;
         }
 
@@ -94,19 +94,19 @@ const CreateToken: FC = () => {
           );
           const sig = await sendTransaction(tx, connection);
           log(`📦 ATA created: ${ataAddress.toBase58()}`);
-          log(`🔗 Tx: ${sig}`);
+          log(`🔗 Tx: https://solscan.io/tx/${sig}`);
           break;
         }
 
         case 3: {
           if (!mint || !ata) throw new Error('Mint or ATA not set');
-const amount = BigInt("1000000000000000000"); // 1B tokens with 9 decimals
-const tx = new Transaction().add(
-  createMintToInstruction(mint, ata, publicKey, amount)
-);
+          const amount = BigInt("1000000000000000000"); // 1B tokens with 9 decimals
+          const tx = new Transaction().add(
+            createMintToInstruction(mint, ata, publicKey, amount)
+          );
           const sig = await sendTransaction(tx, connection);
           log(`✅ Tokens minted`);
-          log(`🔗 Tx: ${sig}`);
+          log(`🔗 Tx: https://solscan.io/tx/${sig}`);
           break;
         }
 
@@ -142,29 +142,34 @@ const tx = new Transaction().add(
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Step {step + 1}: {steps[step] || 'Done'}</h1>
-        <button onClick={reset} className="text-xs text-red-500 underline">Reset</button>
-      </div>
+    <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
+      <div className="max-w-xl mx-auto space-y-6">
 
-      {error && <p className="text-red-600 text-sm">❌ {error}</p>}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold tracking-wide">
+            Step {step + 1}: {steps[step] || 'Complete'}
+          </h1>
+          <button onClick={reset} className="text-xs text-red-500 underline">
+            Reset
+          </button>
+        </div>
 
-      {step < steps.length ? (
-        <button
-          onClick={runStep}
-          disabled={loading}
-          className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
-        >
-          {loading ? 'Processing...' : 'Next Step ➡️'}
-        </button>
-      ) : (
-        <div className="space-y-4">
-          <div className="text-xs text-green-500 break-words space-y-1">
+        {error && <p className="text-sm text-red-600">❌ {error}</p>}
+
+        {step < steps.length ? (
+          <button
+            onClick={runStep}
+            disabled={loading}
+            className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : 'Next Step ➡️'}
+          </button>
+        ) : (
+          <div className="space-y-3 text-xs text-green-600">
             <p>
-              Mint: {mint?.toBase58()}
+              <strong>Mint:</strong> {mint?.toBase58()}
               <button
-                className="ml-2 text-blue-400 underline"
+                className="ml-2 text-blue-500 underline"
                 onClick={() => mint && navigator.clipboard.writeText(mint.toBase58())}
               >
                 Copy
@@ -175,28 +180,30 @@ const tx = new Transaction().add(
                 href={`https://solscan.io/token/${mint?.toBase58()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-400 underline"
+                className="text-blue-600 underline"
               >
-                View on Explorer ↗
+                View on Solscan ↗
               </a>
             </p>
             <button
               onClick={goToDashboard}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded mt-2"
+              className="bg-[var(--jal-green)] text-black font-semibold px-4 py-2 rounded hover:brightness-110 transition"
             >
               View in Dashboard
             </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {logs.length > 0 && (
-        <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">
-          <p className="text-green-400 font-bold mb-2">🪵 Transaction Log</p>
-          {logs.map((msg, i) => <p key={i}>{msg}</p>)}
-        </div>
-      )}
-    </div>
+        {logs.length > 0 && (
+          <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">
+            <p className="text-[var(--jal-green)] font-bold mb-2">🪵 Transaction Log</p>
+            {logs.map((msg, i) => (
+              <p key={i}>{msg}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
   );
 };
 
