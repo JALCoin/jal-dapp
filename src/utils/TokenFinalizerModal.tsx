@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PublicKey, Connection } from '@solana/web3.js';
 import { finalizeTokenMetadata } from '../utils/finalizeTokenMetadata';
 import { verifyTokenMetadataAttached } from '../utils/verifyTokenMetadataAttached';
@@ -31,20 +31,50 @@ const TokenFinalizerModal: FC<Props> = ({
   const [symbol, setSymbol] = useState(templateMetadata?.symbol ?? '');
   const [description, setDescription] = useState(templateMetadata?.description ?? '');
   const [metadataUri, setMetadataUri] = useState('');
+  const [mimeType, setMimeType] = useState('');
+  const [imageSizeKB, setImageSizeKB] = useState(0);
   const [attaching, setAttaching] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [txSignature, setTxSignature] = useState<string | null>(null);
 
+  const IMAGE_SIZE_LIMIT_KB = 500;
+
+  useEffect(() => {
+    const checkImageMetadata = async () => {
+      if (!imageUri.startsWith('http')) return;
+
+      try {
+        const res = await fetch(imageUri);
+        const blob = await res.blob();
+        const sizeKB = +(blob.size / 1024).toFixed(2);
+
+        setMimeType(blob.type || 'image/png');
+        setImageSizeKB(sizeKB);
+      } catch (err) {
+        console.warn('Image check failed:', err);
+        setMimeType('');
+        setImageSizeKB(0);
+      }
+    };
+
+    if (imageUri) checkImageMetadata();
+  }, [imageUri]);
+
   if (!wallet?.adapter || !mint || !connection) return null;
 
   const handleDownloadMetadata = () => {
+    if (imageSizeKB > IMAGE_SIZE_LIMIT_KB) {
+      alert('Image too large for token metadata (max 500KB).');
+      return;
+    }
+
     const metadata = {
       name,
       symbol,
       description,
       image: imageUri,
       properties: {
-        files: [{ uri: imageUri, type: 'image/png' }],
+        files: [{ uri: imageUri, type: mimeType || 'image/png' }],
         category: 'image',
       },
     };
@@ -106,8 +136,13 @@ const TokenFinalizerModal: FC<Props> = ({
             <input
               value={imageUri}
               onChange={(e) => setImageUri(e.target.value)}
-              placeholder="ipfs://..."
+              placeholder="https://gateway.lighthouse.storage/ipfs/..."
             />
+            {imageSizeKB > 0 && (
+              <p className={imageSizeKB > IMAGE_SIZE_LIMIT_KB ? 'text-red-500' : 'text-xs'}>
+                {`File type: ${mimeType} | Size: ${imageSizeKB} KB`}
+              </p>
+            )}
           </li>
           <li>
             Fill in your token identity:
@@ -127,7 +162,11 @@ const TokenFinalizerModal: FC<Props> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-            <button className="button" onClick={handleDownloadMetadata}>
+            <button
+              className="button"
+              onClick={handleDownloadMetadata}
+              disabled={imageSizeKB > IMAGE_SIZE_LIMIT_KB}
+            >
               Download metadata.json
             </button>
           </li>
