@@ -19,9 +19,29 @@ const Dashboard: FC = () => {
   );
 
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
+  const [hiddenMints, setHiddenMints] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [showFinalizer, setShowFinalizer] = useState(false);
+  const [templateMetadata, setTemplateMetadata] = useState<{
+    name?: string;
+    symbol?: string;
+    description?: string;
+    image?: string;
+    mimeType?: string;
+    sizeKB?: number;
+  }>({});
+
+  useEffect(() => {
+    const savedHidden = localStorage.getItem('hiddenMints');
+    if (savedHidden) {
+      setHiddenMints(JSON.parse(savedHidden));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('hiddenMints', JSON.stringify(hiddenMints));
+  }, [hiddenMints]);
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -61,9 +81,37 @@ const Dashboard: FC = () => {
     fetchTokens();
   }, [publicKey, connection]);
 
-  const handleTurnIntoCurrency = (mint: string) => {
-    setSelectedMint(mint);
-    setShowFinalizer(true);
+  const handleTurnIntoCurrency = async (mint: string) => {
+    try {
+      const defaultImageUrl = 'https://gateway.lighthouse.storage/ipfs/bafybeiaw3zuzz25waz56cur5n4xkfnxmpewte5nvlscqenwzpdarlholbu';
+      const response = await fetch(defaultImageUrl);
+      const blob = await response.blob();
+
+      const fileSizeKB = +(blob.size / 1024).toFixed(2);
+      const mimeType = blob.type;
+
+      if (fileSizeKB > 500) {
+        console.warn(`Image size exceeds 500KB (${fileSizeKB}KB).`);
+      }
+
+      setTemplateMetadata({
+        name: 'JAL Coin',
+        symbol: 'JAL',
+        description: 'JAL is a token that unlocks utility in the Solana vault ecosystem.',
+        image: defaultImageUrl,
+        mimeType,
+        sizeKB: fileSizeKB,
+      });
+
+      setSelectedMint(mint);
+      setShowFinalizer(true);
+    } catch (error) {
+      console.error('Failed to fetch image for metadata:', error);
+    }
+  };
+
+  const handleHideToken = (mint: string) => {
+    setHiddenMints((prev) => [...prev, mint]);
   };
 
   return (
@@ -73,40 +121,51 @@ const Dashboard: FC = () => {
 
         {loading ? (
           <p>Loading token accounts...</p>
-        ) : tokens.length === 0 ? (
+        ) : tokens.filter(t => !hiddenMints.includes(t.mint)).length === 0 ? (
           <p>No tokens created by this wallet.</p>
         ) : (
           <div className="token-list">
-            {tokens.map((token) => (
-              <div key={token.mint} className="token-card">
-                <div className="token-info">
-                  <p>
-                    <strong>Mint:</strong> <span className="mono">{token.mint}</span>
-                    <button
-                      className="copy-btn"
-                      onClick={() => navigator.clipboard.writeText(token.mint)}
-                      title="Copy Mint Address"
-                    >
-                      📋
-                    </button>
-                  </p>
-                  <p><strong>Amount:</strong> {token.amount}</p>
+            {tokens
+              .filter((token) => !hiddenMints.includes(token.mint))
+              .map((token) => (
+                <div key={token.mint} className="token-card relative">
+                  <button
+                    className="absolute top-1 right-2 text-lg text-gray-400 hover:text-red-500"
+                    onClick={() => handleHideToken(token.mint)}
+                    title="Remove from dashboard"
+                  >
+                    ×
+                  </button>
+
+                  <div className="token-info">
+                    <p>
+                      <strong>Mint:</strong>{' '}
+                      <span className="mono">{token.mint}</span>
+                      <button
+                        className="copy-btn"
+                        onClick={() => navigator.clipboard.writeText(token.mint)}
+                        title="Copy Mint Address"
+                      >
+                        📋
+                      </button>
+                    </p>
+                    <p><strong>Amount:</strong> {token.amount}</p>
+                  </div>
+
+                  <a
+                    href={`https://solscan.io/token/${token.mint}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="explorer-link"
+                  >
+                    View on Solscan ↗
+                  </a>
+
+                  <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
+                    Turn Into Currency
+                  </button>
                 </div>
-
-                <a
-                  href={`https://solscan.io/token/${token.mint}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="explorer-link"
-                >
-                  View on Solscan ↗
-                </a>
-
-                <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
-                  Turn Into Currency
-                </button>
-              </div>
-            ))}
+              ))}
           </div>
         )}
       </div>
@@ -116,12 +175,7 @@ const Dashboard: FC = () => {
           mint={selectedMint}
           connection={connection}
           onClose={() => setShowFinalizer(false)}
-          templateMetadata={{
-            name: 'JAL',
-            symbol: 'JAL',
-            description: 'JAL is a token that unlocks utility in the Solana vault ecosystem.',
-            image: 'https://placehold.co/512x512.png?text=JAL',
-          }}
+          templateMetadata={templateMetadata}
         />
       )}
     </main>
