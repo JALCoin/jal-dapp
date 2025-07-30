@@ -1,37 +1,32 @@
 import type { FC } from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import {
-  Connection,
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  Transaction,
+  Connection, Keypair, PublicKey, SystemProgram, Transaction,
 } from '@solana/web3.js';
 import {
-  TOKEN_PROGRAM_ID,
-  MINT_SIZE,
-  getMinimumBalanceForRentExemptMint,
-  getAssociatedTokenAddress,
-  createAssociatedTokenAccountInstruction,
-  createInitializeMintInstruction,
-  createMintToInstruction,
+  TOKEN_PROGRAM_ID, MINT_SIZE, getMinimumBalanceForRentExemptMint,
+  getAssociatedTokenAddress, createAssociatedTokenAccountInstruction,
+  createInitializeMintInstruction, createMintToInstruction,
 } from '@solana/spl-token';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import TokenFinalizerModal from '../utils/TokenFinalizerModal';
 
 const steps = [
   'Create Mint Account',
   'Initialize Mint',
   'Create Associated Token Account',
   'Mint Tokens',
+  'Turn Into Currency',
   'Done',
 ];
 
 const CryptoGenerator: FC = () => {
   const { publicKey, sendTransaction } = useWallet();
-  const connection = new Connection('https://solana-proxy-production.up.railway.app', 'confirmed');
+  const connection = useMemo(() => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'), []);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [step, setStep] = useState(0);
   const [mint, setMint] = useState<PublicKey | null>(null);
@@ -39,8 +34,22 @@ const CryptoGenerator: FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showFinalizer, setShowFinalizer] = useState(false);
 
   const log = (msg: string) => setLogs((prev) => [...prev, msg]);
+
+  // Handle anchor scrolls like #step1 → step = 0
+  useEffect(() => {
+    if (!location.hash) return;
+    const match = location.hash.match(/#step(\d+)/);
+    if (match) {
+      const index = parseInt(match[1], 10) - 1;
+      if (index >= 0 && index < steps.length) {
+        setStep(index);
+        log(`⏩ Jumped to step ${index + 1}: ${steps[index]}`);
+      }
+    }
+  }, [location]);
 
   const runStep = useCallback(async () => {
     if (!publicKey || !sendTransaction) return;
@@ -112,11 +121,16 @@ const CryptoGenerator: FC = () => {
         }
 
         case 4: {
+          setShowFinalizer(true);
+          return; // Pause and wait for metadata modal
+        }
+
+        case 5: {
           if (mint && ata) {
             localStorage.setItem('mint', mint.toBase58());
             localStorage.setItem('ata', ata.toBase58());
+            log(`🎉 Token creation complete!`);
           }
-          log(`🎉 Token creation complete!`);
           break;
         }
       }
@@ -136,13 +150,20 @@ const CryptoGenerator: FC = () => {
     setAta(null);
     setLogs([]);
     setError(null);
+    setShowFinalizer(false);
   };
 
   const goToDashboard = () => navigate('/dashboard');
 
+  const handleMetadataSuccess = (mint: string) => {
+    log(`🌐 Metadata attached to ${mint}`);
+    setStep((s) => s + 1);
+    setShowFinalizer(false);
+  };
+
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
-      <div className="max-w-xl mx-auto space-y-6">
+      <div className="max-w-xl mx-auto space-y-6" id={`step${step + 1}`}>
 
         <div className="flex justify-center my-4">
           <WalletMultiButton />
@@ -204,6 +225,17 @@ const CryptoGenerator: FC = () => {
           </div>
         )}
       </div>
+
+      {showFinalizer && mint && (
+        <div className="modal-overlay">
+          <TokenFinalizerModal
+            mint={mint.toBase58()}
+            connection={connection}
+            onClose={() => setShowFinalizer(false)}
+            onSuccess={handleMetadataSuccess}
+          />
+        </div>
+      )}
     </main>
   );
 };
