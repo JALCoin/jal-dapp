@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 export default function Home() {
   return (
-    <main>
+    <main className="homepage">
       {/* Hero Section */}
       <section>
         <h1>You haven't found what you're looking for, have you?</h1>
@@ -18,7 +18,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section Group: About / Generator / Manifesto / Explore / Join */}
+      {/* Section Group */}
       <section className="section-group">
         {/* About */}
         <div>
@@ -46,13 +46,21 @@ export default function Home() {
         </div>
 
         {/* Manifesto */}
-        <div id="manifesto" style={{ backgroundColor: 'black', color: 'white', padding: '1.5rem', borderRadius: '12px' }}>
+        <div id="manifesto" style={{
+          backgroundColor: 'black',
+          color: 'white',
+          padding: '1.5rem',
+          borderRadius: '12px',
+          marginTop: '1rem'
+        }}>
           <h2>The JAL/SOL Manifesto</h2>
           <p>
             This isn’t about crypto. It’s about truth, code, and claiming space.
             It's about putting your name on something that won’t fade.
           </p>
-          <p style={{ color: 'var(--jal-glow)' }}>This is the future of on-chain identity.</p>
+          <p style={{ color: 'var(--jal-glow)' }}>
+            This is the future of on-chain identity.
+          </p>
         </div>
 
         {/* Dashboard */}
@@ -71,7 +79,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Join the Mission */}
+        {/* Join */}
         <div>
           <h2>Join the Mission</h2>
           <p>Want early access to drops and secret content?</p>
