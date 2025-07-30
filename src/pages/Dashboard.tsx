@@ -23,16 +23,8 @@ const Dashboard: FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [showFinalizer, setShowFinalizer] = useState(false);
-  const [templateMetadata, setTemplateMetadata] = useState<{
-    name?: string;
-    symbol?: string;
-    description?: string;
-    image?: string;
-    mimeType?: string;
-    sizeKB?: number;
-  }>({});
+  const [templateMetadata, setTemplateMetadata] = useState({});
 
-  // Load hidden mints from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('hiddenMints');
     if (saved) {
@@ -61,18 +53,14 @@ const Dashboard: FC = () => {
         const owned: TokenInfo[] = [];
 
         for (const acc of response.value) {
-          const mintAddress = acc.account.data.parsed.info.mint;
-          const mintInfo = await connection.getParsedAccountInfo(new PublicKey(mintAddress));
-          const parsed = (mintInfo.value?.data as any)?.parsed?.info;
+          const tokenInfo = acc.account.data.parsed.info;
+          const mintAddress = tokenInfo.mint;
 
-          if (parsed?.mintAuthority === publicKey.toBase58()) {
-            const tokenInfo = acc.account.data.parsed.info;
-            owned.push({
-              mint: mintAddress,
-              amount: tokenInfo.tokenAmount.uiAmountString,
-              decimals: tokenInfo.tokenAmount.decimals,
-            });
-          }
+          owned.push({
+            mint: mintAddress,
+            amount: tokenInfo.tokenAmount.uiAmountString,
+            decimals: tokenInfo.tokenAmount.decimals,
+          });
         }
 
         setTokens(owned);
@@ -122,18 +110,18 @@ const Dashboard: FC = () => {
   const visibleTokens = tokens.filter((t) => !hiddenMints.includes(t.mint));
 
   return (
-    <main>
+    <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
       <div className="container">
-        <h1>Your Created Tokens</h1>
+        <h1 className="text-3xl font-bold text-center">Your Created Tokens</h1>
 
         {loading ? (
-          <p>Loading token accounts...</p>
+          <p className="text-center mt-4 text-[var(--jal-muted)]">Loading token accounts...</p>
         ) : visibleTokens.length === 0 ? (
-          <p>No tokens created by this wallet.</p>
+          <p className="text-center mt-4 text-[var(--jal-muted)]">No tokens created by this wallet.</p>
         ) : (
           <div className="token-list">
             {visibleTokens.map((token) => (
-              <div key={token.mint} className="token-card" style={{ position: 'relative' }}>
+              <div key={token.mint} className="token-card">
                 <button
                   className="delete-btn"
                   onClick={() => handleHideToken(token.mint)}
