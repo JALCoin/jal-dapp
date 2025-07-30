@@ -1,3 +1,4 @@
+// src/AppProviders.tsx
 import type { FC } from 'react';
 import { useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
@@ -7,7 +8,13 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 export const AppProviders: FC<{ children: React.ReactNode }> = ({ children }) => {
-  const endpoint = useMemo(() => 'http://localhost:3001/api/solana', []);
+  const endpoint = useMemo(() => {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return 'http://localhost:3001/api/solana';
+    }
+    return 'https://solana-proxy-production.up.railway.app';
+  }, []);
+
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
   const onError = (error: any) => console.error('Wallet error:', error);
 
