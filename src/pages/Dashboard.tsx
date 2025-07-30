@@ -25,7 +25,6 @@ const Dashboard: FC = () => {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [hiddenMints, setHiddenMints] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
 
   const fetchMetadataFromChain = async (mint: string): Promise<Partial<TokenInfo>> => {
     try {
@@ -122,12 +121,6 @@ const Dashboard: FC = () => {
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
       <div className="container">
         <h1 className="text-3xl font-bold text-center">Your Created Tokens</h1>
-
-        {justUnlocked && (
-          <div className="text-center bg-green-100 text-green-700 rounded p-3 mb-4 border border-green-400">
-            🎉 Your currency is now live! Tools unlocked for: <strong>{justUnlocked}</strong>
-          </div>
-        )}
 
         {loading ? (
           <p className="text-center mt-4 text-[var(--jal-muted)]">Loading token accounts...</p>
