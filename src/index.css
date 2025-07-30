@@ -236,3 +236,15 @@ footer {
   padding-top: 1rem;
   padding-bottom: 1rem;
 }
+/* Utility: Center buttons consistently */
+.center-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+.center-button {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
