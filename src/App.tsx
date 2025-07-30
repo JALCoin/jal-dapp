@@ -4,7 +4,6 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import CreateToken from './pages/CreateToken';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 const App: FC = () => {
   return (
