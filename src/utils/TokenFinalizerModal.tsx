@@ -10,6 +10,7 @@ interface Props {
   mint: string;
   connection: Connection;
   onClose: () => void;
+  onSuccess?: (mint: string) => void;
   templateMetadata?: {
     name?: string;
     symbol?: string;
@@ -18,7 +19,13 @@ interface Props {
   };
 }
 
-const TokenFinalizerModal: FC<Props> = ({ mint, connection, onClose, templateMetadata }) => {
+const TokenFinalizerModal: FC<Props> = ({
+  mint,
+  connection,
+  onClose,
+  onSuccess,
+  templateMetadata
+}) => {
   const { wallet } = useWallet();
   const [imageUri, setImageUri] = useState(templateMetadata?.image ?? '');
   const [name, setName] = useState(templateMetadata?.name ?? '');
@@ -102,6 +109,11 @@ const TokenFinalizerModal: FC<Props> = ({ mint, connection, onClose, templateMet
       if (!verified?.isAttached) throw new Error('Metadata verification failed.');
 
       setStatus('success');
+
+      // ✅ Trigger success callback
+      if (onSuccess) {
+        onSuccess(mint);
+      }
     } catch (e) {
       console.error(e);
       setStatus('error');
@@ -141,27 +153,10 @@ const TokenFinalizerModal: FC<Props> = ({ mint, connection, onClose, templateMet
 
           <li>
             3. Fill in your token identity:
-            <input
-              placeholder="Token Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <input
-              placeholder="Symbol"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-            />
-            <textarea
-              placeholder="Description"
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            <button
-              className="button"
-              onClick={handleDownloadMetadata}
-              disabled={imageSizeKB > IMAGE_SIZE_LIMIT_KB}
-            >
+            <input placeholder="Token Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <input placeholder="Symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} />
+            <textarea placeholder="Description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+            <button className="button" onClick={handleDownloadMetadata} disabled={imageSizeKB > IMAGE_SIZE_LIMIT_KB}>
               Download metadata.json
             </button>
           </li>
