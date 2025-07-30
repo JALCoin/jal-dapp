@@ -24,7 +24,10 @@ const steps = [
 
 const CryptoGenerator: FC = () => {
   const { publicKey, sendTransaction } = useWallet();
-  const connection = useMemo(() => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'), []);
+  const connection = useMemo(
+    () => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'),
+    []
+  );
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -38,7 +41,6 @@ const CryptoGenerator: FC = () => {
 
   const log = (msg: string) => setLogs((prev) => [...prev, msg]);
 
-  // Handle anchor scrolls like #step1 → step = 0
   useEffect(() => {
     if (!location.hash) return;
     const match = location.hash.match(/#step(\d+)/);
@@ -110,7 +112,7 @@ const CryptoGenerator: FC = () => {
 
         case 3: {
           if (!mint || !ata) throw new Error('Mint or ATA not set');
-          const amount = BigInt('1000000000000000000'); // 1B tokens
+          const amount = BigInt('1000000000000000000');
           const tx = new Transaction().add(
             createMintToInstruction(mint, ata, publicKey, amount)
           );
@@ -122,7 +124,7 @@ const CryptoGenerator: FC = () => {
 
         case 4: {
           setShowFinalizer(true);
-          return; // Pause and wait for metadata modal
+          return;
         }
 
         case 5: {
@@ -162,10 +164,10 @@ const CryptoGenerator: FC = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
-      <div className="max-w-xl mx-auto space-y-6" id={`step${step + 1}`}>
+    <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] flex items-start justify-center py-20 px-4">
+      <div className="w-full max-w-xl space-y-6" id={`step${step + 1}`}>
 
-        <div className="flex justify-center my-4">
+        <div className="flex justify-center mb-6">
           <WalletMultiButton />
         </div>
 
@@ -182,7 +184,7 @@ const CryptoGenerator: FC = () => {
           <button
             onClick={runStep}
             disabled={loading || !publicKey}
-            className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
+            className="button"
           >
             {loading ? 'Processing...' : 'Next Step ➡️'}
           </button>
@@ -217,7 +219,7 @@ const CryptoGenerator: FC = () => {
         )}
 
         {logs.length > 0 && (
-          <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">
+          <div className="log-box">
             <p className="text-[var(--jal-green)] font-bold mb-2">🪵 Transaction Log</p>
             {logs.map((msg, i) => (
               <p key={i}>{msg}</p>
