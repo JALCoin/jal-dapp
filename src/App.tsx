@@ -1,7 +1,7 @@
-// src/App.tsx
 import type { FC } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import CreateToken from './pages/CreateToken';
+import CryptoGenerator from './pages/CryptoGenerator';
+import CryptoGeneratorIntro from './pages/CryptoGeneratorIntro';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 
@@ -12,7 +12,8 @@ const App: FC = () => {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/create-token" element={<CreateToken />} />
+          <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
+          <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
           <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </main>
@@ -26,7 +27,7 @@ const Header: FC = () => (
       <img src="/JALSOL1.gif" alt="JAL Vault Logo" className="logo" />
       <nav>
         <Link to="/">Home</Link>
-        <Link to="/create-token">Create Token</Link>
+        <Link to="/crypto-generator">Crypto Generator</Link>
         <Link to="/dashboard">Dashboard</Link>
       </nav>
     </div>
