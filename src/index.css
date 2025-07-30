@@ -91,13 +91,6 @@ header nav a:hover {
   color: var(--jal-glow);
 }
 
-/* Wallet Button */
-.wallet-button {
-  padding-top: 3rem;
-  display: flex;
-  justify-content: center;
-}
-
 .wallet-adapter-button {
   background-color: black !important;
   color: white !important;
@@ -233,4 +226,13 @@ footer {
   input[type="text"] {
     width: 100%;
   }
+}
+/* Center the wallet button on intro pages */
+.wallet-button {
+  margin-top: 4rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
