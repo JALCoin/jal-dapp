@@ -1,13 +1,7 @@
 import type { FC } from 'react';
 import { useCallback, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-} from '@solana/web3.js';
+import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import {
   TOKEN_PROGRAM_ID,
   MINT_SIZE,
@@ -18,6 +12,7 @@ import {
   createMintToInstruction,
 } from '@solana/spl-token';
 import { useNavigate } from 'react-router-dom';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 const steps = [
   'Create Mint Account',
@@ -69,23 +64,21 @@ const CreateToken: FC = () => {
 
           const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
           log(`📤 Mint account created: ${mintAccount.publicKey.toBase58()}`);
-          log(`🔗 Tx: https://solscan.io/tx/${sig}`);
+          log(`🔗 https://solscan.io/tx/${sig}`);
           break;
         }
 
         case 1: {
-          if (!mint) throw new Error('Mint account not set');
-          const tx = new Transaction().add(
-            createInitializeMintInstruction(mint, 9, publicKey, null)
-          );
+          if (!mint) throw new Error('Mint not set');
+          const tx = new Transaction().add(createInitializeMintInstruction(mint, 9, publicKey, null));
           const sig = await sendTransaction(tx, connection);
           log(`✅ Mint initialized`);
-          log(`🔗 Tx: https://solscan.io/tx/${sig}`);
+          log(`🔗 https://solscan.io/tx/${sig}`);
           break;
         }
 
         case 2: {
-          if (!mint) throw new Error('Mint account not set');
+          if (!mint) throw new Error('Mint not set');
           const ataAddress = await getAssociatedTokenAddress(mint, publicKey);
           setAta(ataAddress);
 
@@ -94,19 +87,17 @@ const CreateToken: FC = () => {
           );
           const sig = await sendTransaction(tx, connection);
           log(`📦 ATA created: ${ataAddress.toBase58()}`);
-          log(`🔗 Tx: https://solscan.io/tx/${sig}`);
+          log(`🔗 https://solscan.io/tx/${sig}`);
           break;
         }
 
         case 3: {
           if (!mint || !ata) throw new Error('Mint or ATA not set');
-          const amount = BigInt("1000000000000000000"); // 1B tokens with 9 decimals
-          const tx = new Transaction().add(
-            createMintToInstruction(mint, ata, publicKey, amount)
-          );
+          const amount = BigInt('1000000000000000000'); // 1B tokens
+          const tx = new Transaction().add(createMintToInstruction(mint, ata, publicKey, amount));
           const sig = await sendTransaction(tx, connection);
           log(`✅ Tokens minted`);
-          log(`🔗 Tx: https://solscan.io/tx/${sig}`);
+          log(`🔗 https://solscan.io/tx/${sig}`);
           break;
         }
 
@@ -122,8 +113,8 @@ const CreateToken: FC = () => {
 
       setStep((s) => s + 1);
     } catch (err: any) {
-      setError(err.message);
       log(`❌ ${err.message}`);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -137,21 +128,21 @@ const CreateToken: FC = () => {
     setError(null);
   };
 
-  const goToDashboard = () => {
-    navigate('/dashboard');
-  };
+  const goToDashboard = () => navigate('/dashboard');
 
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
       <div className="max-w-xl mx-auto space-y-6">
 
+        <div className="flex justify-center my-4">
+          <WalletMultiButton />
+        </div>
+
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold tracking-wide">
+          <h1 className="text-xl font-semibold">
             Step {step + 1}: {steps[step] || 'Complete'}
           </h1>
-          <button onClick={reset} className="text-xs text-red-500 underline">
-            Reset
-          </button>
+          <button onClick={reset} className="text-xs text-red-500 underline">Reset</button>
         </div>
 
         {error && <p className="text-sm text-red-600">❌ {error}</p>}
@@ -159,7 +150,7 @@ const CreateToken: FC = () => {
         {step < steps.length ? (
           <button
             onClick={runStep}
-            disabled={loading}
+            disabled={loading || !publicKey}
             className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
           >
             {loading ? 'Processing...' : 'Next Step ➡️'}
@@ -197,9 +188,7 @@ const CreateToken: FC = () => {
         {logs.length > 0 && (
           <div className="bg-black text-white text-xs p-3 rounded max-h-64 overflow-y-auto font-mono">
             <p className="text-[var(--jal-green)] font-bold mb-2">🪵 Transaction Log</p>
-            {logs.map((msg, i) => (
-              <p key={i}>{msg}</p>
-            ))}
+            {logs.map((msg, i) => <p key={i}>{msg}</p>)}
           </div>
         )}
       </div>
