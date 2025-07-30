@@ -10,9 +10,27 @@ export default function Home() {
         <p>
           Until now. JAL/SOL is where self-worth meets code—where you don’t just follow value… you mint it.
         </p>
-        <div className="flex gap-4 flex-wrap justify-center mt-6">
-          <Link to="/create-token" className="button">Create Your Currency</Link>
-          <a href="#manifesto" className="button" style={{ backgroundColor: 'white', color: 'black', border: '1px solid black' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            marginTop: '1.5rem',
+          }}
+        >
+          <Link to="/create-token" className="button">
+            Create Your Currency
+          </Link>
+          <a
+            href="#manifesto"
+            className="button"
+            style={{
+              backgroundColor: 'white',
+              color: 'black',
+              border: '1px solid black',
+            }}
+          >
             Read the Manifesto
           </a>
         </div>
@@ -27,20 +45,32 @@ export default function Home() {
           <p>🔨 Step 2: Mint Token</p>
           <p>🧬 Step 3: Attach Identity</p>
           <p>🔓 Step 4: Become a Vault</p>
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '1rem' }}>
-            <Link to="/create-token" className="button">Begin Creation</Link>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              width: '100%',
+              marginTop: '1rem',
+            }}
+          >
+            <Link to="/create-token" className="button">
+              Begin Creation
+            </Link>
           </div>
         </div>
 
         {/* Manifesto */}
-        <div id="manifesto" style={{
-          backgroundColor: 'black',
-          color: 'white',
-          padding: '1.5rem',
-          borderRadius: '12px',
-          marginTop: '1rem',
-          textAlign: 'center'
-        }}>
+        <div
+          id="manifesto"
+          style={{
+            backgroundColor: 'black',
+            color: 'white',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            marginTop: '1rem',
+            textAlign: 'center',
+          }}
+        >
           <h2>The JAL/SOL Manifesto</h2>
           <p>
             This isn’t about crypto. It’s about truth, code, and claiming space.
@@ -58,9 +88,26 @@ export default function Home() {
             I'm Jeremy Aaron Lugg. Born like a king. Built to turn influence into currency.
             This is more than a dApp. It's my vault—and now it's yours too.
           </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-            <a href="https://x.com/JAL358" target="_blank" className="button">Follow Me on X</a>
-            <a href="mailto:358jal@gmail.com" className="button">Contact</a>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              flexWrap: 'wrap',
+              marginTop: '1rem',
+            }}
+          >
+            <a
+              href="https://x.com/JAL358"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button"
+            >
+              Follow Me on X
+            </a>
+            <a href="mailto:358jal@gmail.com" className="button">
+              Contact
+            </a>
           </div>
         </div>
 
@@ -68,13 +115,36 @@ export default function Home() {
         <div>
           <h2>Explore the Vaults</h2>
           <p>Recently minted tokens by others like you:</p>
-          <ul className="list-disc pl-4 text-left max-w-fit mx-auto">
+          <ul
+            style={{
+              listStylePosition: 'inside',
+              textAlign: 'center',
+              paddingLeft: 0,
+              marginTop: '1rem',
+              marginBottom: '1rem',
+            }}
+          >
             <li>$POWERUP</li>
             <li>$SOVEREIGN</li>
             <li>$CHOSEN</li>
           </ul>
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '1rem' }}>
-            <Link to="/dashboard" className="button" style={{ backgroundColor: 'white', color: 'black', border: '1px solid black' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              width: '100%',
+              marginTop: '1rem',
+            }}
+          >
+            <Link
+              to="/dashboard"
+              className="button"
+              style={{
+                backgroundColor: 'white',
+                color: 'black',
+                border: '1px solid black',
+              }}
+            >
               View Dashboard
             </Link>
           </div>
@@ -84,17 +154,35 @@ export default function Home() {
         <div>
           <h2>Join the Mission</h2>
           <p>Want early access to drops and secret content?</p>
-          <form onSubmit={(e) => e.preventDefault()} style={{ textAlign: "center" }}>
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            style={{ textAlign: 'center' }}
+          >
             <input type="email" placeholder="you@example.com" />
-            <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '1rem' }}>
-              <button type="submit" className="button">Join Now</button>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                width: '100%',
+                marginTop: '1rem',
+              }}
+            >
+              <button type="submit" className="button">
+                Join Now
+              </button>
             </div>
           </form>
         </div>
       </section>
 
       {/* Footer */}
-      <footer style={{ color: 'black', padding: '2rem 1rem', textAlign: 'center' }}>
+      <footer
+        style={{
+          color: 'black',
+          padding: '2rem 1rem',
+          textAlign: 'center',
+        }}
+      >
         © 2025 JAL/SOL • Built on Solana • 358jal@gmail.com
       </footer>
     </main>
