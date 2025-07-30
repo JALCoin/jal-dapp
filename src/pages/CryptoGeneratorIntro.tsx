@@ -3,11 +3,11 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 export default function CryptoGeneratorIntro() {
   return (
-    <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] px-6 pt-24 pb-12">
+    <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] px-6 pt-20 pb-12">
       <div className="max-w-5xl mx-auto space-y-20">
 
         {/* Wallet Button */}
-        <div className="flex justify-center">
+        <div className="flex justify-center mt-8">
           <WalletMultiButton />
         </div>
 
@@ -17,39 +17,27 @@ export default function CryptoGeneratorIntro() {
           <p className="text-[var(--jal-muted)]">
             This is where influence becomes currency. Mint your own token in 4 steps.
           </p>
-          <Link to="/crypto-generator/engine" className="button mt-2 mx-auto">
+          <Link to="/crypto-generator/engine" className="button mt-2">
             Begin Full Process →
           </Link>
         </section>
 
-        {/* Feature Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-          <div className="flex flex-col items-center space-y-3">
+        {/* Feature Grid with Buttons Below */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+          <div className="space-y-2">
             <h2 className="text-lg font-semibold">🪙 Mint a Token</h2>
-            <p className="text-sm max-w-xs">
-              Create your own SPL token directly from your wallet on Solana.
-            </p>
-            <Link to="/crypto-generator/engine#step1" className="button">
-              Go to Mint
-            </Link>
+            <p>Create your own SPL token directly from your wallet on Solana.</p>
+            <Link to="/crypto-generator/engine#step1" className="button mt-2">Go to Mint</Link>
           </div>
-          <div className="flex flex-col items-center space-y-3">
+          <div className="space-y-2">
             <h2 className="text-lg font-semibold">🧬 Attach Metadata</h2>
-            <p className="text-sm max-w-xs">
-              Make it yours with name, symbol, and logo—all on-chain.
-            </p>
-            <Link to="/crypto-generator/engine#step5" className="button">
-              Finalize Metadata
-            </Link>
+            <p>Make it yours with name, symbol, and logo—all on-chain.</p>
+            <Link to="/crypto-generator/engine#step5" className="button mt-2">Finalize Metadata</Link>
           </div>
-          <div className="flex flex-col items-center space-y-3">
+          <div className="space-y-2">
             <h2 className="text-lg font-semibold">🚀 Use It</h2>
-            <p className="text-sm max-w-xs">
-              Send it. List it. Power a project. Let it mean something.
-            </p>
-            <Link to="/dashboard" className="button">
-              View Tools
-            </Link>
+            <p>Send it. List it. Power a project. Let it mean something.</p>
+            <Link to="/dashboard" className="button mt-2">View Tools</Link>
           </div>
         </section>
 
