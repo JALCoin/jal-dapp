@@ -214,10 +214,13 @@ footer {
     text-align: center;
   }
 }
+/* Responsive Container Fix */
 .homepage {
-  max-width: 1400px;
+  width: 100%;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 1rem;
+  box-sizing: border-box;
 }
 
 .section-group {
@@ -225,15 +228,11 @@ footer {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 3rem;
   margin-top: 4rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.section-group h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-.section-group p {
-  margin-bottom: 1rem;
+section {
+  padding: 4rem 1.5rem;
 }
 
