@@ -18,14 +18,8 @@ interface Props {
   };
 }
 
-const TokenFinalizerModal: FC<Props> = ({
-  mint,
-  connection,
-  onClose,
-  templateMetadata,
-}) => {
+const TokenFinalizerModal: FC<Props> = ({ mint, connection, onClose, templateMetadata }) => {
   const { wallet } = useWallet();
-
   const [imageUri, setImageUri] = useState(templateMetadata?.image ?? '');
   const [name, setName] = useState(templateMetadata?.name ?? '');
   const [symbol, setSymbol] = useState(templateMetadata?.symbol ?? '');
@@ -40,27 +34,24 @@ const TokenFinalizerModal: FC<Props> = ({
   const IMAGE_SIZE_LIMIT_KB = 500;
 
   useEffect(() => {
-    const checkImageMetadata = async () => {
+    const checkImage = async () => {
       if (!imageUri.startsWith('http')) return;
 
       try {
         const res = await fetch(imageUri);
         const blob = await res.blob();
-        const sizeKB = +(blob.size / 1024).toFixed(2);
-
         setMimeType(blob.type || 'image/png');
-        setImageSizeKB(sizeKB);
-      } catch (err) {
-        console.warn('Image check failed:', err);
+        setImageSizeKB(+(blob.size / 1024).toFixed(2));
+      } catch {
         setMimeType('');
         setImageSizeKB(0);
       }
     };
 
-    if (imageUri) checkImageMetadata();
+    checkImage();
   }, [imageUri]);
 
-  if (!wallet?.adapter || !mint || !connection) return null;
+  if (!wallet?.adapter || !mint) return null;
 
   const handleDownloadMetadata = () => {
     if (imageSizeKB > IMAGE_SIZE_LIMIT_KB) {
@@ -74,7 +65,7 @@ const TokenFinalizerModal: FC<Props> = ({
       description,
       image: imageUri,
       properties: {
-        files: [{ uri: imageUri, type: mimeType || 'image/png' }],
+        files: [{ uri: imageUri, type: mimeType }],
         category: 'image',
       },
     };
@@ -108,11 +99,11 @@ const TokenFinalizerModal: FC<Props> = ({
       setTxSignature(signature);
 
       const verified = await verifyTokenMetadataAttached(connection, new PublicKey(mint));
-      if (!verified?.isAttached) throw new Error('Metadata could not be verified.');
+      if (!verified?.isAttached) throw new Error('Metadata verification failed.');
 
       setStatus('success');
-    } catch (error) {
-      console.error('Attach metadata failed:', error);
+    } catch (e) {
+      console.error(e);
       setStatus('error');
     } finally {
       setAttaching(false);
@@ -120,32 +111,36 @@ const TokenFinalizerModal: FC<Props> = ({
   };
 
   return (
-    <div className="instruction-backdrop">
-      <div className="instruction-panel">
-        <button className="close-btn" onClick={onClose}>×</button>
-        <h2>Turn Into Currency</h2>
-        <ol>
+    <div className="modal-overlay">
+      <div className="modal-box">
+        <button className="delete-btn" onClick={onClose}>×</button>
+        <h2 className="text-xl font-bold mb-3 text-center">Turn Into Currency</h2>
+
+        <ol className="space-y-4 text-sm">
           <li>
-            Upload your <strong>token image</strong> to{' '}
-            <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer">
+            1. Upload your <strong>token image</strong> to{' '}
+            <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer" className="underline">
               lighthouse.storage
             </a>
           </li>
+
           <li>
-            Paste the uploaded image URI:
+            2. Paste the uploaded image URI:
             <input
+              type="text"
               value={imageUri}
               onChange={(e) => setImageUri(e.target.value)}
               placeholder="https://gateway.lighthouse.storage/ipfs/..."
             />
             {imageSizeKB > 0 && (
-              <p className={imageSizeKB > IMAGE_SIZE_LIMIT_KB ? 'text-red-500' : 'text-xs'}>
-                {`File type: ${mimeType} | Size: ${imageSizeKB} KB`}
+              <p className={`text-xs ${imageSizeKB > IMAGE_SIZE_LIMIT_KB ? 'text-red-500' : 'text-green-600'}`}>
+                File type: {mimeType} | Size: {imageSizeKB} KB
               </p>
             )}
           </li>
+
           <li>
-            Fill in your token identity:
+            3. Fill in your token identity:
             <input
               placeholder="Token Name"
               value={name}
@@ -170,61 +165,48 @@ const TokenFinalizerModal: FC<Props> = ({
               Download metadata.json
             </button>
           </li>
+
           <li>
-            Upload your `metadata.json` to IPFS and paste the URI:
+            4. Upload your metadata file to IPFS and paste the URI:
             <input
               value={metadataUri}
               onChange={(e) => setMetadataUri(e.target.value)}
               placeholder="ipfs://..."
             />
           </li>
+
           <li>
-            <button className="button" disabled={attaching} onClick={handleAttachMetadata}>
+            <button className="button" onClick={handleAttachMetadata} disabled={attaching}>
               {attaching ? 'Attaching...' : `Attach Metadata to ${mint.slice(0, 4)}...`}
             </button>
-            <p className="note">
+            <p className="text-xs text-yellow-700 mt-1">
               ⚠️ Approve Phantom immediately after clicking. Delay = failure.
             </p>
           </li>
         </ol>
 
         {status === 'success' && txSignature && (
-          <div className="text-green-500 text-sm mt-3">
-            ✅ Metadata verified.<br />
-            <a
-              href={`https://solscan.io/tx/${txSignature}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 underline"
-            >
+          <div className="text-green-600 text-xs mt-4 space-y-1">
+            <p>✅ Metadata successfully attached.</p>
+            <a href={`https://solscan.io/tx/${txSignature}`} target="_blank" rel="noopener noreferrer" className="underline">
               View Transaction ↗
-            </a><br />
-            <a
-              href={`https://solscan.io/address/${mint}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 underline"
-            >
+            </a>
+            <a href={`https://solscan.io/address/${mint}`} target="_blank" rel="noopener noreferrer" className="underline">
               View Mint ↗
-            </a><br />
-            <a
-              href={`https://ipfs.io/ipfs/${metadataUri.replace('ipfs://', '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 underline text-xs break-all"
-            >
+            </a>
+            <a href={`https://ipfs.io/ipfs/${metadataUri.replace('ipfs://', '')}`} target="_blank" rel="noopener noreferrer" className="underline break-all">
               Metadata URI ↗
             </a>
           </div>
         )}
 
         {status === 'error' && (
-          <p className="text-red-500 text-sm mt-3">
-            ❌ Failed to attach metadata. Try again or check IPFS URI.
+          <p className="text-red-500 text-xs mt-3">
+            ❌ Metadata attachment failed. Double check IPFS URI and retry.
           </p>
         )}
 
-        <p className="note mt-3">
+        <p className="text-[var(--jal-muted)] text-xs mt-3">
           Once attached, this metadata becomes permanent on-chain.
         </p>
       </div>

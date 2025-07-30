@@ -11,6 +11,15 @@ interface TokenInfo {
   decimals: number;
 }
 
+interface MetadataTemplate {
+  name?: string;
+  symbol?: string;
+  description?: string;
+  image?: string;
+  mimeType?: string;
+  sizeKB?: number;
+}
+
 const Dashboard: FC = () => {
   const { publicKey } = useWallet();
   const connection = useMemo(
@@ -23,16 +32,15 @@ const Dashboard: FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [showFinalizer, setShowFinalizer] = useState(false);
-  const [templateMetadata, setTemplateMetadata] = useState({});
+  const [templateMetadata, setTemplateMetadata] = useState<MetadataTemplate>({});
 
+  // Load saved hidden mints
   useEffect(() => {
-    const saved = localStorage.getItem('hiddenMints');
-    if (saved) {
-      try {
-        setHiddenMints(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse hiddenMints:', e);
-      }
+    try {
+      const saved = localStorage.getItem('hiddenMints');
+      if (saved) setHiddenMints(JSON.parse(saved));
+    } catch (err) {
+      console.error('Failed to parse hiddenMints:', err);
     }
   }, []);
 
@@ -40,6 +48,7 @@ const Dashboard: FC = () => {
     localStorage.setItem('hiddenMints', JSON.stringify(hiddenMints));
   }, [hiddenMints]);
 
+  // Fetch token accounts
   useEffect(() => {
     const fetchTokens = async () => {
       if (!publicKey) return;
@@ -50,18 +59,14 @@ const Dashboard: FC = () => {
           programId: TOKEN_PROGRAM_ID,
         });
 
-        const owned: TokenInfo[] = [];
-
-        for (const acc of response.value) {
-          const tokenInfo = acc.account.data.parsed.info;
-          const mintAddress = tokenInfo.mint;
-
-          owned.push({
-            mint: mintAddress,
-            amount: tokenInfo.tokenAmount.uiAmountString,
-            decimals: tokenInfo.tokenAmount.decimals,
-          });
-        }
+        const owned: TokenInfo[] = response.value.map((acc) => {
+          const info = acc.account.data.parsed.info;
+          return {
+            mint: info.mint,
+            amount: info.tokenAmount.uiAmountString,
+            decimals: info.tokenAmount.decimals,
+          };
+        });
 
         setTokens(owned);
       } catch (err) {
@@ -74,6 +79,7 @@ const Dashboard: FC = () => {
     fetchTokens();
   }, [publicKey, connection]);
 
+  // Prepare metadata and show finalizer
   const handleTurnIntoCurrency = async (mint: string) => {
     try {
       const imageUrl = 'https://gateway.lighthouse.storage/ipfs/bafybeiaw3zuzz25waz56cur5n4xkfnxmpewte5nvlscqenwzpdarlholbu';
@@ -98,8 +104,8 @@ const Dashboard: FC = () => {
 
       setSelectedMint(mint);
       setShowFinalizer(true);
-    } catch (error) {
-      console.error('Metadata image fetch failed:', error);
+    } catch (err) {
+      console.error('Metadata image fetch failed:', err);
     }
   };
 
@@ -164,12 +170,14 @@ const Dashboard: FC = () => {
       </div>
 
       {showFinalizer && selectedMint && (
-        <TokenFinalizerModal
-          mint={selectedMint}
-          connection={connection}
-          onClose={() => setShowFinalizer(false)}
-          templateMetadata={templateMetadata}
-        />
+        <div className="modal-overlay">
+          <TokenFinalizerModal
+            mint={selectedMint}
+            connection={connection}
+            onClose={() => setShowFinalizer(false)}
+            templateMetadata={templateMetadata}
+          />
+        </div>
       )}
     </main>
   );
