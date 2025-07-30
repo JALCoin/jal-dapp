@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import TokenFinalizerModal from '../utils/TokenFinalizerModal';
 
