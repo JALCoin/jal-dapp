@@ -87,10 +87,35 @@ header nav a:hover {
   color: var(--jal-glow);
 }
 
+/* ======================
+   WALLET BUTTON SECTION
+====================== */
 .wallet-button {
-  margin-top: 0.5rem;
+  margin-top: 3rem;
   display: flex;
   justify-content: center;
+  z-index: 2;
+}
+
+.wallet-adapter-button {
+  background-color: black !important;
+  color: white !important;
+  font-size: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  display: inline-flex !important;
+  justify-content: center;
+  align-items: center;
+  min-width: 200px;
+  box-shadow: 0 0 12px var(--jal-glow);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.wallet-adapter-button:hover {
+  background-color: #111 !important;
+  box-shadow: 0 0 18px var(--jal-glow), 0 0 24px var(--jal-glow);
 }
 
 /* ======================
@@ -124,7 +149,6 @@ section p {
   color: var(--jal-muted);
 }
 
-/* HERO */
 main > section:first-of-type h1 {
   font-size: 2.75rem;
   font-weight: 800;
@@ -161,12 +185,12 @@ button:hover, .button:hover {
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-} /* 🔧 supports disabled state in CreateToken */
+}
 
 /* ======================
-   MONO FONT + LOGS
+   LOG BOX
 ====================== */
-.log-box { /* 🔧 optional utility class for logs */
+.log-box {
   background: black;
   color: white;
   font-size: 0.85rem;
@@ -178,14 +202,8 @@ button:disabled {
 }
 
 /* ======================
-   TOKENS & FOOTER
+   FOOTER
 ====================== */
-ul {
-  list-style: disc;
-  padding-left: 1.5rem;
-  color: #111;
-}
-
 footer {
   text-align: center;
   padding: 2rem 1rem;
@@ -204,7 +222,7 @@ footer {
   }
 
   .wallet-button {
-    margin-top: 0.5rem;
+    margin-top: 2rem;
   }
 
   section h1, section h2 {
