@@ -7,9 +7,9 @@ export default function CryptoGeneratorIntro() {
       <div className="max-w-5xl mx-auto space-y-16">
 
         {/* Wallet Button */}
-        <div className="flex justify-center">
-          <WalletMultiButton />
-        </div>
+        <div className="wallet-button">
+  <WalletMultiButton />
+</div>
 
         {/* Hero Section */}
         <section className="text-center space-y-3">
