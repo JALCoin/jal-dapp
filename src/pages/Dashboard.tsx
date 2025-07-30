@@ -1,9 +1,9 @@
+// src/pages/Dashboard.tsx
 import type { FC } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import TokenFinalizerModal from '../utils/TokenFinalizerModal';
 
 interface TokenInfo {
   mint: string;
@@ -17,23 +17,27 @@ interface TokenInfo {
 
 const Dashboard: FC = () => {
   const { publicKey } = useWallet();
-  const connection = useMemo(() => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'), []);
+  const connection = useMemo(
+    () => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'),
+    []
+  );
 
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [hiddenMints, setHiddenMints] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMint, setSelectedMint] = useState<string | null>(null);
-  const [showFinalizer, setShowFinalizer] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
 
   const fetchMetadataFromChain = async (mint: string): Promise<Partial<TokenInfo>> => {
     try {
       const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
-      const [metadataPDA] = await PublicKey.findProgramAddress([
-        Buffer.from("metadata"),
-        METADATA_PROGRAM_ID.toBuffer(),
-        new PublicKey(mint).toBuffer(),
-      ], METADATA_PROGRAM_ID);
+      const [metadataPDA] = await PublicKey.findProgramAddress(
+        [
+          Buffer.from("metadata"),
+          METADATA_PROGRAM_ID.toBuffer(),
+          new PublicKey(mint).toBuffer(),
+        ],
+        METADATA_PROGRAM_ID
+      );
 
       const accountInfo = await connection.getAccountInfo(metadataPDA);
       if (!accountInfo) return {};
@@ -108,17 +112,6 @@ const Dashboard: FC = () => {
     fetchTokens();
   }, [publicKey, connection]);
 
-  const handleTurnIntoCurrency = (mint: string) => {
-    setSelectedMint(mint);
-    setShowFinalizer(true);
-  };
-
-  const handleMetadataSuccess = (mint: string) => {
-    setJustUnlocked(mint);
-    setShowFinalizer(false);
-    fetchTokens();
-  };
-
   const handleHideToken = (mint: string) => {
     setHiddenMints((prev) => [...prev, mint]);
   };
@@ -180,12 +173,6 @@ const Dashboard: FC = () => {
                   className="explorer-link"
                 >View on Solscan ↗</a>
 
-                {!token.hasMetadata && (
-                  <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
-                    Turn Into Currency
-                  </button>
-                )}
-
                 {token.hasMetadata && localStorage.getItem(`unlocked-${token.mint}`) && (
                   <div className="text-xs mt-2 text-green-600">✅ Tools unlocked</div>
                 )}
@@ -194,17 +181,6 @@ const Dashboard: FC = () => {
           </div>
         )}
       </div>
-
-      {showFinalizer && selectedMint && (
-        <div className="modal-overlay">
-          <TokenFinalizerModal
-            mint={selectedMint}
-            connection={connection}
-            onClose={() => setShowFinalizer(false)}
-            onSuccess={handleMetadataSuccess}
-          />
-        </div>
-      )}
     </main>
   );
 };
