@@ -20,19 +20,6 @@ export default function Home() {
 
       {/* Section Group */}
       <section className="section-group">
-        {/* About */}
-        <div>
-          <h2>About JAL</h2>
-          <p>
-            I'm Jeremy Aaron Lugg. Born like a king. Built to turn influence into currency.
-            This is more than a dApp. It's my vault—and now it's yours too.
-          </p>
-          <div className="flex gap-2 mt-4 flex-wrap">
-            <a href="https://x.com/JAL358" target="_blank" className="button">Follow Me on X</a>
-            <a href="mailto:358jal@gmail.com" className="button">Contact</a>
-          </div>
-        </div>
-
         {/* Generator */}
         <div>
           <h2>Currency Generator</h2>
@@ -63,6 +50,19 @@ export default function Home() {
           </p>
         </div>
 
+        {/* About */}
+        <div>
+          <h2>About JAL</h2>
+          <p>
+            I'm Jeremy Aaron Lugg. Born like a king. Built to turn influence into currency.
+            This is more than a dApp. It's my vault—and now it's yours too.
+          </p>
+          <div className="flex gap-2 mt-4 flex-wrap">
+            <a href="https://x.com/JAL358" target="_blank" className="button">Follow Me on X</a>
+            <a href="mailto:358jal@gmail.com" className="button">Contact</a>
+          </div>
+        </div>
+
         {/* Dashboard */}
         <div>
           <h2>Explore the Vaults</h2>
@@ -91,7 +91,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer>
+      <footer style={{ color: 'black', padding: '2rem 1rem', textAlign: 'center' }}>
         © 2025 JAL/SOL • Built on Solana • 358jal@gmail.com
       </footer>
     </main>

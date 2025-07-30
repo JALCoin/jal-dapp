@@ -182,8 +182,8 @@ footer {
   text-align: center;
   padding: 2rem 1rem;
   font-size: 0.85rem;
-  background: black;
-  color: white;
+  background: transparent;
+  color: black;
 }
 
 /* Log Box */
