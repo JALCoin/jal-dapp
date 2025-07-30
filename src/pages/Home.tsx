@@ -27,7 +27,7 @@ export default function Home() {
           <p>🔨 Step 2: Mint Token</p>
           <p>🧬 Step 3: Attach Identity</p>
           <p>🔓 Step 4: Become a Vault</p>
-          <div className="mt-4">
+          <div className="centered-button">
             <Link to="/create-token" className="button">Begin Creation</Link>
           </div>
         </div>
@@ -57,7 +57,7 @@ export default function Home() {
             I'm Jeremy Aaron Lugg. Born like a king. Built to turn influence into currency.
             This is more than a dApp. It's my vault—and now it's yours too.
           </p>
-          <div className="flex gap-2 mt-4 flex-wrap">
+          <div className="flex gap-2 mt-4 flex-wrap justify-center">
             <a href="https://x.com/JAL358" target="_blank" className="button">Follow Me on X</a>
             <a href="mailto:358jal@gmail.com" className="button">Contact</a>
           </div>
@@ -67,12 +67,12 @@ export default function Home() {
         <div>
           <h2>Explore the Vaults</h2>
           <p>Recently minted tokens by others like you:</p>
-          <ul className="list-disc pl-4">
+          <ul className="list-disc pl-4 text-left max-w-fit mx-auto">
             <li>$POWERUP</li>
             <li>$SOVEREIGN</li>
             <li>$CHOSEN</li>
           </ul>
-          <div className="mt-4">
+          <div className="centered-button">
             <Link to="/dashboard" className="button" style={{ backgroundColor: 'white', color: 'black', border: '1px solid black' }}>
               View Dashboard
             </Link>
@@ -83,9 +83,11 @@ export default function Home() {
         <div>
           <h2>Join the Mission</h2>
           <p>Want early access to drops and secret content?</p>
-          <form onSubmit={(e) => e.preventDefault()}>
+          <form onSubmit={(e) => e.preventDefault()} style={{ textAlign: "center" }}>
             <input type="email" placeholder="you@example.com" />
-            <button type="submit" className="button mt-2">Join Now</button>
+            <div className="centered-button">
+              <button type="submit" className="button">Join Now</button>
+            </div>
           </form>
         </div>
       </section>
