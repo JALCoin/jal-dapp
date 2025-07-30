@@ -158,43 +158,23 @@ button:hover, .button:hover {
   box-shadow: 0 0 8px var(--jal-glow), 0 0 12px var(--jal-glow);
 }
 
-input[type="email"] {
-  padding: 0.75rem;
-  font-size: 1rem;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: white;
-  width: 280px;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+} /* 🔧 supports disabled state in CreateToken */
 
 /* ======================
-   SECTION GROUP
+   MONO FONT + LOGS
 ====================== */
-.section-group {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 3rem;
-  margin-top: 4rem;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.section-group h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-.section-group p {
-  margin-bottom: 1rem;
-  text-align: left;
+.log-box { /* 🔧 optional utility class for logs */
+  background: black;
+  color: white;
+  font-size: 0.85rem;
+  padding: 1rem;
+  border-radius: 8px;
+  font-family: monospace;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 /* ======================
@@ -240,7 +220,8 @@ footer {
     text-align: center;
   }
 
-  input[type="email"] {
+  input[type="email"],
+  input[type="text"] {
     width: 100%;
   }
 }
