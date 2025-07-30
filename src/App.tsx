@@ -22,17 +22,14 @@ const App: FC = () => {
 };
 
 const Header: FC = () => (
-  <header className="flex items-center justify-between px-4 py-3 bg-black text-white shadow-md">
-    <div className="flex items-center gap-4">
-      <img src="/JALSOL1.gif" alt="JAL Vault Logo" className="h-12 w-auto" />
-      <nav className="flex gap-4 text-sm">
-        <Link to="/" className="hover:text-[var(--jal-glow)]">Home</Link>
-        <Link to="/create-token" className="hover:text-[var(--jal-glow)]">Create Token</Link>
-        <Link to="/dashboard" className="hover:text-[var(--jal-glow)]">Dashboard</Link>
+  <header className="jal-header">
+    <div className="header-inner">
+      <img src="/JALSOL1.gif" alt="JAL Vault Logo" className="logo" />
+      <nav>
+        <Link to="/">Home</Link>
+        <Link to="/create-token">Create Token</Link>
+        <Link to="/dashboard">Dashboard</Link>
       </nav>
-    </div>
-    <div className="wallet-button">
-      <WalletMultiButton />
     </div>
   </header>
 );
