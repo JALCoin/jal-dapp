@@ -24,6 +24,7 @@ const Dashboard: FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [showFinalizer, setShowFinalizer] = useState(false);
+  const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
 
   const fetchMetadataFromChain = async (mint: string): Promise<Partial<TokenInfo>> => {
     try {
@@ -45,6 +46,7 @@ const Dashboard: FC = () => {
       const data = await res.json();
 
       localStorage.setItem(`metadata-${mint}`, JSON.stringify(data));
+      localStorage.setItem(`unlocked-${mint}`, 'true');
 
       return {
         name: data.name,
@@ -70,45 +72,51 @@ const Dashboard: FC = () => {
     localStorage.setItem('hiddenMints', JSON.stringify(hiddenMints));
   }, [hiddenMints]);
 
-  useEffect(() => {
-    const fetchTokens = async () => {
-      if (!publicKey) return;
-      setLoading(true);
+  const fetchTokens = async () => {
+    if (!publicKey) return;
+    setLoading(true);
 
-      try {
-        const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
-          programId: TOKEN_PROGRAM_ID,
-        });
+    try {
+      const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
+        programId: TOKEN_PROGRAM_ID,
+      });
 
-        const enrichedTokens: TokenInfo[] = [];
-        for (const acc of response.value) {
-          const info = acc.account.data.parsed.info;
-          const mint = info.mint;
+      const enrichedTokens: TokenInfo[] = [];
+      for (const acc of response.value) {
+        const info = acc.account.data.parsed.info;
+        const mint = info.mint;
 
-          const baseToken: TokenInfo = {
-            mint,
-            amount: info.tokenAmount.uiAmountString,
-            decimals: info.tokenAmount.decimals,
-          };
+        const baseToken: TokenInfo = {
+          mint,
+          amount: info.tokenAmount.uiAmountString,
+          decimals: info.tokenAmount.decimals,
+        };
 
-          const metadata = await fetchMetadataFromChain(mint);
-          enrichedTokens.push({ ...baseToken, ...metadata });
-        }
-
-        setTokens(enrichedTokens);
-      } catch (err) {
-        console.error('Token fetch error:', err);
-      } finally {
-        setLoading(false);
+        const metadata = await fetchMetadataFromChain(mint);
+        enrichedTokens.push({ ...baseToken, ...metadata });
       }
-    };
 
+      setTokens(enrichedTokens);
+    } catch (err) {
+      console.error('Token fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTokens();
   }, [publicKey, connection]);
 
   const handleTurnIntoCurrency = (mint: string) => {
     setSelectedMint(mint);
     setShowFinalizer(true);
+  };
+
+  const handleMetadataSuccess = (mint: string) => {
+    setJustUnlocked(mint);
+    setShowFinalizer(false);
+    fetchTokens();
   };
 
   const handleHideToken = (mint: string) => {
@@ -121,6 +129,12 @@ const Dashboard: FC = () => {
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
       <div className="container">
         <h1 className="text-3xl font-bold text-center">Your Created Tokens</h1>
+
+        {justUnlocked && (
+          <div className="text-center bg-green-100 text-green-700 rounded p-3 mb-4 border border-green-400">
+            🎉 Your currency is now live! Tools unlocked for: <strong>{justUnlocked}</strong>
+          </div>
+        )}
 
         {loading ? (
           <p className="text-center mt-4 text-[var(--jal-muted)]">Loading token accounts...</p>
@@ -171,6 +185,10 @@ const Dashboard: FC = () => {
                     Turn Into Currency
                   </button>
                 )}
+
+                {token.hasMetadata && localStorage.getItem(`unlocked-${token.mint}`) && (
+                  <div className="text-xs mt-2 text-green-600">✅ Tools unlocked</div>
+                )}
               </div>
             ))}
           </div>
@@ -183,6 +201,7 @@ const Dashboard: FC = () => {
             mint={selectedMint}
             connection={connection}
             onClose={() => setShowFinalizer(false)}
+            onSuccess={handleMetadataSuccess}
           />
         </div>
       )}
