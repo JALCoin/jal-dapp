@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import TokenFinalizerModal from '../utils/TokenFinalizerModal';
 
@@ -9,38 +9,60 @@ interface TokenInfo {
   mint: string;
   amount: string;
   decimals: number;
-}
-
-interface MetadataTemplate {
   name?: string;
   symbol?: string;
-  description?: string;
   image?: string;
-  mimeType?: string;
-  sizeKB?: number;
+  hasMetadata?: boolean;
 }
 
 const Dashboard: FC = () => {
   const { publicKey } = useWallet();
-  const connection = useMemo(
-    () => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'),
-    []
-  );
+  const connection = useMemo(() => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'), []);
 
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [hiddenMints, setHiddenMints] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [showFinalizer, setShowFinalizer] = useState(false);
-  const [templateMetadata, setTemplateMetadata] = useState<MetadataTemplate>({});
 
-  // Load saved hidden mints
-  useEffect(() => {
+  const fetchMetadataFromChain = async (mint: string): Promise<Partial<TokenInfo>> => {
     try {
-      const saved = localStorage.getItem('hiddenMints');
-      if (saved) setHiddenMints(JSON.parse(saved));
-    } catch (err) {
-      console.error('Failed to parse hiddenMints:', err);
+      const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+      const [metadataPDA] = await PublicKey.findProgramAddress([
+        Buffer.from("metadata"),
+        METADATA_PROGRAM_ID.toBuffer(),
+        new PublicKey(mint).toBuffer(),
+      ], METADATA_PROGRAM_ID);
+
+      const accountInfo = await connection.getAccountInfo(metadataPDA);
+      if (!accountInfo) return {};
+
+      const uriStart = 115;
+      const uriEnd = uriStart + 200;
+      const uri = new TextDecoder().decode(accountInfo.data.slice(uriStart, uriEnd)).replace(/\u0000/g, '').trim();
+
+      const res = await fetch(uri.startsWith('http') ? uri : `https://ipfs.io/ipfs/${uri.replace('ipfs://', '')}`);
+      const data = await res.json();
+
+      localStorage.setItem(`metadata-${mint}`, JSON.stringify(data));
+
+      return {
+        name: data.name,
+        symbol: data.symbol,
+        image: data.image,
+        hasMetadata: true,
+      };
+    } catch {
+      return { hasMetadata: false };
+    }
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('hiddenMints');
+    if (saved) {
+      try {
+        setHiddenMints(JSON.parse(saved));
+      } catch {}
     }
   }, []);
 
@@ -48,7 +70,6 @@ const Dashboard: FC = () => {
     localStorage.setItem('hiddenMints', JSON.stringify(hiddenMints));
   }, [hiddenMints]);
 
-  // Fetch token accounts
   useEffect(() => {
     const fetchTokens = async () => {
       if (!publicKey) return;
@@ -59,16 +80,22 @@ const Dashboard: FC = () => {
           programId: TOKEN_PROGRAM_ID,
         });
 
-        const owned: TokenInfo[] = response.value.map((acc) => {
+        const enrichedTokens: TokenInfo[] = [];
+        for (const acc of response.value) {
           const info = acc.account.data.parsed.info;
-          return {
-            mint: info.mint,
+          const mint = info.mint;
+
+          const baseToken: TokenInfo = {
+            mint,
             amount: info.tokenAmount.uiAmountString,
             decimals: info.tokenAmount.decimals,
           };
-        });
 
-        setTokens(owned);
+          const metadata = await fetchMetadataFromChain(mint);
+          enrichedTokens.push({ ...baseToken, ...metadata });
+        }
+
+        setTokens(enrichedTokens);
       } catch (err) {
         console.error('Token fetch error:', err);
       } finally {
@@ -79,34 +106,9 @@ const Dashboard: FC = () => {
     fetchTokens();
   }, [publicKey, connection]);
 
-  // Prepare metadata and show finalizer
-  const handleTurnIntoCurrency = async (mint: string) => {
-    try {
-      const imageUrl = 'https://gateway.lighthouse.storage/ipfs/bafybeiaw3zuzz25waz56cur5n4xkfnxmpewte5nvlscqenwzpdarlholbu';
-      const res = await fetch(imageUrl);
-      const blob = await res.blob();
-
-      const fileSizeKB = +(blob.size / 1024).toFixed(2);
-      const mimeType = blob.type;
-
-      if (fileSizeKB > 500) {
-        console.warn(`Image is ${fileSizeKB}KB, exceeds 500KB.`);
-      }
-
-      setTemplateMetadata({
-        name: 'JAL Coin',
-        symbol: 'JAL',
-        description: 'JAL is a token that unlocks utility in the Solana vault ecosystem.',
-        image: imageUrl,
-        mimeType,
-        sizeKB: fileSizeKB,
-      });
-
-      setSelectedMint(mint);
-      setShowFinalizer(true);
-    } catch (err) {
-      console.error('Metadata image fetch failed:', err);
-    }
+  const handleTurnIntoCurrency = (mint: string) => {
+    setSelectedMint(mint);
+    setShowFinalizer(true);
   };
 
   const handleHideToken = (mint: string) => {
@@ -132,11 +134,19 @@ const Dashboard: FC = () => {
                   className="delete-btn"
                   onClick={() => handleHideToken(token.mint)}
                   title="Remove from dashboard"
-                >
-                  ×
-                </button>
+                >×</button>
+
+                {token.image && (
+                  <img
+                    src={token.image.startsWith('ipfs://') ? token.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : token.image}
+                    alt={token.name || token.symbol || 'Token Logo'}
+                    className="w-16 h-16 object-contain mb-2"
+                  />
+                )}
 
                 <div className="token-info">
+                  <p><strong>Name:</strong> {token.name || '—'}</p>
+                  <p><strong>Symbol:</strong> {token.symbol || '—'}</p>
                   <p>
                     <strong>Mint:</strong>{' '}
                     <span className="mono">{token.mint}</span>
@@ -144,9 +154,7 @@ const Dashboard: FC = () => {
                       className="copy-btn"
                       onClick={() => navigator.clipboard.writeText(token.mint)}
                       title="Copy Mint Address"
-                    >
-                      📋
-                    </button>
+                    >📋</button>
                   </p>
                   <p><strong>Amount:</strong> {token.amount}</p>
                 </div>
@@ -156,13 +164,13 @@ const Dashboard: FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="explorer-link"
-                >
-                  View on Solscan ↗
-                </a>
+                >View on Solscan ↗</a>
 
-                <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
-                  Turn Into Currency
-                </button>
+                {!token.hasMetadata && (
+                  <button className="button" onClick={() => handleTurnIntoCurrency(token.mint)}>
+                    Turn Into Currency
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -175,7 +183,6 @@ const Dashboard: FC = () => {
             mint={selectedMint}
             connection={connection}
             onClose={() => setShowFinalizer(false)}
-            templateMetadata={templateMetadata}
           />
         </div>
       )}
