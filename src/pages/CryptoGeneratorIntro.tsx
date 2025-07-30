@@ -17,7 +17,7 @@ export default function CryptoGeneratorIntro() {
           <p className="text-[var(--jal-muted)]">
             This is where influence becomes currency. Mint your own token in 4 steps.
           </p>
-          <div className="flex justify-center">
+          <div className="center-button">
             <Link to="/crypto-generator/engine" className="button">
               Begin Full Process →
             </Link>
@@ -49,7 +49,9 @@ export default function CryptoGeneratorIntro() {
             <div key={title} className="text-center space-y-2">
               <h2 className="text-lg font-semibold">{title}</h2>
               <p className="text-sm text-[var(--jal-muted)]">{desc}</p>
-              <Link to={link} className="button mt-2 inline-block">{label}</Link>
+              <div className="center-button">
+                <Link to={link} className="button">{label}</Link>
+              </div>
             </div>
           ))}
         </section>
@@ -57,9 +59,11 @@ export default function CryptoGeneratorIntro() {
         {/* CTA */}
         <section className="text-center space-y-4">
           <h2 className="text-2xl font-semibold">Already minted?</h2>
-          <Link to="/dashboard" className="button">
-            View My Vault
-          </Link>
+          <div className="center-button">
+            <Link to="/dashboard" className="button">
+              View My Vault
+            </Link>
+          </div>
         </section>
       </div>
     </main>
