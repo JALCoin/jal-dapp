@@ -23,6 +23,7 @@ html, body, #root {
   scroll-behavior: smooth;
 }
 
+/* Watermark */
 body::after {
   content: '';
   position: fixed;
@@ -36,6 +37,7 @@ body::after {
   pointer-events: none;
 }
 
+/* Header */
 header {
   width: 100%;
   background: black;
@@ -73,6 +75,7 @@ header {
   }
 }
 
+/* Social Icons */
 .social-links {
   position: absolute;
   top: 1rem;
@@ -86,7 +89,6 @@ header {
   width: 28px;
   height: 28px;
   object-fit: contain;
-  filter: drop-shadow(0 0 2px transparent);
   transition: transform 0.2s ease, filter 0.3s ease;
 }
 
@@ -120,6 +122,7 @@ header {
   opacity: 0;
 }
 
+/* Sidebar Navigation */
 .sidebar-overlay {
   position: fixed;
   top: 0;
@@ -158,6 +161,7 @@ header {
   text-shadow: 0 0 6px var(--jal-glow);
 }
 
+/* Main Content */
 main {
   max-width: 1100px;
   margin: 0 auto;
@@ -167,11 +171,13 @@ main {
 
 main > section {
   padding: 4rem 1rem;
-  z-index: 1;
   position: relative;
+  z-index: 1;
 }
 
-section h1, section h2 {
+/* Typography */
+section h1,
+section h2 {
   font-size: 2.25rem;
   font-weight: 700;
   text-align: center;
@@ -197,7 +203,9 @@ main > section:first-of-type p {
   margin-top: 1rem;
 }
 
-button, .button {
+/* Buttons */
+.button,
+button {
   background-color: black;
   color: white;
   padding: 0.75rem 1.5rem;
@@ -211,9 +219,16 @@ button, .button {
   transition: all 0.3s ease;
 }
 
-button:hover, .button:hover {
+.button:hover,
+button:hover {
   background-color: #111;
   box-shadow: 0 0 8px var(--jal-glow), 0 0 12px var(--jal-glow);
+}
+
+.button.secondary {
+  background: white;
+  color: black;
+  border: 1px solid black;
 }
 
 button:disabled {
@@ -221,40 +236,95 @@ button:disabled {
   cursor: not-allowed;
 }
 
-footer {
+/* Cards and Layout Blocks */
+.section-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+.card {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.card.dark {
+  background: black;
+  color: white;
+}
+
+.glow-text {
+  color: var(--jal-glow);
+  font-weight: bold;
+}
+
+/* Lists */
+.vault-list {
+  list-style-position: inside;
+  text-align: center;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+/* Utility Layout */
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.centered-button {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
+/* Email Form */
+.newsletter-form input[type="email"] {
+  padding: 0.75rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  display: block;
+  text-align: center;
+}
+
+/* Footer */
+.site-footer {
   text-align: center;
   padding: 2rem 1rem;
   font-size: 0.85rem;
-  background: transparent;
   color: black;
 }
 
-.log-box {
-  background: black;
-  color: white;
-  font-size: 0.85rem;
-  padding: 1rem;
-  border-radius: 8px;
-  font-family: monospace;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
+/* Responsive Design */
 @media (max-width: 768px) {
-  section h1, section h2 {
+  .section-group {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  section h1,
+  section h2 {
     font-size: 1.8rem;
   }
 
-  .section-group {
-    grid-template-columns: 1fr;
-    text-align: center;
+  .logo {
+    height: 140px;
   }
 
-  .section-group p {
-    text-align: center;
-  }
-
-  input[type="email"], input[type="text"] {
+  input[type="email"],
+  input[type="text"] {
     width: 100%;
   }
 }
@@ -263,18 +333,9 @@ footer {
   .logo {
     height: 120px;
   }
-}
 
-.wallet-button {
-  margin-top: 4rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem 0;
-}
-
-.centered-button {
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
+  .cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
 }
