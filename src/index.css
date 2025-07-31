@@ -241,3 +241,48 @@ footer {
   justify-content: center;
   margin-top: 1rem;
 }
+.social-links {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: 1rem;
+  z-index: 20;
+}
+
+.social-links img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 2px transparent);
+  transition: transform 0.2s ease, filter 0.3s ease;
+}
+
+.social-links img:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 6px var(--jal-glow));
+background-color: rgba(255, 255, 255, 0.05);
+border-radius: 9999px;
+padding: 4px;
+}
+@media (max-width: 480px) {
+  .logo {
+    height: 120px;
+  }
+}
+nav a::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 2px;
+  background: var(--jal-glow);
+  transition: width 0.3s ease;
+}
+
+nav a:hover::after {
+  width: 100%;
+}
+
+
+
+
