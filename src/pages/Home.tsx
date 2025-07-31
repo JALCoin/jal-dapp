@@ -6,10 +6,8 @@ export default function Home() {
     <main className="homepage">
       {/* Hero Section */}
       <section className="hero">
-        <h1>You haven't found what you're looking for, have you?</h1>
-        <p>
-          Until now. JAL/SOL is where self-worth meets code—where you don’t just follow value… you mint it.
-        </p>
+        <h1>You’re as valuable as what you decide to build.</h1>
+        <p>This is your vault. Mint it into something real.</p>
         <div className="cta-buttons">
           <Link to="/create-token" className="button">Create Your Currency</Link>
           <a href="#manifesto" className="button secondary">Read the Manifesto</a>
@@ -33,7 +31,7 @@ export default function Home() {
         {/* Manifesto */}
         <div id="manifesto" className="card dark">
           <h2>The JAL/SOL Manifesto</h2>
-          <p>This isn’t about crypto. It’s about truth, code, and claiming space. It's about putting your name on something that won’t fade.</p>
+          <p>This isn’t about crypto. It’s about truth, presence, and claiming space. It's about putting your name on something that won’t fade.</p>
           <p className="glow-text">This is the future of on-chain identity.</p>
         </div>
 
