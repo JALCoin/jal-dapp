@@ -1,3 +1,4 @@
+// src/App.tsx
 import type { FC } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -61,13 +62,18 @@ const Header: FC = () => {
         </a>
       </div>
 
+      <button
+        className={`hamburger ${isOpen ? 'hidden' : ''}`}
+        onClick={toggleSidebar}
+        aria-label="Menu"
+      >
+        ☰
+      </button>
+
       <div className="header-inner">
         <Link to="/" aria-label="JAL/SOL Home">
           <img src="/JALSOL1.gif" alt="JAL Vault Logo" className="logo" />
         </Link>
-        <button className="hamburger" onClick={toggleSidebar} aria-label="Menu">
-          ☰
-        </button>
       </div>
 
       {isOpen && (
