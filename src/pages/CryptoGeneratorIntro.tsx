@@ -6,9 +6,9 @@ export default function CryptoGeneratorIntro() {
   return (
     <main className="homepage">
       {/* Wallet Button */}
-      <div className="wallet-button">
-        <WalletMultiButton />
-      </div>
+<div className="wallet-button" style={{ marginTop: '3rem', display: 'flex', justifyContent: 'center' }}>
+  <WalletMultiButton />
+</div>
 
       {/* Intro */}
       <section>
