@@ -98,14 +98,26 @@ header {
   padding: 4px;
 }
 
+/* Hamburger Icon */
 .hamburger {
-  background: none;
-  border: none;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: black;
   color: white;
   font-size: 2rem;
+  border: none;
   cursor: pointer;
-  margin-top: 1rem;
   z-index: 30;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  box-shadow: 0 0 12px var(--jal-glow);
+  transition: transform 0.4s ease, opacity 0.3s ease;
+}
+
+.hamburger.hidden {
+  transform: translateX(120%);
+  opacity: 0;
 }
 
 .sidebar-overlay {

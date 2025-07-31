@@ -62,13 +62,13 @@ const Header: FC = () => {
         </a>
       </div>
 
-      <button
-        className={`hamburger ${isOpen ? 'hidden' : ''}`}
-        onClick={toggleSidebar}
-        aria-label="Menu"
-      >
-        ☰
-      </button>
+     <button
+  className={`hamburger ${isOpen ? 'hidden' : ''}`}
+  onClick={toggleSidebar}
+  aria-label="Menu"
+>
+  ☰
+</button>
 
       <div className="header-inner">
         <Link to="/" aria-label="JAL/SOL Home">
