@@ -60,7 +60,7 @@ header {
 
 /* Logo */
 .logo {
-  height: 72px;
+  height: 172px;
   animation: pulse 4s ease-in-out infinite;
   filter: drop-shadow(0 0 6px var(--jal-glow));
 }
