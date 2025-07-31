@@ -58,7 +58,6 @@ header {
   gap: 1.25rem;
 }
 
-/* Logo */
 .logo {
   height: 172px;
   animation: pulse 4s ease-in-out infinite;
@@ -89,7 +88,17 @@ nav a {
   text-decoration: none;
   font-weight: 600;
   font-size: 1rem;
+  position: relative;
   transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+nav a::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 2px;
+  background: var(--jal-glow);
+  transition: width 0.3s ease;
 }
 
 nav a:hover {
@@ -97,7 +106,37 @@ nav a:hover {
   text-shadow: 0 0 6px var(--jal-glow), 0 0 12px var(--jal-glow);
 }
 
-/* Wallet Adapter */
+nav a:hover::after {
+  width: 100%;
+}
+
+/* Social Icons (Top-Left) */
+.social-links {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: 1rem;
+  z-index: 20;
+}
+
+.social-links img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 2px transparent);
+  transition: transform 0.2s ease, filter 0.3s ease;
+}
+
+.social-links img:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 6px var(--jal-glow));
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+  padding: 4px;
+}
+
+/* Wallet Adapter Button */
 .wallet-adapter-button {
   background-color: black !important;
   color: white !important;
@@ -205,7 +244,7 @@ footer {
   overflow-y: auto;
 }
 
-/* Responsive */
+/* Responsive Scaling */
 @media (max-width: 768px) {
   section h1, section h2 {
     font-size: 1.8rem;
@@ -226,14 +265,19 @@ footer {
   }
 }
 
-/* Utility Classes */
+@media (max-width: 480px) {
+  .logo {
+    height: 120px;
+  }
+}
+
+/* Utility */
 .wallet-button {
   margin-top: 4rem;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding: 1rem 0;
 }
 
 .centered-button {
@@ -241,48 +285,3 @@ footer {
   justify-content: center;
   margin-top: 1rem;
 }
-.social-links {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  display: flex;
-  gap: 1rem;
-  z-index: 20;
-}
-
-.social-links img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 2px transparent);
-  transition: transform 0.2s ease, filter 0.3s ease;
-}
-
-.social-links img:hover {
-  transform: scale(1.1);
-  filter: drop-shadow(0 0 6px var(--jal-glow));
-background-color: rgba(255, 255, 255, 0.05);
-border-radius: 9999px;
-padding: 4px;
-}
-@media (max-width: 480px) {
-  .logo {
-    height: 120px;
-  }
-}
-nav a::after {
-  content: '';
-  display: block;
-  width: 0;
-  height: 2px;
-  background: var(--jal-glow);
-  transition: width 0.3s ease;
-}
-
-nav a:hover::after {
-  width: 100%;
-}
-
-
-
-
