@@ -41,23 +41,26 @@ body::after {
 header {
   width: 100%;
   background: black;
-  padding: 1.5rem 1rem;
+  padding: 2rem 1rem 1.5rem;
   display: flex;
   justify-content: center;
   box-sizing: border-box;
+  position: relative;
+  z-index: 10;
 }
 
 .header-inner {
-  width: 100%;
   max-width: 960px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
-header img {
-  height: 56px;
+/* Logo */
+.logo {
+  height: 72px;
   animation: pulse 4s ease-in-out infinite;
   filter: drop-shadow(0 0 6px var(--jal-glow));
 }
@@ -68,29 +71,33 @@ header img {
     filter: drop-shadow(0 0 6px var(--jal-glow));
   }
   50% {
-    transform: scale(1.015);
+    transform: scale(1.02);
     filter: drop-shadow(0 0 14px var(--jal-glow));
   }
 }
 
-header nav {
+/* Navigation */
+nav {
   display: flex;
-  gap: 1.5rem;
+  gap: 2rem;
   flex-wrap: wrap;
   justify-content: center;
 }
 
-header nav a {
+nav a {
   color: white;
   text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
-header nav a:hover {
+nav a:hover {
   color: var(--jal-glow);
+  text-shadow: 0 0 6px var(--jal-glow), 0 0 12px var(--jal-glow);
 }
 
+/* Wallet Adapter */
 .wallet-adapter-button {
   background-color: black !important;
   color: white !important;
@@ -200,15 +207,6 @@ footer {
 
 /* Responsive */
 @media (max-width: 768px) {
-  header nav {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .wallet-button {
-    padding-top: 2rem;
-  }
-
   section h1, section h2 {
     font-size: 1.8rem;
   }
@@ -227,7 +225,8 @@ footer {
     width: 100%;
   }
 }
-/* Center the wallet button on intro pages */
+
+/* Utility Classes */
 .wallet-button {
   margin-top: 4rem;
   display: flex;
@@ -236,15 +235,9 @@ footer {
   padding-top: 1rem;
   padding-bottom: 1rem;
 }
-/* Utility: Center buttons consistently */
-.center-button {
+
+.centered-button {
   display: flex;
   justify-content: center;
-  align-items: center;
-  margin-top: 0.75rem;
-}
-.center-button {
-  display: flex;
-  justify-content: center;
-  margin-top: 0.5rem;
+  margin-top: 1rem;
 }
