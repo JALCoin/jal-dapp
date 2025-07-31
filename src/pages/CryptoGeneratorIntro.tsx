@@ -6,14 +6,23 @@ export default function CryptoGeneratorIntro() {
   return (
     <main className="homepage">
       {/* Wallet Button */}
-<div className="wallet-button" style={{ marginTop: '3rem', display: 'flex', justifyContent: 'center' }}>
-  <WalletMultiButton />
-</div>
+      <div
+        className="wallet-button"
+        style={{
+          marginTop: "3rem",
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <WalletMultiButton />
+      </div>
 
-      {/* Intro */}
+      {/* Intro Section */}
       <section>
         <h1>Your Vault Starts Here</h1>
-        <p>Influence becomes infrastructure. This is where you mint your identity.</p>
+        <p>
+          Influence becomes infrastructure. This is where you mint your identity.
+        </p>
         <div className="centered-button">
           <Link to="/crypto-generator/engine" className="button">
             Begin Full Process
@@ -21,41 +30,50 @@ export default function CryptoGeneratorIntro() {
         </div>
       </section>
 
-      {/* Steps */}
-      <section className="section-group">
-        {/* Step 1 */}
-        <div className="card">
-          <h2>🪙 Mint a Token</h2>
-          <p>Create your SPL token directly from your wallet. Instant. Permissionless.</p>
-          <div className="centered-button">
-            <Link to="/crypto-generator/engine#step1" className="button">Go to Mint</Link>
+      {/* Step Cards */}
+      <section className="section-group flex flex-col items-center gap-6 mt-6">
+        {[
+          {
+            title: "🪙 Mint a Token",
+            desc: "Create your SPL token directly from your wallet. Instant. Permissionless.",
+            link: "/crypto-generator/engine#step1",
+            label: "Go to Mint",
+          },
+          {
+            title: "🧬 Attach Metadata",
+            desc: "Name it. Symbol it. Upload the logo. All saved to the chain.",
+            link: "/crypto-generator/engine#step5",
+            label: "Finalize Metadata",
+          },
+          {
+            title: "🚀 Use It",
+            desc: "Send it. Grow it. Launch with it. Power a currency around who you are.",
+            link: "/dashboard",
+            label: "View Tools",
+          },
+        ].map(({ title, desc, link, label }) => (
+          <div
+            key={title}
+            className="card w-full max-w-md text-center mx-auto"
+          >
+            <h2>{title}</h2>
+            <p>{desc}</p>
+            <div className="centered-button">
+              <Link to={link} className="button">
+                {label}
+              </Link>
+            </div>
           </div>
-        </div>
-
-        {/* Step 2 */}
-        <div className="card">
-          <h2>🧬 Attach Metadata</h2>
-          <p>Name it. Symbol it. Upload the logo. All saved to the chain.</p>
-          <div className="centered-button">
-            <Link to="/crypto-generator/engine#step5" className="button">Finalize Metadata</Link>
-          </div>
-        </div>
-
-        {/* Step 3 */}
-        <div className="card">
-          <h2>🚀 Use It</h2>
-          <p>Send it. Grow it. Launch with it. Power a currency around who you are.</p>
-          <div className="centered-button">
-            <Link to="/dashboard" className="button">View Tools</Link>
-          </div>
-        </div>
+        ))}
       </section>
 
       {/* Already Minted */}
       <section>
         <h2>Already minted?</h2>
         <div className="centered-button">
-          <Link to="/dashboard" className="button secondary">View My Vault</Link>
+          <Link to="/dashboard" className="button secondary">
+            View My Vault
+          </Link>
         </div>
       </section>
     </main>
