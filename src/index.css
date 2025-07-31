@@ -329,3 +329,12 @@ button:hover {
     height: 120px;
   }
 }
+/* Caret Fix */
+* {
+  caret-color: transparent;
+}
+input,
+textarea {
+  caret-color: auto;
+}
+
