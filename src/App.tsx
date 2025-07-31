@@ -24,23 +24,21 @@ const App: FC = () => {
 
 const Header: FC = () => (
   <header className="jal-header">
-    {/* Social Icons Top Left */}
-<div className="social-links">
-  <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
-    <img src="/icons/X.png" alt="X" />
-  </a>
-  <a href="https://instagram.com/YOUR_HANDLE" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-    <img src="/icons/Instagram.png" alt="Instagram" />
-  </a>
-  <a href="https://t.me/YOUR_TELEGRAM" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
-    <img src="/icons/Telegram.png" alt="Telegram" />
-  </a>
-  <a href="https://tiktok.com/@YOUR_HANDLE" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-    <img src="/icons/TikTok.png" alt="TikTok" />
-  </a>
-</div>
+    <div className="social-links">
+      <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+        <img src="/icons/X.png" alt="X" />
+      </a>
+      <a href="https://www.instagram.com/358jal/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+        <img src="/icons/Instagram.png" alt="Instagram" />
+      </a>
+      <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+        <img src="/icons/Telegram.png" alt="Telegram" />
+      </a>
+      <a href="https://www.tiktok.com/@358jal" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+        <img src="/icons/TikTok.png" alt="TikTok" />
+      </a>
+    </div>
 
-    {/* Logo and Navigation */}
     <div className="header-inner">
       <Link to="/" aria-label="JAL/SOL Home">
         <img src="/JALSOL1.gif" alt="JAL Vault Logo" className="logo" />
