@@ -5,6 +5,10 @@ import CryptoGeneratorIntro from './pages/CryptoGeneratorIntro';
 import CryptoGenerator from './pages/CryptoGenerator';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
+import About from './pages/About';
+import Manifesto from './pages/Manifesto';
+import Content from './pages/Content';
+import Learn from './pages/Learn';
 
 const App: FC = () => {
   return (
@@ -16,6 +20,10 @@ const App: FC = () => {
           <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
           <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/manifesto" element={<Manifesto />} />
+          <Route path="/content" element={<Content />} />
+          <Route path="/learn" element={<Learn />} />
         </Routes>
       </main>
     </Router>
@@ -47,6 +55,12 @@ const Header: FC = () => (
         <Link to="/">Home</Link>
         <Link to="/crypto-generator">Crypto Generator</Link>
         <Link to="/dashboard">Dashboard</Link>
+      </nav>
+      <nav className="bottom-nav">
+        <Link to="/about">About</Link>
+        <Link to="/manifesto">Manifesto</Link>
+        <Link to="/content">Content</Link>
+        <Link to="/learn">Learn</Link>
       </nav>
     </div>
   </header>
