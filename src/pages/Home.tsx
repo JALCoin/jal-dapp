@@ -9,7 +9,7 @@ export default function Home() {
         <h1>You’re as valuable as what you decide to build.</h1>
         <p>This is your vault. Mint it into something real.</p>
         <div className="cta-buttons">
-          <Link to="/create-token" className="button">Create Your Currency</Link>
+          <Link to="/crypto-generator" className="button">Create Your Currency</Link>
           <a href="#manifesto" className="button secondary">Read the Manifesto</a>
         </div>
       </section>
