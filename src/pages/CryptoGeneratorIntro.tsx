@@ -2,7 +2,15 @@
 import { Link } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
-export const generatorInfoBlocks = [
+// Type-safe block definition
+export interface GeneratorInfoBlock {
+  title: string;
+  content: string;
+  link?: { href: string; label: string };
+}
+
+// Exported data array used in multiple pages
+export const generatorInfoBlocks: GeneratorInfoBlock[] = [
   {
     title: "Mint a Token",
     content: "Define your symbol, supply, and mint authority using your connected wallet.",
@@ -23,10 +31,12 @@ export const generatorInfoBlocks = [
 export default function CryptoGeneratorIntro() {
   return (
     <main className="homepage">
+      {/* 🔐 Connect Wallet */}
       <div className="wallet-button" style={{ marginTop: "3rem", display: "flex", justifyContent: "center" }}>
         <WalletMultiButton />
       </div>
 
+      {/* 🚀 Generator Intro */}
       <section className="hero mt-6">
         <h1 className="hero-glow">Generate Your Currency</h1>
         <p className="text-center text-[var(--jal-muted)] max-w-2xl mx-auto">
@@ -38,6 +48,7 @@ export default function CryptoGeneratorIntro() {
         </div>
       </section>
 
+      {/* ⚙️ Generator Steps */}
       <section className="section-group flex flex-col items-center gap-6 mt-12">
         {generatorInfoBlocks.map(({ title, content, link }) => (
           <div key={title} className="card w-full max-w-md text-center mx-auto">
@@ -52,6 +63,7 @@ export default function CryptoGeneratorIntro() {
         ))}
       </section>
 
+      {/* 🔁 Already Generated */}
       <section className="mt-12 text-center">
         <h2 className="text-xl text-white font-semibold mb-2">Already created your token?</h2>
         <div className="centered-button">
@@ -59,6 +71,7 @@ export default function CryptoGeneratorIntro() {
         </div>
       </section>
 
+      {/* 📭 Footer */}
       <footer className="site-footer mt-16">
         Computed on SOL • Vaulted by JAL • 358jal@gmail.com
       </footer>
