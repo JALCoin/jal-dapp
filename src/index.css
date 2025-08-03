@@ -263,3 +263,52 @@ section.hero {
   background: rgba(0,0,0,0.2);
   box-shadow: inset 0 -2px 12px rgba(0,255,213,0.05);
 }
+/* === Cards === */
+.card {
+  background: var(--jal-surface);
+  color: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 0 6px rgba(0,255,213,0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: scale(1.01);
+  box-shadow: 0 0 10px var(--jal-glow);
+}
+
+/* === Buttons === */
+.button, button {
+  background-color: var(--jal-surface);
+  color: var(--jal-text);
+  font-weight: 600;
+  border: 1px solid var(--jal-glow);
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  box-shadow: 0 0 6px var(--jal-glow);
+  transition: all 0.3s ease;
+}
+
+.button:hover {
+  background-color: black;
+  box-shadow: 0 0 12px var(--jal-glow);
+}
+
+.button.secondary {
+  background-color: black;
+  color: white;
+  border: 1px solid white;
+}
+
+.button.secondary:hover {
+  background-color: var(--jal-surface);
+  color: var(--jal-text);
+  border-color: var(--jal-glow);
+}
+
+/* === Mobile Layout Padding Fix === */
+main > section {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
