@@ -386,4 +386,23 @@ body::after {
   right: 0;
   box-shadow: 0 0 12px var(--jal-glow);
 }
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 12px;
+}
 
+::-webkit-scrollbar-track {
+  background: #1c1c1c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--jal-glow);
+  border-radius: 6px;
+  box-shadow: 0 0 8px var(--jal-glow);
+  border: 2px solid #1c1c1c;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0ffdd4;
+  box-shadow: 0 0 12px var(--jal-glow), 0 0 18px var(--jal-glow);
+}
