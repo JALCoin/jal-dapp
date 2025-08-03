@@ -111,11 +111,11 @@ export default function Vault() {
 
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
-      <div className="max-w-6xl mx-auto text-center">
-        <h1 className="text-4xl font-extrabold uppercase mb-6 glow-text tracking-widest">Vault</h1>
+      <div className="max-w-6xl mx-auto">
+        <h1 className="vault-header">Vault</h1>
 
         {!publicKey && (
-          <div className="mb-8 flex justify-center">
+          <div className="vault-wallet">
             <WalletMultiButton />
           </div>
         )}
@@ -125,34 +125,26 @@ export default function Vault() {
         ) : visibleTokens.length === 0 ? (
           <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">No tokens found in your Vault.</p>
         ) : (
-          <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 justify-items-center">
+          <div className="vault-grid">
             {visibleTokens.map((token) => (
-              <div
-                key={token.mint}
-                className="token-card relative rounded-xl p-5 bg-[var(--jal-card)] border border-[var(--jal-glow)] shadow-lg hover:shadow-[0_0_24px_var(--jal-gold)] transition-all duration-300 w-full max-w-xs"
-              >
+              <div key={token.mint} className="token-card">
                 <button
                   onClick={() => handleHideToken(token.mint)}
                   title="Hide from vault"
                   className="absolute top-2 right-2 text-sm text-red-400 hover:text-white transition duration-150 px-2"
-                >
-                  ✕
-                </button>
+                >✕</button>
 
                 {token.image && (
                   <img
                     src={token.image.startsWith('ipfs://') ? token.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : token.image}
                     alt={token.name || token.symbol || 'Token'}
-                    className="w-20 h-20 object-contain mx-auto mb-4 rounded-md drop-shadow"
                   />
                 )}
 
                 <div className="text-center space-y-1">
                   <p className="text-white font-semibold text-lg">{token.name || 'Unnamed Token'}</p>
                   <p className="text-[var(--jal-muted)] text-sm">{token.symbol || '—'}</p>
-                  <p className="text-sm break-all">
-                    <strong className="text-[var(--jal-glow)]">Mint:</strong> {token.mint}
-                  </p>
+                  <p className="text-sm break-all"><strong className="text-[var(--jal-glow)]">Mint:</strong> {token.mint}</p>
                   <p><strong>Amount:</strong> {token.amount}</p>
                 </div>
 
@@ -161,17 +153,15 @@ export default function Vault() {
                     href={`https://solscan.io/token/${token.mint}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-blue-400 hover:underline"
+                    className="explorer-link"
                   >
                     View on Solscan ↗
                   </a>
                   <button
-                    className="text-sm bg-black border border-[var(--jal-gold)] px-2 py-1 rounded hover:bg-[var(--jal-surface)]"
+                    className="copy-btn"
                     onClick={() => navigator.clipboard.writeText(token.mint)}
                     title="Copy mint address"
-                  >
-                    📋 Copy
-                  </button>
+                  >📋 Copy</button>
                 </div>
 
                 {token.hasMetadata && localStorage.getItem(`unlocked-${token.mint}`) && (
