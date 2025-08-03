@@ -1,4 +1,5 @@
-Rewrite Index.css and add cantering. Also, the images need to load from  \\wsl.localhost\Ubuntu-22.04\home\jal\jal-dapp\public\icons & \\wsl.localhost\Ubuntu-22.04\home\jal\jal-dapp\public.: :root {
+/* === Global Theme Variables === */
+:root {
   --jal-bg: #1c1c1c;
   --jal-surface: #2a2a2a;
   --jal-text: #11f1a7;
@@ -27,6 +28,7 @@ html, body, #root {
   min-height: 100vh;
   scroll-behavior: smooth;
   background-color: var(--jal-bg);
+  display: block;
 }
 
 body::after {
@@ -42,6 +44,7 @@ body::after {
   pointer-events: none;
 }
 
+/* === Header === */
 header {
   width: 100%;
   background: black;
@@ -102,6 +105,7 @@ header {
   20%, 24%, 55% { opacity: 0.5; }
 }
 
+/* === Navigation === */
 .main-nav {
   display: flex;
   gap: 2.5rem;
@@ -194,6 +198,22 @@ header {
   transition: transform 0.2s ease, filter 0.3s ease;
 }
 
+.social-links img[src*="X"] {
+  content: url("/icons/X.png");
+}
+
+.social-links img[src*="Telegram"] {
+  content: url("/icons/Telegram.png");
+}
+
+.social-links img[src*="TikTok"] {
+  content: url("/icons/TikTok.png");
+}
+
+.social-links img[src*="Instagram"] {
+  content: url("/icons/Instagram.png");
+}
+
 .social-links img:hover {
   transform: scale(1.1);
   filter: drop-shadow(0 0 6px var(--jal-glow));
@@ -224,53 +244,41 @@ section h1, section h2 {
   font-weight: 800;
   letter-spacing: 1px;
   text-shadow: 0 0 6px var(--jal-glow), 0 0 12px var(--jal-glow), 0 0 18px var(--jal-glow);
+  text-align: center;
 }
 
-/* === Cards === */
-.card {
-  background: linear-gradient(145deg, #111, #222);
-  border: 1px solid var(--jal-border);
-  box-shadow: 0 0 10px rgba(0,255,213,0.1), 0 0 24px rgba(0,255,213,0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.card:hover {
-  transform: scale(1.01);
-  box-shadow: 0 0 16px var(--jal-glow), 0 0 32px var(--jal-glow);
-}
-
-/* === Buttons === */
-.button, button {
-  background-color: black;
-  color: var(--jal-text);
-  border: 1px solid var(--jal-glow);
-  box-shadow: 0 0 6px var(--jal-glow);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.button:hover, button:hover {
-  background-color: var(--jal-surface);
-  box-shadow: 0 0 12px var(--jal-glow), 0 0 24px var(--jal-glow);
-}
-
-/* === Hero Section === */
-section.hero {
+/* === Layout === */
+main > section {
   padding-top: 4rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--jal-border);
-  background: rgba(0,0,0,0.2);
-  box-shadow: inset 0 -2px 12px rgba(0,255,213,0.05);
+  padding-bottom: 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
+
+.token-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.token-card {
+  text-align: center;
+}
+
 /* === Cards === */
 .card {
   background: var(--jal-surface);
   color: white;
   border-radius: 12px;
   padding: 2rem;
+  margin-bottom: 2rem;
   box-shadow: 0 0 6px rgba(0,255,213,0.05);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-align: center;
 }
 
 .card:hover {
@@ -305,10 +313,4 @@ section.hero {
   background-color: var(--jal-surface);
   color: var(--jal-text);
   border-color: var(--jal-glow);
-}
-
-/* === Mobile Layout Padding Fix === */
-main > section {
-  padding-top: 2.5rem;
-  padding-bottom: 2.5rem;
 }
