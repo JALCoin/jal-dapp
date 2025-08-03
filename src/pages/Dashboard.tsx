@@ -120,12 +120,12 @@ const Dashboard: FC = () => {
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
       <div className="container">
-        <h1 className="text-3xl font-bold text-center">Your Created Tokens</h1>
+        <h1 className="text-3xl font-bold text-center glow-text white-glow mb-4">Your Created Tokens</h1>
 
         {loading ? (
-          <p className="text-center mt-4 text-[var(--jal-muted)]">Loading token accounts...</p>
+          <p className="text-center mt-4 glow-muted">Loading token accounts...</p>
         ) : visibleTokens.length === 0 ? (
-          <p className="text-center mt-4 text-[var(--jal-muted)]">No tokens created by this wallet.</p>
+          <p className="text-center mt-4 glow-muted">No tokens created by this wallet.</p>
         ) : (
           <div className="token-list">
             {visibleTokens.map((token) => (
