@@ -1,11 +1,11 @@
 :root {
-  --jal-bg: #313131;
-  --jal-surface: #3d3d3d;
+  --jal-bg: #202429;
+  --jal-surface: #2c2f36;
   --jal-text: #11f1a7;
-  --jal-muted: rgba(255, 255, 255, 0.4);
-  --jal-glow: #11f1a7;
-  --jal-card: #2e2e2e;
-  --jal-border: #11f1a744;
+  --jal-muted: rgba(17, 241, 167, 0.4);
+  --jal-glow: #20ffe7;
+  --jal-card: #262a31;
+  --jal-border: #11f1a777;
 
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-weight: 400;
