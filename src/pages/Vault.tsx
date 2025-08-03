@@ -125,7 +125,7 @@ export default function Vault() {
         ) : visibleTokens.length === 0 ? (
           <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">No tokens found in your Vault.</p>
         ) : (
-          <div className="vault-grid">
+          <div className="vault-grid"><div className="vault-grid mx-auto justify-center">
             {visibleTokens.map((token) => (
               <div key={token.mint} className="token-card">
                 <button
