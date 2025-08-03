@@ -14,12 +14,12 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import TokenFinalizerModal from '../utils/TokenFinalizerModal';
 
 const steps = [
-  'Create Mint Account',
+  'Generate Token Mint',
   'Initialize Mint',
-  'Create Associated Token Account',
-  'Mint Tokens',
-  'Turn Into Currency',
-  'Done',
+  'Create Token Account',
+  'Mint Supply',
+  'Attach Metadata',
+  'Vault Complete',
 ];
 
 const CryptoGenerator: FC = () => {
@@ -48,7 +48,7 @@ const CryptoGenerator: FC = () => {
       const index = parseInt(match[1], 10) - 1;
       if (index >= 0 && index < steps.length) {
         setStep(index);
-        log(`⏩ Jumped to step ${index + 1}: ${steps[index]}`);
+        log(`Jumped to step ${index + 1}: ${steps[index]}`);
       }
     }
   }, [location]);
@@ -80,8 +80,8 @@ const CryptoGenerator: FC = () => {
           tx.partialSign(mintAccount);
 
           const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
-          log(`📤 Mint created: ${mintAccount.publicKey.toBase58()}`);
-          log(`🔗 https://solscan.io/tx/${sig}`);
+          log(`Mint created: ${mintAccount.publicKey.toBase58()}`);
+          log(`https://solscan.io/tx/${sig}`);
           break;
         }
 
@@ -91,8 +91,8 @@ const CryptoGenerator: FC = () => {
             createInitializeMintInstruction(mint, 9, publicKey, null)
           );
           const sig = await sendTransaction(tx, connection);
-          log(`✅ Mint initialized`);
-          log(`🔗 https://solscan.io/tx/${sig}`);
+          log(`Mint initialized`);
+          log(`https://solscan.io/tx/${sig}`);
           break;
         }
 
@@ -105,8 +105,8 @@ const CryptoGenerator: FC = () => {
             createAssociatedTokenAccountInstruction(publicKey, ataAddress, publicKey, mint)
           );
           const sig = await sendTransaction(tx, connection);
-          log(`📦 ATA created: ${ataAddress.toBase58()}`);
-          log(`🔗 https://solscan.io/tx/${sig}`);
+          log(`Token account created: ${ataAddress.toBase58()}`);
+          log(`https://solscan.io/tx/${sig}`);
           break;
         }
 
@@ -117,8 +117,8 @@ const CryptoGenerator: FC = () => {
             createMintToInstruction(mint, ata, publicKey, amount)
           );
           const sig = await sendTransaction(tx, connection);
-          log(`✅ Tokens minted`);
-          log(`🔗 https://solscan.io/tx/${sig}`);
+          log(`Supply minted`);
+          log(`https://solscan.io/tx/${sig}`);
           break;
         }
 
@@ -131,7 +131,7 @@ const CryptoGenerator: FC = () => {
           if (mint && ata) {
             localStorage.setItem('mint', mint.toBase58());
             localStorage.setItem('ata', ata.toBase58());
-            log(`🎉 Token creation complete!`);
+            log(`Token generation complete.`);
           }
           break;
         }
@@ -139,7 +139,7 @@ const CryptoGenerator: FC = () => {
 
       setStep((s) => s + 1);
     } catch (err: any) {
-      log(`❌ ${err.message}`);
+      log(`Error: ${err.message}`);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -158,15 +158,14 @@ const CryptoGenerator: FC = () => {
   const goToDashboard = () => navigate('/dashboard');
 
   const handleMetadataSuccess = (mint: string) => {
-    log(`🌐 Metadata attached to ${mint}`);
+    log(`Metadata attached to ${mint}`);
     setStep((s) => s + 1);
     setShowFinalizer(false);
   };
 
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] flex items-start justify-center py-20 px-4">
-      <div className="w-full max-w-xl space-y-6" id={`step${step + 1}`}>
-
+      <div className="w-full max-w-xl space-y-6" id={`step${step + 1}`}>      
         <div className="flex justify-center mb-6">
           <WalletMultiButton />
         </div>
@@ -178,27 +177,15 @@ const CryptoGenerator: FC = () => {
           <button onClick={reset} className="text-xs text-red-500 underline">Reset</button>
         </div>
 
-        {error && <p className="text-sm text-red-600">❌ {error}</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
         {step < steps.length ? (
-          <button
-            onClick={runStep}
-            disabled={loading || !publicKey}
-            className="button"
-          >
-            {loading ? 'Processing...' : 'Next Step ➡️'}
+          <button onClick={runStep} disabled={loading || !publicKey} className="button">
+            {loading ? 'Processing...' : 'Next Step'}
           </button>
         ) : (
-          <div className="space-y-3 text-xs text-green-600">
-            <p>
-              <strong>Mint:</strong> {mint?.toBase58()}
-              <button
-                className="ml-2 text-blue-500 underline"
-                onClick={() => mint && navigator.clipboard.writeText(mint.toBase58())}
-              >
-                Copy
-              </button>
-            </p>
+          <div className="space-y-3 text-sm text-green-600">
+            <p><strong>Mint:</strong> {mint?.toBase58()}</p>
             <p>
               <a
                 href={`https://solscan.io/token/${mint?.toBase58()}`}
@@ -206,21 +193,16 @@ const CryptoGenerator: FC = () => {
                 rel="noopener noreferrer"
                 className="text-blue-600 underline"
               >
-                View on Solscan ↗
+                View on Solscan
               </a>
             </p>
-            <button
-              onClick={goToDashboard}
-              className="bg-[var(--jal-green)] text-black font-semibold px-4 py-2 rounded hover:brightness-110 transition"
-            >
-              View in Dashboard
-            </button>
+            <button onClick={goToDashboard} className="button">Go to Vault</button>
           </div>
         )}
 
         {logs.length > 0 && (
           <div className="log-box">
-            <p className="text-[var(--jal-green)] font-bold mb-2">🪵 Transaction Log</p>
+            <p className="text-[var(--jal-green)] font-bold mb-2">Log</p>
             {logs.map((msg, i) => (
               <p key={i}>{msg}</p>
             ))}

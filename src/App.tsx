@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -10,8 +10,9 @@ import {
 import Home from "./pages/Home";
 import CryptoGenerator from "./pages/CryptoGenerator";
 import Dashboard from "./pages/Dashboard";
+import Vault from "./pages/Vault";
 
-// Optional future modules (can be safely removed/commented)
+// Optional (prepped for later modular growth)
 import About from "./pages/About";
 import Manifesto from "./pages/Manifesto";
 import Learn from "./pages/Learn";
@@ -19,8 +20,20 @@ import Content from "./pages/Content";
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const toggleMenu = () => setMenuOpen(!menuOpen);
+  const [userSymbol, setUserSymbol] = useState<string | null>(null);
+
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("vaultSymbol");
+    if (stored) setUserSymbol(stored.toUpperCase());
+  }, []);
+
+  const VaultLink = () =>
+    userSymbol ? `/vault/${userSymbol}` : `/dashboard`;
+  const VaultLabel = () =>
+    userSymbol ? `VAULT / ${userSymbol}` : `VAULT / JAL`;
 
   return (
     <Router>
@@ -30,13 +43,13 @@ function App() {
             <img src="/logo-glow-gold.svg" alt="JALSOL Logo" className="logo" />
           </NavLink>
 
-          {/* 🌐 Desktop Navigation */}
+          {/* 🔒 Top Nav */}
           <nav className="main-nav">
             <NavLink to="/" onClick={closeMenu} className="nav-link">
               JAL/SOL
             </NavLink>
-            <NavLink to="/dashboard" onClick={closeMenu} className="nav-link">
-              VAULT / JAL
+            <NavLink to={VaultLink()} onClick={closeMenu} className="nav-link">
+              {VaultLabel()}
             </NavLink>
             <NavLink to="/learn" onClick={closeMenu} className="nav-link">
               LEARN/SOL
@@ -46,7 +59,7 @@ function App() {
             </NavLink>
           </nav>
 
-          {/* 📡 Social Links */}
+          {/* 📡 Social */}
           <div className="social-links">
             <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer">
               <img src="/x.svg" alt="X" />
@@ -59,14 +72,14 @@ function App() {
             </a>
           </div>
 
-          {/* 🍔 Hamburger */}
+          {/* 🍔 Menu */}
           <button className="hamburger" onClick={toggleMenu}>
             {menuOpen ? "✕" : "☰"}
           </button>
         </div>
       </header>
 
-      {/* 📱 Sidebar Navigation */}
+      {/* 📱 Sidebar Nav */}
       {menuOpen && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
@@ -74,8 +87,8 @@ function App() {
             <NavLink to="/" onClick={closeMenu} className="nav-link">
               JAL/SOL
             </NavLink>
-            <NavLink to="/dashboard" onClick={closeMenu} className="nav-link">
-              VAULT / JAL
+            <NavLink to={VaultLink()} onClick={closeMenu} className="nav-link">
+              {VaultLabel()}
             </NavLink>
             <NavLink to="/learn" onClick={closeMenu} className="nav-link">
               LEARN/SOL
@@ -87,11 +100,12 @@ function App() {
         </>
       )}
 
-      {/* 🧭 Route Views */}
+      {/* 🔁 Route Definitions */}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/vault/:symbol" element={<Vault />} />
         <Route path="/about" element={<About />} />
         <Route path="/manifesto" element={<Manifesto />} />
         <Route path="/content" element={<Content />} />

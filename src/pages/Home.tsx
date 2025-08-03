@@ -6,79 +6,75 @@ export default function Home() {
     <main className="homepage">
       {/* Hero Section */}
       <section className="hero">
-        <h1>You’re as valuable as what you decide to build.</h1>
-        <p>This is your vault. Mint it into something real.</p>
+        <h1>JAL/SOL: A Currency Generator</h1>
+        <p>
+          Built by JAL. Computed on SOL. This is a tool to mint presence, not hype.
+        </p>
         <div className="cta-buttons">
-          <Link to="/crypto-generator" className="button">Create Your Currency</Link>
-          <a href="#manifesto" className="button secondary">Read the Manifesto</a>
+          <Link to="/crypto-generator" className="button gold">Create Your Currency</Link>
         </div>
       </section>
 
-      {/* Core Flow Section */}
+      {/* VAULT Overview */}
       <section className="section-group">
-        {/* Generator */}
         <div className="card">
-          <h2>Currency Generator</h2>
-          <p>🪙 Step 1: Connect Phantom Wallet</p>
-          <p>🔨 Step 2: Mint Token</p>
-          <p>🧬 Step 3: Attach Identity</p>
-          <p>🔓 Step 4: Become a Vault</p>
+          <h2>What is the VAULT?</h2>
+          <p>
+            The VAULT generates Solana tokens with a Neutral Reputation on Solscan.
+            Identity is attached on-chain using Lighthouse and Metaplex.
+          </p>
+          <p>
+            Each token receives a public vault URL:<br />
+            <strong>jalsol.com/VAULT/YOURSYMBOL</strong>
+          </p>
           <div className="centered-button">
-            <Link to="/create-token" className="button">Begin Creation</Link>
+            <Link to="/crypto-generator" className="button">Start Generation</Link>
           </div>
         </div>
 
-        {/* Manifesto */}
-        <div id="manifesto" className="card dark">
-          <h2>The JAL/SOL Manifesto</h2>
-          <p>This isn’t about crypto. It’s about truth, presence, and claiming space. It's about putting your name on something that won’t fade.</p>
-          <p className="glow-text">This is the future of on-chain identity.</p>
+        {/* Token Creation Flow */}
+        <div className="card">
+          <h2>How It Works</h2>
+          <p>1. Connect your Phantom Wallet</p>
+          <p>2. Mint your Token</p>
+          <p>3. Upload metadata to Lighthouse</p>
+          <p>4. Finalize it using Metaplex</p>
+          <p>5. You now own a Vault</p>
         </div>
 
-        {/* About */}
-        <div className="card">
+        {/* Creator */}
+        <div className="card dark">
           <h2>About JAL</h2>
           <p>
-            I'm Jeremy Aaron Lugg. Born like a king. Built to turn influence into currency. This is more than a dApp. It’s my vault—and now it’s yours too.
+            I’m Jeremy Aaron Lugg. Born like a king. Built like a ledger.
+            JAL/SOL is how I prove that influence can become infrastructure.
           </p>
           <div className="cta-buttons">
             <a href="https://x.com/JAL358" className="button" target="_blank" rel="noopener noreferrer">
-              Follow Me on X
+              X Profile
             </a>
             <a href="mailto:358jal@gmail.com" className="button">Contact</a>
           </div>
         </div>
 
-        {/* Dashboard */}
+        {/* Sample Vaults */}
         <div className="card">
-          <h2>Explore the Vaults</h2>
-          <p>Recently minted tokens by others like you:</p>
+          <h2>Recent Vaults</h2>
+          <p>Live tokens minted using JAL/SOL:</p>
           <ul className="vault-list">
             <li>$POWERUP</li>
             <li>$SOVEREIGN</li>
             <li>$CHOSEN</li>
           </ul>
           <div className="centered-button">
-            <Link to="/dashboard" className="button secondary">View Dashboard</Link>
+            <Link to="/dashboard" className="button secondary">Open the Vault</Link>
           </div>
-        </div>
-
-        {/* Join */}
-        <div className="card">
-          <h2>Join the Mission</h2>
-          <p>Want early access to drops and secret content?</p>
-          <form onSubmit={(e) => e.preventDefault()} className="newsletter-form">
-            <input type="email" placeholder="you@example.com" required />
-            <div className="centered-button">
-              <button type="submit" className="button">Join Now</button>
-            </div>
-          </form>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="site-footer">
-        © 2025 JAL/SOL • Built on Solana • 358jal@gmail.com
+        © 2025 JAL/SOL • Computed by SOL • 358jal@gmail.com
       </footer>
     </main>
   );
