@@ -1,6 +1,6 @@
 // src/pages/Home.tsx
 import { Link } from "react-router-dom";
-import CryptoGeneratorInfo from "./CryptoGeneratorInfo";
+import { generatorInfoBlocks as CryptoGeneratorInfo } from "./CryptoGeneratorIntro";
 
 export default function Home() {
   return (
@@ -16,7 +16,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === INFO SECTION (CryptoGeneratorInfo) === */}
+      {/* === INFO SECTION (CryptoGeneratorIntro blocks) === */}
       <section className="section-group">
         {CryptoGeneratorInfo.map((block, i) => (
           <div key={i} className={`card ${block.className || ''}`}>
@@ -26,16 +26,14 @@ export default function Home() {
               : <p>{block.content}</p>}
             {block.link && (
               <div className="centered-button mt-4">
-                <Link to={block.link.href} className="button">
-                  {block.link.label}
-                </Link>
+                <Link to={block.link.href} className="button">{block.link.label}</Link>
               </div>
             )}
           </div>
         ))}
       </section>
 
-      {/* === ABOUT === */}
+      {/* === ABOUT JAL === */}
       <section className="section-group">
         <div className="card dark">
           <h2>About JAL</h2>
@@ -50,7 +48,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === SAMPLE VAULTS === */}
+      {/* === RECENT VAULTS === */}
       <section className="section-group">
         <div className="card">
           <h2>Recent Vaults</h2>
