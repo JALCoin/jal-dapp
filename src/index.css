@@ -307,3 +307,70 @@ main > section {
   border-color: var(--jal-gold);
   color: var(--jal-text);
 }
+/* === Vault Page Specific === */
+.vault-header {
+  font-size: 2rem;
+  font-weight: 800;
+  color: white;
+  text-align: center;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px var(--jal-gold), 0 0 12px white;
+}
+
+.vault-wallet {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.vault-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  justify-items: center;
+}
+
+.token-card {
+  background: var(--jal-card);
+  border: 1px solid var(--jal-glow);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 320px;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 16px var(--jal-glow);
+}
+
+.token-card:hover {
+  box-shadow: 0 0 20px var(--jal-gold), 0 0 32px white;
+}
+
+.token-card img {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1rem;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 10px var(--jal-gold);
+}
+
+.token-card p {
+  margin: 0.25rem 0;
+}
+
+.token-card .explorer-link {
+  display: block;
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #0af;
+  text-decoration: underline;
+}
+
+.token-card .copy-btn {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
