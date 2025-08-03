@@ -1,3 +1,4 @@
+// src/pages/Home.tsx
 import { Link } from "react-router-dom";
 
 export default function Home() {
@@ -6,7 +7,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="hero">
         <h1 className="gold-glow">You’re as valuable as what you decide to build.</h1>
-        <p>This is your vault. Mint it into something real.</p>
+        <p className="gold">This is your vault. Mint it into something real.</p>
         <div className="cta-buttons">
           <Link to="/crypto-generator" className="button gold">Create Your Currency</Link>
           <a href="#manifesto" className="button secondary">Read the Manifesto</a>
@@ -16,9 +17,9 @@ export default function Home() {
       {/* Core Flow Section */}
       <section className="section-group">
         {/* Generator */}
-        <div className="card">
+        <div className="card gold">
           <h2 className="gold-glow">Currency Generator</h2>
-          <p>🪙 Step 1: Connect Phantom Wallet</p>
+          <p className="gold">🪙 Step 1: Connect Phantom Wallet</p>
           <p>🔨 Step 2: Mint Token</p>
           <p>🧬 Step 3: Attach Identity</p>
           <p>🔓 Step 4: Become a Vault</p>
@@ -36,9 +37,9 @@ export default function Home() {
 
         {/* About */}
         <div className="card">
-          <h2>About JAL</h2>
+          <h2 className="gold">About JAL</h2>
           <p>
-            I'm Jeremy Aaron Lugg. Born like a king. Built to turn influence into currency. This is more than a dApp. It’s my vault—and now it’s yours too.
+            I'm Jeremy Aaron Lugg. Born like a king. Built to turn influence into currency. This is more than a dApp—it’s my vault, and now it’s yours too.
           </p>
           <div className="cta-buttons">
             <a href="https://x.com/JAL358" className="button" target="_blank" rel="noopener noreferrer">
@@ -48,9 +49,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Dashboard */}
+        {/* Vault List */}
         <div className="card">
-          <h2>Explore the Vaults</h2>
+          <h2 className="gold-glow">Explore the Vaults</h2>
           <p>Recently minted tokens by others like you:</p>
           <ul className="vault-list gold-glow">
             <li>$POWERUP</li>
@@ -63,7 +64,7 @@ export default function Home() {
         </div>
 
         {/* Join */}
-        <div className="card">
+        <div className="card gold-border">
           <h2 className="gold-glow">Join the Mission</h2>
           <p>Want early access to drops and secret content?</p>
           <form onSubmit={(e) => e.preventDefault()} className="newsletter-form">
