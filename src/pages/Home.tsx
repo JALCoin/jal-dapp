@@ -1,4 +1,3 @@
-// src/pages/Home.tsx
 import { Link } from "react-router-dom";
 
 export default function Home() {
@@ -6,10 +5,10 @@ export default function Home() {
     <main className="homepage">
       {/* Hero Section */}
       <section className="hero">
-        <h1>You’re as valuable as what you decide to build.</h1>
+        <h1 className="gold-glow">You’re as valuable as what you decide to build.</h1>
         <p>This is your vault. Mint it into something real.</p>
         <div className="cta-buttons">
-          <Link to="/crypto-generator" className="button">Create Your Currency</Link>
+          <Link to="/crypto-generator" className="button gold">Create Your Currency</Link>
           <a href="#manifesto" className="button secondary">Read the Manifesto</a>
         </div>
       </section>
@@ -18,7 +17,7 @@ export default function Home() {
       <section className="section-group">
         {/* Generator */}
         <div className="card">
-          <h2>Currency Generator</h2>
+          <h2 className="gold-glow">Currency Generator</h2>
           <p>🪙 Step 1: Connect Phantom Wallet</p>
           <p>🔨 Step 2: Mint Token</p>
           <p>🧬 Step 3: Attach Identity</p>
@@ -29,8 +28,8 @@ export default function Home() {
         </div>
 
         {/* Manifesto */}
-        <div id="manifesto" className="card dark">
-          <h2>The JAL/SOL Manifesto</h2>
+        <div id="manifesto" className="card dark gold-border">
+          <h2 className="gold-glow">The JAL/SOL Manifesto</h2>
           <p>This isn’t about crypto. It’s about truth, presence, and claiming space. It's about putting your name on something that won’t fade.</p>
           <p className="glow-text">This is the future of on-chain identity.</p>
         </div>
@@ -53,7 +52,7 @@ export default function Home() {
         <div className="card">
           <h2>Explore the Vaults</h2>
           <p>Recently minted tokens by others like you:</p>
-          <ul className="vault-list">
+          <ul className="vault-list gold-glow">
             <li>$POWERUP</li>
             <li>$SOVEREIGN</li>
             <li>$CHOSEN</li>
@@ -65,12 +64,12 @@ export default function Home() {
 
         {/* Join */}
         <div className="card">
-          <h2>Join the Mission</h2>
+          <h2 className="gold-glow">Join the Mission</h2>
           <p>Want early access to drops and secret content?</p>
           <form onSubmit={(e) => e.preventDefault()} className="newsletter-form">
             <input type="email" placeholder="you@example.com" required />
             <div className="centered-button">
-              <button type="submit" className="button">Join Now</button>
+              <button type="submit" className="button gold">Join Now</button>
             </div>
           </form>
         </div>
