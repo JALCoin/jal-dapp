@@ -1,22 +1,21 @@
+// src/App.tsx
 import { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Link } from "react-router-dom";
 import Home from "./pages/Home";
-import CreateToken from "./pages/CreateToken";
 import CryptoGenerator from "./pages/CryptoGenerator";
 import Dashboard from "./pages/Dashboard";
 
-export default function App() {
+function App() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
+  const toggleMenu = () => setMenuOpen(!menuOpen);
   const closeMenu = () => setMenuOpen(false);
 
   return (
     <Router>
-      {/* === Header === */}
       <header>
         <div className="header-inner">
           <Link to="/" onClick={closeMenu}>
-            <img src="/logo-glow-gold.svg" alt="JALSOL" className="logo" />
+            <img src="/logo-glow-gold.svg" alt="JALSOL Logo" className="logo" />
           </Link>
 
           <nav className="social-links">
@@ -37,10 +36,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* === Sidebar Menu === */}
       {menuOpen && (
         <>
-          <div className="sidebar-overlay" onClick={closeMenu} />
+          <div className="sidebar-overlay" onClick={closeMenu}></div>
           <div className="sidebar-nav">
             <Link to="/" onClick={closeMenu}>Home</Link>
             <Link to="/crypto-generator" onClick={closeMenu}>Crypto Generator</Link>
@@ -53,13 +51,13 @@ export default function App() {
         </>
       )}
 
-      {/* === Pages === */}
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/create-token" element={<CreateToken />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
   );
 }
+
+export default App;
