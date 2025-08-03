@@ -12,7 +12,7 @@ import CryptoGenerator from "./pages/CryptoGenerator";
 import Dashboard from "./pages/Dashboard";
 import Vault from "./pages/Vault";
 
-// Optional modules for expansion
+// Optional expansion modules
 import About from "./pages/About";
 import Manifesto from "./pages/Manifesto";
 import Learn from "./pages/Learn";
@@ -37,10 +37,12 @@ function App() {
     <Router>
       <header>
         <div className="header-inner">
+          {/* 🌀 Logo */}
           <NavLink to="/" onClick={closeMenu}>
-            <img src="/JALLogo.jpg" alt="JALSOL Logo" className="logo" />
+            <img src="/JALSOL1.gif" alt="JALSOL Logo" className="logo header-logo" />
           </NavLink>
 
+          {/* 🔗 Top Navigation */}
           <nav className="main-nav">
             <NavLink to="/" onClick={closeMenu} className="nav-link">
               JAL/SOL
@@ -56,6 +58,7 @@ function App() {
             </NavLink>
           </nav>
 
+          {/* 📡 Social Media */}
           <div className="social-links">
             <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer">
               <img src="/icons/X.png" alt="X" />
@@ -68,12 +71,14 @@ function App() {
             </a>
           </div>
 
+          {/* 🍔 Mobile Menu Button */}
           <button className="hamburger" onClick={toggleMenu}>
             {menuOpen ? "✕" : "☰"}
           </button>
         </div>
       </header>
 
+      {/* 📱 Mobile Sidebar Navigation */}
       {menuOpen && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
@@ -94,6 +99,7 @@ function App() {
         </>
       )}
 
+      {/* 🔁 Routes */}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
