@@ -1,6 +1,5 @@
 // src/pages/Dashboard.tsx
-import type { FC } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { FC, useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
@@ -17,11 +16,7 @@ interface TokenInfo {
 
 const Dashboard: FC = () => {
   const { publicKey } = useWallet();
-  const connection = useMemo(
-    () => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'),
-    []
-  );
-
+  const connection = useMemo(() => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'), []);
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [hiddenMints, setHiddenMints] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,11 +25,7 @@ const Dashboard: FC = () => {
     try {
       const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
       const [metadataPDA] = await PublicKey.findProgramAddress(
-        [
-          Buffer.from("metadata"),
-          METADATA_PROGRAM_ID.toBuffer(),
-          new PublicKey(mint).toBuffer(),
-        ],
+        [Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), new PublicKey(mint).toBuffer()],
         METADATA_PROGRAM_ID
       );
 
@@ -44,7 +35,6 @@ const Dashboard: FC = () => {
       const uriStart = 115;
       const uriEnd = uriStart + 200;
       const uri = new TextDecoder().decode(accountInfo.data.slice(uriStart, uriEnd)).replace(/\u0000/g, '').trim();
-
       const res = await fetch(uri.startsWith('http') ? uri : `https://ipfs.io/ipfs/${uri.replace('ipfs://', '')}`);
       const data = await res.json();
 
@@ -119,55 +109,58 @@ const Dashboard: FC = () => {
 
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
-      <div className="container">
-        <h1 className="text-3xl font-bold text-center glow-text white-glow mb-4">Your Created Tokens</h1>
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-extrabold text-center mb-8 glow-text white-glow uppercase tracking-widest">
+          Your Vault
+        </h1>
 
         {loading ? (
-          <p className="text-center mt-4 glow-muted">Loading token accounts...</p>
+          <p className="text-center mt-10 text-[var(--jal-muted)] text-lg animate-pulse">Loading tokens...</p>
         ) : visibleTokens.length === 0 ? (
-          <p className="text-center mt-4 glow-muted">No tokens created by this wallet.</p>
+          <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">No tokens found in your Vault.</p>
         ) : (
-          <div className="token-list">
+          <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {visibleTokens.map((token) => (
-              <div key={token.mint} className="token-card">
+              <div key={token.mint} className="token-card relative rounded-xl p-5 bg-[var(--jal-card)] border border-[var(--jal-glow)] shadow-lg hover:shadow-[0_0_24px_var(--jal-gold)] transition-all duration-300">
                 <button
-                  className="delete-btn"
                   onClick={() => handleHideToken(token.mint)}
-                  title="Remove from dashboard"
-                >×</button>
+                  title="Hide from dashboard"
+                  className="absolute top-2 right-2 text-sm text-red-400 hover:text-white transition duration-150 px-2"
+                >✕</button>
 
                 {token.image && (
                   <img
                     src={token.image.startsWith('ipfs://') ? token.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : token.image}
-                    alt={token.name || token.symbol || 'Token Logo'}
-                    className="w-16 h-16 object-contain mb-2"
+                    alt={token.name || token.symbol || 'Token'}
+                    className="w-20 h-20 object-contain mx-auto mb-4 rounded-md drop-shadow"
                   />
                 )}
 
-                <div className="token-info">
-                  <p><strong>Name:</strong> {token.name || '—'}</p>
-                  <p><strong>Symbol:</strong> {token.symbol || '—'}</p>
-                  <p>
-                    <strong>Mint:</strong>{' '}
-                    <span className="mono">{token.mint}</span>
-                    <button
-                      className="copy-btn"
-                      onClick={() => navigator.clipboard.writeText(token.mint)}
-                      title="Copy Mint Address"
-                    >📋</button>
-                  </p>
+                <div className="text-center space-y-1">
+                  <p className="text-white font-semibold text-lg">{token.name || 'Unnamed Token'}</p>
+                  <p className="text-[var(--jal-muted)] text-sm">{token.symbol || '—'}</p>
+                  <p className="text-sm break-all"><strong className="text-[var(--jal-glow)]">Mint:</strong> {token.mint}</p>
                   <p><strong>Amount:</strong> {token.amount}</p>
                 </div>
 
-                <a
-                  href={`https://solscan.io/token/${token.mint}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="explorer-link"
-                >View on Solscan ↗</a>
+                <div className="mt-4 flex justify-between items-center">
+                  <a
+                    href={`https://solscan.io/token/${token.mint}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-400 hover:underline"
+                  >
+                    View on Solscan ↗
+                  </a>
+                  <button
+                    className="text-sm bg-black border border-[var(--jal-gold)] px-2 py-1 rounded hover:bg-[var(--jal-surface)]"
+                    onClick={() => navigator.clipboard.writeText(token.mint)}
+                    title="Copy mint address"
+                  >📋 Copy</button>
+                </div>
 
                 {token.hasMetadata && localStorage.getItem(`unlocked-${token.mint}`) && (
-                  <div className="text-xs mt-2 text-green-600">✅ Tools unlocked</div>
+                  <p className="text-center text-green-400 text-xs mt-2">✅ Metadata Attached</p>
                 )}
               </div>
             ))}
