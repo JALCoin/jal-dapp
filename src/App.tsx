@@ -1,9 +1,21 @@
 // src/App.tsx
 import { useState } from "react";
-import { BrowserRouter as Router, Route, Routes, Link } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  NavLink,
+} from "react-router-dom";
+
 import Home from "./pages/Home";
 import CryptoGenerator from "./pages/CryptoGenerator";
 import Dashboard from "./pages/Dashboard";
+
+// Optional future modules (can be safely removed/commented)
+import About from "./pages/About";
+import Manifesto from "./pages/Manifesto";
+import Learn from "./pages/Learn";
+import Content from "./pages/Content";
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -14,11 +26,28 @@ function App() {
     <Router>
       <header>
         <div className="header-inner">
-          <Link to="/" onClick={closeMenu}>
+          <NavLink to="/" onClick={closeMenu}>
             <img src="/logo-glow-gold.svg" alt="JALSOL Logo" className="logo" />
-          </Link>
+          </NavLink>
 
-          <nav className="social-links">
+          {/* 🌐 Desktop Navigation */}
+          <nav className="main-nav">
+            <NavLink to="/" onClick={closeMenu} className="nav-link">
+              JAL/SOL
+            </NavLink>
+            <NavLink to="/dashboard" onClick={closeMenu} className="nav-link">
+              VAULT / JAL
+            </NavLink>
+            <NavLink to="/learn" onClick={closeMenu} className="nav-link">
+              LEARN/SOL
+            </NavLink>
+            <NavLink to="/about" onClick={closeMenu} className="nav-link">
+              About JAL
+            </NavLink>
+          </nav>
+
+          {/* 📡 Social Links */}
+          <div className="social-links">
             <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer">
               <img src="/x.svg" alt="X" />
             </a>
@@ -28,33 +57,45 @@ function App() {
             <a href="https://tiktok.com/@jalcoin" target="_blank" rel="noopener noreferrer">
               <img src="/tiktok.svg" alt="TikTok" />
             </a>
-          </nav>
+          </div>
 
+          {/* 🍔 Hamburger */}
           <button className="hamburger" onClick={toggleMenu}>
             {menuOpen ? "✕" : "☰"}
           </button>
         </div>
       </header>
 
+      {/* 📱 Sidebar Navigation */}
       {menuOpen && (
         <>
-          <div className="sidebar-overlay" onClick={closeMenu}></div>
+          <div className="sidebar-overlay" onClick={closeMenu} />
           <div className="sidebar-nav">
-            <Link to="/" onClick={closeMenu}>Home</Link>
-            <Link to="/crypto-generator" onClick={closeMenu}>Crypto Generator</Link>
-            <Link to="/dashboard" onClick={closeMenu}>Dashboard</Link>
-            <Link to="/about" onClick={closeMenu}>About</Link>
-            <a href="#manifesto" onClick={closeMenu}>Manifesto</a>
-            <a href="#content" onClick={closeMenu}>Content</a>
-            <a href="#learn" onClick={closeMenu}>Learn</a>
+            <NavLink to="/" onClick={closeMenu} className="nav-link">
+              JAL/SOL
+            </NavLink>
+            <NavLink to="/dashboard" onClick={closeMenu} className="nav-link">
+              VAULT / JAL
+            </NavLink>
+            <NavLink to="/learn" onClick={closeMenu} className="nav-link">
+              LEARN/SOL
+            </NavLink>
+            <NavLink to="/about" onClick={closeMenu} className="nav-link">
+              About JAL
+            </NavLink>
           </div>
         </>
       )}
 
+      {/* 🧭 Route Views */}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/manifesto" element={<Manifesto />} />
+        <Route path="/content" element={<Content />} />
+        <Route path="/learn" element={<Learn />} />
       </Routes>
     </Router>
   );
