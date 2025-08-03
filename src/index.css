@@ -7,6 +7,11 @@
   --jal-card: #262626;
   --jal-border: #11f1a766;
 
+  --jal-gold: #ffd700;
+  --jal-gold-glow: #ffcc00aa;
+  --jal-gold-shadow: 0 0 6px #ffd700aa, 0 0 12px #ffcc00aa;
+}
+
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-weight: 400;
   line-height: 1.6;
@@ -407,12 +412,6 @@ body::after {
 ::-webkit-scrollbar-thumb:hover {
   background: #0ffdd4;
   box-shadow: 0 0 12px var(--jal-glow), 0 0 18px var(--jal-glow);
-}
-/* ✨ Gold Glow Theme Additions */
-:root {
-  --jal-gold: #ffd700;
-  --jal-gold-glow: #ffcc00aa;
-  --jal-gold-shadow: 0 0 6px #ffd700aa, 0 0 12px #ffcc00aa;
 }
 
 /* Gold text glow */
