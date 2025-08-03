@@ -347,3 +347,31 @@ textarea {
   justify-content: center;
   align-items: center;
 }
+/* Shadow under hero heading */
+main > section:first-of-type h1 {
+  text-shadow: 0 2px 12px var(--jal-glow);
+}
+
+/* Side glow edges (left and right borders only) */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--jal-glow), transparent 40%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+body::before {
+  left: 0;
+  box-shadow: 0 0 12px var(--jal-glow);
+}
+
+body::after {
+  right: 0;
+  box-shadow: 0 0 12px var(--jal-glow);
+}
+
