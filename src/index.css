@@ -1,4 +1,3 @@
-/* === Global Theme Variables === */
 :root {
   --jal-bg: #1c1c1c;
   --jal-surface: #2a2a2a;
@@ -10,7 +9,7 @@
 
   --jal-gold: #ffd700;
   --jal-gold-glow: #ffcc00aa;
-  --jal-gold-shadow: 0 0 6px #ffd700aa, 0 0 12px #ffcc00aa;
+  --jal-gold-shadow: 0 0 10px #ffd700aa, 0 0 20px #ffffff88;
 
   font-family: 'Orbitron', system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-weight: 400;
@@ -54,9 +53,9 @@ header {
   position: relative;
   z-index: 10;
   box-sizing: border-box;
-  border-bottom: 1px solid var(--jal-glow);
-  box-shadow: 0 4px 20px rgba(0, 255, 213, 0.1), inset 0 -2px 10px var(--jal-glow);
-  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--jal-gold);
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.08), inset 0 -2px 10px var(--jal-gold);
+  backdrop-filter: blur(10px);
 }
 
 .header-inner {
@@ -80,29 +79,29 @@ header {
   border-radius: 50%;
   background: radial-gradient(circle, var(--jal-gold-glow), transparent 60%);
   z-index: -1;
-  opacity: 0.08;
+  opacity: 0.1;
 }
 
 .logo {
   height: 172px;
-  animation: pulse 4s ease-in-out infinite, flicker 5s linear infinite;
-  filter: drop-shadow(0 0 10px var(--jal-gold-glow));
+  animation: pulse 4s ease-in-out infinite, flicker 6s linear infinite;
+  filter: drop-shadow(0 0 10px white) drop-shadow(0 0 8px var(--jal-gold));
 }
 
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
-    filter: drop-shadow(0 0 6px var(--jal-glow));
+    filter: drop-shadow(0 0 6px var(--jal-glow)) drop-shadow(0 0 10px white);
   }
   50% {
     transform: scale(1.02);
-    filter: drop-shadow(0 0 14px var(--jal-glow));
+    filter: drop-shadow(0 0 14px var(--jal-glow)) drop-shadow(0 0 14px var(--jal-gold));
   }
 }
 
 @keyframes flicker {
   0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
-  20%, 24%, 55% { opacity: 0.5; }
+  20%, 24%, 55% { opacity: 0.4; }
 }
 
 /* === Navigation === */
@@ -120,33 +119,34 @@ header {
   font-weight: 600;
   font-size: 1.1rem;
   letter-spacing: 0.5px;
-  transition: color 0.3s ease, text-shadow 0.3s ease, letter-spacing 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .nav-link:hover {
-  color: var(--jal-glow);
-  text-shadow: 0 0 8px var(--jal-glow), 0 0 12px var(--jal-glow);
+  color: var(--jal-gold);
+  text-shadow: 0 0 6px var(--jal-gold), 0 0 12px white;
   letter-spacing: 1.5px;
 }
 
 .nav-link.active {
-  border-bottom: 2px solid var(--jal-glow);
+  border-bottom: 2px solid var(--jal-gold);
   animation: flickerLink 1.2s infinite alternate;
 }
 
 @keyframes flickerLink {
-  0% { opacity: 0.95; }
-  50% { opacity: 0.6; }
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
   100% { opacity: 1; }
 }
 
+/* === Sidebar === */
 .sidebar-overlay {
   position: fixed;
   top: 0;
   left: 0;
   height: 100vh;
   width: 100vw;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
   z-index: 998;
 }
@@ -160,12 +160,12 @@ header {
   background: black;
   display: flex;
   flex-direction: column;
-  padding: 5rem 2rem 2rem;
+  padding: 5rem 2rem;
   gap: 2rem;
   align-items: flex-start;
   z-index: 999;
   overflow-y: auto;
-  box-shadow: inset 0 0 12px var(--jal-glow);
+  box-shadow: inset 0 0 12px var(--jal-gold);
 }
 
 .sidebar-nav a {
@@ -173,15 +173,15 @@ header {
   font-size: 1.25rem;
   font-weight: 600;
   text-decoration: none;
-  transition: color 0.3s ease, text-shadow 0.3s ease, letter-spacing 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .sidebar-nav a:hover {
-  color: var(--jal-glow);
-  text-shadow: 0 0 6px var(--jal-glow);
-  letter-spacing: 1px;
+  color: var(--jal-gold);
+  text-shadow: 0 0 10px var(--jal-gold), 0 0 12px white;
 }
 
+/* === Social Icons === */
 .social-links {
   position: absolute;
   top: 1rem;
@@ -198,30 +198,15 @@ header {
   transition: transform 0.2s ease, filter 0.3s ease;
 }
 
-.social-links img[src*="X"] {
-  content: url("/icons/X.png");
-}
-
-.social-links img[src*="Telegram"] {
-  content: url("/icons/Telegram.png");
-}
-
-.social-links img[src*="TikTok"] {
-  content: url("/icons/TikTok.png");
-}
-
-.social-links img[src*="Instagram"] {
-  content: url("/icons/Instagram.png");
-}
-
 .social-links img:hover {
-  transform: scale(1.1);
-  filter: drop-shadow(0 0 6px var(--jal-glow));
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 8px white);
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 9999px;
   padding: 4px;
 }
 
+/* === Hamburger Menu === */
 .hamburger {
   position: absolute;
   top: 1rem;
@@ -234,8 +219,7 @@ header {
   z-index: 1100;
   padding: 0.5rem 1rem;
   border-radius: 12px;
-  box-shadow: 0 0 12px var(--jal-glow);
-  transition: transform 0.4s ease, opacity 0.3s ease;
+  box-shadow: 0 0 12px var(--jal-gold);
 }
 
 /* === Typography === */
@@ -243,30 +227,17 @@ section h1, section h2 {
   color: white;
   font-weight: 800;
   letter-spacing: 1px;
-  text-shadow: 0 0 6px var(--jal-glow), 0 0 12px var(--jal-glow), 0 0 18px var(--jal-glow);
+  text-shadow: 0 0 8px white, 0 0 12px var(--jal-gold), 0 0 24px white;
   text-align: center;
 }
 
 /* === Layout === */
 main > section {
-  padding-top: 4rem;
-  padding-bottom: 4rem;
+  padding: 4rem 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-}
-
-.token-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2rem;
-  margin-top: 2rem;
-}
-
-.token-card {
-  text-align: center;
 }
 
 /* === Cards === */
@@ -276,41 +247,43 @@ main > section {
   border-radius: 12px;
   padding: 2rem;
   margin-bottom: 2rem;
-  box-shadow: 0 0 6px rgba(0,255,213,0.05);
+  box-shadow: 0 0 6px rgba(255,255,255,0.05);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   text-align: center;
 }
 
 .card:hover {
   transform: scale(1.01);
-  box-shadow: 0 0 10px var(--jal-glow);
+  box-shadow: 0 0 12px var(--jal-gold), 0 0 24px white;
 }
 
 /* === Buttons === */
 .button, button {
-  background-color: var(--jal-surface);
+  background-color: black;
   color: var(--jal-text);
   font-weight: 600;
-  border: 1px solid var(--jal-glow);
+  border: 1px solid var(--jal-gold);
   padding: 0.6rem 1.2rem;
   border-radius: 8px;
-  box-shadow: 0 0 6px var(--jal-glow);
+  box-shadow: 0 0 6px white;
   transition: all 0.3s ease;
+  text-transform: uppercase;
 }
 
-.button:hover {
-  background-color: black;
-  box-shadow: 0 0 12px var(--jal-glow);
+.button:hover, button:hover {
+  background-color: var(--jal-surface);
+  color: white;
+  box-shadow: 0 0 10px var(--jal-gold), 0 0 16px white;
 }
 
 .button.secondary {
-  background-color: black;
+  background-color: transparent;
   color: white;
   border: 1px solid white;
 }
 
 .button.secondary:hover {
   background-color: var(--jal-surface);
+  border-color: var(--jal-gold);
   color: var(--jal-text);
-  border-color: var(--jal-glow);
 }
