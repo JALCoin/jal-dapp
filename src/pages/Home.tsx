@@ -6,9 +6,9 @@ export default function Home() {
     <main className="homepage">
       {/* Hero Section */}
       <section className="hero">
-        <h1>JAL/SOL: A Currency Generator</h1>
+        <h1>You're as valuable as what you decide to build.</h1>
         <p>
-          Built by JAL. Computed on SOL. This is a tool to mint presence, not hype.
+          Created by JAL. Computed on SOL.
         </p>
         <div className="cta-buttons">
           <Link to="/crypto-generator" className="button gold">Create Your Currency</Link>
