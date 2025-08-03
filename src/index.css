@@ -7,6 +7,7 @@
   --jal-glow: #0ffdd4;
   --jal-card: #262626;
   --jal-border: #11f1a766;
+
   --jal-gold: #ffd700;
   --jal-gold-glow: #ffcc00aa;
   --jal-gold-shadow: 0 0 6px #ffd700aa, 0 0 12px #ffcc00aa;
@@ -80,3 +81,374 @@ header {
   z-index: -1;
   opacity: 0.08;
 }
+
+.logo {
+  height: 172px;
+  animation: pulse 4s ease-in-out infinite, flicker 5s linear infinite;
+  filter: drop-shadow(0 0 10px var(--jal-gold-glow));
+}
+
+/* New cyberpunk flicker */
+@keyframes flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    opacity: 1;
+  }
+  20%, 24%, 55% {
+    opacity: 0.5;
+  }
+}
+
+
+.social-links {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: 1rem;
+  z-index: 20;
+}
+
+.social-links img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  transition: transform 0.2s ease, filter 0.3s ease;
+}
+
+.social-links img:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 6px var(--jal-glow));
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+  padding: 4px;
+}
+
+.hamburger {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: black;
+  color: white;
+  font-size: 2rem;
+  border: none;
+  cursor: pointer;
+  z-index: 30;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  box-shadow: 0 0 12px var(--jal-glow);
+  transition: transform 0.4s ease, opacity 0.3s ease;
+}
+
+.hamburger.hidden {
+  transform: translateX(120%);
+  opacity: 0;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 15;
+}
+
+.sidebar-nav {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 280px;
+  background: black;
+  padding: 4rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  z-index: 25;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.5);
+}
+
+.sidebar-nav a {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.sidebar-nav a:hover {
+  color: var(--jal-glow);
+  text-shadow: 0 0 6px var(--jal-glow);
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  box-sizing: border-box;
+}
+
+main > section {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+section h1 {
+  font-size: 2.8rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: #ffffff;
+  text-shadow: 0 0 6px var(--jal-glow), 0 0 12px var(--jal-glow);
+}
+
+section h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+section p {
+  font-size: 1.125rem;
+  color: var(--jal-muted);
+  max-width: 800px;
+  margin: 0 auto 1.5rem;
+}
+
+.button,
+button {
+  background-color: black;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-block;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.button:hover,
+button:hover {
+  background-color: #111;
+  box-shadow: 0 0 8px var(--jal-glow), 0 0 12px var(--jal-glow);
+}
+
+.button.secondary {
+  background: white;
+  color: black;
+  border: 1px solid black;
+}
+
+.section-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .section-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .section-group .card {
+    width: 300px;
+  }
+}
+
+.card {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 0 12px var(--jal-glow);
+}
+
+.card.dark {
+  background: black;
+  color: white;
+}
+
+.glow-text {
+  color: var(--jal-glow);
+  font-weight: bold;
+}
+
+.vault-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.vault-list li {
+  margin-bottom: 0.5rem;
+}
+
+.newsletter-form input[type="email"] {
+  padding: 0.75rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  display: block;
+  text-align: center;
+}
+
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.centered-button {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
+.site-footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  font-size: 0.85rem;
+  color: black;
+}
+
+@media (max-width: 768px) {
+  section h1 {
+    font-size: 2rem;
+  }
+
+  section h2 {
+    font-size: 1.6rem;
+  }
+
+  .logo {
+    height: 140px;
+  }
+
+  .cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo {
+    height: 120px;
+  }
+}
+
+* {
+  caret-color: transparent;
+}
+
+input,
+textarea {
+  caret-color: auto;
+}
+
+.wallet-button {
+  margin-top: 3rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+/* Shadow under hero heading */
+main > section:first-of-type h1 {
+  text-shadow: 0 2px 12px var(--jal-glow);
+}
+
+/* Side glow edges (left and right borders only) */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--jal-glow), transparent 40%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+body::before {
+  left: 0;
+  box-shadow: 0 0 12px var(--jal-glow);
+}
+
+body::after {
+  right: 0;
+  box-shadow: 0 0 12px var(--jal-glow);
+}
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1c1c1c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--jal-glow);
+  border-radius: 6px;
+  box-shadow: 0 0 8px var(--jal-glow);
+  border: 2px solid #1c1c1c;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0ffdd4;
+  box-shadow: 0 0 12px var(--jal-glow), 0 0 18px var(--jal-glow);
+}
+
+/* Gold text glow */
+.gold-glow {
+  color: var(--jal-gold);
+  text-shadow: var(--jal-gold-shadow);
+}
+
+/* Gold card border + glow */
+.card.gold {
+  border: 2px solid var(--jal-gold);
+  box-shadow: 0 0 10px var(--jal-gold-glow), 0 0 20px var(--jal-gold-glow);
+}
+
+/* Gold highlight for buttons */
+.button.gold {
+  background-color: var(--jal-gold);
+  color: black;
+  font-weight: 700;
+  box-shadow: 0 0 6px var(--jal-gold-glow), 0 0 12px var(--jal-gold-glow);
+}
+
+.button.gold:hover {
+  background-color: #ffe066;
+  box-shadow: 0 0 12px var(--jal-gold-glow), 0 0 20px var(--jal-gold-glow);
+}
+
+/* Gold-glowing border utility */
+.gold-border {
+  border: 1px solid var(--jal-gold);
+  box-shadow: 0 0 10px var(--jal-gold-glow);
+}
+
