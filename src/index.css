@@ -328,8 +328,8 @@ main > section {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
-  justify-content: center; /* ✅ center grid items */
-  padding-top: 2rem;
+  justify-items: center;
+  justify-content: center; /* ✅ this is what you're missing */
 }
 
 .token-card {
