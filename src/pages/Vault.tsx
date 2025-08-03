@@ -125,14 +125,16 @@ export default function Vault() {
         ) : visibleTokens.length === 0 ? (
           <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">No tokens found in your Vault.</p>
         ) : (
-          <div className="vault-grid"><div className="vault-grid mx-auto justify-center">
+          <div className="vault-grid">
             {visibleTokens.map((token) => (
-              <div key={token.mint} className="token-card">
+              <div key={token.mint} className="token-card relative">
                 <button
                   onClick={() => handleHideToken(token.mint)}
                   title="Hide from vault"
                   className="absolute top-2 right-2 text-sm text-red-400 hover:text-white transition duration-150 px-2"
-                >✕</button>
+                >
+                  ✕
+                </button>
 
                 {token.image && (
                   <img
@@ -144,7 +146,9 @@ export default function Vault() {
                 <div className="text-center space-y-1">
                   <p className="text-white font-semibold text-lg">{token.name || 'Unnamed Token'}</p>
                   <p className="text-[var(--jal-muted)] text-sm">{token.symbol || '—'}</p>
-                  <p className="text-sm break-all"><strong className="text-[var(--jal-glow)]">Mint:</strong> {token.mint}</p>
+                  <p className="text-sm break-all">
+                    <strong className="text-[var(--jal-glow)]">Mint:</strong> {token.mint}
+                  </p>
                   <p><strong>Amount:</strong> {token.amount}</p>
                 </div>
 
@@ -161,7 +165,9 @@ export default function Vault() {
                     className="copy-btn"
                     onClick={() => navigator.clipboard.writeText(token.mint)}
                     title="Copy mint address"
-                  >📋 Copy</button>
+                  >
+                    📋 Copy
+                  </button>
                 </div>
 
                 {token.hasMetadata && localStorage.getItem(`unlocked-${token.mint}`) && (
