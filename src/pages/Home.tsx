@@ -8,7 +8,7 @@ export default function Home() {
       <section className="hero">
         <h1>You're as valuable as what you decide to build.</h1>
         <p>
-          Created by JAL. Computed on SOL.
+          Created by JAL & this is your VAULT. Computed on SOL & mint into something real.
         </p>
         <div className="cta-buttons">
           <Link to="/crypto-generator" className="button gold">Create Your Currency</Link>
