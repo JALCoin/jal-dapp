@@ -128,15 +128,16 @@ export default function Vault() {
         )}
 
 {loading ? (
-  <div className="flex justify-center items-center min-h-[60vh] flex-col">
+  <div className="flex justify-center items-center min-h-[60vh] w-full flex-col text-center">
     <img
       src="/JALSOL1.gif"
       alt="Loading..."
-      className="vault-loading-logo"
+      className="w-24 h-24 vault-loading-logo"
     />
     <p className="text-[var(--jal-muted)] mt-4 text-sm">Loading your Vault...</p>
   </div>
 ) : visibleTokens.length === 0 ? (
+
           <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">
             No tokens found in your Vault.
           </p>
