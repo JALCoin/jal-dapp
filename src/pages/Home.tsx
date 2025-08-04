@@ -50,28 +50,21 @@ export default function Home() {
         <div className="card dark">
           <h2>About JAL</h2>
           <p>
-            I’m Jeremy Aaron Lugg. Born like a king. Built like a ledger.  
+            I’m Jeremy Aaron Lugg. Born like a king. Built like a ledger.
             JAL/SOL is how I prove that influence can become infrastructure.
           </p>
           <div className="cta-buttons">
-            <a href="https://x.com/JAL358" className="button" target="_blank" rel="noopener noreferrer">X Profile</a>
-            <a href="mailto:358jal@gmail.com" className="button">Contact</a>
-          </div>
-        </div>
-      </section>
-
-      {/* === SAMPLE VAULTS === */}
-      <section className="section-group">
-        <div className="card">
-          <h2>Recent Vaults</h2>
-          <p>Live tokens minted using JAL/SOL:</p>
-          <ul className="vault-list">
-            <li>$POWERUP</li>
-            <li>$SOVEREIGN</li>
-            <li>$CHOSEN</li>
-          </ul>
-          <div className="centered-button">
-            <Link to="/dashboard" className="button secondary">Open the Vault</Link>
+            <a
+              href="https://x.com/JAL358"
+              className="button"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              X Profile
+            </a>
+            <a href="mailto:358jal@gmail.com" className="button">
+              Contact
+            </a>
           </div>
         </div>
       </section>

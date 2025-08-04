@@ -118,91 +118,94 @@ export default function Vault() {
 
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
-      {loading ? (
-        <div className="flex justify-center items-center min-h-[70vh] flex-col text-center">
-<img
-  src="/JALSOL1.gif"
-  alt="Loading..."
-  className="vault-loading-logo"
-/>
-          <p className="text-[var(--jal-muted)] mt-4 text-sm">Loading your Vault...</p>
-        </div>
-      ) : (
-        <div className="max-w-6xl mx-auto">
-          <h1 className="vault-header">Vault</h1>
+      <div className="max-w-6xl mx-auto">
+        <h1 className="vault-header">Vault</h1>
 
-          {!publicKey && (
-            <div className="vault-wallet">
-              <WalletMultiButton />
-            </div>
-          )}
+        {!publicKey && (
+          <div className="vault-wallet">
+            <WalletMultiButton />
+          </div>
+        )}
 
-          {visibleTokens.length === 0 ? (
-            <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">
-              No tokens found in your Vault.
-            </p>
-          ) : (
-            <div className="vault-grid">
-              {visibleTokens.map((token) => (
-                <div key={token.mint} className="token-card relative">
-                  <button
-                    onClick={() => handleHideToken(token.mint)}
-                    title="Hide from vault"
-                    className="absolute top-2 right-2 text-sm text-red-400 hover:text-white transition duration-150 px-2"
-                  >
-                    ✕
-                  </button>
+        {loading ? (
+          <div className="vault-loading">
+            {[...Array(3)].map((_, idx) => (
+              <div key={idx} className="skeleton-card" />
+            ))}
+          </div>
+        ) : visibleTokens.length === 0 ? (
+          <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">
+            No tokens found in your Vault.
+          </p>
+        ) : (
+          <div className="vault-grid">
+            {visibleTokens.map((token) => (
+              <div key={token.mint} className="token-card relative">
+                <button
+                  onClick={() => handleHideToken(token.mint)}
+                  title="Hide from vault"
+                  className="absolute top-2 right-2 text-sm text-red-400 hover:text-white transition duration-150 px-2"
+                >
+                  ✕
+                </button>
 
-                  {token.image && (
-                    <img
-                      src={
-                        token.image.startsWith('ipfs://')
-                          ? token.image.replace('ipfs://', 'https://ipfs.io/ipfs/')
-                          : token.image
-                      }
-                      alt={token.name || token.symbol || 'Token'}
-                      className="w-20 h-20 mx-auto mb-2 object-contain rounded"
-                    />
-                  )}
+                {token.image && (
+                  <img
+                    src={
+                      token.image.startsWith('ipfs://')
+                        ? token.image.replace('ipfs://', 'https://ipfs.io/ipfs/')
+                        : token.image
+                    }
+                    alt={token.name || token.symbol || 'Token'}
+                    className="w-20 h-20 mx-auto mb-2 object-contain rounded"
+                  />
+                )}
 
-                  <div className="text-center space-y-1">
-                    <p className="text-white font-semibold text-lg">{token.name || 'Unnamed Token'}</p>
-                    <p className="text-[var(--jal-muted)] text-sm">{token.symbol || '—'}</p>
-                    <p className="text-sm break-all">
-                      <strong className="text-[var(--jal-glow)]">Mint:</strong> {token.mint}
-                    </p>
-                    <p>
-                      <strong>Amount:</strong> {token.amount}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 flex justify-between items-center">
-                    <a
-                      href={`https://solscan.io/token/${token.mint}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="explorer-link"
-                    >
-                      View on Solscan ↗
-                    </a>
-                    <button
-                      className="copy-btn"
-                      onClick={() => navigator.clipboard.writeText(token.mint)}
-                      title="Copy mint address"
-                    >
-                      📋 Copy
-                    </button>
-                  </div>
-
-                  {token.hasMetadata && localStorage.getItem(`unlocked-${token.mint}`) && (
-                    <p className="text-center text-green-400 text-xs mt-2">✅ Metadata Attached</p>
-                  )}
+                <div className="text-center space-y-1">
+                  <p className="text-white font-semibold text-lg">
+                    {token.name || 'Unnamed Token'}
+                  </p>
+                  <p className="text-[var(--jal-muted)] text-sm">
+                    {token.symbol || '—'}
+                  </p>
+                  <p className="text-sm break-all">
+                    <strong className="text-[var(--jal-glow)]">Mint:</strong> {token.mint}
+                  </p>
+                  <p>
+                    <strong>Amount:</strong> {token.amount}
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+
+                <div className="mt-4 flex justify-between items-center">
+                  <a
+                    href={`https://solscan.io/token/${token.mint}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="explorer-link"
+                  >
+                    View on Solscan ↗
+                  </a>
+                  <button
+                    className="copy-btn"
+                    onClick={() => navigator.clipboard.writeText(token.mint)}
+                    title="Copy mint address"
+                  >
+                    📋 Copy
+                  </button>
+                </div>
+
+                <p
+                  className={`meta-tag ${
+                    token.hasMetadata ? 'finalized' : 'missing'
+                  }`}
+                >
+                  {token.hasMetadata ? '✅ Metadata Attached' : '⚠️ Metadata not attached'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

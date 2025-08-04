@@ -36,7 +36,11 @@ function App() {
       <header>
         <div className="header-inner">
           <NavLink to="/" onClick={closeMenu}>
-            <img src="/JALSOL1.gif" alt="JALSOL Logo" className="logo header-logo" />
+            <img
+              src="/JALSOL1.gif"
+              alt="JALSOL Logo"
+              className="logo header-logo"
+            />
           </NavLink>
 
           <nav className="main-nav">
@@ -55,13 +59,25 @@ function App() {
           </nav>
 
           <div className="social-links">
-            <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://x.com/JAL358"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <img src="/icons/X.png" alt="X" />
             </a>
-            <a href="https://t.me/JALSOL" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://t.me/JALSOL"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <img src="/icons/Telegram.png" alt="Telegram" />
             </a>
-            <a href="https://tiktok.com/@jalcoin" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://tiktok.com/@jalcoin"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <img src="/icons/TikTok.png" alt="TikTok" />
             </a>
           </div>
@@ -104,7 +120,6 @@ function App() {
           <Route path="/learn" element={<Learn />} />
         </Routes>
 
-        {/* Divider Animation */}
         <div className="scroll-divider"></div>
       </main>
     </Router>

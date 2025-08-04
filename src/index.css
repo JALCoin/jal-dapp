@@ -431,3 +431,60 @@ main > section {
     font-size: 1rem;
   }
 }
+/* === Vault Skeleton Loading === */
+.vault-loading {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  padding: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.skeleton-card {
+  width: 320px;
+  height: 260px;
+  border-radius: 1rem;
+  background: linear-gradient(
+    90deg,
+    var(--jal-surface) 25%,
+    #3a3a3a 50%,
+    var(--jal-surface) 75%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.2s infinite;
+  box-shadow: 0 0 12px var(--jal-glow);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+/* === Metadata Tag Styling === */
+.token-card .meta-tag {
+  font-size: 0.75rem;
+  text-align: center;
+  margin-top: 0.75rem;
+  font-weight: 500;
+}
+
+.meta-tag.finalized {
+  color: #4ade80; /* green-400 */
+}
+
+.meta-tag.missing {
+  color: #f87171; /* red-400 */
+  font-style: italic;
+}
+
+/* === Stronger Social Glow === */
+.social-links img:hover {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 8px var(--jal-gold)) drop-shadow(0 0 12px white);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
