@@ -1,18 +1,28 @@
 // src/pages/Home.tsx
 import { Link } from "react-router-dom";
 import { generatorInfoBlocks } from "./CryptoGeneratorIntro";
+import { useEffect, useState } from "react";
 
 export default function Home() {
+  const [userSymbol, setUserSymbol] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("vaultSymbol");
+    if (stored) setUserSymbol(stored.toUpperCase());
+  }, []);
+
   return (
     <main className="homepage">
       {/* === HERO === */}
       <section className="hero">
-        <h1 className="hero-glow">You're as valuable as what you decide to build.</h1>
+        <h1 className="hero-glow">Plenty is built. I’m created.</h1>
         <p className="text-green-500 text-center">
           Created by JAL & this is your VAULT. Computed on SOL & mint into something real.
         </p>
         <div className="cta-buttons">
-          <Link to="/vault/JAL" className="button gold">Create Your Currency</Link>
+          <Link to={userSymbol ? `/vault/${userSymbol}` : "/dashboard"} className="button gold">
+            Create Your Currency
+          </Link>
         </div>
       </section>
 
