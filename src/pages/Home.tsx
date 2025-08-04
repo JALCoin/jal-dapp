@@ -17,7 +17,7 @@ export default function Home() {
       <section className="hero">
         <h1 className="hero-glow">Plenty is built. I’m created.</h1>
         <p className="text-green-500 text-center">
-          Created by JAL & this is your VAULT. Computed on SOL & mint into something real.
+          Tokenised by JAL & this is your VAULT. Computed on SOL & mint into something real.
         </p>
         <div className="cta-buttons">
           <Link to={userSymbol ? `/vault/${userSymbol}` : "/dashboard"} className="button gold">
@@ -50,7 +50,7 @@ export default function Home() {
         <div className="card dark">
           <h2>About JAL</h2>
           <p>
-            I’m Jeremy Aaron Lugg. Born like a king. Built like a ledger.
+            I’m Jeremy Aaron Lugg. Born with it and built for it.
             JAL/SOL is how I prove that influence can become infrastructure.
           </p>
           <div className="cta-buttons">
