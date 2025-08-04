@@ -374,4 +374,9 @@ main > section {
   font-size: 0.8rem;
   cursor: pointer;
 }
-
+.vault-loading-logo {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px var(--jal-glow));
+}
