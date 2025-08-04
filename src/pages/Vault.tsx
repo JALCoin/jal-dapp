@@ -128,12 +128,14 @@ export default function Vault() {
         )}
 
 {loading ? (
-  <div className="flex justify-center items-center mt-16">
+  <div className="flex justify-center items-center min-h-[60vh] flex-col">
     <img
       src="/JALSOL1.gif"
       alt="Loading..."
-      className="w-48 h-48 animate-pulse"
+      className="w-36 h-36 animate-pulse"
+      style={{ filter: 'drop-shadow(0 0 8px var(--jal-glow))' }}
     />
+    <p className="text-[var(--jal-muted)] mt-4 text-sm">Loading your Vault...</p>
   </div>
 ) : visibleTokens.length === 0 ? (
           <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">
