@@ -325,11 +325,11 @@ main > section {
 }
 
 .vault-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 2rem;
-  justify-items: center;
-  justify-content: center; /* ✅ this is what you're missing */
+  padding: 2rem 0;
 }
 
 .token-card {
