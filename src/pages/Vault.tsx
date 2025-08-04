@@ -129,11 +129,10 @@ export default function Vault() {
 
 {loading ? (
   <div className="flex justify-center items-center min-h-[60vh] flex-col">
-    <img
+<img
   src="/JALSOL1.gif"
   alt="Loading..."
-  className="w-28 h-28 md:w-24 md:h-24 object-contain animate-pulse"
-  style={{ filter: 'drop-shadow(0 0 6px var(--jal-glow))' }}
+  className="vault-loading-logo"
 />
     <p className="text-[var(--jal-muted)] mt-4 text-sm">Loading your Vault...</p>
   </div>
