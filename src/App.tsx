@@ -97,7 +97,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/crypto-generator" element={<CryptoGenerator />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Vault />} />
           <Route path="/vault/:symbol" element={<Vault />} />
           <Route path="/about" element={<About />} />
           <Route path="/manifesto" element={<Manifesto />} />
