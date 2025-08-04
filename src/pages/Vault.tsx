@@ -112,7 +112,7 @@ export default function Vault() {
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="vault-header">Vault</h1>
+        <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 justify-center">
 
         {!publicKey && (
           <div className="vault-wallet">
