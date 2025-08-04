@@ -9,7 +9,6 @@ import {
 
 import Home from "./pages/Home";
 import CryptoGenerator from "./pages/CryptoGenerator";
-import Dashboard from "./pages/Dashboard";
 import Vault from "./pages/Vault";
 
 import About from "./pages/About";
