@@ -17,16 +17,19 @@ interface TokenInfo {
 
 export default function Vault() {
   const { publicKey } = useWallet();
-  const connection = useMemo(() => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'), []);
+  const connection = useMemo(
+    () => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'),
+    []
+  );
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [hiddenMints, setHiddenMints] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchMetadataFromChain = async (mint: string): Promise<Partial<TokenInfo>> => {
     try {
-      const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+      const METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
       const [metadataPDA] = await PublicKey.findProgramAddress(
-        [Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), new PublicKey(mint).toBuffer()],
+        [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), new PublicKey(mint).toBuffer()],
         METADATA_PROGRAM_ID
       );
 
@@ -35,7 +38,11 @@ export default function Vault() {
 
       const uriStart = 115;
       const uriEnd = uriStart + 200;
-      const uri = new TextDecoder().decode(accountInfo.data.slice(uriStart, uriEnd)).replace(/\u0000/g, '').trim();
+      const uri = new TextDecoder()
+        .decode(accountInfo.data.slice(uriStart, uriEnd))
+        .replace(/\u0000/g, '')
+        .trim();
+
       const res = await fetch(uri.startsWith('http') ? uri : `https://ipfs.io/ipfs/${uri.replace('ipfs://', '')}`);
       const data = await res.json();
 
@@ -112,7 +119,7 @@ export default function Vault() {
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 justify-center">
+        <h1 className="vault-header">Vault</h1>
 
         {!publicKey && (
           <div className="vault-wallet">
@@ -121,9 +128,13 @@ export default function Vault() {
         )}
 
         {loading ? (
-          <p className="text-center mt-10 text-[var(--jal-muted)] text-lg animate-pulse">Loading tokens...</p>
+          <p className="text-center mt-10 text-[var(--jal-muted)] text-lg animate-pulse">
+            Loading tokens...
+          </p>
         ) : visibleTokens.length === 0 ? (
-          <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">No tokens found in your Vault.</p>
+          <p className="text-center mt-10 text-[var(--jal-muted)] text-lg">
+            No tokens found in your Vault.
+          </p>
         ) : (
           <div className="vault-grid">
             {visibleTokens.map((token) => (
@@ -138,7 +149,11 @@ export default function Vault() {
 
                 {token.image && (
                   <img
-                    src={token.image.startsWith('ipfs://') ? token.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : token.image}
+                    src={
+                      token.image.startsWith('ipfs://')
+                        ? token.image.replace('ipfs://', 'https://ipfs.io/ipfs/')
+                        : token.image
+                    }
                     alt={token.name || token.symbol || 'Token'}
                   />
                 )}
@@ -149,7 +164,9 @@ export default function Vault() {
                   <p className="text-sm break-all">
                     <strong className="text-[var(--jal-glow)]">Mint:</strong> {token.mint}
                   </p>
-                  <p><strong>Amount:</strong> {token.amount}</p>
+                  <p>
+                    <strong>Amount:</strong> {token.amount}
+                  </p>
                 </div>
 
                 <div className="mt-4 flex justify-between items-center">
