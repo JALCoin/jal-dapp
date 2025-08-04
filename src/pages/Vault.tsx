@@ -118,7 +118,7 @@ export default function Vault() {
 
   return (
     <main className="min-h-screen bg-[var(--jal-bg)] text-[var(--jal-text)] p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto vault-unlock">
         <h1 className="vault-header">Vault</h1>
 
         {!publicKey && (
