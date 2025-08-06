@@ -1,18 +1,22 @@
 /* === GLOBAL THEME VARIABLES === */
 :root {
-  --jal-bg: #121212;
-  --jal-surface: #1e1e1e;
+  --jal-bg: #0d0d0d;
+  --jal-surface: #1a1a1a;
+  --jal-card: #262626;
   --jal-text: #11f1a7;
-  --jal-muted: rgba(17, 241, 167, 0.5);
+  --jal-muted: rgba(17, 241, 167, 0.4);
   --jal-glow: #0ffdd4;
   --jal-border: #11f1a766;
   --jal-gold: #ffd700;
-  --jal-gold-glow: #ffcc00aa;
+  --jal-gold-glow: #ffe680aa;
 
   font-family: 'Orbitron', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: 0.3px;
   background-color: var(--jal-bg);
   color: var(--jal-text);
-  line-height: 1.6;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -25,6 +29,7 @@ html, body, #root {
   min-height: 100vh;
   scroll-behavior: smooth;
   background-color: var(--jal-bg);
+  overflow-x: hidden;
 }
 
 /* === BACKGROUND OVERLAY === */
@@ -45,7 +50,7 @@ body::after {
 header {
   width: 100%;
   background: black;
-  padding: 2rem 1rem 1.25rem;
+  padding: 2rem 1rem 1rem;
   border-bottom: 2px solid var(--jal-gold);
   animation: borderGlowShift 8s infinite;
   display: flex;
@@ -97,10 +102,10 @@ header {
 /* === SOCIAL ICONS === */
 .social-links {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
+  top: 2rem;
+  right: 2rem;
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem;
   z-index: 100;
 }
 
@@ -129,7 +134,7 @@ header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem 1rem;
+  padding: 3rem 1rem;
   background: var(--jal-bg);
   min-height: 100vh;
 }
@@ -139,7 +144,6 @@ header {
   color: white;
   font-weight: 800;
   text-align: center;
-  letter-spacing: 1px;
   text-shadow: 0 0 12px white, 0 0 18px var(--jal-gold);
   margin-bottom: 2rem;
 }
@@ -198,6 +202,95 @@ header {
   border-color: var(--jal-gold);
 }
 
+/* === SECTION GROUP === */
+.section-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  padding: 3rem 1.5rem;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.section-group > div {
+  background: var(--jal-surface);
+  border: 1px solid var(--jal-border);
+  border-radius: 12px;
+  padding: 1.5rem 1.25rem;
+  box-shadow: 0 0 10px var(--jal-muted);
+  transition: all 0.3s ease;
+}
+
+.section-group > div:hover {
+  box-shadow: 0 0 20px var(--jal-glow), 0 0 40px var(--jal-gold-glow);
+}
+
+.section-group h2 {
+  color: var(--jal-gold);
+  font-size: 1.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-group p {
+  color: var(--jal-text);
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.section-group a {
+  color: var(--jal-glow);
+  font-weight: 600;
+  text-decoration: underline;
+  transition: all 0.3s ease;
+}
+
+.section-group a:hover {
+  color: var(--jal-gold);
+  text-shadow: 0 0 6px white, 0 0 10px var(--jal-gold);
+}
+
+/* === BUTTON === */
+.button, a.button {
+  display: inline-block;
+  background: black;
+  color: var(--jal-text);
+  border: 2px solid var(--jal-text);
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  box-shadow: 0 0 10px var(--jal-glow);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.button:hover, a.button:hover {
+  transform: scale(1.05);
+  color: white;
+  border-color: var(--jal-gold);
+  box-shadow: 0 0 20px var(--jal-gold), 0 0 30px white;
+}
+
+/* === FOOTER === */
+.site-footer {
+  text-align: center;
+  padding: 1rem 0;
+  font-size: 0.85rem;
+  color: var(--jal-muted);
+  text-shadow: 0 0 4px var(--jal-glow);
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--jal-glow);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--jal-gold);
+}
+
 /* === ANIMATIONS === */
 @keyframes pulse {
   0%, 100% {
@@ -226,28 +319,6 @@ header {
   }
 }
 
-/* === FOOTER === */
-.site-footer {
-  margin-top: auto;
-  text-align: center;
-  padding: 1rem 0;
-  font-size: 0.85rem;
-  color: var(--jal-muted);
-  text-shadow: 0 0 4px var(--jal-glow);
-}
-
-/* === SCROLLBAR === */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--jal-glow);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--jal-gold);
-}
-
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
   .logo {
@@ -274,5 +345,10 @@ header {
 
   .nav-link {
     font-size: 1rem;
+  }
+
+  .social-links {
+    top: 1rem;
+    right: 1rem;
   }
 }
