@@ -1,4 +1,4 @@
-/* === GLOBAL VARIABLES === */
+/* === GLOBAL THEME VARIABLES === */
 :root {
   --jal-bg: #1c1c1c;
   --jal-surface: #2a2a2a;
@@ -15,9 +15,9 @@
   background-color: var(--jal-bg);
   color: var(--jal-text);
   line-height: 1.6;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
 }
 
 /* === RESET === */
@@ -29,13 +29,14 @@ html, body, #root {
   scroll-behavior: smooth;
 }
 
+/* === BACKGROUND OVERLAY === */
 body::after {
   content: '';
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: url('/JAL (3).gif') no-repeat center center;
+  background: url('/JAL%20(3).gif') no-repeat center center;
   background-size: 480px;
   opacity: 0.025;
   pointer-events: none;
@@ -68,6 +69,7 @@ header {
   filter: drop-shadow(0 0 8px white) drop-shadow(0 0 12px var(--jal-gold));
 }
 
+/* === HEADER ANIMATIONS === */
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
@@ -122,7 +124,39 @@ header {
   animation: flicker 1.2s infinite;
 }
 
-/* === VAULT THEME === */
+/* === SOCIAL ICONS === */
+.social-links {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  z-index: 100;
+}
+
+.social-links img {
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--jal-border);
+  box-shadow: 0 0 6px var(--jal-muted);
+  backdrop-filter: blur(6px);
+  object-fit: contain;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.social-links img:hover {
+  transform: scale(1.15);
+  background-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 12px var(--jal-gold), 0 0 20px white;
+  border-color: var(--jal-gold);
+}
+
+/* === VAULT LAYOUT === */
 .vault-screen {
   min-height: 100vh;
   display: flex;
@@ -208,17 +242,7 @@ header {
   border-color: var(--jal-gold);
 }
 
-/* === FOOTER === */
-.site-footer {
-  margin-top: auto;
-  text-align: center;
-  padding: 1rem 0;
-  font-size: 0.85rem;
-  color: var(--jal-muted);
-  text-shadow: 0 0 4px var(--jal-glow);
-}
-
-/* === ANIMATION === */
+/* === ANIMATIONS === */
 @keyframes vaultOpen {
   from {
     opacity: 0;
@@ -236,6 +260,16 @@ header {
   animation: vaultOpen 0.9s ease-out forwards;
 }
 
+/* === FOOTER === */
+.site-footer {
+  margin-top: auto;
+  text-align: center;
+  padding: 1rem 0;
+  font-size: 0.85rem;
+  color: var(--jal-muted);
+  text-shadow: 0 0 4px var(--jal-glow);
+}
+
 /* === SCROLLBAR === */
 ::-webkit-scrollbar {
   width: 8px;
@@ -248,7 +282,7 @@ header {
   background: var(--jal-gold);
 }
 
-/* === RESPONSIVE HEADER === */
+/* === RESPONSIVE === */
 @media (max-width: 768px) {
   .logo {
     height: 120px;
