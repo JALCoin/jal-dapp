@@ -4,12 +4,6 @@ import { Connection } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Link } from "react-router-dom";
 
-interface TokenInfo {
-  mint: string;
-  amount: string;
-  decimals: number;
-}
-
 export default function Vault() {
   const { publicKey } = useWallet();
   const [tokenCount, setTokenCount] = useState<number | null>(null);
