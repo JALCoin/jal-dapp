@@ -14,33 +14,33 @@ export default function Home() {
   return (
     <main className="homepage">
       {/* === HERO === */}
-      <section className="hero">
+      <section className="hero vault-unlock">
         <h1 className="hero-glow">Plenty is built. I’m created.</h1>
-        <p className="text-green-500 text-center mt-2">
+        <p className="text-green-500 text-center">
           Tokenised by JAL & this is your VAULT. Computed on SOL & mint into something real.
         </p>
-        <div className="cta-buttons mt-4">
+        <div className="cta-buttons">
           <Link
             to={userSymbol ? `/vault/${userSymbol}` : "/dashboard"}
-            className="button"
+            className="button gold"
           >
-            Create Your Currency
+            CREATE YOUR CURRENCY
           </Link>
         </div>
       </section>
 
-      {/* === GENERATOR FLOW CARDS === */}
+      {/* === INFO CARDS === */}
       <section className="section-group">
         {generatorInfoBlocks.map((block, i) => (
-          <div key={i} className="card">
+          <div key={i} className="card vault-unlock">
             <h2>{block.title}</h2>
             {Array.isArray(block.content)
               ? block.content.map((p, idx) => <p key={idx}>{p}</p>)
               : <p>{block.content}</p>}
             {block.link && (
-              <div className="mt-3">
+              <div className="centered-button mt-4">
                 <Link to={block.link.href} className="button">
-                  {block.link.label}
+                  {block.link.label.toUpperCase()}
                 </Link>
               </div>
             )}
@@ -48,25 +48,25 @@ export default function Home() {
         ))}
       </section>
 
-      {/* === ABOUT JAL === */}
+      {/* === ABOUT CARD === */}
       <section className="section-group">
-        <div className="card">
+        <div className="card dark vault-unlock">
           <h2>About JAL</h2>
           <p>
             I’m Jeremy Aaron Lugg. Born with it and built for it.<br />
             JAL/SOL is how I prove that influence can become infrastructure.
           </p>
-          <div className="cta-buttons mt-3">
+          <div className="cta-buttons">
             <a
               href="https://x.com/JAL358"
               className="button"
               target="_blank"
               rel="noopener noreferrer"
             >
-              X Profile
+              X PROFILE
             </a>
             <a href="mailto:358jal@gmail.com" className="button">
-              Contact
+              CONTACT
             </a>
           </div>
         </div>
