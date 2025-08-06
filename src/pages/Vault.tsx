@@ -1,23 +1,18 @@
 // src/pages/Vault.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey, Connection } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { Connection, TOKEN_PROGRAM_ID } from "@solana/web3.js";
 import { Link } from "react-router-dom";
 
 interface TokenInfo {
   mint: string;
   amount: string;
   decimals: number;
-  name?: string;
-  symbol?: string;
-  image?: string;
-  hasMetadata?: boolean;
 }
 
 export default function Vault() {
   const { publicKey } = useWallet();
-  const [tokens, setTokens] = useState<TokenInfo[]>([]);
+  const [tokenCount, setTokenCount] = useState<number | null>(null);
 
   const connection = useMemo(() => new Connection("https://api.mainnet-beta.solana.com"), []);
 
@@ -25,34 +20,34 @@ export default function Vault() {
     const fetchTokens = async () => {
       if (!publicKey) return;
 
-      const accounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-        programId: TOKEN_PROGRAM_ID,
-      });
+      try {
+        const accounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+          programId: TOKEN_PROGRAM_ID,
+        });
 
-      const ownedTokens: TokenInfo[] = accounts.value
-        .map(({ account }) => {
-          const info = account.data.parsed.info;
-          return {
-            mint: info.mint,
-            amount: info.tokenAmount.uiAmountString,
-            decimals: info.tokenAmount.decimals,
-          };
-        })
-        .filter((token) => token.amount !== "0");
+        const ownedTokens = accounts.value.filter(({ account }) => {
+          const amount = account.data.parsed.info.tokenAmount.uiAmount;
+          return amount && amount > 0;
+        });
 
-      setTokens(ownedTokens);
+        setTokenCount(ownedTokens.length);
+      } catch (err) {
+        console.error("Failed to fetch tokens:", err);
+      }
     };
 
     fetchTokens();
   }, [connection, publicKey]);
 
   return (
-    <main className="vault-screen">
-      {/* === HEADER === */}
+    <main className="vault-screen vault-unlock">
+      {/* === GLOW DIVIDER === */}
       <div className="vault-header-divider"></div>
+
+      {/* === VAULT TITLE === */}
       <h1 className="vault-title">VAULT</h1>
 
-      {/* === PLACEHOLDER LOGO === */}
+      {/* === LOGO PLACEHOLDER === */}
       <div className="vault-logo-circle">
         <div className="vault-logo-inner">
           Logo: Updated after<br />currency creation.
@@ -73,6 +68,19 @@ export default function Vault() {
           CREATE YOUR CURRENCY
         </Link>
       </div>
+
+      {/* === OPTIONAL WALLET STATUS === */}
+      {publicKey && (
+        <p className="vault-subtext">
+          Wallet connected: <br />
+          <span style={{ fontSize: "0.8rem" }}>{publicKey.toBase58()}</span>
+          {tokenCount !== null && (
+            <div style={{ marginTop: "0.5rem" }}>
+              🪙 <strong>{tokenCount}</strong> token{tokenCount === 1 ? "" : "s"} in your Vault
+            </div>
+          )}
+        </p>
+      )}
 
       {/* === FOOTER === */}
       <footer className="site-footer">
