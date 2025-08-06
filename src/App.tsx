@@ -10,7 +10,6 @@ import {
 import Home from "./pages/Home";
 import CryptoGenerator from "./pages/CryptoGenerator";
 import Vault from "./pages/Vault";
-
 import About from "./pages/About";
 import Manifesto from "./pages/Manifesto";
 import Learn from "./pages/Learn";
@@ -33,6 +32,7 @@ function App() {
 
   return (
     <Router>
+      {/* === HEADER === */}
       <header>
         <div className="header-inner">
           <NavLink to="/" onClick={closeMenu}>
@@ -58,6 +58,7 @@ function App() {
             </NavLink>
           </nav>
 
+          {/* === SOCIAL ICONS === */}
           <div className="social-links">
             <a
               href="https://x.com/JAL358"
@@ -82,12 +83,14 @@ function App() {
             </a>
           </div>
 
+          {/* === HAMBURGER === */}
           <button className="hamburger" onClick={toggleMenu}>
             {menuOpen ? "✕" : "☰"}
           </button>
         </div>
       </header>
 
+      {/* === SIDEBAR MENU === */}
       {menuOpen && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
@@ -108,6 +111,7 @@ function App() {
         </>
       )}
 
+      {/* === MAIN ROUTES === */}
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -119,8 +123,6 @@ function App() {
           <Route path="/content" element={<Content />} />
           <Route path="/learn" element={<Learn />} />
         </Routes>
-
-        <div className="scroll-divider"></div>
       </main>
     </Router>
   );
