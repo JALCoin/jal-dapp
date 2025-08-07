@@ -9,7 +9,7 @@
   --jal-gold: #ffd700;
   --jal-gold-glow: #ffcc00aa;
 
-  font-family: 'Orbitron', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Orbitron', system-ui, sans-serif;
   background-color: var(--jal-bg);
   color: var(--jal-text);
   line-height: 1.6;
@@ -31,11 +31,10 @@ html, body, #root {
 body::after {
   content: '';
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  margin: auto;
   background: url('/JAL%20(3).gif') no-repeat center center;
-  background-size: 480px;
+  background-size: 420px;
   opacity: 0.03;
   pointer-events: none;
   z-index: 0;
@@ -55,14 +54,14 @@ header {
 }
 
 .header-inner {
-  max-width: 960px;
-  width: 100%;
+  width: min(100%, 1200px);
+  padding-inline: clamp(16px, 4vw, 40px);
   text-align: center;
   position: relative;
 }
 
 .logo {
-  height: 140px;
+  height: clamp(100px, 15vw, 140px);
   animation: pulse 4s ease-in-out infinite, flicker 6s linear infinite;
   filter: drop-shadow(0 0 10px white) drop-shadow(0 0 16px var(--jal-gold));
 }
@@ -72,7 +71,7 @@ header {
   margin-top: 1.5rem;
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  gap: clamp(1rem, 4vw, 2rem);
   flex-wrap: wrap;
 }
 
@@ -101,7 +100,6 @@ header {
   left: 1rem;
   display: flex;
   gap: 1rem;
-  z-index: 100;
 }
 
 .social-links img {
@@ -127,10 +125,7 @@ header {
 /* === SIDEBAR NAV === */
 .sidebar-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(6px);
   z-index: 50;
@@ -169,74 +164,34 @@ header {
   text-shadow: 0 0 8px var(--jal-gold), 0 0 16px white;
 }
 
-/* === HERO + HOMEPAGE STRUCTURE === */
-.section-group {
+/* === LANDING PAGE HERO === */
+.hero-full {
+  min-height: calc(100vh - 160px);
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.hero-stack {
+  text-align: center;
+}
+
+.welcome-title {
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 10px var(--jal-gold), 0 0 24px rgba(255,255,255,.35);
+}
+
+.welcome-sub {
+  color: var(--jal-muted);
+  margin: 0.75rem 0 2rem;
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+}
+
+.wallet-center {
   display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
-  padding: 2rem 1.5rem;
-  max-width: 840px;
-  margin: 0 auto;
-}
-
-.section-group > div {
-  background: var(--jal-surface);
-  border: 1px solid var(--jal-border);
-  border-radius: 12px;
-  padding: 1.5rem 1.25rem;
-  box-shadow: 0 0 10px var(--jal-muted);
-  transition: all 0.3s ease;
-}
-
-.section-group > div:hover {
-  box-shadow: 0 0 20px var(--jal-glow), 0 0 40px var(--jal-gold-glow);
-}
-
-.section-group h2 {
-  color: var(--jal-gold);
-  font-size: 1.35rem;
-  margin-bottom: 0.5rem;
-}
-
-.section-group p {
-  color: var(--jal-text);
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.section-group a {
-  color: var(--jal-glow);
-  font-weight: 600;
-  text-decoration: underline;
-  transition: all 0.3s ease;
-}
-
-.section-group a:hover {
-  color: var(--jal-gold);
-  text-shadow: 0 0 6px white, 0 0 10px var(--jal-gold);
-}
-
-/* === CTA BUTTON === */
-a.button {
-  position: relative;
-  color: var(--jal-text);
-  border: 2px solid var(--jal-text);
-  padding: 0.6rem 1.25rem;
-  border-radius: 8px;
-  background: black;
-  text-transform: uppercase;
-  font-weight: 600;
-  box-shadow: 0 0 10px var(--jal-glow);
-  transition: transform 0.2s ease, box-shadow 0.3s ease;
-  display: inline-block;
-  animation: pulseGlow 2.4s infinite ease-in-out;
-}
-
-a.button:hover {
-  transform: scale(1.05);
-  color: white;
-  border-color: var(--jal-gold);
-  box-shadow: 0 0 20px var(--jal-gold), 0 0 30px white;
+  justify-content: center;
 }
 
 /* === VAULT PAGE === */
@@ -251,9 +206,9 @@ a.button:hover {
 
 .vault-title {
   font-size: 2rem;
-  color: white;
   font-weight: 800;
   text-align: center;
+  color: white;
   letter-spacing: 1px;
   text-shadow: 0 0 12px white, 0 0 18px var(--jal-gold);
   margin-bottom: 2rem;
@@ -271,26 +226,18 @@ a.button:hover {
   margin-bottom: 2rem;
 }
 
-.vault-logo-inner {
-  font-size: 0.85rem;
-  color: #333;
-  text-align: center;
-  padding: 0.5rem;
-}
-
 .vault-slogan {
-  color: white;
   font-size: 1.3rem;
   font-weight: 700;
-  text-align: center;
+  color: white;
   text-shadow: 0 0 10px white, 0 0 20px var(--jal-gold);
   margin-bottom: 1.25rem;
 }
 
 .vault-subtext {
-  color: var(--jal-text);
   font-size: 0.95rem;
   text-align: center;
+  color: var(--jal-text);
   margin-bottom: 2rem;
 }
 
@@ -324,54 +271,13 @@ a.button:hover {
     filter: drop-shadow(0 0 16px var(--jal-glow)) drop-shadow(0 0 16px var(--jal-gold));
   }
 }
-
-@keyframes flicker {
-  0%, 18%, 22%, 26%, 50%, 100% { opacity: 1; }
-  20%, 24% { opacity: 0.4; }
-}
-
+@keyframes flicker { 0%,18%,22%,26%,50%,100% {opacity:1;} 20%,24% {opacity:0.4;} }
 @keyframes borderGlowShift {
-  0%, 100% {
-    border-color: var(--jal-gold);
-    box-shadow: 0 4px 20px #ffd70088;
-  }
-  50% {
-    border-color: var(--jal-glow);
-    box-shadow: 0 4px 20px #0ffdd455;
-  }
+  0%,100% { border-color: var(--jal-gold); box-shadow: 0 4px 20px #ffd70088; }
+  50% { border-color: var(--jal-glow); box-shadow: 0 4px 20px #0ffdd455; }
 }
-
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 10px var(--jal-glow);
-  }
-  50% {
-    box-shadow: 0 0 18px var(--jal-gold), 0 0 30px white;
-  }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0.2; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes vaultOpen {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-    filter: blur(6px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-    filter: blur(0);
-  }
-}
+@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+@keyframes slideInRight { from{transform:translateX(100%);opacity:0.2;} to{transform:translateX(0);opacity:1;} }
 
 /* === FOOTER === */
 .site-footer {
@@ -384,42 +290,17 @@ a.button:hover {
 }
 
 /* === SCROLLBAR === */
-::-webkit-scrollbar {
-  width: 8px;
-}
+::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb {
   background: var(--jal-glow);
   border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--jal-gold);
-}
+::-webkit-scrollbar-thumb:hover { background: var(--jal-gold); }
 
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
-  .logo {
-    height: 120px;
-  }
-
-  .vault-title {
-    font-size: 1.6rem;
-  }
-
-  .vault-logo-circle {
-    width: 128px;
-    height: 128px;
-  }
-
-  .vault-button {
-    padding: 0.6rem 1.25rem;
-    font-size: 0.9rem;
-  }
-
-  .main-nav {
-    gap: 1rem;
-  }
-
-  .nav-link {
-    font-size: 1rem;
-  }
+  .main-nav { gap: 1rem; }
+  .nav-link { font-size: 1rem; }
+  .vault-logo-circle { width: 128px; height: 128px; }
+  .vault-title { font-size: 1.6rem; }
 }
