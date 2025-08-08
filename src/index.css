@@ -39,6 +39,72 @@ body::after {
   pointer-events: none;
   z-index: 0;
 }
+/* === LANDING === */
+.landing {
+  position: relative;
+  min-height: calc(100vh - 160px); /* header height buffer */
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.landing-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 60% at 50% 40%,
+              rgba(255, 255, 255, 0.12),
+              transparent 60%),
+              linear-gradient(135deg,
+                rgba(17,241,167,0.16),
+                rgba(255,215,0,0.12),
+                rgba(255,255,255,0.10));
+  background-size: 200% 200%, 200% 200%;
+  animation: landingDrift 18s ease-in-out infinite;
+  filter: blur(0.3px);
+  z-index: 0;
+}
+
+@keyframes landingDrift {
+  0%   { background-position: 0% 0%, 0% 100%; }
+  50%  { background-position: 100% 50%, 100% 0%; }
+  100% { background-position: 0% 0%, 0% 100%; }
+}
+
+.landing-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1.25rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.landing-logo {
+  width: clamp(120px, 22vw, 240px);
+  height: auto;
+  filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 14px var(--jal-gold));
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.landing-wallet {
+  /* you can keep the wallet adapter’s default styles, or tweak: */
+  border-radius: 12px !important;
+  border: 2px solid var(--jal-text) !important;
+  background: #000 !important;
+  color: var(--jal-text) !important;
+  box-shadow: 0 0 12px var(--jal-glow) !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  padding: 0.75rem 1.25rem !important;
+}
+
+.landing-wallet:hover {
+  border-color: var(--jal-gold) !important;
+  color: #fff !important;
+  box-shadow: 0 0 18px var(--jal-gold), 0 0 24px #fff !important;
+  transform: translateZ(0);
+}
+
 
 /* === HEADER === */
 header {
