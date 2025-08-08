@@ -1,6 +1,13 @@
 // src/App.tsx
 import { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, NavLink, useLocation, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  NavLink,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 
@@ -48,19 +55,31 @@ function Shell() {
 
   return (
     <>
-      <header>
-        <div className="header-inner">
-          <NavLink to="/" onClick={closeMenu}>
-            <img src="/JALSOL1.gif" alt="JALSOL Logo" className="logo header-logo" />
-          </NavLink>
+      {/* Hide ENTIRE header on Landing */}
+      {!isLanding && (
+        <header>
+          <div className="header-inner">
+            <NavLink to="/" onClick={closeMenu}>
+              <img
+                src="/JALSOL1.gif"
+                alt="JALSOL Logo"
+                className="logo header-logo"
+              />
+            </NavLink>
 
-          {/* Hide main nav on landing */}
-          {!isLanding && (
             <nav className="main-nav">
-              <NavLink to="/" onClick={closeMenu} className="nav-link">JAL/SOL</NavLink>
-              <NavLink to={vaultPath} onClick={closeMenu} className="nav-link">{vaultLabel}</NavLink>
-              <NavLink to="/learn" onClick={closeMenu} className="nav-link">LEARN/SOL</NavLink>
-              <NavLink to="/about" onClick={closeMenu} className="nav-link">About JAL</NavLink>
+              <NavLink to="/" onClick={closeMenu} className="nav-link">
+                JAL/SOL
+              </NavLink>
+              <NavLink to={vaultPath} onClick={closeMenu} className="nav-link">
+                {vaultLabel}
+              </NavLink>
+              <NavLink to="/learn" onClick={closeMenu} className="nav-link">
+                LEARN/SOL
+              </NavLink>
+              <NavLink to="/about" onClick={closeMenu} className="nav-link">
+                About JAL
+              </NavLink>
 
               {publicKey && (
                 <WalletDisconnectButton
@@ -69,34 +88,54 @@ function Shell() {
                 />
               )}
             </nav>
-          )}
 
-          <div className="social-links">
-            <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer">
-              <img src="/icons/X.png" alt="X" />
-            </a>
-            <a href="https://t.me/JALSOL" target="_blank" rel="noopener noreferrer">
-              <img src="/icons/Telegram.png" alt="Telegram" />
-            </a>
-            <a href="https://tiktok.com/@jalcoin" target="_blank" rel="noopener noreferrer">
-              <img src="/icons/TikTok.png" alt="TikTok" />
-            </a>
+            <div className="social-links">
+              <a
+                href="https://x.com/JAL358"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img src="/icons/X.png" alt="X" />
+              </a>
+              <a
+                href="https://t.me/JALSOL"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img src="/icons/Telegram.png" alt="Telegram" />
+              </a>
+              <a
+                href="https://tiktok.com/@jalcoin"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img src="/icons/TikTok.png" alt="TikTok" />
+              </a>
+            </div>
+
+            <button className="hamburger" onClick={toggleMenu} aria-label="Toggle menu">
+              {menuOpen ? "✕" : "☰"}
+            </button>
           </div>
-
-          <button className="hamburger" onClick={toggleMenu} aria-label="Toggle menu">
-            {menuOpen ? "✕" : "☰"}
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
 
       {menuOpen && !isLanding && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
           <div className="sidebar-nav">
-            <NavLink to="/" onClick={closeMenu} className="nav-link">JAL/SOL</NavLink>
-            <NavLink to={vaultPath} onClick={closeMenu} className="nav-link">{vaultLabel}</NavLink>
-            <NavLink to="/learn" onClick={closeMenu} className="nav-link">LEARN/SOL</NavLink>
-            <NavLink to="/about" onClick={closeMenu} className="nav-link">About JAL</NavLink>
+            <NavLink to="/" onClick={closeMenu} className="nav-link">
+              JAL/SOL
+            </NavLink>
+            <NavLink to={vaultPath} onClick={closeMenu} className="nav-link">
+              {vaultLabel}
+            </NavLink>
+            <NavLink to="/learn" onClick={closeMenu} className="nav-link">
+              LEARN/SOL
+            </NavLink>
+            <NavLink to="/about" onClick={closeMenu} className="nav-link">
+              About JAL
+            </NavLink>
 
             {publicKey && (
               <WalletDisconnectButton
