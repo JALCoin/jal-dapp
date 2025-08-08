@@ -273,3 +273,31 @@ header {
   .logo-circle { width: 128px; height: 128px; }
   .vault-title { font-size: 1.6rem; }
 }
+/* === SOCIAL ICONS === */
+.social-links {
+  position: absolute;
+  top: 1.5rem;
+  left: 1rem;
+  display: flex;
+  gap: 0.75rem; /* slightly reduced gap */
+}
+
+.social-links img {
+  width: 28px;   /* reduced from 36px */
+  height: 28px;  /* reduced from 36px */
+  padding: 4px;  /* reduced from 6px */
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--jal-border);
+  box-shadow: 0 0 4px var(--jal-muted);
+  backdrop-filter: blur(6px);
+  object-fit: contain;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.social-links img:hover {
+  transform: scale(1.15);
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 10px var(--jal-gold), 0 0 16px white;
+  border-color: var(--jal-gold);
+}
