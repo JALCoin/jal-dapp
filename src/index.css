@@ -27,52 +27,70 @@ html, body, #root {
   background-color: var(--jal-bg);
 }
 
-/* === BACKGROUND OVERLAY === */
-body::after {
-  content: '';
-  position: fixed;
+/* === MACHINE BACKGROUND (Shared) === */
+.machine-bg {
+  position: absolute;
   inset: 0;
-  margin: auto;
-  background: url('/JAL%20(3).gif') no-repeat center center;
-  background-size: 420px;
-  opacity: 0.03;
-  pointer-events: none;
+  background:
+    radial-gradient(60% 60% at 50% 40%, rgba(255, 255, 255, 0.08), transparent 60%),
+    linear-gradient(135deg, rgba(17, 241, 167, 0.12), rgba(255, 215, 0, 0.08), rgba(255,255,255,0.05)),
+    url('/334a8ed6-2888-4713-b226-b50a5200a9c2.png') repeat;
+  background-size: 200% 200%, 200% 200%, 300px;
+  animation: machineDrift 18s ease-in-out infinite;
+  filter: blur(0.4px);
   z-index: 0;
 }
+
+@keyframes machineDrift {
+  0% { background-position: 0% 0%, 0% 100%, 0 0; }
+  50% { background-position: 100% 50%, 100% 0%, 150px 150px; }
+  100% { background-position: 0% 0%, 0% 100%, 0 0; }
+}
+
+.machine-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0.02) 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* === REUSABLE LOGO CIRCLE === */
+.logo-circle {
+  width: clamp(120px, 20vw, 160px);
+  height: clamp(120px, 20vw, 160px);
+  border-radius: 50%;
+  border: 4px solid var(--jal-gold);
+  background: radial-gradient(circle at center, #111, #000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px var(--jal-gold), inset 0 0 20px rgba(255, 255, 255, 0.1);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+.wallet-connected .logo-circle {
+  box-shadow: 0 0 18px var(--jal-gold), inset 0 0 25px var(--jal-glow);
+}
+
 /* === LANDING === */
 .landing {
   position: relative;
-  min-height: calc(100vh - 160px); /* header height buffer */
+  min-height: calc(100vh - 160px);
   display: grid;
   place-items: center;
   overflow: hidden;
 }
 
-.landing-bg {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(60% 60% at 50% 40%,
-              rgba(255, 255, 255, 0.12),
-              transparent 60%),
-              linear-gradient(135deg,
-                rgba(17,241,167,0.16),
-                rgba(255,215,0,0.12),
-                rgba(255,255,255,0.10));
-  background-size: 200% 200%, 200% 200%;
-  animation: landingDrift 18s ease-in-out infinite;
-  filter: blur(0.3px);
-  z-index: 0;
-}
-
-@keyframes landingDrift {
-  0%   { background-position: 0% 0%, 0% 100%; }
-  50%  { background-position: 100% 50%, 100% 0%; }
-  100% { background-position: 0% 0%, 0% 100%; }
-}
-
 .landing-inner {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   display: grid;
   gap: 1.25rem;
   justify-items: center;
@@ -83,11 +101,9 @@ body::after {
   width: clamp(120px, 22vw, 240px);
   height: auto;
   filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 14px var(--jal-gold));
-  image-rendering: -webkit-optimize-contrast;
 }
 
 .landing-wallet {
-  /* you can keep the wallet adapter’s default styles, or tweak: */
   border-radius: 12px !important;
   border: 2px solid var(--jal-text) !important;
   background: #000 !important;
@@ -102,9 +118,7 @@ body::after {
   border-color: var(--jal-gold) !important;
   color: #fff !important;
   box-shadow: 0 0 18px var(--jal-gold), 0 0 24px #fff !important;
-  transform: translateZ(0);
 }
-
 
 /* === HEADER === */
 header {
@@ -159,115 +173,16 @@ header {
   animation: flicker 1.2s infinite;
 }
 
-/* === SOCIAL ICONS === */
-.social-links {
-  position: absolute;
-  top: 1.5rem;
-  left: 1rem;
-  display: flex;
-  gap: 1rem;
-}
-
-.social-links img {
-  width: 36px;
-  height: 36px;
-  padding: 6px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--jal-border);
-  box-shadow: 0 0 6px var(--jal-muted);
-  backdrop-filter: blur(6px);
-  object-fit: contain;
-  transition: transform 0.2s ease, box-shadow 0.3s ease;
-}
-
-.social-links img:hover {
-  transform: scale(1.15);
-  background-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 12px var(--jal-gold), 0 0 20px white;
-  border-color: var(--jal-gold);
-}
-
-/* === SIDEBAR NAV === */
-.sidebar-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(6px);
-  z-index: 50;
-  animation: fadeIn 0.4s ease-out;
-}
-
-.sidebar-nav {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: 240px;
-  background: #000;
-  border-left: 2px solid var(--jal-gold);
-  box-shadow: -2px 0 12px var(--jal-glow);
-  padding: 2rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  z-index: 60;
-  animation: slideInRight 0.4s ease-out;
-}
-
-.sidebar-nav .nav-link {
-  font-size: 1rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--jal-text);
-  border-bottom: 1px solid transparent;
-  transition: all 0.3s ease;
-}
-
-.sidebar-nav .nav-link:hover {
-  color: var(--jal-gold);
-  border-bottom: 1px solid var(--jal-gold);
-  text-shadow: 0 0 8px var(--jal-gold), 0 0 16px white;
-}
-
-/* === LANDING PAGE HERO === */
-.hero-full {
-  min-height: calc(100vh - 160px);
-  display: grid;
-  place-items: center;
-  padding: 2rem;
-}
-
-.hero-stack {
-  text-align: center;
-}
-
-.welcome-title {
-  font-size: clamp(2.2rem, 6vw, 4.5rem);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 0 10px var(--jal-gold), 0 0 24px rgba(255,255,255,.35);
-}
-
-.welcome-sub {
-  color: var(--jal-muted);
-  margin: 0.75rem 0 2rem;
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
-}
-
-.wallet-center {
-  display: flex;
-  justify-content: center;
-}
-
 /* === VAULT PAGE === */
 .vault-screen {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 2rem 1rem;
   background: var(--jal-bg);
   min-height: 100vh;
+  z-index: 1;
 }
 
 .vault-title {
@@ -277,18 +192,6 @@ header {
   color: white;
   letter-spacing: 1px;
   text-shadow: 0 0 12px white, 0 0 18px var(--jal-gold);
-  margin-bottom: 2rem;
-}
-
-.vault-logo-circle {
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  border: 4px solid var(--jal-gold);
-  background: radial-gradient(circle at center, #eee, #999);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   margin-bottom: 2rem;
 }
 
@@ -367,6 +270,6 @@ header {
 @media (max-width: 768px) {
   .main-nav { gap: 1rem; }
   .nav-link { font-size: 1rem; }
-  .vault-logo-circle { width: 128px; height: 128px; }
+  .logo-circle { width: 128px; height: 128px; }
   .vault-title { font-size: 1.6rem; }
 }

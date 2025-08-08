@@ -8,19 +8,28 @@ export default function Landing() {
   const { publicKey } = useWallet();
   const navigate = useNavigate();
 
-  // When connected, send them in
+  // Redirect when connected
   useEffect(() => {
     if (publicKey) {
-      // change to `/vault/XYZ` if you want
       navigate("/dashboard", { replace: true });
     }
   }, [publicKey, navigate]);
 
   return (
     <main className="landing">
-      <div className="landing-bg" aria-hidden />
+      {/* Shared animated machine background */}
+      <div className="machine-bg" aria-hidden />
+
       <div className="landing-inner">
-        <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
+        {/* Reusable glowing logo circle */}
+        <div className={`logo-circle ${publicKey ? "wallet-connected" : ""}`}>
+          <img
+            src="/JALSOL1.gif"
+            alt="JAL/SOL"
+            style={{ width: "70%", height: "auto" }}
+          />
+        </div>
+
         <WalletMultiButton className="landing-wallet" />
       </div>
     </main>
