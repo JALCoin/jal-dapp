@@ -27,7 +27,58 @@ html, body, #root {
   background-color: var(--jal-bg);
 }
 
-/* === MACHINE BACKGROUND (Shared) === */
+/* === LANDING PAGE GRADIENT BACKGROUND === */
+.landing-gradient {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(270deg, #11f1a7, #ffd700, #ffffff);
+  background-size: 600% 600%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.landing-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 1;
+  text-align: center;
+}
+
+.landing-logo {
+  width: clamp(140px, 25vw, 260px);
+  height: auto;
+  filter: drop-shadow(0 0 10px white) drop-shadow(0 0 16px var(--jal-gold));
+}
+
+.landing-wallet {
+  border-radius: 12px !important;
+  border: 2px solid var(--jal-text) !important;
+  background: #000 !important;
+  color: var(--jal-text) !important;
+  box-shadow: 0 0 12px var(--jal-glow) !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  padding: 0.75rem 1.25rem !important;
+}
+
+.landing-wallet:hover {
+  border-color: var(--jal-gold) !important;
+  color: #fff !important;
+  box-shadow: 0 0 18px var(--jal-gold), 0 0 24px #fff !important;
+}
+
+/* === MACHINE BACKGROUND (Shared for other pages) === */
 .machine-bg {
   position: absolute;
   inset: 0;
@@ -77,100 +128,6 @@ html, body, #root {
 
 .wallet-connected .logo-circle {
   box-shadow: 0 0 18px var(--jal-gold), inset 0 0 25px var(--jal-glow);
-}
-
-/* === LANDING === */
-.landing {
-  position: relative;
-  min-height: calc(100vh - 160px);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-
-.landing-inner {
-  position: relative;
-  z-index: 3;
-  display: grid;
-  gap: 1.25rem;
-  justify-items: center;
-  text-align: center;
-}
-
-.landing-logo {
-  width: clamp(120px, 22vw, 240px);
-  height: auto;
-  filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 14px var(--jal-gold));
-}
-
-.landing-wallet {
-  border-radius: 12px !important;
-  border: 2px solid var(--jal-text) !important;
-  background: #000 !important;
-  color: var(--jal-text) !important;
-  box-shadow: 0 0 12px var(--jal-glow) !important;
-  text-transform: uppercase !important;
-  font-weight: 700 !important;
-  padding: 0.75rem 1.25rem !important;
-}
-
-.landing-wallet:hover {
-  border-color: var(--jal-gold) !important;
-  color: #fff !important;
-  box-shadow: 0 0 18px var(--jal-gold), 0 0 24px #fff !important;
-}
-
-/* === HEADER === */
-header {
-  width: 100%;
-  background: black;
-  padding: 2rem 1rem 1.25rem;
-  border-bottom: 2px solid var(--jal-gold);
-  animation: borderGlowShift 8s infinite;
-  display: flex;
-  justify-content: center;
-  position: relative;
-  z-index: 10;
-}
-
-.header-inner {
-  width: min(100%, 1200px);
-  padding-inline: clamp(16px, 4vw, 40px);
-  text-align: center;
-  position: relative;
-}
-
-.logo {
-  height: clamp(100px, 15vw, 140px);
-  animation: pulse 4s ease-in-out infinite, flicker 6s linear infinite;
-  filter: drop-shadow(0 0 10px white) drop-shadow(0 0 16px var(--jal-gold));
-}
-
-/* === NAVIGATION === */
-.main-nav {
-  margin-top: 1.5rem;
-  display: flex;
-  justify-content: center;
-  gap: clamp(1rem, 4vw, 2rem);
-  flex-wrap: wrap;
-}
-
-.nav-link {
-  color: white;
-  font-size: 1.05rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-.nav-link:hover {
-  color: var(--jal-gold);
-  text-shadow: 0 0 8px var(--jal-gold), 0 0 16px white;
-}
-
-.nav-link.active {
-  border-bottom: 2px solid var(--jal-gold);
-  animation: flicker 1.2s infinite;
 }
 
 /* === VAULT PAGE === */
@@ -245,8 +202,6 @@ header {
   0%,100% { border-color: var(--jal-gold); box-shadow: 0 4px 20px #ffd70088; }
   50% { border-color: var(--jal-glow); box-shadow: 0 4px 20px #0ffdd455; }
 }
-@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
-@keyframes slideInRight { from{transform:translateX(100%);opacity:0.2;} to{transform:translateX(0);opacity:1;} }
 
 /* === FOOTER === */
 .site-footer {
@@ -258,34 +213,19 @@ header {
   text-shadow: 0 0 4px var(--jal-glow);
 }
 
-/* === SCROLLBAR === */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-thumb {
-  background: var(--jal-glow);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover { background: var(--jal-gold); }
-
-/* === RESPONSIVE === */
-@media (max-width: 768px) {
-  .main-nav { gap: 1rem; }
-  .nav-link { font-size: 1rem; }
-  .logo-circle { width: 128px; height: 128px; }
-  .vault-title { font-size: 1.6rem; }
-}
 /* === SOCIAL ICONS === */
 .social-links {
   position: absolute;
   top: 1.5rem;
   left: 1rem;
   display: flex;
-  gap: 0.75rem; /* slightly reduced gap */
+  gap: 0.75rem;
 }
 
 .social-links img {
-  width: 28px;   /* reduced from 36px */
-  height: 28px;  /* reduced from 36px */
-  padding: 4px;  /* reduced from 6px */
+  width: 28px;
+  height: 28px;
+  padding: 4px;
   border-radius: 50%;
   background-color: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--jal-border);
@@ -300,4 +240,12 @@ header {
   background-color: rgba(255, 255, 255, 0.1);
   box-shadow: 0 0 10px var(--jal-gold), 0 0 16px white;
   border-color: var(--jal-gold);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .main-nav { gap: 1rem; }
+  .nav-link { font-size: 1rem; }
+  .logo-circle { width: 128px; height: 128px; }
+  .vault-title { font-size: 1.6rem; }
 }
