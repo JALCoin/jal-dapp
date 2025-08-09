@@ -5,7 +5,7 @@
   --jal-bg:#121212;
   --jal-surface:#1e1e1e;
   --jal-text:#11f1a7;
-  --jal-muted:rgba(17,241,167,.5);
+  --jal-muted:rgba(17,241,167,.55);
   --jal-glow:#0ffdd4;
   --jal-border:#11f1a766;
   --jal-gold:#ffd700;
@@ -30,6 +30,7 @@ html,body,#root{
   display:grid; place-items:center; overflow:hidden;
   background:linear-gradient(270deg,#11f1a7,#ffd700,#ffffff);
   background-size:600% 600%; animation:gradientShift 15s ease infinite;
+  transition:opacity .5s ease, filter .5s ease, transform .5s ease;
 }
 @keyframes gradientShift{
   0%{background-position:0% 50%}
@@ -37,11 +38,22 @@ html,body,#root{
   100%{background-position:0% 50%}
 }
 
+/* landing → hub exit */
+.landing-merge{
+  pointer-events:none;
+}
+.landing-merge.landing-gradient{
+  opacity:.2; filter:saturate(.85) blur(.3px);
+  transform:scale(1.01);
+}
+
 /* Center-top social icons (landing only) */
 .landing-social{
   position:absolute; top:1.25rem; left:50%; transform:translateX(-50%);
   display:flex; gap:.75rem; z-index:3;
+  transition:opacity .35s ease;
 }
+.landing-merge .landing-social{opacity:0}
 .landing-social img{
   width:28px; height:28px; max-width:28px; max-height:28px;
   padding:4px; border-radius:50%;
@@ -82,7 +94,6 @@ html,body,#root{
   filter:drop-shadow(0 0 14px #fff) drop-shadow(0 0 22px var(--jal-gold));
 }
 
-/* Wallet button */
 .landing-wallet{
   border-radius:12px!important; border:2px solid var(--jal-text)!important;
   background:#000!important; color:var(--jal-text)!important;
@@ -96,7 +107,6 @@ html,body,#root{
 }
 
 /* Merge/exit animation after connect */
-.landing-merge{position:relative; overflow:hidden}
 .landing-merge .landing-wallet.fade-out{opacity:0; transform:translateY(6px)}
 .landing-merge .landing-logo-wrapper.to-top{animation:logoSlideToTop .8s ease forwards}
 @keyframes logoSlideToTop{
@@ -157,38 +167,57 @@ header .social-links img{
 @keyframes slideInRight{from{transform:translateX(100%);opacity:.2}to{transform:translateX(0);opacity:1}}
 
 /* ===============================
-   HUB (post‑connect big buttons)
+   HUB (post-connect with animated gradient)
 =================================*/
-.hub{
-  min-height:calc(100vh - 140px); /* leaves room for the thin header band */
-  display:grid; place-items:start center;
-  padding:6vh 1rem 10vh;
+.hub {
+  min-height: calc(100vh - 140px);
+  display: grid;
+  place-items: start center;
+  padding: 7vh 1rem 12vh;
+
+  /* Animated gradient base like landing */
   background:
-    radial-gradient(40% 35% at 50% 28%, rgba(255,255,255,.08), transparent 70%),
-    radial-gradient(55% 45% at 50% 60%, rgba(17,241,167,.06), transparent 70%),
-    linear-gradient(135deg, rgba(17,241,167,.10), rgba(255,215,0,.08), rgba(255,255,255,.06));
+    linear-gradient(270deg, var(--jal-text), var(--jal-gold), var(--white), var(--jal-bg));
+  background-size: 600% 600%;
+  animation: gradientShift 15s ease infinite, hubBgFade .5s ease-in forwards;
+
+  /* Overlay subtle radial highlights */
+  position: relative;
 }
-
-.hub-inner{ width:min(960px,94vw); margin-inline:auto; }
-
-.hub-title{
-  margin:0 0 0.5rem;
-  text-align:center; color:#fff;
-  font-size:clamp(1.8rem,3vw,2.6rem);
-  letter-spacing:.02em;
-  text-shadow:0 0 10px var(--jal-gold), 0 0 22px rgba(255,255,255,.35);
+.hub::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(42% 36% at 50% 28%, rgba(255, 255, 255, 0.08), transparent 70%),
+    radial-gradient(55% 46% at 50% 62%, rgba(17, 241, 167, 0.07), transparent 72%);
+  pointer-events: none;
+}
+@keyframes hubBgFade {
+  from { opacity: 0 }
+  to { opacity: 1 }
 }
 
 /* Connected wallet pill */
 .hub-connection{
-  margin:0 0 1.25rem;
+  margin:.15rem 0 1.1rem;
   display:flex; justify-content:center; gap:.5rem;
   font-size:.85rem; color:var(--jal-muted);
+  animation: fadeIn .45s ease .05s both;
 }
 .hub-connection .pill{
   background:#000; color:#fff; border:1px solid var(--jal-glow);
-  padding:.25rem .5rem; border-radius:999px;
+  padding:.25rem .55rem; border-radius:999px;
   box-shadow:0 0 10px rgba(15,253,212,.25);
+}
+
+/* Stagger helpers */
+.stagger-1{animation:fadeInUp .4s ease .05s both}
+.stagger-2{animation:fadeInUp .4s ease .12s both}
+.stagger-3{animation:fadeInUp .4s ease .19s both}
+@keyframes fadeInUp{
+  from{opacity:0; transform:translateY(6px)}
+  to{opacity:1; transform:translateY(0)}
 }
 
 .hub-stack{ display:grid; gap:1rem; }
@@ -197,38 +226,31 @@ header .social-links img{
   display:block; width:100%; text-align:center; text-decoration:none;
   padding:clamp(1rem,2.6vw,1.4rem) clamp(1rem,2.6vw,1.6rem);
   border-radius:14px; border:2px solid var(--jal-text);
-  background:rgba(0,0,0,.9); color:var(--jal-text);
+  background:rgba(0,0,0,.92); color:var(--jal-text);
   font-weight:900; letter-spacing:.08em; text-transform:uppercase;
   box-shadow:0 0 14px rgba(0,255,200,.25), inset 0 0 0 rgba(255,255,255,0);
   transition:transform .18s ease, box-shadow .25s ease, color .2s ease,
-             background .2s ease, border-color .2s ease;
+             background .2s ease, border-color .2s ease, filter .2s ease;
 }
-
 .hub-btn .sub{
-  display:block; margin-top:.4rem;
+  display:block; margin-top:.42rem;
   font-weight:600; letter-spacing:.03em; text-transform:none;
-  opacity:.8; color:var(--jal-muted);
+  opacity:.86; color:var(--jal-muted);
 }
-
 .hub-btn:hover{
   transform:translateY(-2px) scale(1.01);
   background:#fff; color:#000; border-color:#fff;
   box-shadow:0 0 26px rgba(255,255,255,.65),
              0 0 34px var(--jal-gold),
              inset 0 0 12px rgba(255,255,255,.35);
+  filter:saturate(1.05);
 }
-
 .hub-btn:focus-visible{
   outline:3px solid #fff; outline-offset:3px;
   box-shadow:0 0 0 4px rgba(255,255,255,.35), 0 0 18px var(--jal-gold);
 }
 
-@media (max-width:768px){
-  .hub{padding-top:5vh}
-  .hub-title{font-size:1.6rem}
-  .hub-btn{letter-spacing:.06em}
-}
-/* Hub Disconnect Button */
+/* Hub Disconnect Button (top-right inside Hub) */
 .hub-disconnect-btn {
   border: 2px solid var(--jal-text) !important;
   background: #000 !important;
@@ -238,9 +260,8 @@ header .social-links img{
   text-transform: uppercase !important;
   box-shadow: 0 0 10px var(--jal-glow) !important;
   padding: 0.5rem 1rem !important;
-  transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.2s ease, color 0.2s ease;
+  transition: transform .2s ease, box-shadow .3s ease, border-color .2s ease, color .2s ease;
 }
-
 .hub-disconnect-btn:hover {
   transform: scale(1.05);
   border-color: var(--jal-gold) !important;
@@ -249,7 +270,7 @@ header .social-links img{
 }
 
 /* ===============================
-   VAULT (shared look used in Vault.tsx)
+   VAULT
 =================================*/
 .vault-screen{
   position:relative; display:flex; flex-direction:column; align-items:center;
