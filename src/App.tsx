@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactElement } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -22,7 +22,7 @@ import Learn from "./pages/Learn";
 import Content from "./pages/Content";
 import Hub from "./pages/Hub";
 
-function Protected({ children }: { children: JSX.Element }) {
+function Protected({ children }: { children: ReactElement }) {
   const { connected } = useWallet();
   if (!connected) return <Navigate to="/" replace />;
   return children;
@@ -33,7 +33,7 @@ function Shell() {
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
 
   const location = useLocation();
-  const { publicKey, connected } = useWallet();
+  const { publicKey } = useWallet(); // connected not needed here
 
   const isLanding = location.pathname === "/";
   const isHub = location.pathname.startsWith("/hub");
@@ -51,9 +51,6 @@ function Shell() {
       document.body.style.overflow = "";
     };
   }, [menuOpen]);
-
-  // If disconnected while on any protected route (not hub-specific),
-  // the Protected wrapper will bounce to "/". No global redirect needed here.
 
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
