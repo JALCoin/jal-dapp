@@ -32,6 +32,7 @@ function Shell() {
   const { publicKey, connected } = useWallet();
 
   const isLanding = location.pathname === "/";
+  const isHub = location.pathname.startsWith("/hub");
 
   // load cached symbol
   useEffect(() => {
@@ -42,27 +43,25 @@ function Shell() {
   // lock scroll on sidebar
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => void (document.body.style.overflow = "");
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [menuOpen]);
 
-  // ✅ robust redirect: if connected while on "/", go to /hub
+  // connect on landing → hub
   useEffect(() => {
-    if (connected && isLanding) {
-      navigate("/hub", { replace: true });
-    }
+    if (connected && isLanding) navigate("/hub", { replace: true });
   }, [connected, isLanding, navigate]);
 
-  // if disconnected away from landing, send back to landing
+  // disconnected off landing → back to landing
   useEffect(() => {
     if (!connected && !isLanding) navigate("/", { replace: true });
   }, [connected, isLanding, navigate]);
 
-  // block direct access to /hub when not connected
+  // guard hub
   useEffect(() => {
-    if (location.pathname === "/hub" && !connected) {
-      navigate("/", { replace: true });
-    }
-  }, [connected, location.pathname, navigate]);
+    if (isHub && !connected) navigate("/", { replace: true });
+  }, [connected, isHub, navigate]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
@@ -97,7 +96,7 @@ function Shell() {
 
   return (
     <>
-      {/* hide header on landing */}
+      {/* Header hidden on Landing. On /hub, show header but hide nav + hamburger. */}
       {!isLanding && (
         <header>
           <div className="header-inner">
@@ -105,11 +104,14 @@ function Shell() {
               <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
             </NavLink>
 
-            <nav className="main-nav" aria-label="Primary">
-              {links.map((l) => renderNavLink(l.to, l.label))}
-              {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
-            </nav>
+            {!isHub && (
+              <nav className="main-nav" aria-label="Primary">
+                {links.map((l) => renderNavLink(l.to, l.label))}
+                {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
+              </nav>
+            )}
 
+            {/* Keep socials always */}
             <div className="social-links" aria-label="Social links">
               <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
                 <img src="/icons/X.png" alt="" />
@@ -122,20 +124,24 @@ function Shell() {
               </a>
             </div>
 
-            <button
-              className="hamburger"
-              onClick={toggleMenu}
-              aria-label="Toggle menu"
-              aria-expanded={menuOpen}
-              aria-controls="sidebar-nav"
-            >
-              {menuOpen ? "✕" : "☰"}
-            </button>
+            {/* Hide hamburger on /hub since nav is hidden */}
+            {!isHub && (
+              <button
+                className="hamburger"
+                onClick={toggleMenu}
+                aria-label="Toggle menu"
+                aria-expanded={menuOpen}
+                aria-controls="sidebar-nav"
+              >
+                {menuOpen ? "✕" : "☰"}
+              </button>
+            )}
           </div>
         </header>
       )}
 
-      {menuOpen && !isLanding && (
+      {/* Sidebar (never on /hub) */}
+      {menuOpen && !isLanding && !isHub && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
           <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
