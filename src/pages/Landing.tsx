@@ -1,10 +1,7 @@
 // src/pages/Landing.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import {
-  WalletMultiButton,
-  WalletDisconnectButton,
-} from "@solana/wallet-adapter-react-ui";
+import { WalletMultiButton, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 import { useNavigate } from "react-router-dom";
 
 export default function Landing() {
@@ -12,27 +9,47 @@ export default function Landing() {
   const navigate = useNavigate();
 
   const [merging, setMerging] = useState(false);
+  const timerRef = useRef<number | null>(null);
 
-  // On connect: run merge animation, then go to /hub
+  // Respect reduced-motion: skip animation and go straight to hub
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   useEffect(() => {
-    if (connected && publicKey && !merging) {
-      setMerging(true);
-      const t = setTimeout(() => {
-        navigate("/hub", { replace: true });
-      }, 1000); // match your CSS transition duration
-      return () => clearTimeout(t);
-    }
-  }, [connected, publicKey, merging, navigate]);
+    if (!connected || !publicKey || merging) return;
 
-  // Reset visual state if disconnected while still on landing
+    if (prefersReducedMotion) {
+      navigate("/hub", { replace: true });
+      return;
+    }
+
+    setMerging(true);
+    // match CSS timing (index.css: logoSlideToTop .8s + a little buffer)
+    timerRef.current = window.setTimeout(() => navigate("/hub", { replace: true }), 1000);
+
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [connected, publicKey, merging, navigate, prefersReducedMotion]);
+
+  // Reset state if user disconnects while still on landing
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
   }, [connected, publicKey]);
 
   return (
-    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} style={{ position: "relative" }}>
+    <main
+      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
+      style={{ position: "relative" }}
+      aria-live="polite"
+    >
       {/* Center-top social icons */}
       <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
@@ -46,7 +63,7 @@ export default function Landing() {
         </a>
       </div>
 
-      {/* Show Disconnect button during merge so users can cancel */}
+      {/* Show Disconnect during merge so users can cancel */}
       {merging && (
         <div className="landing-disconnect">
           <WalletDisconnectButton className="wallet-disconnect-btn" />
@@ -63,7 +80,13 @@ export default function Landing() {
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
-        <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
+        {/* Hide the connect button once we’re connected/merging */}
+        {!connected && <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />}
+
+        {/* SR-only connection hint */}
+        <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
+          {connected ? "Wallet connected. Preparing hub…" : "Wallet not connected."}
+        </span>
       </div>
     </main>
   );
