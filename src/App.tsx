@@ -6,7 +6,6 @@ import {
   Route,
   NavLink,
   useLocation,
-  useNavigate,
   Navigate,
 } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -23,24 +22,29 @@ import Learn from "./pages/Learn";
 import Content from "./pages/Content";
 import Hub from "./pages/Hub";
 
+function Protected({ children }: { children: JSX.Element }) {
+  const { connected } = useWallet();
+  if (!connected) return <Navigate to="/" replace />;
+  return children;
+}
+
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
 
   const location = useLocation();
-  const navigate = useNavigate();
   const { publicKey, connected } = useWallet();
 
   const isLanding = location.pathname === "/";
   const isHub = location.pathname.startsWith("/hub");
 
-  // load cached symbol
+  // Load cached symbol once
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // lock scroll on sidebar
+  // Lock body scroll when sidebar opened
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
@@ -48,20 +52,8 @@ function Shell() {
     };
   }, [menuOpen]);
 
-  // connect on landing → hub
-  useEffect(() => {
-    if (connected && isLanding) navigate("/hub", { replace: true });
-  }, [connected, isLanding, navigate]);
-
-  // disconnected off landing → back to landing
-  useEffect(() => {
-    if (!connected && !isLanding) navigate("/", { replace: true });
-  }, [connected, isLanding, navigate]);
-
-  // guard hub
-  useEffect(() => {
-    if (isHub && !connected) navigate("/", { replace: true });
-  }, [connected, isHub, navigate]);
+  // If disconnected while on any protected route (not hub-specific),
+  // the Protected wrapper will bounce to "/". No global redirect needed here.
 
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
@@ -96,7 +88,7 @@ function Shell() {
 
   return (
     <>
-      {/* Header hidden on Landing. On /hub, show header but hide nav + hamburger. */}
+      {/* Hide header on Landing. On /hub keep only logo + socials (no nav/hamburger). */}
       {!isLanding && (
         <header>
           <div className="header-inner">
@@ -111,7 +103,6 @@ function Shell() {
               </nav>
             )}
 
-            {/* Keep socials always */}
             <div className="social-links" aria-label="Social links">
               <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
                 <img src="/icons/X.png" alt="" />
@@ -124,7 +115,6 @@ function Shell() {
               </a>
             </div>
 
-            {/* Hide hamburger on /hub since nav is hidden */}
             {!isHub && (
               <button
                 className="hamburger"
@@ -153,7 +143,18 @@ function Shell() {
 
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/hub" element={<Hub />} />
+
+        {/* Post-connect hub (guarded) */}
+        <Route
+          path="/hub"
+          element={
+            <Protected>
+              <Hub />
+            </Protected>
+          }
+        />
+
+        {/* The rest of your routes */}
         <Route path="/home" element={<Home />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -163,10 +164,31 @@ function Shell() {
         <Route path="/content" element={<Content />} />
         <Route path="/learn" element={<Learn />} />
 
-        {/* placeholders */}
-        <Route path="/start" element={<div style={{ padding: 24 }}>Start flow…</div>} />
-        <Route path="/utility" element={<div style={{ padding: 24 }}>Utility…</div>} />
-        <Route path="/terms" element={<div style={{ padding: 24 }}>Terms…</div>} />
+        {/* Placeholders — also guarded since they’re hub actions */}
+        <Route
+          path="/start"
+          element={
+            <Protected>
+              <div style={{ padding: 24 }}>Start flow…</div>
+            </Protected>
+          }
+        />
+        <Route
+          path="/utility"
+          element={
+            <Protected>
+              <div style={{ padding: 24 }}>Utility…</div>
+            </Protected>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <Protected>
+              <div style={{ padding: 24 }}>Terms…</div>
+            </Protected>
+          }
+        />
 
         {/* catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
