@@ -1,52 +1,70 @@
+// src/pages/Landing.tsx
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import {
+  WalletMultiButton,
+  WalletDisconnectButton,
+} from "@solana/wallet-adapter-react-ui";
 import { useNavigate } from "react-router-dom";
-import Home from "./Home";
 
 export default function Landing() {
   const { publicKey, connected } = useWallet();
   const navigate = useNavigate();
 
-  const [showHome, setShowHome] = useState(false);
-  const [leaving, setLeaving] = useState(false);
+  const [merging, setMerging] = useState(false);
 
-  // When connected, reveal Home underneath and slide Landing away.
+  // On connect: run merge animation, then go to /hub
   useEffect(() => {
-    if (connected && publicKey && !leaving) {
-      setShowHome(true);      // show Home behind
-      setLeaving(true);       // start slide-up animation
+    if (connected && publicKey && !merging) {
+      setMerging(true);
       const t = setTimeout(() => {
-        navigate("/home", { replace: true }); // then switch to /home
-      }, 600); // match CSS keyframe duration
+        navigate("/hub", { replace: true });
+      }, 1000); // match your CSS transition duration
       return () => clearTimeout(t);
     }
-  }, [connected, publicKey, leaving, navigate]);
+  }, [connected, publicKey, merging, navigate]);
 
-  // IMPORTANT: if user disconnects on "/", reset overlay & animation
+  // Reset visual state if disconnected while still on landing
   useEffect(() => {
     if (!connected || !publicKey) {
-      setShowHome(false);  // hide background Home
-      setLeaving(false);   // cancel slide
+      setMerging(false);
     }
   }, [connected, publicKey]);
 
   return (
-    <div style={{ position: "relative", minHeight: "100svh" }}>
-      {/* Home is rendered behind Landing for overlap reveal */}
-      {showHome && <Home />}
+    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} style={{ position: "relative" }}>
+      {/* Center-top social icons */}
+      <div className="landing-social" aria-hidden={merging}>
+        <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <img src="/icons/X.png" alt="X" />
+        </a>
+        <a href="https://t.me/JALSOL" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+          <img src="/icons/Telegram.png" alt="Telegram" />
+        </a>
+        <a href="https://tiktok.com/@jalcoin" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+          <img src="/icons/TikTok.png" alt="TikTok" />
+        </a>
+      </div>
 
-      <main
-        className={`landing-gradient ${leaving ? "landing-exit" : ""}`}
-        style={{ position: "absolute", inset: 0, zIndex: 10 }}
-      >
-        <div className="landing-inner">
-          <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
-            <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
-          </div>
-          <WalletMultiButton className="landing-wallet" />
+      {/* Show Disconnect button during merge so users can cancel */}
+      {merging && (
+        <div className="landing-disconnect">
+          <WalletDisconnectButton className="wallet-disconnect-btn" />
         </div>
-      </main>
-    </div>
+      )}
+
+      {/* Logo + wallet button */}
+      <div className="landing-inner">
+        <div
+          className={`landing-logo-wrapper ${merging ? "to-top" : ""} ${
+            connected ? "wallet-connected" : ""
+          }`}
+        >
+          <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
+        </div>
+
+        <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
+      </div>
+    </main>
   );
 }

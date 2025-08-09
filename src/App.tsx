@@ -20,6 +20,7 @@ import About from "./pages/About";
 import Manifesto from "./pages/Manifesto";
 import Learn from "./pages/Learn";
 import Content from "./pages/Content";
+import Hub from "./pages/Hub";
 
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -27,9 +28,9 @@ function Shell() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { publicKey } = useWallet();
+  const { publicKey, connected } = useWallet();
 
-  const isLanding = location.pathname === "/";
+  const isLandingRoute = location.pathname === "/";
 
   // Load cached vault symbol
   useEffect(() => {
@@ -37,7 +38,7 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // Lock page scroll when sidebar is open
+  // Lock scroll when sidebar is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
@@ -45,18 +46,26 @@ function Shell() {
     };
   }, [menuOpen]);
 
-  // On wallet disconnect -> navigate to Landing (prevents bounce)
+  // If wallet disconnects off the landing page, send user back to landing
   useEffect(() => {
-    if (!publicKey && location.pathname !== "/") {
+    if (!connected && !isLandingRoute) {
       navigate("/", { replace: true });
     }
-  }, [publicKey, location.pathname, navigate]);
+  }, [connected, isLandingRoute, navigate]);
+
+  // Guard the Hub route (must be connected)
+  useEffect(() => {
+    if (location.pathname === "/hub" && !connected) {
+      navigate("/", { replace: true });
+    }
+  }, [connected, location.pathname, navigate]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
 
   const vaultPath = useMemo(
-    () => (userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard"),
+    () =>
+      userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard",
     [userSymbol]
   );
   const vaultLabel = useMemo(
@@ -64,9 +73,9 @@ function Shell() {
     [userSymbol]
   );
 
-  // Define links once; reuse in header + sidebar
   const links = [
     { to: "/", label: "JAL/SOL" },
+    { to: "/hub", label: "HUB" },
     { to: vaultPath, label: vaultLabel },
     { to: "/learn", label: "LEARN/SOL" },
     { to: "/about", label: "About JAL" },
@@ -86,26 +95,47 @@ function Shell() {
   return (
     <>
       {/* Header hidden on Landing */}
-      {!isLanding && (
+      {!isLandingRoute && (
         <header>
           <div className="header-inner">
             <NavLink to="/" onClick={closeMenu} aria-label="Go to Landing">
-              <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
+              <img
+                src="/JALSOL1.gif"
+                alt="JAL/SOL Logo"
+                className="logo header-logo"
+              />
             </NavLink>
 
             <nav className="main-nav" aria-label="Primary">
               {links.map((l) => renderNavLink(l.to, l.label))}
-              {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
+              {publicKey && (
+                <WalletDisconnectButton className="wallet-disconnect-btn" />
+              )}
             </nav>
 
             <div className="social-links" aria-label="Social links">
-              <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
+              <a
+                href="https://x.com/JAL358"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="X / Twitter"
+              >
                 <img src="/icons/X.png" alt="" />
               </a>
-              <a href="https://t.me/JALSOL" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+              <a
+                href="https://t.me/JALSOL"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Telegram"
+              >
                 <img src="/icons/Telegram.png" alt="" />
               </a>
-              <a href="https://tiktok.com/@jalcoin" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+              <a
+                href="https://tiktok.com/@jalcoin"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="TikTok"
+              >
                 <img src="/icons/TikTok.png" alt="" />
               </a>
             </div>
@@ -123,13 +153,20 @@ function Shell() {
         </header>
       )}
 
-      {/* Sidebar (mobile) */}
-      {menuOpen && !isLanding && (
+      {/* Sidebar */}
+      {menuOpen && !isLandingRoute && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
-          <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
+          <div
+            id="sidebar-nav"
+            className="sidebar-nav"
+            role="dialog"
+            aria-modal="true"
+          >
             {links.map((l) => renderNavLink(l.to, l.label))}
-            {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
+            {publicKey && (
+              <WalletDisconnectButton className="wallet-disconnect-btn" />
+            )}
           </div>
         </>
       )}
@@ -138,6 +175,7 @@ function Shell() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/hub" element={<Hub />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/vault/:symbol" element={<Vault />} />
@@ -145,6 +183,11 @@ function Shell() {
         <Route path="/manifesto" element={<Manifesto />} />
         <Route path="/content" element={<Content />} />
         <Route path="/learn" element={<Learn />} />
+
+        {/* Placeholders—replace with real pages when ready */}
+        <Route path="/start" element={<div style={{ padding: 24 }}>Start flow…</div>} />
+        <Route path="/utility" element={<div style={{ padding: 24 }}>Utility…</div>} />
+        <Route path="/terms" element={<div style={{ padding: 24 }}>Terms…</div>} />
       </Routes>
     </>
   );
