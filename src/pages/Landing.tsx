@@ -11,31 +11,26 @@ export default function Landing() {
   const [merging, setMerging] = useState(false);
   const timerRef = useRef<number | null>(null);
 
-  // Respect reduced-motion: skip animation and go straight to hub
-  const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
+  // 1) Robust redirect: go to /hub immediately when connected.
   useEffect(() => {
-    if (!connected || !publicKey || merging) return;
+    if (!connected || !publicKey) return;
 
-    if (prefersReducedMotion) {
-      navigate("/hub", { replace: true });
-      return;
-    }
-
+    // kick off the visual effect but don't rely on it for routing
     setMerging(true);
-    // match CSS timing (index.css: logoSlideToTop .8s + a little buffer)
-    timerRef.current = window.setTimeout(() => navigate("/hub", { replace: true }), 1000);
+
+    // hard redirect quickly (no animation dependency)
+    // small delay so the UI can show the merge for a heartbeat
+    timerRef.current = window.setTimeout(() => {
+      navigate("/hub", { replace: true });
+    }, 150); // 150ms is enough for a hint of motion
 
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = null;
     };
-  }, [connected, publicKey, merging, navigate, prefersReducedMotion]);
+  }, [connected, publicKey, navigate]);
 
-  // Reset state if user disconnects while still on landing
+  // safety: if user disconnects on landing, reset merge
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
@@ -45,48 +40,42 @@ export default function Landing() {
   }, [connected, publicKey]);
 
   return (
-    <main
-      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
-      style={{ position: "relative" }}
-      aria-live="polite"
-    >
-      {/* Center-top social icons */}
+    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
       <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
-          <img src="/icons/X.png" alt="X" />
+          <img src="/icons/X.png" alt="" />
         </a>
         <a href="https://t.me/JALSOL" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
-          <img src="/icons/Telegram.png" alt="Telegram" />
+          <img src="/icons/Telegram.png" alt="" />
         </a>
         <a href="https://tiktok.com/@jalcoin" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-          <img src="/icons/TikTok.png" alt="TikTok" />
+          <img src="/icons/TikTok.png" alt="" />
         </a>
       </div>
 
-      {/* Show Disconnect during merge so users can cancel */}
       {merging && (
         <div className="landing-disconnect">
           <WalletDisconnectButton className="wallet-disconnect-btn" />
         </div>
       )}
 
-      {/* Logo + wallet button */}
       <div className="landing-inner">
-        <div
-          className={`landing-logo-wrapper ${merging ? "to-top" : ""} ${
-            connected ? "wallet-connected" : ""
-          }`}
-        >
+        <div className={`landing-logo-wrapper ${merging ? "to-top" : ""} ${connected ? "wallet-connected" : ""}`}>
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
-        {/* Hide the connect button once we’re connected/merging */}
         {!connected && <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />}
 
-        {/* SR-only connection hint */}
-        <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
-          {connected ? "Wallet connected. Preparing hub…" : "Wallet not connected."}
-        </span>
+        {/* Manual escape hatch just in case */}
+        {connected && (
+          <button
+            type="button"
+            onClick={() => navigate("/hub", { replace: true })}
+            style={{ marginTop: 16, background: "transparent", color: "#ffd700", border: "none", cursor: "pointer" }}
+          >
+            Continue to Hub →
+          </button>
+        )}
       </div>
     </main>
   );
