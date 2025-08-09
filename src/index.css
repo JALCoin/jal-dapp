@@ -208,6 +208,20 @@ header {
 .jal-header { display: grid; place-items: center; margin-bottom: 16px; }
 .jal-header-logo { width: 120px; height: auto; animation: glowPulse 2.2s ease-in-out infinite; }
 
+/* Inline topbar shown only during the reveal on "/" */
+.jal-topbar{
+  max-width: 960px;
+  margin: 0 auto 8px;
+  padding: 6px 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.jal-topbar-logo{
+  width: 90px;
+  height: auto;
+}
+
 .jal-title {
   text-align: center; font-size: clamp(22px, 2.2vw, 28px);
   margin: 0 0 18px; color: #fff; text-shadow: 0 0 8px var(--jal-gold);

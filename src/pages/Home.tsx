@@ -1,9 +1,17 @@
 // src/pages/Home.tsx
 import { useEffect, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 
 export default function Home() {
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
+  const location = useLocation();
+  const { connected } = useWallet();
+
+  // We render Home underneath Landing during the slide. While location is "/",
+  // the global header is hidden—so show a temporary topbar here.
+  const showInlineTopbar = location.pathname === "/";
 
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
@@ -16,24 +24,37 @@ export default function Home() {
   );
 
   return (
-    <main className="jal-page">
-      <h1 className="jal-title">Choose your direction</h1>
+    <main className="jal-page fade-in">
+      {/* === Inline topbar visible only during the reveal on "/" === */}
+      {showInlineTopbar && (
+        <div className="jal-topbar">
+          <img src="/JALSOL1.gif" alt="JAL/SOL" className="jal-topbar-logo" />
+          {connected && <WalletDisconnectButton className="wallet-disconnect-btn" />}
+        </div>
+      )}
+
+      {/* === Header (logo pulse) for /home and also looks fine during reveal === */}
+      <div className="jal-header">
+        <img src="/JALSOL1.gif" alt="JAL/SOL" className="jal-header-logo" />
+      </div>
+
+      <h1 className="jal-title">Choose Your Direction</h1>
 
       <div className="jal-buttons">
-        <Link to="/crypto-generator" className="jal-button">
-          Create Your Currency
+        <Link to="/crypto-generator" className="jal-button gold">
+          CREATE YOUR CURRENCY
         </Link>
 
         <Link to={vaultPath} className="jal-button secondary">
-          {userSymbol ? `Open Vault / ${userSymbol}` : "Open Vault"}
+          {userSymbol ? `OPEN VAULT / ${userSymbol}` : "OPEN VAULT"}
         </Link>
 
         <Link to="/learn" className="jal-button secondary">
-          Learn / SOL
+          LEARN / SOL
         </Link>
 
         <Link to="/about" className="jal-button secondary">
-          About JAL
+          ABOUT JAL
         </Link>
       </div>
 
