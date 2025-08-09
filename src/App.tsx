@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -35,85 +35,108 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
+  // Lock page scroll when sidebar is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
 
-  const vaultPath = userSymbol ? `/vault/${userSymbol}` : "/dashboard";
-  const vaultLabel = userSymbol ? `VAULT / ${userSymbol}` : "VAULT / JAL";
+  const vaultPath = useMemo(
+    () => (userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard"),
+    [userSymbol]
+  );
+  const vaultLabel = useMemo(
+    () => (userSymbol ? `VAULT / ${userSymbol}` : "VAULT / JAL"),
+    [userSymbol]
+  );
 
-  const disconnectBtnStyles: React.CSSProperties = {
-    border: "2px solid var(--jal-text)",
-    background: "black",
-    color: "var(--jal-text)",
-    borderRadius: "10px",
-    padding: "0.45rem 0.8rem",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    boxShadow: "0 0 10px var(--jal-glow)",
-    cursor: "pointer",
-  };
+  // Define links once; reuse in header + sidebar
+  const links = [
+    { to: "/", label: "JAL/SOL" },
+    { to: vaultPath, label: vaultLabel },
+    { to: "/learn", label: "LEARN/SOL" },
+    { to: "/about", label: "About JAL" },
+  ];
+
+  const renderNavLink = (to: string, label: string) => (
+    <NavLink
+      key={to + label}
+      to={to}
+      onClick={closeMenu}
+      className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
+    >
+      {label}
+    </NavLink>
+  );
 
   return (
     <>
-      {/* Hide ENTIRE header on Landing */}
+      {/* Hide header on Landing */}
       {!isLanding && (
         <header>
           <div className="header-inner">
-            <NavLink to="/" onClick={closeMenu}>
+            <NavLink to="/" onClick={closeMenu} aria-label="Go to Landing">
               <img
                 src="/JALSOL1.gif"
-                alt="JALSOL Logo"
+                alt="JAL/SOL Logo"
                 className="logo header-logo"
               />
             </NavLink>
 
-            <nav className="main-nav">
-              <NavLink to="/" onClick={closeMenu} className="nav-link">
-                JAL/SOL
-              </NavLink>
-              <NavLink to={vaultPath} onClick={closeMenu} className="nav-link">
-                {vaultLabel}
-              </NavLink>
-              <NavLink to="/learn" onClick={closeMenu} className="nav-link">
-                LEARN/SOL
-              </NavLink>
-              <NavLink to="/about" onClick={closeMenu} className="nav-link">
-                About JAL
-              </NavLink>
+            <nav className="main-nav" aria-label="Primary">
+              {links.map((l) => renderNavLink(l.to, l.label))}
 
               {publicKey && (
                 <WalletDisconnectButton
-                  style={disconnectBtnStyles}
+                  className="wallet-disconnect-btn"
                   onClick={() => navigate("/")}
                 />
               )}
             </nav>
 
-            <div className="social-links">
+            <div className="social-links" aria-label="Social links">
               <a
                 href="https://x.com/JAL358"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="X / Twitter"
               >
-                <img src="/icons/X.png" alt="X" />
+                <img src="/icons/X.png" alt="" />
               </a>
               <a
                 href="https://t.me/JALSOL"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Telegram"
               >
-                <img src="/icons/Telegram.png" alt="Telegram" />
+                <img src="/icons/Telegram.png" alt="" />
               </a>
               <a
                 href="https://tiktok.com/@jalcoin"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="TikTok"
               >
-                <img src="/icons/TikTok.png" alt="TikTok" />
+                <img src="/icons/TikTok.png" alt="" />
               </a>
             </div>
 
-            <button className="hamburger" onClick={toggleMenu} aria-label="Toggle menu">
+            <button
+              className="hamburger"
+              onClick={toggleMenu}
+              aria-label="Toggle menu"
+              aria-expanded={menuOpen}
+              aria-controls="sidebar-nav"
+            >
               {menuOpen ? "✕" : "☰"}
             </button>
           </div>
@@ -123,23 +146,11 @@ function Shell() {
       {menuOpen && !isLanding && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
-          <div className="sidebar-nav">
-            <NavLink to="/" onClick={closeMenu} className="nav-link">
-              JAL/SOL
-            </NavLink>
-            <NavLink to={vaultPath} onClick={closeMenu} className="nav-link">
-              {vaultLabel}
-            </NavLink>
-            <NavLink to="/learn" onClick={closeMenu} className="nav-link">
-              LEARN/SOL
-            </NavLink>
-            <NavLink to="/about" onClick={closeMenu} className="nav-link">
-              About JAL
-            </NavLink>
-
+          <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
+            {links.map((l) => renderNavLink(l.to, l.label))}
             {publicKey && (
               <WalletDisconnectButton
-                style={{ ...disconnectBtnStyles, marginTop: "0.5rem" }}
+                className="wallet-disconnect-btn"
                 onClick={() => {
                   closeMenu();
                   navigate("/");
