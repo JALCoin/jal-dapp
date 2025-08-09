@@ -2,6 +2,7 @@
 import { useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 
 export default function Hub() {
   const { connected, publicKey } = useWallet();
@@ -37,6 +38,11 @@ export default function Hub() {
 
   return (
     <main className="hub" role="main">
+      {/* Top-right Disconnect */}
+      <div style={{ position: "absolute", top: "1rem", right: "1rem", zIndex: 10 }}>
+        <WalletDisconnectButton className="wallet-disconnect-btn" />
+      </div>
+
       <div className="hub-inner" style={{ animation: "fadeIn .4s ease-out" }}>
         <h1 className="hub-title">Welcome to the JAL Hub</h1>
 
@@ -59,19 +65,17 @@ export default function Hub() {
             to="/start"
             className="hub-btn"
             aria-label="Start: swap JAL and SOL and provide liquidity on Raydium"
-            style={{ animation: "fadeIn .35s ease-out", animationDelay: "40ms" }}
+            style={{ animation: "fadeIn .35s ease-out", animationDelay: "40ms" } as any}
           >
             START
-            <span className="sub">
-              Swap JAL ⇄ SOL &amp; provide liquidity on Raydium
-            </span>
+            <span className="sub">Swap JAL ⇄ SOL &amp; provide liquidity on Raydium</span>
           </Link>
 
           <Link
             to="/utility"
             className="hub-btn"
             aria-label="JAL / SOL Utility"
-            style={{ animation: "fadeIn .35s ease-out", animationDelay: "90ms" }}
+            style={{ animation: "fadeIn .35s ease-out", animationDelay: "90ms" } as any}
           >
             JAL / SOL (Utility)
             <span className="sub">Tools, docs, and live utilities</span>
@@ -81,7 +85,7 @@ export default function Hub() {
             to="/terms"
             className="hub-btn"
             aria-label="Terms of Use"
-            style={{ animation: "fadeIn .35s ease-out", animationDelay: "140ms" }}
+            style={{ animation: "fadeIn .35s ease-out", animationDelay: "140ms" } as any}
           >
             Terms of Use
             <span className="sub">Read before using the dapp</span>
