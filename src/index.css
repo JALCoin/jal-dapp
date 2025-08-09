@@ -4,27 +4,29 @@
 
 /* === THEME TOKENS === */
 :root {
+  /* Surfaces */
   --jal-bg: #121212;
   --jal-surface: #1e1e1e;
   --jal-panel: #161616;
 
+  /* Brand */
   --jal-text: #11f1a7;
   --jal-text-weak: #8aeecf;
   --jal-muted: rgba(17, 241, 167, 0.55);
-
   --jal-border: #11f1a766;
   --jal-glow: #0ffdd4;
   --jal-gold: #ffd700;
   --jal-gold-glow: #ffcc00aa;
   --jal-danger: #ff4d4d;
 
+  /* Radii & Shadows */
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 20px;
-
   --shadow-soft: 0 0 10px rgba(15, 253, 212, 0.25);
   --shadow-strong: 0 0 22px rgba(255, 215, 0, 0.35);
 
+  /* Typography base */
   font-family: "Orbitron", system-ui, sans-serif;
   color-scheme: dark;
   background-color: var(--jal-bg);
@@ -40,7 +42,7 @@
 html, body, #root { margin: 0; padding: 0; min-height: 100dvh; background: var(--jal-bg); }
 img, svg, video { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
-button { font: inherit; }
+button { font: inherit; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--jal-gold); outline-offset: 2px; }
 
 /* ==========================================================================
@@ -88,7 +90,12 @@ header {
   box-shadow: var(--shadow-soft);
 }
 
-/* Sidebar (mobile nav) */
+@media (max-width: 900px) {
+  .main-nav { display: none; }
+  .hamburger { display: inline-block; }
+}
+
+/* Sidebar (mobile) */
 .sidebar-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(2px); z-index: 60;
 }
@@ -102,12 +109,7 @@ header {
 .sidebar-nav .nav-link { border-color: var(--jal-border); background: #0b0b0b; }
 .sidebar-nav .nav-link:hover { border-color: var(--jal-gold); }
 
-@media (max-width: 900px) {
-  .main-nav { display: none; }
-  .hamburger { display: inline-block; }
-}
-
-/* Disconnect button theme */
+/* Disconnect button theme (wallet-adapter) */
 .wallet-disconnect-btn {
   border: 2px solid var(--jal-text) !important; background: #000 !important; color: var(--jal-text) !important;
   border-radius: 10px !important; padding: .45rem .8rem !important; font-weight: 700 !important;
@@ -119,7 +121,7 @@ header {
 }
 
 /* ==========================================================================
-   Landing (with slide-up exit)
+   Landing (gradient + slide-up exit)
    ========================================================================== */
 
 .landing-gradient {
@@ -140,13 +142,7 @@ header {
   .landing-logo-wrapper::before { animation: none; }
 }
 
-/* Slide-up exit when connecting */
-.landing-exit { animation: landingSlideUp .6s ease forwards; }
-@keyframes landingSlideUp {
-  to { transform: translateY(-18vh); opacity: 0; filter: blur(2px); }
-}
-
-/* Social (top-center) */
+/* Top-center socials */
 .landing-social {
   position: absolute; top: max(12px, env(safe-area-inset-top, 0));
   left: 50%; transform: translateX(-50%);
@@ -161,7 +157,7 @@ header {
 .landing-social a:hover { transform: scale(1.12); background: rgba(255,255,255,.1); box-shadow: 0 0 10px var(--jal-gold), 0 0 16px #fff; border-color: var(--jal-gold); }
 .landing-social img { width: 28px; height: 28px; object-fit: contain; pointer-events: none; }
 
-/* Logo & glow */
+/* Logo + glow */
 .landing-inner { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; z-index: 1; text-align: center; position: relative; padding-top: env(safe-area-inset-top, 0); }
 .landing-logo-wrapper { position: relative; display: inline-block; will-change: transform, filter; }
 .landing-logo-wrapper::before {
@@ -190,15 +186,29 @@ header {
   box-shadow: 0 0 18px var(--jal-gold), 0 0 24px #fff !important;
 }
 
+/* Slide-up exit (Landing only) */
+.landing-gradient.landing-exit { animation: landingSlideUp .6s ease forwards; }
+@keyframes landingSlideUp {
+  to { transform: translateY(-18vh); opacity: 0; filter: blur(2px); }
+}
+
+/* Also support App wrapper animation (if used) */
+.page-container { transition: transform .6s ease, opacity .6s ease; }
+.page-container.landing-exit { transform: translateY(-100%); opacity: 0; }
+
 /* ==========================================================================
-   JAL Home (Directive buttons)
+   JAL Home (directive hub)
    ========================================================================== */
 
 .jal-page { max-width: 960px; margin: 0 auto; padding: 28px 16px 40px; }
+.jal-header { display: grid; place-items: center; margin-bottom: 16px; }
+.jal-header-logo { width: 120px; height: auto; animation: glowPulse 2.2s ease-in-out infinite; }
+
 .jal-title {
   text-align: center; font-size: clamp(22px, 2.2vw, 28px);
   margin: 0 0 18px; color: #fff; text-shadow: 0 0 8px var(--jal-gold);
 }
+
 .jal-buttons { display: grid; gap: 14px; }
 @media (min-width: 720px) { .jal-buttons { grid-template-columns: 1fr; } }
 .jal-button {
@@ -210,7 +220,16 @@ header {
   transition: transform .12s, box-shadow .2s, border-color .2s;
 }
 .jal-button:hover { transform: translateY(-1px); border-color: var(--jal-gold); box-shadow: 0 0 14px var(--jal-glow), 0 0 12px rgba(255,215,0,.18); }
+.jal-button.gold { background: linear-gradient(180deg, #171400, #0d0b00); border-color: var(--jal-gold); box-shadow: 0 0 12px var(--jal-gold-glow); }
+.jal-button.gold:hover { box-shadow: 0 0 18px var(--jal-gold), 0 0 24px #fff; }
 .jal-button.secondary { background: linear-gradient(180deg, #0a0a0a, #0f0f0f); }
+
+/* Optional: staggered reveal */
+.jal-buttons .jal-button { opacity: 0; transform: translateY(6px); animation: fadeIn .35s ease forwards; }
+.jal-buttons .jal-button:nth-child(1){ animation-delay: .05s; }
+.jal-buttons .jal-button:nth-child(2){ animation-delay: .12s; }
+.jal-buttons .jal-button:nth-child(3){ animation-delay: .19s; }
+.jal-buttons .jal-button:nth-child(4){ animation-delay: .26s; }
 
 /* ==========================================================================
    Generic Sections / Cards / Buttons / Utilities
@@ -234,12 +253,10 @@ header {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: .75rem 1.1rem; border-radius: var(--radius-md);
   border: 1px solid var(--jal-border); background: #0b0b0b; color: #fff;
-  text-transform: uppercase; letter-spacing: .05em; font-weight: 700; cursor: pointer;
+  text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
   transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
 }
 .button:hover { transform: translateY(-1px); border-color: var(--jal-gold); box-shadow: 0 0 12px var(--jal-glow); }
-.button.gold { background: linear-gradient(180deg, #171400, #0d0b00); border-color: var(--jal-gold); box-shadow: 0 0 12px var(--jal-gold-glow); }
-.button.gold:hover { box-shadow: 0 0 18px var(--jal-gold), 0 0 24px #fff; }
 
 /* Utilities */
 .center { text-align: center; }
@@ -247,7 +264,7 @@ header {
 .mb-1{margin-bottom:8px}.mb-2{margin-bottom:16px}.mb-3{margin-bottom:24px}
 
 /* ==========================================================================
-   Forms / Inputs (used by CryptoGenerator)
+   Forms / Inputs (CryptoGenerator-ready)
    ========================================================================== */
 
 .form { display: grid; gap: 14px; }
@@ -289,7 +306,7 @@ header {
 .token-card .symbol { font-weight: 800; letter-spacing: .08em; color: #fff; }
 .token-card .supply { color: var(--jal-text-weak); font-size: .95rem; }
 
-/* Glowing red remove button */
+/* Remove button (alert style) */
 .token-card .remove-btn {
   position: absolute; top: 10px; right: 10px; width: 34px; height: 34px;
   display: grid; place-items: center; border-radius: 50%;
@@ -320,12 +337,11 @@ header {
 }
 
 /* ==========================================================================
-   Animations helpers
+   Animations
    ========================================================================== */
 
 .fade-in { animation: fadeIn .3s ease both; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-
 .spin { animation: spin 1.1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
