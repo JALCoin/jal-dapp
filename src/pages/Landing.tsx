@@ -11,19 +11,25 @@ export default function Landing() {
   const [showHome, setShowHome] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
+  // When connected, reveal Home underneath and slide Landing away.
   useEffect(() => {
     if (connected && publicKey && !leaving) {
-      // 1) Immediately show Home under Landing
-      setShowHome(true);
-      // 2) Start slide-up animation
-      setLeaving(true);
-      // 3) After animation, route to /home so the site header appears
+      setShowHome(true);      // show Home behind
+      setLeaving(true);       // start slide-up animation
       const t = setTimeout(() => {
-        navigate("/home", { replace: true });
-      }, 600); // match CSS duration
+        navigate("/home", { replace: true }); // then switch to /home
+      }, 600); // match CSS keyframe duration
       return () => clearTimeout(t);
     }
   }, [connected, publicKey, leaving, navigate]);
+
+  // IMPORTANT: if user disconnects on "/", reset overlay & animation
+  useEffect(() => {
+    if (!connected || !publicKey) {
+      setShowHome(false);  // hide background Home
+      setLeaving(false);   // cancel slide
+    }
+  }, [connected, publicKey]);
 
   return (
     <div style={{ position: "relative", minHeight: "100svh" }}>
@@ -34,8 +40,6 @@ export default function Landing() {
         className={`landing-gradient ${leaving ? "landing-exit" : ""}`}
         style={{ position: "absolute", inset: 0, zIndex: 10 }}
       >
-        {/* Social (optional: add back your icons if you want) */}
-
         <div className="landing-inner">
           <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
             <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
