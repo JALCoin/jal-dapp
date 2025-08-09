@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   BrowserRouter as Router,
   Routes,
