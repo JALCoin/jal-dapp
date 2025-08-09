@@ -29,7 +29,8 @@ html,body,#root{
   position:relative; height:100svh; width:100%;
   display:grid; place-items:center; overflow:hidden;
   background:linear-gradient(270deg,#11f1a7,#ffd700,#ffffff);
-  background-size:600% 600%; animation:gradientShift 15s ease infinite;
+  background-size:600% 600%;
+  animation:gradientShift 15s ease infinite;
   transition:opacity .5s ease, filter .5s ease, transform .5s ease;
 }
 @keyframes gradientShift{
@@ -38,20 +39,16 @@ html,body,#root{
   100%{background-position:0% 50%}
 }
 
-/* landing → hub exit */
-.landing-merge{
-  pointer-events:none;
-}
+/* landing → hub exit (subtle fade/blur) */
+.landing-merge{ pointer-events:none; }
 .landing-merge.landing-gradient{
-  opacity:.2; filter:saturate(.85) blur(.3px);
-  transform:scale(1.01);
+  opacity:.2; filter:saturate(.85) blur(.3px); transform:scale(1.01);
 }
 
 /* Center-top social icons (landing only) */
 .landing-social{
   position:absolute; top:1.25rem; left:50%; transform:translateX(-50%);
-  display:flex; gap:.75rem; z-index:3;
-  transition:opacity .35s ease;
+  display:flex; gap:.75rem; z-index:3; transition:opacity .35s ease;
 }
 .landing-merge .landing-social{opacity:0}
 .landing-social img{
@@ -94,6 +91,7 @@ html,body,#root{
   filter:drop-shadow(0 0 14px #fff) drop-shadow(0 0 22px var(--jal-gold));
 }
 
+/* Wallet button */
 .landing-wallet{
   border-radius:12px!important; border:2px solid var(--jal-text)!important;
   background:#000!important; color:var(--jal-text)!important;
@@ -169,41 +167,46 @@ header .social-links img{
 /* ===============================
    HUB (post-connect with animated gradient)
 =================================*/
-.hub {
-  min-height: calc(100vh - 140px);
-  display: grid;
-  place-items: start center;
-  padding: 7vh 1rem 12vh;
+.hub{
+  min-height:calc(100vh - 140px);
+  display:grid; place-items:start center;
+  padding:7vh 1rem 12vh;
+  position:relative;
 
   /* Animated gradient base like landing */
+  background:linear-gradient(270deg, var(--jal-text), var(--jal-gold), var(--white), var(--jal-bg));
+  background-size:600% 600%;
+  animation:gradientShift 15s ease infinite, hubBgFade .5s ease-in forwards;
+}
+.hub::before{
+  content:"";
+  position:absolute; inset:0; pointer-events:none;
   background:
-    linear-gradient(270deg, var(--jal-text), var(--jal-gold), var(--white), var(--jal-bg));
-  background-size: 600% 600%;
-  animation: gradientShift 15s ease infinite, hubBgFade .5s ease-in forwards;
+    radial-gradient(42% 36% at 50% 28%, rgba(255,255,255,.10), transparent 70%),
+    radial-gradient(55% 46% at 50% 62%, rgba(17,241,167,.08), transparent 72%),
+    radial-gradient(30% 20% at 50% 48%, rgba(255,255,255,.10), transparent 70%);
+}
+@keyframes hubBgFade{from{opacity:0}to{opacity:1}}
 
-  /* Overlay subtle radial highlights */
-  position: relative;
+.hub-inner{ width:min(960px,94vw); margin-inline:auto; }
+
+.hub-title{
+  margin:0 0 .25rem;
+  text-align:center;
+  color:var(--jal-gold);
+  font-size:clamp(1.9rem,3.1vw,2.7rem);
+  letter-spacing:.02em;
+  text-shadow:0 0 10px var(--jal-gold), 0 0 22px rgba(255,255,255,.35);
+  animation:slideDown .5s ease both;
 }
-.hub::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(42% 36% at 50% 28%, rgba(255, 255, 255, 0.08), transparent 70%),
-    radial-gradient(55% 46% at 50% 62%, rgba(17, 241, 167, 0.07), transparent 72%);
-  pointer-events: none;
-}
-@keyframes hubBgFade {
-  from { opacity: 0 }
-  to { opacity: 1 }
-}
+@keyframes slideDown{from{opacity:0; transform:translateY(-8px)}to{opacity:1; transform:translateY(0)}}
 
 /* Connected wallet pill */
 .hub-connection{
   margin:.15rem 0 1.1rem;
   display:flex; justify-content:center; gap:.5rem;
   font-size:.85rem; color:var(--jal-muted);
-  animation: fadeIn .45s ease .05s both;
+  animation:fadeIn .45s ease .05s both;
 }
 .hub-connection .pill{
   background:#000; color:#fff; border:1px solid var(--jal-glow);
@@ -215,10 +218,7 @@ header .social-links img{
 .stagger-1{animation:fadeInUp .4s ease .05s both}
 .stagger-2{animation:fadeInUp .4s ease .12s both}
 .stagger-3{animation:fadeInUp .4s ease .19s both}
-@keyframes fadeInUp{
-  from{opacity:0; transform:translateY(6px)}
-  to{opacity:1; transform:translateY(0)}
-}
+@keyframes fadeInUp{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:translateY(0)}}
 
 .hub-stack{ display:grid; gap:1rem; }
 
@@ -235,7 +235,8 @@ header .social-links img{
 .hub-btn .sub{
   display:block; margin-top:.42rem;
   font-weight:600; letter-spacing:.03em; text-transform:none;
-  opacity:.86; color:var(--jal-muted);
+  opacity:.92; color:var(--jal-muted);
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));
 }
 .hub-btn:hover{
   transform:translateY(-2px) scale(1.01);
@@ -251,22 +252,27 @@ header .social-links img{
 }
 
 /* Hub Disconnect Button (top-right inside Hub) */
-.hub-disconnect-btn {
-  border: 2px solid var(--jal-text) !important;
-  background: #000 !important;
-  color: var(--jal-text) !important;
-  border-radius: 10px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  box-shadow: 0 0 10px var(--jal-glow) !important;
-  padding: 0.5rem 1rem !important;
-  transition: transform .2s ease, box-shadow .3s ease, border-color .2s ease, color .2s ease;
+.hub-disconnect-btn{
+  border:2px solid var(--jal-text) !important;
+  background:#000 !important;
+  color:var(--jal-text) !important;
+  border-radius:10px !important;
+  font-weight:700 !important;
+  text-transform:uppercase !important;
+  box-shadow:0 0 10px var(--jal-glow) !important;
+  padding:.5rem 1rem !important;
+  transition:transform .2s ease, box-shadow .3s ease, border-color .2s ease, color .2s ease;
 }
-.hub-disconnect-btn:hover {
-  transform: scale(1.05);
-  border-color: var(--jal-gold) !important;
-  color: #fff !important;
-  box-shadow: 0 0 20px var(--jal-gold), 0 0 30px #fff !important;
+.hub-disconnect-btn:hover{
+  transform:scale(1.05);
+  border-color:var(--jal-gold) !important;
+  color:#fff !important;
+  box-shadow:0 0 20px var(--jal-gold), 0 0 30px #fff !important;
+}
+
+/* Slight placement tweak on very small screens */
+@media (max-width:480px){
+  .hub > div[style*="position: absolute"]{ top:.6rem !important; right:.6rem !important; }
 }
 
 /* ===============================
@@ -307,6 +313,18 @@ header .social-links img{
 ::-webkit-scrollbar{width:8px}
 ::-webkit-scrollbar-thumb{background:var(--jal-glow); border-radius:4px}
 ::-webkit-scrollbar-thumb:hover{background:var(--jal-gold)}
+
+/* ===============================
+   ACCESSIBILITY: Reduce Motion
+=================================*/
+@media (prefers-reduced-motion: reduce){
+  .landing-gradient,
+  .hub{
+    animation:none !important;
+    background-position:50% 50% !important;
+  }
+  .landing-logo-wrapper::before{ animation:none !important; }
+}
 
 /* ===============================
    RESPONSIVE
