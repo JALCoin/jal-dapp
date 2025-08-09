@@ -13,7 +13,7 @@
   --white:#ffffff;
 }
 
-*{box-sizing:border-box}
+*{ box-sizing:border-box }
 html,body,#root{
   margin:0; padding:0; min-height:100vh;
   background:var(--jal-bg); color:var(--jal-text);
@@ -32,6 +32,7 @@ html,body,#root{
   background-size:600% 600%;
   animation:gradientShift 15s ease infinite;
   transition:opacity .5s ease, filter .5s ease, transform .5s ease;
+  will-change: background-position;
 }
 @keyframes gradientShift{
   0%{background-position:0% 50%}
@@ -50,7 +51,7 @@ html,body,#root{
   position:absolute; top:1.25rem; left:50%; transform:translateX(-50%);
   display:flex; gap:.75rem; z-index:3; transition:opacity .35s ease;
 }
-.landing-merge .landing-social{opacity:0}
+.landing-merge .landing-social{ opacity:0 }
 .landing-social img{
   width:28px; height:28px; max-width:28px; max-height:28px;
   padding:4px; border-radius:50%;
@@ -68,8 +69,11 @@ html,body,#root{
 }
 
 /* Logo + soft glow */
-.landing-inner{display:flex; flex-direction:column; align-items:center; gap:1.25rem; position:relative; z-index:2}
-.landing-logo-wrapper{position:relative; display:inline-block}
+.landing-inner{
+  display:flex; flex-direction:column; align-items:center; gap:1.25rem;
+  position:relative; z-index:2;
+}
+.landing-logo-wrapper{ position:relative; display:inline-block }
 .landing-logo-wrapper::before{
   content:''; position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%);
   width:clamp(300px,50vw,520px); height:clamp(300px,50vw,520px);
@@ -105,8 +109,8 @@ html,body,#root{
 }
 
 /* Merge/exit animation after connect */
-.landing-merge .landing-wallet.fade-out{opacity:0; transform:translateY(6px)}
-.landing-merge .landing-logo-wrapper.to-top{animation:logoSlideToTop .8s ease forwards}
+.landing-merge .landing-wallet.fade-out{ opacity:0; transform:translateY(6px) }
+.landing-merge .landing-logo-wrapper.to-top{ animation:logoSlideToTop .8s ease forwards }
 @keyframes logoSlideToTop{
   0%{transform:translateY(0) scale(1); opacity:1}
   60%{transform:translateY(-28vh) scale(.86); opacity:.9}
@@ -122,118 +126,59 @@ html,body,#root{
   border-radius:10px!important; box-shadow:0 0 10px var(--jal-glow)!important;
   text-transform:uppercase!important; font-weight:700!important;
 }
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeIn{ from{opacity:0} to{opacity:1} }
 
 /* ===============================
-   HEADER (hidden on landing by app) — glow-friendly redesign
+   HEADER (hidden on landing by app) — glow‑friendly
 =================================*/
-header {
-  position: relative;
-  width: 100%;
-  background: #000;
-  padding: 2rem 1rem 1.25rem;
-  box-shadow: 0 4px 20px #ffd70055;
-  overflow: visible; /* let logo glow extend */
-  z-index: 10;
+header{
+  position:relative; width:100%; background:#000;
+  padding:2rem 1rem 1.25rem;
+  box-shadow:0 4px 20px #ffd70055;
+  overflow:visible; /* allow logo glow to extend */
+  z-index:10;
 }
-
-/* Soft glowing gold divider under header */
-header::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--jal-gold) 15%,
-    var(--jal-gold) 85%,
-    transparent 100%
-  );
-  box-shadow:
-    0 0 8px var(--jal-gold),
-    0 0 16px var(--jal-gold-glow);
-  z-index: 0;
+header::after{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:3px;
+  background:linear-gradient(90deg, transparent 0%, var(--jal-gold) 15%, var(--jal-gold) 85%, transparent 100%);
+  box-shadow:0 0 8px var(--jal-gold), 0 0 16px var(--jal-gold-glow);
+  z-index:0;
 }
-
-.header-inner {
-  width: min(100%, 1200px);
-  margin-inline: auto;
-  padding-inline: clamp(16px, 4vw, 40px);
-  text-align: center;
-  position: relative;
-  z-index: 1; /* above divider */
-  overflow: visible; /* keep glow visible */
+.header-inner{
+  width:min(100%,1200px); margin-inline:auto;
+  padding-inline:clamp(16px,4vw,40px); text-align:center;
+  position:relative; z-index:1; overflow:visible;
 }
-
-/* Logo with free-floating glow */
-.logo {
-  height: clamp(100px, 15vw, 140px);
-  filter:
-    drop-shadow(0 0 14px #fff)
-    drop-shadow(0 0 22px var(--jal-gold));
+.logo{
+  height:clamp(100px,15vw,140px);
+  filter:drop-shadow(0 0 14px #fff) drop-shadow(0 0 22px var(--jal-gold));
 }
-
-/* Main navigation */
-.main-nav {
-  margin-top: 1.25rem;
-  display: flex;
-  justify-content: center;
-  gap: clamp(1rem, 4vw, 2rem);
-  flex-wrap: wrap;
+.main-nav{
+  margin-top:1.25rem; display:flex; justify-content:center; gap:clamp(1rem,4vw,2rem); flex-wrap:wrap;
 }
-
-.nav-link {
-  color: #fff;
-  font-weight: 700;
-  text-decoration: none;
-  transition: all 0.25s ease;
+.nav-link{
+  color:#fff; font-weight:700; text-decoration:none; transition:all .25s ease;
 }
-.nav-link:hover {
-  color: var(--jal-gold);
-  text-shadow: 0 0 8px var(--jal-gold), 0 0 16px #fff;
-}
-.nav-link.active {
-  border-bottom: 2px solid var(--jal-gold);
-}
-
-/* Hamburger menu button */
-.hamburger {
-  position: absolute;
-  top: 1.25rem;
-  right: 1rem;
-  background: transparent;
-  color: #fff;
-  font-size: 1.4rem;
-  border: 0;
-  cursor: pointer;
+.nav-link:hover{ color:var(--jal-gold); text-shadow:0 0 8px var(--jal-gold), 0 0 16px #fff; }
+.nav-link.active{ border-bottom:2px solid var(--jal-gold) }
+.hamburger{
+  position:absolute; top:1.25rem; right:1rem; background:transparent; color:#fff;
+  font-size:1.4rem; border:0; cursor:pointer;
 }
 
 /* Header socials (non-landing) */
-header .social-links {
-  position: absolute;
-  top: 1.25rem;
-  left: 1rem;
-  display: flex;
-  gap: 0.75rem;
+header .social-links{
+  position:absolute; top:1.25rem; left:1rem; display:flex; gap:.75rem;
 }
-header .social-links img {
-  width: 28px;
-  height: 28px;
-  padding: 4px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--jal-border);
-  box-shadow: 0 0 4px var(--jal-muted);
-  object-fit: contain;
-  transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+header .social-links img{
+  width:28px; height:28px; padding:4px; border-radius:50%;
+  background:rgba(255,255,255,.03); border:1px solid var(--jal-border);
+  box-shadow:0 0 4px var(--jal-muted); object-fit:contain;
+  transition:transform .2s ease, box-shadow .3s ease, border-color .3s ease;
 }
-header .social-links img:hover {
-  transform: scale(1.15);
-  border-color: var(--jal-gold);
-  box-shadow: 0 0 10px var(--jal-gold), 0 0 16px #fff;
+header .social-links img:hover{
+  transform:scale(1.15); border-color:var(--jal-gold);
+  box-shadow:0 0 10px var(--jal-gold), 0 0 16px #fff;
 }
 
 /* Sidebar */
@@ -248,10 +193,10 @@ header .social-links img:hover {
   display:flex; flex-direction:column; gap:1.25rem; z-index:60;
   animation:slideInRight .25s ease-out;
 }
-@keyframes slideInRight{from{transform:translateX(100%);opacity:.2}to{transform:translateX(0);opacity:1}}
+@keyframes slideInRight{ from{transform:translateX(100%);opacity:.2} to{transform:translateX(0);opacity:1} }
 
 /* ===============================
-   HUB (post-connect with animated gradient)
+   HUB (post‑connect with animated gradient)
 =================================*/
 .hub{
   min-height:calc(100vh - 140px);
@@ -259,77 +204,84 @@ header .social-links img:hover {
   padding:7vh 1rem 12vh;
   position:relative;
 
-  /* Animated gradient base like landing */
+  /* Landing‑style animated gradient */
   background:linear-gradient(270deg, var(--jal-text), var(--jal-gold), var(--white), var(--jal-bg));
   background-size:600% 600%;
   animation:gradientShift 15s ease infinite, hubBgFade .5s ease-in forwards;
+  will-change: background-position;
 }
-.hub::before{
-  content:"";
-  position:absolute; inset:0; pointer-events:none;
-  background:
-    radial-gradient(42% 36% at 50% 28%, rgba(255,255,255,.10), transparent 70%),
-    radial-gradient(55% 46% at 50% 62%, rgba(17,241,167,.08), transparent 72%),
-    radial-gradient(30% 20% at 50% 48%, rgba(255,255,255,.10), transparent 70%);
-}
-@keyframes hubBgFade{from{opacity:0}to{opacity:1}}
+@keyframes hubBgFade{ from{opacity:0} to{opacity:1} }
 
-.hub-inner{ width:min(960px,94vw); margin-inline:auto; }
+/* Bright center glow + teal wash */
+.hub::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(42% 36% at 50% 28%, rgba(255,255,255,.12), transparent 70%),
+    radial-gradient(55% 46% at 50% 62%, rgba(17,241,167,.10), transparent 72%),
+    radial-gradient(30% 22% at 50% 48%, rgba(255,255,255,.12), transparent 70%);
+  mix-blend-mode:screen; opacity:.95; z-index:0;
+}
+
+/* Gentle diagonal light sweep for a liquid feel */
+.hub::after{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.10) 35%, rgba(255,255,255,0) 65%);
+  transform:translateX(-30%);
+  animation:hubSweep 8s ease-in-out infinite;
+}
+@keyframes hubSweep{
+  0%,100%{ transform:translateX(-30%) }
+  50%{ transform:translateX(30%) }
+}
+
+.hub-inner{ width:min(960px,94vw); margin-inline:auto; position:relative; z-index:1; }
 
 .hub-title{
-  margin:0 0 .25rem;
-  text-align:center;
-  color:var(--jal-gold);
-  font-size:clamp(1.9rem,3.1vw,2.7rem);
-  letter-spacing:.02em;
+  margin:0 0 .25rem; text-align:center; color:var(--jal-gold);
+  font-size:clamp(1.9rem,3.1vw,2.7rem); letter-spacing:.02em;
   text-shadow:0 0 10px var(--jal-gold), 0 0 22px rgba(255,255,255,.35);
   animation:slideDown .5s ease both;
 }
-@keyframes slideDown{from{opacity:0; transform:translateY(-8px)}to{opacity:1; transform:translateY(0)}}
+@keyframes slideDown{ from{opacity:0; transform:translateY(-8px)} to{opacity:1; transform:translateY(0)} }
 
 /* Connected wallet pill */
 .hub-connection{
-  margin:.15rem 0 1.1rem;
-  display:flex; justify-content:center; gap:.5rem;
-  font-size:.85rem; color:var(--jal-muted);
-  animation:fadeIn .45s ease .05s both;
+  margin:.15rem 0 1.1rem; display:flex; justify-content:center; gap:.5rem;
+  font-size:.85rem; color:var(--jal-muted); animation:fadeIn .45s ease .05s both;
 }
 .hub-connection .pill{
   background:#000; color:#fff; border:1px solid var(--jal-glow);
   padding:.25rem .55rem; border-radius:999px;
-  box-shadow:0 0 10px rgba(15,253,212,.25);
+  box-shadow:0 0 10px rgba(15,253,212,.25); backdrop-filter:blur(2px);
 }
 
 /* Stagger helpers */
 .stagger-1{animation:fadeInUp .4s ease .05s both}
 .stagger-2{animation:fadeInUp .4s ease .12s both}
 .stagger-3{animation:fadeInUp .4s ease .19s both}
-@keyframes fadeInUp{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:translateY(0)}}
+@keyframes fadeInUp{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
 
 .hub-stack{ display:grid; gap:1rem; }
 
+/* Call‑to‑action panels */
 .hub-btn{
   display:block; width:100%; text-align:center; text-decoration:none;
   padding:clamp(1rem,2.6vw,1.4rem) clamp(1rem,2.6vw,1.6rem);
   border-radius:14px; border:2px solid var(--jal-text);
-  background:rgba(0,0,0,.92); color:var(--jal-text);
+  background:rgba(0,0,0,.90); color:var(--jal-text);
   font-weight:900; letter-spacing:.08em; text-transform:uppercase;
-  box-shadow:0 0 14px rgba(0,255,200,.25), inset 0 0 0 rgba(255,255,255,0);
+  box-shadow:0 0 14px rgba(0,255,200,.25), 0 8px 24px rgba(0,0,0,.12);
   transition:transform .18s ease, box-shadow .25s ease, color .2s ease,
              background .2s ease, border-color .2s ease, filter .2s ease;
 }
 .hub-btn .sub{
-  display:block; margin-top:.42rem;
-  font-weight:600; letter-spacing:.03em; text-transform:none;
-  opacity:.92; color:var(--jal-muted);
-  filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));
+  display:block; margin-top:.42rem; font-weight:600; letter-spacing:.03em; text-transform:none;
+  opacity:.92; color:var(--jal-muted); filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));
 }
 .hub-btn:hover{
   transform:translateY(-2px) scale(1.01);
   background:#fff; color:#000; border-color:#fff;
-  box-shadow:0 0 26px rgba(255,255,255,.65),
-             0 0 34px var(--jal-gold),
-             inset 0 0 12px rgba(255,255,255,.35);
+  box-shadow:0 0 26px rgba(255,255,255,.65), 0 0 34px var(--jal-gold), inset 0 0 12px rgba(255,255,255,.35);
   filter:saturate(1.05);
 }
 .hub-btn:focus-visible{
@@ -340,23 +292,18 @@ header .social-links img:hover {
 /* Hub Disconnect Button (top-right inside Hub) */
 .hub-disconnect-btn{
   border:2px solid var(--jal-text) !important;
-  background:#000 !important;
-  color:var(--jal-text) !important;
-  border-radius:10px !important;
-  font-weight:700 !important;
-  text-transform:uppercase !important;
-  box-shadow:0 0 10px var(--jal-glow) !important;
-  padding:.5rem 1rem !important;
+  background:#000 !important; color:var(--jal-text) !important;
+  border-radius:10px !important; font-weight:700 !important; text-transform:uppercase !important;
+  box-shadow:0 0 10px var(--jal-glow) !important; padding:.5rem 1rem !important;
   transition:transform .2s ease, box-shadow .3s ease, border-color .2s ease, color .2s ease;
 }
 .hub-disconnect-btn:hover{
   transform:scale(1.05);
-  border-color:var(--jal-gold) !important;
-  color:#fff !important;
+  border-color:var(--jal-gold) !important; color:#fff !important;
   box-shadow:0 0 20px var(--jal-gold), 0 0 30px #fff !important;
 }
 
-/* Slight placement tweak on very small screens */
+/* Tiny placement tweak */
 @media (max-width:480px){
   .hub > div[style*="position: absolute"]{ top:.6rem !important; right:.6rem !important; }
 }
@@ -376,11 +323,12 @@ header .social-links img:hover {
   font-size:1.3rem; font-weight:700; color:#fff;
   text-shadow:0 0 10px #fff, 0 0 20px var(--jal-gold); margin-bottom:1.25rem;
 }
-.vault-subtext{font-size:.95rem; text-align:center; color:var(--jal-text); margin-bottom:2rem}
+.vault-subtext{ font-size:.95rem; text-align:center; color:var(--jal-text); margin-bottom:2rem }
 .vault-button{
   background:#000; color:var(--jal-text); border:2px solid var(--jal-text);
   padding:.75rem 1.5rem; border-radius:12px; font-weight:700; text-transform:uppercase;
-  box-shadow:0 0 10px var(--jal-glow); transition:transform .2s ease, box-shadow .3s ease, border-color .2s ease, color .2s ease;
+  box-shadow:0 0 10px var(--jal-glow);
+  transition:transform .2s ease, box-shadow .3s ease, border-color .2s ease, color .2s ease;
 }
 .vault-button:hover{
   transform:scale(1.05); color:#fff; border-color:var(--jal-gold);
@@ -396,19 +344,18 @@ header .social-links img:hover {
 }
 
 /* Scrollbar (webkit) */
-::-webkit-scrollbar{width:8px}
-::-webkit-scrollbar-thumb{background:var(--jal-glow); border-radius:4px}
-::-webkit-scrollbar-thumb:hover{background:var(--jal-gold)}
+::-webkit-scrollbar{ width:8px }
+::-webkit-scrollbar-thumb{ background:var(--jal-glow); border-radius:4px }
+::-webkit-scrollbar-thumb:hover{ background:var(--jal-gold) }
 
 /* ===============================
    ACCESSIBILITY: Reduce Motion
 =================================*/
 @media (prefers-reduced-motion: reduce){
-  .landing-gradient,
-  .hub{
-    animation:none !important;
-    background-position:50% 50% !important;
+  .landing-gradient, .hub{
+    animation:none !important; background-position:50% 50% !important;
   }
+  .hub::after{ animation:none !important; }
   .landing-logo-wrapper::before{ animation:none !important; }
 }
 
@@ -416,8 +363,8 @@ header .social-links img:hover {
    RESPONSIVE
 =================================*/
 @media (max-width:768px){
-  .main-nav{gap:1rem}
-  .nav-link{font-size:1rem}
-  .logo{height:112px}
-  .hub-inner{width:min(95vw,1000px)}
+  .main-nav{ gap:1rem }
+  .nav-link{ font-size:1rem }
+  .logo{ height:112px }
+  .hub-inner{ width:min(95vw,1000px) }
 }
