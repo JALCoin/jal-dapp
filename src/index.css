@@ -189,7 +189,11 @@ header {
 /* Slide-up exit (Landing only) */
 .landing-gradient.landing-exit { animation: landingSlideUp .6s ease forwards; }
 @keyframes landingSlideUp {
-  to { transform: translateY(-18vh); opacity: 0; filter: blur(2px); }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+    filter: blur(2px);
+  }
 }
 
 /* Also support App wrapper animation (if used) */
