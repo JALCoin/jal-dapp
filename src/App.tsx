@@ -7,6 +7,7 @@ import {
   NavLink,
   useLocation,
   useNavigate,
+  Navigate,
 } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
@@ -30,30 +31,33 @@ function Shell() {
   const navigate = useNavigate();
   const { publicKey, connected } = useWallet();
 
-  const isLandingRoute = location.pathname === "/";
+  const isLanding = location.pathname === "/";
 
-  // Load cached vault symbol
+  // load cached symbol
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // Lock scroll when sidebar is open
+  // lock scroll on sidebar
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => void (document.body.style.overflow = "");
   }, [menuOpen]);
 
-  // If wallet disconnects off the landing page, send user back to landing
+  // ✅ robust redirect: if connected while on "/", go to /hub
   useEffect(() => {
-    if (!connected && !isLandingRoute) {
-      navigate("/", { replace: true });
+    if (connected && isLanding) {
+      navigate("/hub", { replace: true });
     }
-  }, [connected, isLandingRoute, navigate]);
+  }, [connected, isLanding, navigate]);
 
-  // Guard the Hub route (must be connected)
+  // if disconnected away from landing, send back to landing
+  useEffect(() => {
+    if (!connected && !isLanding) navigate("/", { replace: true });
+  }, [connected, isLanding, navigate]);
+
+  // block direct access to /hub when not connected
   useEffect(() => {
     if (location.pathname === "/hub" && !connected) {
       navigate("/", { replace: true });
@@ -64,8 +68,7 @@ function Shell() {
   const closeMenu = () => setMenuOpen(false);
 
   const vaultPath = useMemo(
-    () =>
-      userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard",
+    () => (userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard"),
     [userSymbol]
   );
   const vaultLabel = useMemo(
@@ -94,48 +97,27 @@ function Shell() {
 
   return (
     <>
-      {/* Header hidden on Landing */}
-      {!isLandingRoute && (
+      {/* hide header on landing */}
+      {!isLanding && (
         <header>
           <div className="header-inner">
             <NavLink to="/" onClick={closeMenu} aria-label="Go to Landing">
-              <img
-                src="/JALSOL1.gif"
-                alt="JAL/SOL Logo"
-                className="logo header-logo"
-              />
+              <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
             </NavLink>
 
             <nav className="main-nav" aria-label="Primary">
               {links.map((l) => renderNavLink(l.to, l.label))}
-              {publicKey && (
-                <WalletDisconnectButton className="wallet-disconnect-btn" />
-              )}
+              {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
             </nav>
 
             <div className="social-links" aria-label="Social links">
-              <a
-                href="https://x.com/JAL358"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="X / Twitter"
-              >
+              <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
                 <img src="/icons/X.png" alt="" />
               </a>
-              <a
-                href="https://t.me/JALSOL"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Telegram"
-              >
+              <a href="https://t.me/JALSOL" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
                 <img src="/icons/Telegram.png" alt="" />
               </a>
-              <a
-                href="https://tiktok.com/@jalcoin"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="TikTok"
-              >
+              <a href="https://tiktok.com/@jalcoin" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
                 <img src="/icons/TikTok.png" alt="" />
               </a>
             </div>
@@ -153,29 +135,20 @@ function Shell() {
         </header>
       )}
 
-      {/* Sidebar */}
-      {menuOpen && !isLandingRoute && (
+      {menuOpen && !isLanding && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
-          <div
-            id="sidebar-nav"
-            className="sidebar-nav"
-            role="dialog"
-            aria-modal="true"
-          >
+          <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
             {links.map((l) => renderNavLink(l.to, l.label))}
-            {publicKey && (
-              <WalletDisconnectButton className="wallet-disconnect-btn" />
-            )}
+            {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
           </div>
         </>
       )}
 
-      {/* Routes */}
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/home" element={<Home />} />
         <Route path="/hub" element={<Hub />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/vault/:symbol" element={<Vault />} />
@@ -184,10 +157,13 @@ function Shell() {
         <Route path="/content" element={<Content />} />
         <Route path="/learn" element={<Learn />} />
 
-        {/* Placeholders—replace with real pages when ready */}
+        {/* placeholders */}
         <Route path="/start" element={<div style={{ padding: 24 }}>Start flow…</div>} />
         <Route path="/utility" element={<div style={{ padding: 24 }}>Utility…</div>} />
         <Route path="/terms" element={<div style={{ padding: 24 }}>Terms…</div>} />
+
+        {/* catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );

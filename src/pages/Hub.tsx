@@ -1,15 +1,32 @@
 // src/pages/Hub.tsx
-import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 export default function Hub() {
   const { connected, publicKey } = useWallet();
   const navigate = useNavigate();
 
-  // Guard: if wallet gets disconnected, bounce back to landing
+  // If wallet disconnects, bounce back to landing
   useEffect(() => {
     if (!connected) navigate("/", { replace: true });
+  }, [connected, navigate]);
+
+  // Scroll to top on mount (helps after landing animation)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  // Keyboard shortcuts for power users
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!connected) return;
+      if (e.key === "1") navigate("/start");
+      if (e.key === "2") navigate("/utility");
+      if (e.key === "3") navigate("/terms");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [connected, navigate]);
 
   const shortPk = useMemo(() => {
@@ -38,22 +55,34 @@ export default function Hub() {
         )}
 
         <nav className="hub-stack" aria-label="Main actions">
-          {/* START — swap JAL⇄SOL & add liquidity (Raydium flow can live here later) */}
-          <Link to="/start" className="hub-btn">
+          <Link
+            to="/start"
+            className="hub-btn"
+            aria-label="Start: swap JAL and SOL and provide liquidity on Raydium"
+            style={{ animation: "fadeIn .35s ease-out", animationDelay: "40ms" }}
+          >
             START
             <span className="sub">
               Swap JAL ⇄ SOL &amp; provide liquidity on Raydium
             </span>
           </Link>
 
-          {/* JAL/SOL Utility — docs/tools/links */}
-          <Link to="/utility" className="hub-btn">
+          <Link
+            to="/utility"
+            className="hub-btn"
+            aria-label="JAL / SOL Utility"
+            style={{ animation: "fadeIn .35s ease-out", animationDelay: "90ms" }}
+          >
             JAL / SOL (Utility)
             <span className="sub">Tools, docs, and live utilities</span>
           </Link>
 
-          {/* Terms of Use */}
-          <Link to="/terms" className="hub-btn">
+          <Link
+            to="/terms"
+            className="hub-btn"
+            aria-label="Terms of Use"
+            style={{ animation: "fadeIn .35s ease-out", animationDelay: "140ms" }}
+          >
             Terms of Use
             <span className="sub">Read before using the dapp</span>
           </Link>
