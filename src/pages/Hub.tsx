@@ -99,9 +99,10 @@ export default function Hub() {
   return (
     <main className="hub" role="main" style={{ position: "relative" }}>
       {/* Top-right disconnect (kept on Hub since header nav is hidden) */}
-      <div style={{ position: "absolute", top: "1rem", right: "1rem", zIndex: 10 }}>
-        <WalletDisconnectButton className="hub-disconnect-btn" title="Disconnect wallet" />
-      </div>
+      <div title="Disconnect wallet">
+  <WalletDisconnectButton className="hub-disconnect-btn" />
+</div>
+
 
       <div
         className="hub-inner"
