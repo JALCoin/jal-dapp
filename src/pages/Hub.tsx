@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
+import type { CSSProperties } from "react";
 
 export default function Hub() {
   const { connected, publicKey } = useWallet();
@@ -37,26 +38,18 @@ export default function Hub() {
   }, [publicKey]);
 
   return (
-    <main className="hub" role="main">
+    <main className="hub" role="main" style={{ position: "relative" }}>
       {/* Top-right Disconnect */}
       <div style={{ position: "absolute", top: "1rem", right: "1rem", zIndex: 10 }}>
         <WalletDisconnectButton className="wallet-disconnect-btn" />
       </div>
 
-      <div className="hub-inner" style={{ animation: "fadeIn .4s ease-out" }}>
+      <div className="hub-inner" style={{ animation: "fadeIn .4s ease-out" } as CSSProperties}>
         <h1 className="hub-title">Welcome to the JAL Hub</h1>
 
         {shortPk && (
-          <p
-            className="text-center"
-            style={{
-              marginTop: "-0.5rem",
-              marginBottom: "1.25rem",
-              color: "var(--jal-muted)",
-              fontSize: "0.9rem",
-            }}
-          >
-            Connected: <span style={{ color: "#fff" }}>{shortPk}</span>
+          <p className="hub-connection" aria-live="polite">
+            <span>Connected</span> <span className="pill">{shortPk}</span>
           </p>
         )}
 
@@ -65,7 +58,7 @@ export default function Hub() {
             to="/start"
             className="hub-btn"
             aria-label="Start: swap JAL and SOL and provide liquidity on Raydium"
-            style={{ animation: "fadeIn .35s ease-out", animationDelay: "40ms" } as any}
+            style={{ animation: "fadeIn .35s ease-out", animationDelay: "40ms" } as CSSProperties}
           >
             START
             <span className="sub">Swap JAL ⇄ SOL &amp; provide liquidity on Raydium</span>
@@ -75,7 +68,7 @@ export default function Hub() {
             to="/utility"
             className="hub-btn"
             aria-label="JAL / SOL Utility"
-            style={{ animation: "fadeIn .35s ease-out", animationDelay: "90ms" } as any}
+            style={{ animation: "fadeIn .35s ease-out", animationDelay: "90ms" } as CSSProperties}
           >
             JAL / SOL (Utility)
             <span className="sub">Tools, docs, and live utilities</span>
@@ -85,7 +78,7 @@ export default function Hub() {
             to="/terms"
             className="hub-btn"
             aria-label="Terms of Use"
-            style={{ animation: "fadeIn .35s ease-out", animationDelay: "140ms" } as any}
+            style={{ animation: "fadeIn .35s ease-out", animationDelay: "140ms" } as CSSProperties}
           >
             Terms of Use
             <span className="sub">Read before using the dapp</span>
