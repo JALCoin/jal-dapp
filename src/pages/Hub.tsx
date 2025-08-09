@@ -41,7 +41,7 @@ export default function Hub() {
     <main className="hub" role="main" style={{ position: "relative" }}>
       {/* Top-right Disconnect */}
       <div style={{ position: "absolute", top: "1rem", right: "1rem", zIndex: 10 }}>
-        <WalletDisconnectButton className="wallet-disconnect-btn" />
+        <WalletDisconnectButton className="hub-disconnect-btn" />
       </div>
 
       <div className="hub-inner" style={{ animation: "fadeIn .4s ease-out" } as CSSProperties}>
