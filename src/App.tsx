@@ -212,36 +212,46 @@ function Shell() {
 
 /* -------- Wallet + Router Providers at Root -------- */
 export default function App() {
-  // Use your proxy RPC endpoint if you have one; else default to mainnet-beta
+  // Detect platform once at runtime
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+
   const endpoint = useMemo(
     () => process.env.SOLANA_RPC_ENDPOINT || clusterApiUrl("mainnet-beta"),
     []
   );
 
-  const wallets = useMemo(
-    () => [
+  const wallets = useMemo(() => {
+    const base = [
       new PhantomWalletAdapter(),
       new TrustWalletAdapter(),
       new SolflareWalletAdapter(),
-      new SolanaMobileWalletAdapter({
-        appIdentity: {
-          name: "JAL/SOL",
-          uri: "https://jalsol.com",
-          icon: "https://jalsol.com/icon.png",
-        },
-        // ✅ Required by @solana-mobile/wallet-adapter-mobile v2.x
-        addressSelector: createDefaultAddressSelector(),
-        onWalletNotFound: createDefaultWalletNotFoundHandler(),
-        authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster: "mainnet-beta", // type: Cluster
-      }),
-    ],
-    []
-  );
+    ];
+
+    // ✅ Only add MWA on Android (supported path)
+    if (isAndroid) {
+      base.push(
+        new SolanaMobileWalletAdapter({
+          appIdentity: {
+            name: "JAL/SOL",
+            uri: "https://jalsol.com", // must match the exact origin users see
+            icon: "https://jalsol.com/icon.png",
+          },
+          addressSelector: createDefaultAddressSelector(),
+          onWalletNotFound: createDefaultWalletNotFoundHandler(),
+          authorizationResultCache: createDefaultAuthorizationResultCache(),
+          cluster: "mainnet-beta",
+        })
+      );
+    }
+    return base;
+  }, [isAndroid]);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      {/* ❗Disable autoConnect on iOS to avoid handoff loops */}
+      <WalletProvider wallets={wallets} autoConnect={!isIOS}>
         <WalletModalProvider>
           <Router>
             <Shell />
