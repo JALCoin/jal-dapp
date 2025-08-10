@@ -1,5 +1,5 @@
 // src/pages/Hub.tsx
-import { useEffect, useMemo, useCallback, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
@@ -22,26 +22,21 @@ export default function Hub() {
   const navigate = useNavigate();
   const reducedMotion = usePrefersReducedMotion();
 
-  // Redirect to landing if wallet disconnects
   useEffect(() => {
     if (!connected) navigate("/", { replace: true });
   }, [connected, navigate]);
 
-  // Smoothly scroll to top when Hub mounts (after landing animation)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
   }, [reducedMotion]);
 
-  // Keyboard shortcuts (only while Hub is mounted)
   useEffect(() => {
     if (!connected) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
-      // Don’t hijack typing in inputs
-      const target = e.target as HTMLElement | null;
-      if (target && /input|textarea|select/.test(target.tagName.toLowerCase())) return;
-
-      if (e.key === "1") navigate("/start");
+      const t = e.target as HTMLElement | null;
+      if (t && /input|textarea|select/.test(t.tagName.toLowerCase())) return;
+      if (e.key === "1") navigate("/jal");
       if (e.key === "2") navigate("/utility");
       if (e.key === "3") navigate("/terms");
       if (e.key === "Escape") (document.activeElement as HTMLElement | null)?.blur();
@@ -56,10 +51,16 @@ export default function Hub() {
     return `${s.slice(0, 4)}…${s.slice(-4)}`;
   }, [publicKey]);
 
-  // Focus first action on mount for quick keyboard nav
   const firstActionRef = useRef<HTMLAnchorElement | null>(null);
   useEffect(() => {
     firstActionRef.current?.focus();
+  }, []);
+
+  // NEW: mount flag so the pop-in only plays once
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(t);
   }, []);
 
   const Action = useCallback(
@@ -73,8 +74,8 @@ export default function Hub() {
     }: {
       to: string;
       title: string;
-      sub: string;
-      delayMs: number;
+      sub?: string;
+      delayMs?: number;
       ariaLabel: string;
       innerRef?: React.Ref<HTMLAnchorElement>;
     }) => (
@@ -86,61 +87,62 @@ export default function Hub() {
         style={
           reducedMotion
             ? undefined
-            : ({ animation: "fadeIn .35s ease-out", animationDelay: `${delayMs}ms` } as React.CSSProperties)
+            : ({ animation: "fadeInUp .35s ease-out both", animationDelay: `${delayMs ?? 0}ms` } as CSSProperties)
         }
       >
         {title}
-        <span className="sub">{sub}</span>
+        {sub && <span className="sub">{sub}</span>}
       </Link>
     ),
     [reducedMotion]
   );
 
   return (
-    <main className="hub" role="main" style={{ position: "relative" }}>
-      {/* Top-right disconnect (kept on Hub since header nav is hidden) */}
-      <div title="Disconnect wallet">
-  <WalletDisconnectButton className="hub-disconnect-btn" />
-</div>
-
-
-      <div
-        className="hub-inner"
-        style={reducedMotion ? undefined : ({ animation: "fadeIn .4s ease-out" } as React.CSSProperties)}
-      >
-        <h1 className="hub-title">Welcome</h1>
-
-        {shortPk && (
-          <p className="hub-connection" aria-live="polite">
-            <span>Connected</span> <span className="pill">{shortPk}</span>
-          </p>
-        )}
-
-        <nav className="hub-stack" aria-label="Main actions">
-          <Action
-            innerRef={firstActionRef}
-            to="/start"
-            title="START"
-            sub="Swap JAL ⇄ SOL & provide liquidity on Raydium"
-            delayMs={40}
-            ariaLabel="Start: swap JAL and SOL and provide liquidity on Raydium"
-          />
-          <Action
-            to="/utility"
-            title="JAL / SOL (Utility)"
-            sub="Tools, docs, and live utilities"
-            delayMs={90}
-            ariaLabel="Open JAL / SOL utilities"
-          />
-          <Action
-            to="/terms"
-            title="Terms of Use"
-            sub="Read before using the dapp"
-            delayMs={140}
-            ariaLabel="Read the Terms of Use"
-          />
-        </nav>
+    <div className="hub-overlay" role="dialog" aria-modal="true" aria-label="JAL Hub">
+      <div className="hub-backdrop" aria-hidden="true">
+        <div className="landing-gradient hub-ghost" />
       </div>
-    </main>
+
+      <section
+        className={`hub-panel${mounted ? "" : " is-pre"}`}   {/* <- only animate after mount */}
+      >
+        <div className="hub-panel-top">
+          <div className="hub-connection">
+            <span>Connected</span>
+            {shortPk && <span className="pill">{shortPk}</span>}
+          </div>
+          <WalletDisconnectButton className="hub-disconnect-btn" />
+        </div>
+
+        <div className="hub-panel-body">
+          <h1 className="hub-title">Welcome</h1>
+
+          <nav className="hub-stack" aria-label="Main actions">
+            <Action
+              innerRef={firstActionRef}
+              to="/jal"
+              title="START"
+              sub="Enter JAL — info + SOL ⇄ JAL swap"
+              delayMs={40}
+              ariaLabel="Open JAL page"
+            />
+            <Action
+              to="/utility"
+              title="UTILITY"
+              sub="Tools and live utilities"
+              delayMs={90}
+              ariaLabel="Open utilities"
+            />
+            <Action
+              to="/terms"
+              title="TERMS"
+              sub="Read before using the dapp"
+              delayMs={140}
+              ariaLabel="Read terms of use"
+            />
+          </nav>
+        </div>
+      </section>
+    </div>
   );
 }
