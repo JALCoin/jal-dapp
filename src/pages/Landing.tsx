@@ -15,14 +15,11 @@ export default function Landing() {
   useEffect(() => {
     if (!connected || !publicKey) return;
 
-    // kick off the visual effect but don't rely on it for routing
     setMerging(true);
 
-    // hard redirect quickly (no animation dependency)
-    // small delay so the UI can show the merge for a heartbeat
     timerRef.current = window.setTimeout(() => {
       navigate("/hub", { replace: true });
-    }, 150); // 150ms is enough for a hint of motion
+    }, 150); 
 
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -30,7 +27,7 @@ export default function Landing() {
     };
   }, [connected, publicKey, navigate]);
 
-  // safety: if user disconnects on landing, reset merge
+  // Reset merge if user disconnects
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
@@ -45,10 +42,10 @@ export default function Landing() {
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
           <img src="/icons/X.png" alt="" />
         </a>
-        <a href="https://t.me/JALSOL" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+        <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
           <img src="/icons/Telegram.png" alt="" />
         </a>
-        <a href="https://tiktok.com/@jalcoin" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+        <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
           <img src="/icons/TikTok.png" alt="" />
         </a>
       </div>
@@ -66,7 +63,6 @@ export default function Landing() {
 
         {!connected && <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />}
 
-        {/* Manual escape hatch just in case */}
         {connected && (
           <button
             type="button"
