@@ -10,7 +10,7 @@ import {
 } from "react-router-dom";
 
 /* === Solana Wallet Adapter Providers === */
-import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react";
 import { WalletModalProvider, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 import {
   PhantomWalletAdapter,
@@ -20,11 +20,13 @@ import {
 import {
   SolanaMobileWalletAdapter,
   createDefaultAuthorizationResultCache,
+  createDefaultAddressSelector,
+  createDefaultWalletNotFoundHandler,
 } from "@solana-mobile/wallet-adapter-mobile";
+import { clusterApiUrl } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-import { useWallet } from "@solana/wallet-adapter-react";
-
+/* === Pages === */
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import CryptoGenerator from "./pages/CryptoGenerator";
@@ -55,11 +57,13 @@ function Shell() {
   const isLanding = location.pathname === "/";
   const isHub = location.pathname.startsWith("/hub");
 
+  // Load cached symbol once
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
+  // Lock body scroll when sidebar opened
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
@@ -208,9 +212,9 @@ function Shell() {
 
 /* -------- Wallet + Router Providers at Root -------- */
 export default function App() {
-  // Use your proxy RPC endpoint here if you have one
+  // Use your proxy RPC endpoint if you have one; else default to mainnet-beta
   const endpoint = useMemo(
-    () => process.env.SOLANA_RPC_ENDPOINT || "https://api.mainnet-beta.solana.com",
+    () => process.env.SOLANA_RPC_ENDPOINT || clusterApiUrl("mainnet-beta"),
     []
   );
 
@@ -223,10 +227,13 @@ export default function App() {
         appIdentity: {
           name: "JAL/SOL",
           uri: "https://jalsol.com",
-          icon: "https://jalsol.com/icon.png", // optional
+          icon: "https://jalsol.com/icon.png",
         },
-        cluster: "mainnet-beta",
+        // ✅ Required by @solana-mobile/wallet-adapter-mobile v2.x
+        addressSelector: createDefaultAddressSelector(),
+        onWalletNotFound: createDefaultWalletNotFoundHandler(),
         authorizationResultCache: createDefaultAuthorizationResultCache(),
+        cluster: "mainnet-beta", // type: Cluster
       }),
     ],
     []
