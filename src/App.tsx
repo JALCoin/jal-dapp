@@ -17,6 +17,7 @@ import {
   TrustWalletAdapter,
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
+import type { WalletAdapter } from "@solana/wallet-adapter-base";
 import {
   SolanaMobileWalletAdapter,
   createDefaultAuthorizationResultCache,
@@ -46,29 +47,24 @@ function Protected({ children }: { children: ReactElement }) {
   return children;
 }
 
-/* -------- App Shell (uses wallet context) -------- */
+/* -------- App Shell -------- */
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
-
   const location = useLocation();
   const { publicKey } = useWallet();
 
   const isLanding = location.pathname === "/";
   const isHub = location.pathname.startsWith("/hub");
 
-  // Load cached symbol once
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // Lock body scroll when sidebar opened
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
@@ -104,7 +100,6 @@ function Shell() {
 
   return (
     <>
-      {/* Hide header on Landing and on Hub overlay (full-bleed). */}
       {!isLanding && !isHub && (
         <header>
           <div className="header-inner">
@@ -142,7 +137,6 @@ function Shell() {
         </header>
       )}
 
-      {/* Sidebar (not on Landing or Hub) */}
       {menuOpen && !isLanding && !isHub && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
@@ -155,18 +149,7 @@ function Shell() {
 
       <Routes>
         <Route path="/" element={<Landing />} />
-
-        {/* Hub as a fixed overlay (guarded) */}
-        <Route
-          path="/hub"
-          element={
-            <Protected>
-              <Hub />
-            </Protected>
-          }
-        />
-
-        {/* Other routes */}
+        <Route path="/hub" element={<Protected><Hub /></Protected>} />
         <Route path="/home" element={<Home />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -176,43 +159,17 @@ function Shell() {
         <Route path="/content" element={<Content />} />
         <Route path="/learn" element={<Learn />} />
         <Route path="/jal" element={<Protected><Jal /></Protected>} />
-
-        {/* Placeholders (guarded) */}
-        <Route
-          path="/start"
-          element={
-            <Protected>
-              <div style={{ padding: 24 }}>Start flow…</div>
-            </Protected>
-          }
-        />
-        <Route
-          path="/utility"
-          element={
-            <Protected>
-              <div style={{ padding: 24 }}>Utility…</div>
-            </Protected>
-          }
-        />
-        <Route
-          path="/terms"
-          element={
-            <Protected>
-              <div style={{ padding: 24 }}>Terms…</div>
-            </Protected>
-          }
-        />
-
-        {/* catch-all */}
+        <Route path="/start" element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
+        <Route path="/utility" element={<Protected><div style={{ padding: 24 }}>Utility…</div></Protected>} />
+        <Route path="/terms" element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
 }
 
-/* -------- Wallet + Router Providers at Root -------- */
+/* -------- Root Providers -------- */
 export default function App() {
-  // Detect platform once at runtime
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
   const isIOS = /iPhone|iPad|iPod/i.test(ua);
   const isAndroid = /Android/i.test(ua);
@@ -222,20 +179,19 @@ export default function App() {
     []
   );
 
-  const wallets = useMemo(() => {
-    const base = [
+  const wallets = useMemo<WalletAdapter[]>(() => {
+    const base: WalletAdapter[] = [
       new PhantomWalletAdapter(),
       new TrustWalletAdapter(),
       new SolflareWalletAdapter(),
     ];
 
-    // ✅ Only add MWA on Android (supported path)
     if (isAndroid) {
       base.push(
         new SolanaMobileWalletAdapter({
           appIdentity: {
             name: "JAL/SOL",
-            uri: "https://jalsol.com", // must match the exact origin users see
+            uri: "https://jalsol.com",
             icon: "https://jalsol.com/icon.png",
           },
           addressSelector: createDefaultAddressSelector(),
@@ -245,12 +201,12 @@ export default function App() {
         })
       );
     }
+
     return base;
   }, [isAndroid]);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      {/* ❗Disable autoConnect on iOS to avoid handoff loops */}
       <WalletProvider wallets={wallets} autoConnect={!isIOS}>
         <WalletModalProvider>
           <Router>
