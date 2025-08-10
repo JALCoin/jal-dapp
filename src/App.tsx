@@ -21,6 +21,7 @@ import Manifesto from "./pages/Manifesto";
 import Learn from "./pages/Learn";
 import Content from "./pages/Content";
 import Hub from "./pages/Hub";
+import Jal from "./pages/Jal";
 
 function Protected({ children }: { children: ReactElement }) {
   const { connected } = useWallet();
@@ -33,7 +34,7 @@ function Shell() {
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
 
   const location = useLocation();
-  const { publicKey } = useWallet(); // connected not needed here
+  const { publicKey } = useWallet();
 
   const isLanding = location.pathname === "/";
   const isHub = location.pathname.startsWith("/hub");
@@ -85,49 +86,45 @@ function Shell() {
 
   return (
     <>
-      {/* Hide header on Landing. On /hub keep only logo + socials (no nav/hamburger). */}
-      {!isLanding && (
+      {/* Hide header on Landing and on Hub overlay (full-bleed). */}
+      {!isLanding && !isHub && (
         <header>
           <div className="header-inner">
             <NavLink to="/" onClick={closeMenu} aria-label="Go to Landing">
               <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
             </NavLink>
 
-            {!isHub && (
-              <nav className="main-nav" aria-label="Primary">
-                {links.map((l) => renderNavLink(l.to, l.label))}
-                {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
-              </nav>
-            )}
+            <nav className="main-nav" aria-label="Primary">
+              {links.map((l) => renderNavLink(l.to, l.label))}
+              {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
+            </nav>
 
-<div className="social-links" aria-label="Social links">
-  <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
-    <img src="/icons/X.png" alt="" />
-  </a>
-  <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
-    <img src="/icons/Telegram.png" alt="" />
-  </a>
-  <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-    <img src="/icons/TikTok.png" alt="" />
-  </a>
-</div>
+            <div className="social-links" aria-label="Social links">
+              <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
+                <img src="/icons/X.png" alt="" />
+              </a>
+              <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+                <img src="/icons/Telegram.png" alt="" />
+              </a>
+              <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+                <img src="/icons/TikTok.png" alt="" />
+              </a>
+            </div>
 
-            {!isHub && (
-              <button
-                className="hamburger"
-                onClick={toggleMenu}
-                aria-label="Toggle menu"
-                aria-expanded={menuOpen}
-                aria-controls="sidebar-nav"
-              >
-                {menuOpen ? "✕" : "☰"}
-              </button>
-            )}
+            <button
+              className="hamburger"
+              onClick={toggleMenu}
+              aria-label="Toggle menu"
+              aria-expanded={menuOpen}
+              aria-controls="sidebar-nav"
+            >
+              {menuOpen ? "✕" : "☰"}
+            </button>
           </div>
         </header>
       )}
 
-      {/* Sidebar (never on /hub) */}
+      {/* Sidebar (not on Landing or Hub) */}
       {menuOpen && !isLanding && !isHub && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
@@ -141,7 +138,7 @@ function Shell() {
       <Routes>
         <Route path="/" element={<Landing />} />
 
-        {/* Post-connect hub (guarded) */}
+        {/* Hub as a fixed overlay (guarded) */}
         <Route
           path="/hub"
           element={
@@ -151,7 +148,7 @@ function Shell() {
           }
         />
 
-        {/* The rest of your routes */}
+        {/* Other routes */}
         <Route path="/home" element={<Home />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -160,8 +157,9 @@ function Shell() {
         <Route path="/manifesto" element={<Manifesto />} />
         <Route path="/content" element={<Content />} />
         <Route path="/learn" element={<Learn />} />
+	<Route path="/jal" element={<Protected><Jal /></Protected>}/>
 
-        {/* Placeholders — also guarded since they’re hub actions */}
+        {/* Placeholders (guarded) */}
         <Route
           path="/start"
           element={
