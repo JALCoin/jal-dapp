@@ -100,17 +100,17 @@ function Shell() {
               </nav>
             )}
 
-            <div className="social-links" aria-label="Social links">
-              <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
-                <img src="/icons/X.png" alt="" />
-              </a>
-              <a href="https://t.me/JALSOL" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
-                <img src="/icons/Telegram.png" alt="" />
-              </a>
-              <a href="https://tiktok.com/@jalcoin" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-                <img src="/icons/TikTok.png" alt="" />
-              </a>
-            </div>
+<div className="social-links" aria-label="Social links">
+  <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
+    <img src="/icons/X.png" alt="" />
+  </a>
+  <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+    <img src="/icons/Telegram.png" alt="" />
+  </a>
+  <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+    <img src="/icons/TikTok.png" alt="" />
+  </a>
+</div>
 
             {!isHub && (
               <button
