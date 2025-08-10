@@ -8,8 +8,22 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
+
+/* === Solana Wallet Adapter Providers === */
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { WalletModalProvider, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
+import {
+  PhantomWalletAdapter,
+  TrustWalletAdapter,
+  SolflareWalletAdapter,
+} from "@solana/wallet-adapter-wallets";
+import {
+  SolanaMobileWalletAdapter,
+  createDefaultAuthorizationResultCache,
+} from "@solana-mobile/wallet-adapter-mobile";
+import "@solana/wallet-adapter-react-ui/styles.css";
+
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
@@ -23,12 +37,14 @@ import Content from "./pages/Content";
 import Hub from "./pages/Hub";
 import Jal from "./pages/Jal";
 
+/* -------- Guard -------- */
 function Protected({ children }: { children: ReactElement }) {
   const { connected } = useWallet();
   if (!connected) return <Navigate to="/" replace />;
   return children;
 }
 
+/* -------- App Shell (uses wallet context) -------- */
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
@@ -39,13 +55,11 @@ function Shell() {
   const isLanding = location.pathname === "/";
   const isHub = location.pathname.startsWith("/hub");
 
-  // Load cached symbol once
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // Lock body scroll when sidebar opened
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
@@ -157,7 +171,7 @@ function Shell() {
         <Route path="/manifesto" element={<Manifesto />} />
         <Route path="/content" element={<Content />} />
         <Route path="/learn" element={<Learn />} />
-	<Route path="/jal" element={<Protected><Jal /></Protected>}/>
+        <Route path="/jal" element={<Protected><Jal /></Protected>} />
 
         {/* Placeholders (guarded) */}
         <Route
@@ -192,10 +206,41 @@ function Shell() {
   );
 }
 
+/* -------- Wallet + Router Providers at Root -------- */
 export default function App() {
+  // Use your proxy RPC endpoint here if you have one
+  const endpoint = useMemo(
+    () => process.env.SOLANA_RPC_ENDPOINT || "https://api.mainnet-beta.solana.com",
+    []
+  );
+
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+      new TrustWalletAdapter(),
+      new SolflareWalletAdapter(),
+      new SolanaMobileWalletAdapter({
+        appIdentity: {
+          name: "JAL/SOL",
+          uri: "https://jalsol.com",
+          icon: "https://jalsol.com/icon.png", // optional
+        },
+        cluster: "mainnet-beta",
+        authorizationResultCache: createDefaultAuthorizationResultCache(),
+      }),
+    ],
+    []
+  );
+
   return (
-    <Router>
-      <Shell />
-    </Router>
+    <ConnectionProvider endpoint={endpoint}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <Router>
+            <Shell />
+          </Router>
+        </WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
   );
 }
