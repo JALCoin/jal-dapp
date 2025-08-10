@@ -1,5 +1,5 @@
 // src/pages/Hub.tsx
-import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
@@ -22,14 +22,17 @@ export default function Hub() {
   const navigate = useNavigate();
   const reducedMotion = usePrefersReducedMotion();
 
+  // Redirect if disconnected
   useEffect(() => {
     if (!connected) navigate("/", { replace: true });
   }, [connected, navigate]);
 
+  // Scroll to top
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
   }, [reducedMotion]);
 
+  // Keyboard shortcuts
   useEffect(() => {
     if (!connected) return;
     const onKey = (e: KeyboardEvent) => {
@@ -56,7 +59,7 @@ export default function Hub() {
     firstActionRef.current?.focus();
   }, []);
 
-  // NEW: mount flag so the pop-in only plays once
+  // Animate only after mount
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const t = requestAnimationFrame(() => setMounted(true));
@@ -87,7 +90,7 @@ export default function Hub() {
         style={
           reducedMotion
             ? undefined
-            : ({ animation: "fadeInUp .35s ease-out both", animationDelay: `${delayMs ?? 0}ms` } as CSSProperties)
+            : { animation: "fadeInUp .35s ease-out both", animationDelay: `${delayMs ?? 0}ms` }
         }
       >
         {title}
@@ -99,13 +102,13 @@ export default function Hub() {
 
   return (
     <div className="hub-overlay" role="dialog" aria-modal="true" aria-label="JAL Hub">
+      {/* Ghost backdrop */}
       <div className="hub-backdrop" aria-hidden="true">
         <div className="landing-gradient hub-ghost" />
       </div>
 
-      <section
-        className={`hub-panel${mounted ? "" : " is-pre"}`}   {/* <- only animate after mount */}
-      >
+      {/* Main Hub panel */}
+      <section className={`hub-panel${mounted ? "" : " is-pre"}`}>
         <div className="hub-panel-top">
           <div className="hub-connection">
             <span>Connected</span>
