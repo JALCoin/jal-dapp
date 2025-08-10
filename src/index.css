@@ -10,6 +10,7 @@
   --jal-border:#11f1a766;
   --white:#ffffff;
 
+  /* overlay/glass vars */
   --blur-amt:10px;
   --panel-bg:rgba(0,0,0,.35);
   --panel-stroke:rgba(255,255,255,.5);
@@ -34,7 +35,7 @@ html,body,#root{
 
 /* ===============================
    GLOBAL BACKDROP (animated gradient)
-   Stayed on to let Hub overlay/blur it
+   Always on so Hub can overlay/blur it.
 =================================*/
 body::before{
   content:"";
@@ -91,7 +92,7 @@ body::before{
   box-shadow:0 0 10px #fff, 0 0 20px #fff;
 }
 
-/* Logo + soft glow */
+/* Logo + soft white glow */
 .landing-inner{
   display:flex; flex-direction:column; align-items:center; gap:1.25rem;
   position:relative; z-index:2;
@@ -111,7 +112,7 @@ body::before{
 }
 .landing-logo{
   width:clamp(220px,38vw,520px); height:auto;
-  filter:drop-shadow(0 0 10px rgba(255,255,255,.8)); /* clean white halo */
+  filter:drop-shadow(0 0 10px rgba(255,255,255,.8));
 }
 
 /* Wallet button */
@@ -140,8 +141,7 @@ body::before{
 @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
 
 /* ===============================
-   HEADER (hidden on landing by app)
-   — simplified white glow
+   HEADER (hidden on Landing by App)
 =================================*/
 header{
   position:relative; width:100%; background:#000;
@@ -214,8 +214,15 @@ header .social-links img:hover{
   -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
 }
 
-/* Centered glassy panel with glowing white borders */
+/* Optional ghost of landing inside overlay (non-blocking) */
+.hub-backdrop{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+}
+.hub-ghost{ opacity:.15; }
+
+/* Centered glassy panel with glowing white, full-width borders */
 .hub-panel{
+  position:relative;
   width:min(980px,92vw);
   padding:clamp(18px,2.8vw,28px);
   background:var(--panel-bg);
@@ -226,13 +233,24 @@ header .social-links img:hover{
     0 8px 32px rgba(0,0,0,.35),
     0 0 22px rgba(255,255,255,.35);
   color:#fff;
-  animation:hubPopIn .45s cubic-bezier(.22,.75,.15,1) both;
   transform-origin:center center;
+  animation:hubPopIn .45s cubic-bezier(.22,.75,.15,1) both;
 }
+
+/* Initial safe state for mount-only pop-in */
+.hub-panel.is-pre{ opacity:0; transform:scale(.92); }
+
 @keyframes hubPopIn{
   0%{opacity:0; transform:scale(.92)}
   100%{opacity:1; transform:scale(1)}
 }
+
+/* Hub top row + body */
+.hub-panel-top{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:1rem; margin-bottom:1rem;
+}
+.hub-panel-body{ position:relative; z-index:1; }
 
 /* Hub title + connection pill */
 .hub-title{
@@ -250,8 +268,9 @@ header .social-links img:hover{
   box-shadow:0 0 12px #fff6;
 }
 
-/* Hub button stack */
-.hub-actions{ display:grid; gap:1rem; }
+/* Hub button stack + button animation */
+.hub-stack{ display:grid; gap:1rem; }
+
 .hub-btn{
   display:block; width:100%; text-align:center; text-decoration:none;
   padding:clamp(1rem,2.6vw,1.4rem) clamp(1rem,2.6vw,1.6rem);
@@ -273,6 +292,12 @@ header .social-links img:hover{
 .hub-btn:focus-visible{
   outline:3px solid #fff; outline-offset:3px;
   box-shadow:0 0 0 4px #fff8, 0 0 18px #fff;
+}
+
+/* Stagger anim used by Hub.tsx <Action /> */
+@keyframes fadeInUp{
+  from{ opacity:0; transform:translateY(6px); }
+  to  { opacity:1; transform:translateY(0); }
 }
 
 /* Hub Disconnect (top-right of overlay) */

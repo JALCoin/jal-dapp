@@ -11,23 +11,32 @@ export default function Landing() {
   const [merging, setMerging] = useState(false);
   const timerRef = useRef<number | null>(null);
 
-  // 1) Robust redirect: go to /hub immediately when connected.
+  // detect reduced motion once
+  const reducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // On connect: fade landing, then hand-off to /hub (Hub will pop-in)
   useEffect(() => {
     if (!connected || !publicKey) return;
 
     setMerging(true);
 
+    // align with CSS .45s; skip delay if reduced motion
+    const delay = reducedMotion ? 0 : 450;
+
     timerRef.current = window.setTimeout(() => {
       navigate("/hub", { replace: true });
-    }, 150); 
+    }, delay);
 
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = null;
     };
-  }, [connected, publicKey, navigate]);
+  }, [connected, publicKey, navigate, reducedMotion]);
 
-  // Reset merge if user disconnects
+  // Reset if user disconnects on landing
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
@@ -57,21 +66,12 @@ export default function Landing() {
       )}
 
       <div className="landing-inner">
-        <div className={`landing-logo-wrapper ${merging ? "to-top" : ""} ${connected ? "wallet-connected" : ""}`}>
+        {/* keep logo static during fade */}
+        <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
         {!connected && <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />}
-
-        {connected && (
-          <button
-            type="button"
-            onClick={() => navigate("/hub", { replace: true })}
-            style={{ marginTop: 16, background: "transparent", color: "#ffd700", border: "none", cursor: "pointer" }}
-          >
-            Continue to Hub →
-          </button>
-        )}
       </div>
     </main>
   );
