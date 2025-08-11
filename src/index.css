@@ -35,7 +35,6 @@ html,body,#root{
 
 /* ===============================
    GLOBAL BACKDROP (GPU-friendly drift)
-   Always on so Hub can overlay/blur it.
 =================================*/
 body::before{
   content:"";
@@ -212,7 +211,7 @@ header .social-links a:hover::after{
 @keyframes slideInRight{ from{transform:translateX(100%);opacity:.2} to{transform:translateX(0);opacity:1} }
 
 /* ===============================
-   HUB OVERLAY (transparent, full-screen)
+   HUB OVERLAY
 =================================*/
 .hub-overlay{
   position:fixed; inset:0; z-index:40; display:grid; place-items:center;
@@ -221,8 +220,9 @@ header .social-links a:hover::after{
   -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
+.hub-overlay.is-closing { animation: hubClose 0.3s ease forwards; }
+@keyframes hubClose { from {opacity:1} to {opacity:0} }
 
-/* Optional ghost of landing inside overlay (non-blocking) */
 .hub-backdrop{ position:absolute; inset:0; z-index:0; pointer-events:none; }
 .hub-ghost{ opacity:.15; }
 
@@ -246,11 +246,9 @@ header .social-links a:hover::after{
 .hub-panel.is-pre{ opacity:0; transform:scale(.92); }
 @keyframes hubPopIn{ 0%{opacity:0; transform:scale(.92)} 100%{opacity:1; transform:scale(1)} }
 
-/* Hub top row + body */
 .hub-panel-top{ display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
 .hub-panel-body{ position:relative; z-index:1; }
 
-/* Hub title + connection pill */
 .hub-title{
   margin:0 0 .35rem; text-align:center; color:#fff;
   font-size:clamp(2rem,3.2vw,2.8rem); letter-spacing:.02em;
@@ -266,9 +264,13 @@ header .social-links a:hover::after{
   box-shadow:0 0 12px #fff6;
 }
 
-/* Hub button stack + button animation */
+/* ===============================
+   HUB: BUTTON STACK
+   (supports GIF/image buttons)
+=================================*/
 .hub-stack{ display:grid; gap:1rem; }
 
+/* Generic text button (kept for reuse) */
 .hub-btn{
   display:block; width:100%; text-align:center; text-decoration:none;
   padding:clamp(1rem,2.6vw,1.4rem) clamp(1rem,2.6vw,1.6rem);
@@ -289,18 +291,52 @@ header .social-links a:hover::after{
     filter:saturate(1.05);
   }
 }
-@media (hover:none){
-  .hub-btn:active{ transform:scale(.985); }
-}
+@media (hover:none){ .hub-btn:active{ transform:scale(.985); } }
 .hub-btn:focus-visible{
   outline:3px solid #fff; outline-offset:3px;
   box-shadow:0 0 0 4px #fff8, 0 0 18px #fff !important;
 }
 
-/* Stagger anim used by Hub.tsx <Action /> */
+/* Image/GIF button variant used in Hub.tsx */
+.img-btn{
+  padding:0; background:transparent; border:none;
+  border-radius:14px; overflow:hidden;
+  /* frame */
+  box-shadow:
+    0 0 0 1.5px rgba(255,255,255,.65) inset,
+    0 8px 22px rgba(0,0,0,.35),
+    0 0 18px rgba(255,255,255,.25);
+}
+.img-btn:focus-visible{
+  outline:3px solid #fff; outline-offset:4px;
+  box-shadow:
+    0 0 0 1.5px #fff inset,
+    0 0 24px #fff,
+    0 0 36px #fff8;
+}
+
+/* The GIF itself */
+.hub-gif{
+  display:block; width:100%; height:auto; aspect-ratio: 16 / 3.8; /* keeps nice banner shape */
+  object-fit:cover;
+  background:#000;
+  transition:transform .18s ease, filter .25s ease, box-shadow .25s ease;
+}
+@media (hover:hover){
+  .img-btn:hover .hub-gif{
+    transform:scale(1.012);
+    filter:saturate(1.05);
+    box-shadow:0 0 26px #fff9, 0 0 44px #fff8;
+  }
+}
+@media (hover:none){
+  .img-btn:active .hub-gif{ transform:scale(.992); }
+}
+
+/* Stagger anim used by Hub.tsx */
 @keyframes fadeInUp{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:translateY(0);} }
 
-/* Hub Disconnect (top-right of overlay) */
+/* Hub Disconnect (top-right) */
 .hub-disconnect{ position:absolute; top:1rem; right:1rem; }
 .hub-disconnect-btn{
   border:2px solid #fff !important; background:#000 !important; color:#fff !important;
@@ -359,7 +395,7 @@ header .social-links a:hover::after{
 ::-webkit-scrollbar-thumb{ background:#fff; border-radius:4px }
 ::-webkit-scrollbar-thumb:hover{ background:#e5e5e5 }
 
-/* Wallet adapter theming (optional but nice) */
+/* Wallet adapter theming */
 .wallet-adapter-modal{ backdrop-filter:blur(8px) saturate(1.05); }
 .wallet-adapter-modal-container{
   background:rgba(0,0,0,.72) !important;
@@ -386,18 +422,9 @@ header .social-links a:hover::after{
   .nav-link{ font-size:1rem }
   .logo{ height:112px }
   .hub-panel{ width:min(96vw,980px); }
+  .hub-gif{ aspect-ratio: 16 / 4.4; } /* slightly taller banners on mobile */
 }
 @media (max-height:640px){
   .hub-title{ font-size:clamp(1.6rem,4.8vw,2.2rem); }
   .hub-btn{ padding:.85rem 1rem; }
 }
-
-/* Closing animation for Hub overlay */
-.hub-overlay.is-closing {
-  animation: hubClose 0.3s ease forwards;
-}
-@keyframes hubClose {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
