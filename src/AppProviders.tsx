@@ -1,26 +1,41 @@
 // src/AppProviders.tsx
-import type { FC } from 'react';
-import { useMemo } from 'react';
-import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { useMemo, type FC, type ReactNode } from "react";
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
+import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
+import { WalletConnectWalletAdapter, WalletConnectWalletName } from "@solana/wallet-adapter-walletconnect";
 
-import '@solana/wallet-adapter-react-ui/styles.css';
+export const AppProviders: FC<{ children: ReactNode }> = ({ children }) => {
+  const endpoint = useMemo(() => (
+    typeof window !== "undefined" && window.location.hostname === "localhost"
+      ? "http://localhost:3001/api/solana"
+      : "https://solana-proxy-production.up.railway.app"
+  ), []);
 
-export const AppProviders: FC<{ children: React.ReactNode }> = ({ children }) => {
-  const endpoint = useMemo(() => {
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      return 'http://localhost:3001/api/solana';
-    }
-    return 'https://solana-proxy-production.up.railway.app';
-  }, []);
-
-  const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
-  const onError = (error: any) => console.error('Wallet error:', error);
+  const wallets = useMemo(() => [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+    new WalletConnectWalletAdapter({
+      options: {
+        projectId: "<YOUR_WALLETCONNECT_PROJECT_ID>",   // ← REQUIRED
+        relayUrl: "wss://relay.walletconnect.com",      // default, explicit is fine
+        metadata: {
+          name: "JAL/SOL Dapp",
+          description: "Swap SOL→JAL and use utilities",
+          url: typeof window !== "undefined" ? window.location.origin : "https://jalsol.com",
+          icons: ["https://jalsol.com/icons/icon-512.png"],
+        },
+        // Solana mainnet chain id (101). The adapter defaults correctly,
+        // but setting explicitly can help some wallets.
+        chains: ["solana:101"],
+      },
+    }),
+  ], []);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect onError={onError}>
+      <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
