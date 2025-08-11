@@ -55,7 +55,7 @@ export default function Hub() {
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts (1=JAL, 2=Utility, 3=Vault, 4=How It Works)
   useEffect(() => {
     if (!connected) return;
     const onKey = (e: KeyboardEvent) => {
@@ -65,12 +65,13 @@ export default function Hub() {
 
       if (e.key === "1") navigate("/jal");
       if (e.key === "2") navigate("/utility");
-      if (e.key === "3") navigate("/terms");
+      if (e.key === "3") navigate("/vault");
+      if (e.key === "4") navigate("/how-it-works");
       if (e.key === "Escape") startClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [connected]);
+  }, [connected, navigate]);
 
   // Focus trap
   const panelRef = useRef<HTMLElement | null>(null);
@@ -120,36 +121,39 @@ export default function Hub() {
     if (e.target === e.currentTarget) startClose();
   };
 
-  // Action link
-  const Action = useCallback(
+  // Image Action link
+  const ImgAction = useCallback(
     ({
       to,
-      title,
-      sub,
+      src,
+      alt,
       delayMs,
-      ariaLabel,
       innerRef,
     }: {
       to: string;
-      title: string;
-      sub?: string;
+      src: string;
+      alt: string;
       delayMs?: number;
-      ariaLabel: string;
       innerRef?: React.Ref<HTMLAnchorElement>;
     }) => (
       <Link
         ref={innerRef}
         to={to}
-        className="hub-btn"
-        aria-label={ariaLabel}
+        className="hub-btn img-btn"
+        aria-label={alt}
         style={
           reducedMotion
             ? undefined
             : { animation: "fadeInUp .35s ease-out both", animationDelay: `${delayMs ?? 0}ms` }
         }
       >
-        {title}
-        {sub && <span className="sub">{sub}</span>}
+        <img
+          className="hub-gif"
+          src={src}
+          alt={alt}
+          loading="eager"
+          draggable={false}
+        />
       </Link>
     ),
     [reducedMotion]
@@ -187,28 +191,39 @@ export default function Hub() {
           <h1 className="hub-title" id={titleId}>
             Welcome
           </h1>
+
           <nav className="hub-stack" aria-label="Main actions">
-            <Action
+            {/* 1) JAL — Swap SOL → JAL */}
+            <ImgAction
               innerRef={firstActionRef}
               to="/jal"
-              title="START"
-              sub="Enter JAL — info + SOL ⇄ JAL swap"
+              src={"/JAL.gif"}
+              alt="Swap SOL to JAL tokens"
               delayMs={40}
-              ariaLabel="Open JAL page"
             />
-            <Action
+
+            {/* 2) JAL/SOL — Use utility */}
+            <ImgAction
               to="/utility"
-              title="UTILITY"
-              sub="Tools and live utilities"
+              src={"/JALSOL.gif"}
+              alt="Use JAL/SOL — create tokens, tools, and utilities"
               delayMs={90}
-              ariaLabel="Open utilities"
             />
-            <Action
-              to="/terms"
-              title="TERMS"
-              sub="Read before using the dapp"
+
+            {/* 3) My Vault */}
+            <ImgAction
+              to="/vault"
+              src={"/VAULT.gif"}
+              alt="My Vault — track your creations and holdings"
               delayMs={140}
-              ariaLabel="Read terms of use"
+            />
+
+            {/* 4) How It Works */}
+            <ImgAction
+              to="/how-it-works"
+              src={encodeURI("/HOW IT WORKS.gif")}
+              alt="How It Works — guides, terms, and resources"
+              delayMs={190}
             />
           </nav>
         </div>
