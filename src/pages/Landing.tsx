@@ -7,10 +7,11 @@ import {
   WalletDisconnectButton,
   useWalletModal,
 } from "@solana/wallet-adapter-react-ui";
+import { WalletConnectWalletName } from "@solana/wallet-adapter-walletconnect";
 
 export default function Landing() {
   const { publicKey, connected, select, connect } = useWallet();
-  const { setVisible } = useWalletModal(); // optional: open modal programmatically
+  const { setVisible } = useWalletModal();
   const navigate = useNavigate();
 
   const [merging, setMerging] = useState(false);
@@ -53,15 +54,15 @@ export default function Landing() {
 
   // Deep-link to Phantom in-app browser (preserve current URL)
   const openInPhantom = useCallback(() => {
-    const target = typeof window !== "undefined" ? encodeURIComponent(window.location.href) : "https://jalsol.com";
+    const target =
+      typeof window !== "undefined" ? encodeURIComponent(window.location.href) : "https://jalsol.com";
     window.location.href = `https://phantom.app/ul/browse/${target}`;
   }, []);
 
   // Mobile one-tap: programmatically select WalletConnect, then connect
   const connectWithWalletConnect = useCallback(async () => {
     try {
-      // Adapter name must match the one registered in AppProviders
-      await select?.("WalletConnect");
+      await select?.(WalletConnectWalletName); // typed WalletName ✅
       await connect?.();
     } catch (e) {
       console.error("WalletConnect mobile connect failed:", e);
@@ -100,7 +101,7 @@ export default function Landing() {
             {/* Desktop / injected wallets / in-app browsers */}
             <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
 
-            {/* Mobile enhancements */}
+            {/* Mobile enhancements if not already inside Phantom */}
             {isMobile && !inPhantomBrowser && (
               <>
                 <button className="landing-wallet" onClick={connectWithWalletConnect}>
