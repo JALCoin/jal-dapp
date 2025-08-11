@@ -6,6 +6,7 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
 import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect";
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
 
@@ -17,13 +18,20 @@ export const AppProviders: FC<{ children: ReactNode }> = ({ children }) => {
     return "https://solana-proxy-production.up.railway.app";
   }, []);
 
+  // Choose network (default Mainnet)
+  const network =
+    (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
+      ? WalletAdapterNetwork.Devnet
+      : WalletAdapterNetwork.Mainnet;
+
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
       new WalletConnectWalletAdapter({
+        network, // <- REQUIRED by this version
         options: {
-          projectId: process.env.VITE_WALLETCONNECT_PROJECT_ID ?? "<YOUR_PROJECT_ID>",
+          projectId: (import.meta as any).env?.VITE_WALLETCONNECT_PROJECT_ID ?? "<YOUR_PROJECT_ID>",
           relayUrl: "wss://relay.walletconnect.com",
           metadata: {
             name: "JAL/SOL Dapp",
@@ -34,7 +42,7 @@ export const AppProviders: FC<{ children: ReactNode }> = ({ children }) => {
         },
       }),
     ],
-    []
+    [network]
   );
 
   const onError = (e: any) => console.error("Wallet error:", e);
