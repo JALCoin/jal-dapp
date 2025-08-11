@@ -87,7 +87,9 @@ export default function Hub() {
         root.querySelectorAll<HTMLElement>(
           'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])'
         )
-      ).filter((el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"));
+      ).filter(
+        (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden")
+      );
       if (focusables.length === 0) return;
 
       const first = focusables[0];
@@ -114,14 +116,14 @@ export default function Hub() {
     setClosing(true);
     setTimeout(() => {
       navigate("/", { replace: true });
-    }, reducedMotion ? 0 : 300); // match animation duration
+    }, reducedMotion ? 0 : 300);
   };
 
   const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) startClose();
   };
 
-  // Image Action link
+  // Image Action link (uses /public asset paths)
   const ImgAction = useCallback(
     ({
       to,
@@ -144,7 +146,10 @@ export default function Hub() {
         style={
           reducedMotion
             ? undefined
-            : { animation: "fadeInUp .35s ease-out both", animationDelay: `${delayMs ?? 0}ms` }
+            : {
+                animation: "fadeInUp .35s ease-out both",
+                animationDelay: `${delayMs ?? 0}ms`,
+              }
         }
       >
         <img
@@ -193,35 +198,28 @@ export default function Hub() {
           </h1>
 
           <nav className="hub-stack" aria-label="Main actions">
-            {/* 1) JAL — Swap SOL → JAL */}
             <ImgAction
               innerRef={firstActionRef}
               to="/jal"
-              src={"/JAL.gif"}
+              src="/JAL.gif"
               alt="Swap SOL to JAL tokens"
               delayMs={40}
             />
-
-            {/* 2) JAL/SOL — Use utility */}
             <ImgAction
               to="/utility"
-              src={"/JALSOL.gif"}
+              src="/JALSOL.gif"
               alt="Use JAL/SOL — create tokens, tools, and utilities"
               delayMs={90}
             />
-
-            {/* 3) My Vault */}
             <ImgAction
               to="/vault"
-              src={"/VAULT.gif"}
+              src="/VAULT.gif"
               alt="My Vault — track your creations and holdings"
               delayMs={140}
             />
-
-            {/* 4) How It Works */}
             <ImgAction
               to="/how-it-works"
-              src={encodeURI("/HOW IT WORKS.gif")}
+              src="/HOW-IT-WORKS.gif"
               alt="How It Works — guides, terms, and resources"
               delayMs={190}
             />
