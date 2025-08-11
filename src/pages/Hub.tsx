@@ -114,9 +114,7 @@ export default function Hub() {
   // Smooth close
   const startClose = () => {
     setClosing(true);
-    setTimeout(() => {
-      navigate("/", { replace: true });
-    }, reducedMotion ? 0 : 300);
+    setTimeout(() => navigate("/", { replace: true }), reducedMotion ? 0 : 300);
   };
 
   const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -197,33 +195,33 @@ export default function Hub() {
             Welcome
           </h1>
 
-        <nav className="hub-stack" aria-label="Main actions">
-          <ImgAction
-            innerRef={firstActionRef}
-            to="/jal"
-            src="/JAL.gif"
-            alt="Swap SOL to JAL tokens"
-            delayMs={40}
-          />
-          <ImgAction
-            to="/utility"
-            src="/JALSOL.gif"
-            alt="Use JAL/SOL — create tokens, tools, and utilities"
-            delayMs={90}
-          />
-          <ImgAction
-            to="/vault"
-            src="/VAULT.gif"
-            alt="My Vault — track your creations and holdings"
-            delayMs={140}
-          />
-          <ImgAction
-            to="/how-it-works"
-            src="/HOW-IT-WORKS.gif"  /* if you rename to HOW-IT-WORKS.gif, change this path */
-            alt="How It Works — guides, terms, and resources"
-            delayMs={190}
-          />
-        </nav>
+          <nav className="hub-stack" aria-label="Main actions">
+            <ImgAction
+              innerRef={firstActionRef}
+              to="/jal"
+              src="/JAL.gif"
+              alt="Swap SOL to JAL tokens"
+              delayMs={40}
+            />
+            <ImgAction
+              to="/utility"
+              src="/JALSOL.gif"
+              alt="Use JAL/SOL — create tokens, tools, and utilities"
+              delayMs={90}
+            />
+            <ImgAction
+              to="/vault"
+              src="/VAULT.gif"
+              alt="My Vault — track your creations and holdings"
+              delayMs={140}
+            />
+            <ImgAction
+              to="/how-it-works"
+              src="/HOW%20IT%20WORKS.gif"
+              alt="How It Works — guides, terms, and resources"
+              delayMs={190}
+            />
+          </nav>
         </div>
       </section>
     </div>
