@@ -1,29 +1,35 @@
 // src/pages/Landing.tsx
-import { useEffect, useRef, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useWallet } from "@solana/wallet-adapter-react";
+import {
+  WalletMultiButton,
+  WalletDisconnectButton,
+  useWalletModal,
+} from "@solana/wallet-adapter-react-ui";
 
 export default function Landing() {
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, select, connect } = useWallet();
+  const { setVisible } = useWalletModal(); // optional: open modal programmatically
   const navigate = useNavigate();
 
   const [merging, setMerging] = useState(false);
   const timerRef = useRef<number | null>(null);
 
-  // detect reduced motion once
   const reducedMotion =
     typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-  // On connect: fade landing, then hand-off to /hub (Hub will pop-in)
+  // Detect mobile + Phantom in-app browser
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+  const inPhantomBrowser = /Phantom/i.test(ua);
+
+  // Auto-redirect to hub when connected (desktop + mobile)
   useEffect(() => {
     if (!connected || !publicKey) return;
 
     setMerging(true);
-
-    // align with CSS .45s; skip delay if reduced motion
     const delay = reducedMotion ? 0 : 450;
 
     timerRef.current = window.setTimeout(() => {
@@ -36,7 +42,7 @@ export default function Landing() {
     };
   }, [connected, publicKey, navigate, reducedMotion]);
 
-  // Reset if user disconnects on landing
+  // Reset merge state if disconnected
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
@@ -44,6 +50,25 @@ export default function Landing() {
       timerRef.current = null;
     }
   }, [connected, publicKey]);
+
+  // Deep-link to Phantom in-app browser (preserve current URL)
+  const openInPhantom = useCallback(() => {
+    const target = typeof window !== "undefined" ? encodeURIComponent(window.location.href) : "https://jalsol.com";
+    window.location.href = `https://phantom.app/ul/browse/${target}`;
+  }, []);
+
+  // Mobile one-tap: programmatically select WalletConnect, then connect
+  const connectWithWalletConnect = useCallback(async () => {
+    try {
+      // Adapter name must match the one registered in AppProviders
+      await select?.("WalletConnect");
+      await connect?.();
+    } catch (e) {
+      console.error("WalletConnect mobile connect failed:", e);
+      // Fallback: open modal so the user can pick manually
+      setVisible(true);
+    }
+  }, [select, connect, setVisible]);
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
@@ -66,12 +91,28 @@ export default function Landing() {
       )}
 
       <div className="landing-inner">
-        {/* keep logo static during fade */}
         <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
-        {!connected && <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />}
+        {!connected && (
+          <>
+            {/* Desktop / injected wallets / in-app browsers */}
+            <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
+
+            {/* Mobile enhancements */}
+            {isMobile && !inPhantomBrowser && (
+              <>
+                <button className="landing-wallet" onClick={connectWithWalletConnect}>
+                  Connect (WalletConnect)
+                </button>
+                <button className="landing-wallet" onClick={openInPhantom}>
+                  Open in Phantom
+                </button>
+              </>
+            )}
+          </>
+        )}
       </div>
     </main>
   );
