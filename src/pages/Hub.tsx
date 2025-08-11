@@ -114,7 +114,9 @@ export default function Hub() {
   // Smooth close
   const startClose = () => {
     setClosing(true);
-    setTimeout(() => navigate("/", { replace: true }), reducedMotion ? 0 : 300);
+    setTimeout(() => {
+      navigate("/", { replace: true });
+    }, reducedMotion ? 0 : 300);
   };
 
   const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -217,7 +219,7 @@ export default function Hub() {
             />
             <ImgAction
               to="/how-it-works"
-              src="/HOW%20IT%20WORKS.gif"
+              src="/HOW-IT-WORKS.gif" // matches exact filename in /public
               alt="How It Works — guides, terms, and resources"
               delayMs={190}
             />
