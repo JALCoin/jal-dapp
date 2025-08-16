@@ -249,17 +249,17 @@ export default function App() {
       }),
 
       // ✅ Mobile deep-link adapter (handles open → approve → return)
-      new SolanaMobileWalletAdapter({
-        addressSelector: createDefaultAddressSelector(),
-        appIdentity: {
-          name: "JAL/SOL",
-          uri: "https://jalsol.com",      // use apex for stable return origin
-          icon: "/icons/icon-512.png",    // ensure this asset exists
-        },
-        authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster: "mainnet-beta",
-        walletNotFoundHandler: createDefaultWalletNotFoundHandler(),
-      }),
+new SolanaMobileWalletAdapter({
+  addressSelector: createDefaultAddressSelector(),
+  appIdentity: {
+    name: "JAL/SOL",
+    uri: "https://jalsol.com",
+    icon: "/icons/icon-512.png",
+  },
+  authorizationResultCache: createDefaultAuthorizationResultCache(),
+  cluster: "mainnet-beta",
+  onWalletNotFound: createDefaultWalletNotFoundHandler(), // ✅ correct key
+}),
     ],
     [network]
   );
