@@ -164,7 +164,10 @@ header::after{
   padding-inline:clamp(16px,4vw,40px); text-align:center; position:relative;
 }
 .logo{ height:clamp(100px,15vw,140px); filter:drop-shadow(0 0 10px rgba(255,255,255,.8)); }
-.main-nav{ margin-top:1.25rem; display:flex; justify-content:center; gap:clamp(1rem,4vw,2rem); flex-wrap:wrap; }
+/* Hide inline nav but keep hamburger menu */
+.main-nav {
+  display: none !important;
+}
 .nav-link{ color:#fff; font-weight:700; text-decoration:none; transition:all .25s ease; }
 .nav-link:hover{ color:#fff; text-shadow:0 0 10px #fff, 0 0 24px #fff; }
 .nav-link.active{ border-bottom:2px solid #fff; }
