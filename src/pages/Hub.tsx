@@ -167,7 +167,7 @@ export default function Hub() {
   const titleId = useId();
   const dialogId = useId();
 
-  return (
+return (
     <div
       className={`hub-overlay${closing ? " is-closing" : ""}`}
       role="dialog"
@@ -175,6 +175,13 @@ export default function Hub() {
       aria-labelledby={titleId}
       id={dialogId}
       onClick={onBackdropClick}
+      style={{
+        position: "fixed",
+        inset: 0,
+        minHeight: "100dvh",        // ✅ always full viewport height
+        display: "grid",
+        placeItems: "center",
+      }}
     >
       <div className="hub-backdrop" aria-hidden="true">
         <div className="landing-gradient hub-ghost" />
@@ -183,6 +190,15 @@ export default function Hub() {
       <section
         ref={panelRef}
         className={`hub-panel${mounted ? "" : " is-pre"}`}
+        style={{
+          width: "clamp(320px, 92vw, 980px)", // ✅ responsive width
+          minHeight: "clamp(400px, 80vh, 900px)", // ✅ responsive height
+          padding: "clamp(16px, 3vw, 32px)", // ✅ scale padding
+          borderRadius: "16px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
       >
         <div className="hub-panel-top">
           <div className="hub-connection" role="status" aria-live="polite">
@@ -192,12 +208,16 @@ export default function Hub() {
           <WalletDisconnectButton className="hub-disconnect-btn" />
         </div>
 
-        <div className="hub-panel-body">
+        <div className="hub-panel-body" style={{ flex: 1 }}>
           <h1 className="hub-title" id={titleId}>
             Welcome
           </h1>
 
-          <nav className="hub-stack" aria-label="Main actions">
+          <nav
+            className="hub-stack"
+            aria-label="Main actions"
+            style={{ display: "grid", gap: "clamp(12px, 2vw, 20px)" }} // ✅ responsive gaps
+          >
             <ImgAction
               innerRef={firstActionRef}
               to="/jal"
@@ -219,7 +239,7 @@ export default function Hub() {
             />
             <ImgAction
               to="/how-it-works"
-              src="/HOW-IT-WORKS.gif" // matches exact filename in /public
+              src="/HOW-IT-WORKS.gif"
               alt="How It Works — guides, terms, and resources"
               delayMs={190}
             />
@@ -229,3 +249,4 @@ export default function Hub() {
     </div>
   );
 }
+
