@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 
 const JAL_MINT = "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v"; 
-const RAYDIUM_URL = "https://raydium.io/swap/?input=sol&output=9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
+const RAYDIUM_URL = "https://raydium.io/swap/?inputMint=sol&outputMint=9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
 
 export default function Jal() {
   const [swapOpen, setSwapOpen] = useState(false);
