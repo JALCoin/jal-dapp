@@ -1,4 +1,3 @@
-// src/pages/Hub.tsx
 import React, {
   useEffect,
   useMemo,
@@ -123,7 +122,7 @@ export default function Hub() {
     if (e.target === e.currentTarget) startClose();
   };
 
-  // Image Action link (uses /public asset paths)
+  // Image Action link
   const ImgAction = useCallback(
     ({
       to,
@@ -131,12 +130,14 @@ export default function Hub() {
       alt,
       delayMs,
       innerRef,
+      float,
     }: {
       to: string;
       src: string;
       alt: string;
       delayMs?: number;
       innerRef?: React.Ref<HTMLAnchorElement>;
+      float?: boolean;
     }) => (
       <Link
         ref={innerRef}
@@ -146,14 +147,11 @@ export default function Hub() {
         style={
           reducedMotion
             ? undefined
-            : {
-                animation: "fadeInUp .35s ease-out both",
-                animationDelay: `${delayMs ?? 0}ms`,
-              }
+            : { animation: "fadeInUp .35s ease-out both", animationDelay: `${delayMs ?? 0}ms` }
         }
       >
         <img
-          className="hub-gif"
+          className={`hub-gif${float ? " float" : ""}`}
           src={src}
           alt={alt}
           loading="eager"
@@ -167,7 +165,7 @@ export default function Hub() {
   const titleId = useId();
   const dialogId = useId();
 
-return (
+  return (
     <div
       className={`hub-overlay${closing ? " is-closing" : ""}`}
       role="dialog"
@@ -175,13 +173,6 @@ return (
       aria-labelledby={titleId}
       id={dialogId}
       onClick={onBackdropClick}
-      style={{
-        position: "fixed",
-        inset: 0,
-        minHeight: "100dvh",        // ✅ always full viewport height
-        display: "grid",
-        placeItems: "center",
-      }}
     >
       <div className="hub-backdrop" aria-hidden="true">
         <div className="landing-gradient hub-ghost" />
@@ -189,16 +180,7 @@ return (
 
       <section
         ref={panelRef}
-        className={`hub-panel${mounted ? "" : " is-pre"}`}
-        style={{
-          width: "clamp(320px, 92vw, 980px)", // ✅ responsive width
-          minHeight: "clamp(400px, 80vh, 900px)", // ✅ responsive height
-          padding: "clamp(16px, 3vw, 32px)", // ✅ scale padding
-          borderRadius: "16px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
+        className={`hub-panel hub-panel--fit${mounted ? "" : " is-pre"}`}
       >
         <div className="hub-panel-top">
           <div className="hub-connection" role="status" aria-live="polite">
@@ -208,40 +190,40 @@ return (
           <WalletDisconnectButton className="hub-disconnect-btn" />
         </div>
 
-        <div className="hub-panel-body" style={{ flex: 1 }}>
+        <div className="hub-panel-body">
           <h1 className="hub-title" id={titleId}>
             Welcome
           </h1>
 
-          <nav
-            className="hub-stack"
-            aria-label="Main actions"
-            style={{ display: "grid", gap: "clamp(12px, 2vw, 20px)" }} // ✅ responsive gaps
-          >
+          <nav className="hub-stack hub-stack--responsive" aria-label="Main actions">
             <ImgAction
               innerRef={firstActionRef}
               to="/jal"
               src="/JAL.gif"
               alt="Swap SOL to JAL tokens"
               delayMs={40}
+              float
             />
             <ImgAction
               to="/utility"
               src="/JALSOL.gif"
               alt="Use JAL/SOL — create tokens, tools, and utilities"
               delayMs={90}
+              float
             />
             <ImgAction
               to="/vault"
               src="/VAULT.gif"
               alt="My Vault — track your creations and holdings"
               delayMs={140}
+              float
             />
             <ImgAction
               to="/how-it-works"
               src="/HOW-IT-WORKS.gif"
               alt="How It Works — guides, terms, and resources"
               delayMs={190}
+              float
             />
           </nav>
         </div>
@@ -249,4 +231,3 @@ return (
     </div>
   );
 }
-
