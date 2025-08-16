@@ -8,23 +8,21 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
-
-/* === Solana Wallet Adapter Providers === */
-import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react";
-import { WalletModalProvider, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
+import {
+  ConnectionProvider,
+  WalletProvider,
+  useWallet,
+} from "@solana/wallet-adapter-react";
+import {
+  WalletModalProvider,
+  WalletDisconnectButton,
+} from "@solana/wallet-adapter-react-ui";
 import {
   PhantomWalletAdapter,
-  TrustWalletAdapter,
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
-import type { WalletAdapter } from "@solana/wallet-adapter-base";
-import {
-  SolanaMobileWalletAdapter,
-  createDefaultAuthorizationResultCache,
-  createDefaultAddressSelector,
-  createDefaultWalletNotFoundHandler,
-} from "@solana-mobile/wallet-adapter-mobile";
-import { clusterApiUrl } from "@solana/web3.js";
+import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect";
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 /* === Pages === */
@@ -64,14 +62,17 @@ function Shell() {
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [menuOpen]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
 
   const vaultPath = useMemo(
-    () => (userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard"),
+    () =>
+      userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard",
     [userSymbol]
   );
   const vaultLabel = useMemo(
@@ -104,22 +105,43 @@ function Shell() {
         <header>
           <div className="header-inner">
             <NavLink to="/" onClick={closeMenu} aria-label="Go to Landing">
-              <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
+              <img
+                src="/JALSOL1.gif"
+                alt="JAL/SOL Logo"
+                className="logo header-logo"
+              />
             </NavLink>
 
             <nav className="main-nav" aria-label="Primary">
               {links.map((l) => renderNavLink(l.to, l.label))}
-              {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
+              {publicKey && (
+                <WalletDisconnectButton className="wallet-disconnect-btn" />
+              )}
             </nav>
 
             <div className="social-links" aria-label="Social links">
-              <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
+              <a
+                href="https://x.com/JAL358"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="X / Twitter"
+              >
                 <img src="/icons/X.png" alt="" />
               </a>
-              <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+              <a
+                href="https://t.me/jalsolcommute"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Telegram"
+              >
                 <img src="/icons/Telegram.png" alt="" />
               </a>
-              <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+              <a
+                href="https://www.tiktok.com/@358jalsol"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="TikTok"
+              >
                 <img src="/icons/TikTok.png" alt="" />
               </a>
             </div>
@@ -140,16 +162,30 @@ function Shell() {
       {menuOpen && !isLanding && !isHub && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
-          <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
+          <div
+            id="sidebar-nav"
+            className="sidebar-nav"
+            role="dialog"
+            aria-modal="true"
+          >
             {links.map((l) => renderNavLink(l.to, l.label))}
-            {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
+            {publicKey && (
+              <WalletDisconnectButton className="wallet-disconnect-btn" />
+            )}
           </div>
         </>
       )}
 
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/hub" element={<Protected><Hub /></Protected>} />
+        <Route
+          path="/hub"
+          element={
+            <Protected>
+              <Hub />
+            </Protected>
+          }
+        />
         <Route path="/home" element={<Home />} />
         <Route path="/crypto-generator" element={<CryptoGenerator />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -158,56 +194,92 @@ function Shell() {
         <Route path="/manifesto" element={<Manifesto />} />
         <Route path="/content" element={<Content />} />
         <Route path="/learn" element={<Learn />} />
-        <Route path="/jal" element={<Protected><Jal /></Protected>} />
-        <Route path="/start" element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
-        <Route path="/utility" element={<Protected><div style={{ padding: 24 }}>Utility…</div></Protected>} />
-        <Route path="/terms" element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
+        <Route
+          path="/jal"
+          element={
+            <Protected>
+              <Jal />
+            </Protected>
+          }
+        />
+        <Route
+          path="/start"
+          element={
+            <Protected>
+              <div style={{ padding: 24 }}>Start flow…</div>
+            </Protected>
+          }
+        />
+        <Route
+          path="/utility"
+          element={
+            <Protected>
+              <div style={{ padding: 24 }}>Utility…</div>
+            </Protected>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <Protected>
+              <div style={{ padding: 24 }}>Terms…</div>
+            </Protected>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
 }
 
-/* -------- Root Providers -------- */
+/* -------- Root Providers (Unified) -------- */
 export default function App() {
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  const isAndroid = /Android/i.test(ua);
+  // Endpoint (localhost proxy in dev, Railway in prod)
+  const endpoint = useMemo(() => {
+    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+      return "http://localhost:3001/api/solana";
+    }
+    return "https://solana-proxy-production.up.railway.app";
+  }, []);
 
-  const endpoint = useMemo(
-    () => process.env.SOLANA_RPC_ENDPOINT || clusterApiUrl("mainnet-beta"),
-    []
+  // Choose network (default Mainnet)
+  const network =
+    (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
+      ? WalletAdapterNetwork.Devnet
+      : WalletAdapterNetwork.Mainnet;
+
+  // Wallet adapters
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+      new WalletConnectWalletAdapter({
+        network,
+        options: {
+          projectId:
+            (import.meta as any).env?.VITE_WALLETCONNECT_PROJECT_ID ??
+            "<YOUR_PROJECT_ID>",
+          relayUrl: "wss://relay.walletconnect.com",
+          metadata: {
+            name: "JAL/SOL Dapp",
+            description: "Swap SOL→JAL and use utilities",
+            url:
+              typeof window !== "undefined"
+                ? window.location.origin
+                : "https://jalsol.com",
+            icons: ["https://jalsol.com/icons/icon-512.png"],
+          },
+        },
+      }),
+    ],
+    [network]
   );
 
-  const wallets = useMemo<WalletAdapter[]>(() => {
-    const base: WalletAdapter[] = [
-      new PhantomWalletAdapter(),
-      new TrustWalletAdapter(),
-      new SolflareWalletAdapter(),
-    ];
-
-    if (isAndroid) {
-      base.push(
-        new SolanaMobileWalletAdapter({
-          appIdentity: {
-            name: "JAL/SOL",
-            uri: "https://jalsol.com",
-            icon: "https://jalsol.com/icon.png",
-          },
-          addressSelector: createDefaultAddressSelector(),
-          onWalletNotFound: createDefaultWalletNotFoundHandler(),
-          authorizationResultCache: createDefaultAuthorizationResultCache(),
-          cluster: "mainnet-beta",
-        })
-      );
-    }
-
-    return base;
-  }, [isAndroid]);
+  const onError = (e: any) => console.error("Wallet error:", e);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect={!isIOS}>
+      <WalletProvider wallets={wallets} autoConnect onError={onError}>
         <WalletModalProvider>
           <Router>
             <Shell />
