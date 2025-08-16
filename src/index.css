@@ -10,7 +10,7 @@
   --jal-border:#11f1a766;
   --white:#ffffff;
 
-  /* overlay/glass vars */
+  /* overlay/glass */
   --blur-amt:10px;
   --panel-bg:rgba(0,0,0,.35);
   --panel-stroke:rgba(255,255,255,.5);
@@ -34,7 +34,7 @@ html,body,#root{
 }
 
 /* ===============================
-   GLOBAL BACKDROP (GPU-friendly drift)
+   GLOBAL BACKDROP
 =================================*/
 body::before{
   content:"";
@@ -53,14 +53,12 @@ body::before{
 }
 
 /* ===============================
-   LANDING (logo + wallet)
+   LANDING
 =================================*/
 .landing-gradient{
   position:relative; height:100svh; width:100%;
   display:grid; place-items:center; overflow:hidden; background:transparent;
 }
-
-/* Landing → Hub: fade only */
 .landing-merge{ pointer-events:none; }
 .landing-merge.landing-gradient{ opacity:0; transition:opacity .45s ease; }
 
@@ -85,19 +83,9 @@ body::before{
   border-color:var(--panel-stroke-strong);
   box-shadow:0 0 10px #fff, 0 0 20px #fff;
 }
-.landing-social a:hover::after{
-  content:attr(aria-label);
-  position:absolute; top:125%; left:50%; transform:translateX(-50%);
-  padding:.25rem .5rem; font-size:.72rem; letter-spacing:.02em;
-  color:#000; background:#fff; border-radius:6px; white-space:nowrap;
-  box-shadow:0 4px 16px rgba(0,0,0,.35);
-}
 
-/* Logo + soft white glow */
-.landing-inner{
-  display:flex; flex-direction:column; align-items:center; gap:1.25rem;
-  position:relative; z-index:2;
-}
+/* Logo + soft glow */
+.landing-inner{ display:flex; flex-direction:column; align-items:center; gap:1.25rem; }
 .landing-logo-wrapper{ position:relative; display:inline-block; }
 .landing-logo-wrapper::before{
   content:''; position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%);
@@ -106,7 +94,6 @@ body::before{
   background:radial-gradient(circle, rgba(255,255,255,.28) 0%, transparent 65%);
   filter:blur(42px); animation:glowPulse 6s ease-in-out infinite; z-index:-1;
 }
-.landing-logo-wrapper.wallet-connected::before{ animation-duration:3s; }
 @keyframes glowPulse{
   0%,100%{opacity:.85; transform:translate(-50%,-50%) scale(1)}
   50%{opacity:1; transform:translate(-50%,-50%) scale(1.05)}
@@ -129,58 +116,47 @@ body::before{
   border-color:#fff!important; color:#fff!important;
   box-shadow:0 0 20px #fff, 0 0 28px rgba(255,255,255,.6)!important;
 }
-.landing-wallet:focus-visible{
-  outline:3px solid #fff; outline-offset:3px;
-  box-shadow:0 0 0 4px #fff8, 0 0 18px #fff !important;
-}
-
-/* Temporary disconnect on landing */
-.landing-disconnect{
-  position:absolute; top:1rem; right:1rem; z-index:4; animation:fadeIn .35s ease forwards;
-}
-.wallet-disconnect-btn{
-  border:2px solid var(--jal-text)!important; background:#000!important; color:var(--jal-text)!important;
-  border-radius:10px!important; box-shadow:0 0 10px var(--jal-glow)!important;
-  text-transform:uppercase!important; font-weight:700!important; cursor:pointer;
-}
-@keyframes fadeIn{ from{opacity:0} to{opacity:1} }
 
 /* ===============================
-   HEADER (hidden on Landing by App)
+   HEADER
 =================================*/
 header{
   position:relative; width:100%; background:#000;
   padding:2rem 1rem 1.25rem;
   box-shadow:0 4px 20px #0006;
-  z-index:10;
+  z-index:90; /* above overlays so Hub can slide under */
 }
-/* Existing glow rule (active by default) */
 header::after{
   content:""; position:absolute; left:0; right:0; bottom:0; height:2px;
   background:linear-gradient(90deg, transparent 0%, #fff 15%, #fff 85%, transparent 100%);
   box-shadow:0 0 10px #fff, 0 0 20px #fff8;
 }
+
+/* Hide header visually on /hub but keep mounted for layering */
+.header--hidden{
+  opacity:0; pointer-events:none;
+  transition:opacity .25s ease;
+}
+header:not(.header--hidden){ transition:opacity .25s ease; }
+
 .header-inner{
   width:min(100%,1200px); margin-inline:auto;
   padding-inline:clamp(16px,4vw,40px); text-align:center; position:relative;
 }
 .logo{ height:clamp(100px,15vw,140px); filter:drop-shadow(0 0 10px rgba(255,255,255,.8)); }
 
-/* Hide inline nav but keep hamburger menu */
-.main-nav {
-  display: none !important;
-}
+/* Primary nav (hidden inline; use sidebar on mobile) */
+.main-nav{ display:none !important; }
 .nav-link{ color:#fff; font-weight:700; text-decoration:none; transition:all .25s ease; }
 .nav-link:hover{ color:#fff; text-shadow:0 0 10px #fff, 0 0 24px #fff; }
-.nav-link.active{ border-bottom:2px solid #fff; }
 
-/* ===== Animated hamburger (3 bars → X) ===== */
+/* Animated hamburger (3 bars → X) */
 .hamburger{
   position:absolute; top:1.1rem; right:1rem;
   width:44px; height:44px; border-radius:12px; border:1px solid #ffffff30;
   background: linear-gradient(180deg,#121318,#0a0b0e);
   display:grid; place-items:center; cursor:pointer;
-  transition: border-color .25s ease, transform .2s ease;
+  transition:border-color .25s ease, transform .2s ease;
 }
 .hamburger:hover{ border-color:#ffffff80; transform: translateY(-2px); }
 .hamburger span{
@@ -210,60 +186,57 @@ header .social-links img:hover{
   transform:scale(1.15); border-color:#fff;
   box-shadow:0 0 10px #fff, 0 0 16px #fff;
 }
-header .social-links a:hover::after{
-  content:attr(aria-label);
-  position:absolute; top:125%; left:50%; transform:translateX(-50%);
-  padding:.25rem .5rem; font-size:.72rem; letter-spacing:.02em;
-  color:#000; background:#fff; border-radius:6px; white-space:nowrap;
-  box-shadow:0 4px 16px rgba(0,0,0,.35);
-}
 
-/* ===== Optional alternate rule element (use instead of header::after) ===== */
-.header-rule{
-  height:2px; width:100%;
-  background:
-    radial-gradient(10px 10px at 50% 50%, #fff, transparent 70%),
-    linear-gradient(90deg, transparent 0%, #fff 12%, #fff 88%, transparent 100%);
-  box-shadow: 0 0 12px #fff8, 0 0 22px #fff4;
-}
-
-/* Sidebar */
+/* ===============================
+   SIDEBAR NAV
+=================================*/
 .sidebar-overlay{
   position:fixed; inset:0; background:rgba(0,0,0,.65); backdrop-filter:blur(6px);
-  z-index:50; animation:fadeIn .25s ease-out;
+  z-index:80; animation:fadeIn .25s ease-out;
 }
 .sidebar-nav{
-  position:fixed; top:0; right:0; height:100%; width:240px;
+  position:fixed; top:0; right:0; height:100%; width:260px;
   background:#000; border-left:2px solid #fff;
   box-shadow:-2px 0 16px #fff8; padding:2rem 1.5rem;
-  display:flex; flex-direction:column; gap:1.25rem; z-index:60;
+  display:flex; flex-direction:column; gap:1.25rem; z-index:90;
   animation:slideInRight .25s ease-out;
 }
 @keyframes slideInRight{ from{transform:translateX(100%);opacity:.2} to{transform:translateX(0);opacity:1} }
+@keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+
+/* Wallet buttons reused */
+.wallet-disconnect-btn,
+.hub-disconnect-btn{
+  border:2px solid #fff !important; background:#000 !important; color:#fff !important;
+  border-radius:10px !important; font-weight:700 !important; text-transform:uppercase !important;
+  box-shadow:0 0 14px #fff7 !important; padding:.5rem 1rem !important; cursor:pointer;
+}
+.hub-disconnect-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 0 22px #fff, 0 0 30px #fff !important;
+}
 
 /* ===============================
-   HUB OVERLAY
+   HUB OVERLAY + PANEL
 =================================*/
 .hub-overlay{
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 70;
   display: grid;
   place-items: center;
   background: rgba(0,0,0,.12);
   backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
   -webkit-backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
-  /* allow page to scroll if content taller than viewport */
   overflow: auto;
   padding: 16px;
 }
-.hub-overlay.is-closing { animation: hubClose 0.3s ease forwards; }
+.hub-overlay.is-closing { animation: hubClose .3s ease forwards; }
 @keyframes hubClose { from {opacity:1} to {opacity:0} }
 
 .hub-backdrop{ position:absolute; inset:0; z-index:0; pointer-events:none; }
 .hub-ghost{ opacity:.15; }
 
-/* Centered glassy panel (capped by viewport) */
 .hub-panel{
   position:relative;
   width:min(980px,92vw);
@@ -280,8 +253,6 @@ header .social-links a:hover::after{
   transform-origin:center center;
   animation:hubPopIn .45s cubic-bezier(.22,.75,.15,1) both;
   backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
-
-  /* critical: fit viewport */
   max-height: calc(100svh - 32px);
   display:flex;
   flex-direction:column;
@@ -289,14 +260,20 @@ header .social-links a:hover::after{
 .hub-panel.is-pre{ opacity:0; transform:scale(.92); }
 @keyframes hubPopIn{ 0%{opacity:0; transform:scale(.92)} 100%{opacity:1; transform:scale(1)} }
 
+.hub-panel--fit{
+  width: clamp(320px, 92vw, 980px);
+  min-height: clamp(420px, 80vh, 900px);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
 .hub-panel-top{
   display:flex; align-items:center; justify-content:space-between; gap:1rem;
   margin-bottom:1rem; flex:0 0 auto;
 }
-.hub-panel-body{
-  position:relative; z-index:1; flex:1 1 auto;
-  overflow:auto; padding-bottom:4px;
-}
+.hub-panel-body{ position:relative; z-index:1; flex:1 1 auto; overflow:auto; padding-bottom:4px; }
 
 .hub-title{
   margin:0 0 .35rem; text-align:center; color:#fff;
@@ -313,12 +290,10 @@ header .social-links a:hover::after{
   box-shadow:0 0 12px #fff6;
 }
 
-/* ===============================
-   HUB: BUTTON STACK
-=================================*/
+/* HUB: action stack */
 .hub-stack{ display:grid; gap:1rem; }
+.hub-stack--responsive{ gap: clamp(12px, 2vw, 20px); }
 
-/* Text button (kept for reuse) */
 .hub-btn{
   display:block; width:100%; text-align:center; text-decoration:none;
   padding:clamp(1rem,2.6vw,1.4rem) clamp(1rem,2.6vw,1.6rem);
@@ -340,19 +315,9 @@ header .social-links a:hover::after{
   }
 }
 @media (hover:none){ .hub-btn:active{ transform:scale(.985); } }
-.hub-btn:focus-visible{
-  outline:3px solid #fff; outline-offset:3px;
-  box-shadow:0 0 0 4px #fff8, 0 0 18px #fff !important;
-}
 
-/* Image/GIF button frame */
-.img-btn{
-  padding:0; background:transparent; border:none;
-  border-radius:14px; overflow:hidden;
-  box-shadow:
-    0 0 0 1.5px rgba(255,255,255,.65) inset,
-    0 8px 22px rgba(0,0,0,.35),
-    0 0 18px rgba(255,255,255,.25);
+.img-btn{ padding:0; background:transparent; border:none; border-radius:14px; overflow:hidden;
+  box-shadow:0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
   display:block;
 }
 .img-btn:focus-visible{
@@ -360,54 +325,120 @@ header .social-links a:hover::after{
   box-shadow:0 0 0 1.5px #fff inset, 0 0 24px #fff, 0 0 36px #fff8;
 }
 
-/* GIFs scale by viewport height so panel always fits */
 .hub-gif{
-  display:block;
-  width:100%;
-  height:clamp(80px, 14vh, 180px);
-  object-fit:contain;
-  background:#000;
+  display:block; width:100%; height:clamp(80px, 14vh, 180px);
+  object-fit:contain; background:#000;
   transition:transform .18s ease, filter .25s ease, box-shadow .25s ease;
 }
 .hub-gif--cover{ object-fit:cover; }
 
-/* Optional: gentle float loop for hub GIFs */
+/* Optional: gentle float */
 @keyframes floatY { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-4px) } }
 .hub-gif.float { animation: floatY 4.5s ease-in-out infinite; }
 
-@media (hover:hover){
-  .img-btn:hover .hub-gif{
-    transform:scale(1.01);
-    filter:saturate(1.05);
-    box-shadow:0 0 26px #fff9, 0 0 44px #fff8;
-  }
-}
-@media (hover:none){ .img-btn:active .hub-gif{ transform:scale(.992); } }
-
-/* Stagger anim used by Hub.tsx */
+/* Appear stagger */
 @keyframes fadeInUp{
   from{ opacity:0; transform:translateY(6px); }
   to{ opacity:1; transform:translateY(0); }
 }
 
-/* Hub Disconnect (top-right) */
-.hub-disconnect{ position:absolute; top:1rem; right:1rem; }
-.hub-disconnect-btn{
-  border:2px solid #fff !important; background:#000 !important; color:#fff !important;
-  border-radius:10px !important; font-weight:700 !important; text-transform:uppercase !important;
-  box-shadow:0 0 14px #fff7 !important; padding:.5rem 1rem !important; cursor:pointer;
+/* ===============================
+   JAL PAGE
+=================================*/
+.jal-page{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  background:transparent;
+  position:relative;
+  padding:24px;
 }
-.hub-disconnect-btn:hover{
-  transform:translateY(-1px);
-  box-shadow:0 0 22px #fff, 0 0 30px #fff !important;
+.jal-panel{
+  width:min(960px,96vw);
+  background:var(--panel-bg);
+  border-top:2px solid var(--panel-stroke-strong);
+  border-bottom:2px solid var(--panel-stroke-strong);
+  padding:32px 24px;
+  box-shadow:0 0 24px rgba(255,255,255,0.35), 0 0 2px rgba(255,255,255,0.8) inset;
+  backdrop-filter: blur(6px);
+  color:#fff;
 }
-.hub-disconnect-btn:focus-visible{
-  outline:3px solid #fff; outline-offset:3px;
-  box-shadow:0 0 0 4px #fff8, 0 0 18px #fff !important;
+.jal-title{
+  margin:0; color:#fff; text-align:center;
+  text-shadow:0 0 12px #fff, 0 0 22px #fff8;
 }
+.jal-subtitle{ margin-top:12px; color:rgba(255,255,255,.8); text-align:center; }
+
+/* Mint actions */
+.jal-actions{
+  display:flex; justify-content:center; gap:12px; margin-top:16px; flex-wrap:wrap;
+}
+.jal-chip{
+  background:#000; color:#fff; padding:6px 10px; border-radius:8px; font-size:.9rem;
+  border:1px solid rgba(255,255,255,.7); box-shadow:0 0 8px #fff3 inset;
+}
+.jal-btn{
+  border:1px solid #fff; background:transparent; color:#fff; border-radius:8px;
+  padding:6px 12px; cursor:pointer;
+  transition:transform .14s ease, box-shadow .2s ease, filter .2s ease, border-color .2s ease;
+}
+.jal-btn:hover{ transform:translateY(-1px); border-color:#fff; box-shadow:0 0 18px #fff8; filter:saturate(1.05); }
+.jal-btn:active{ transform:translateY(0); }
+
+.jal-btn--primary{
+  border:2px solid #fff; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  padding:.85rem 1.25rem; border-radius:12px;
+  box-shadow:0 0 18px rgba(255,255,255,.25), 0 0 1px rgba(255,255,255,.8) inset;
+}
+.jal-link{
+  border:1px solid #fff; background:transparent; color:#fff; border-radius:8px; padding:6px 12px;
+  text-decoration:none; display:inline-grid; place-items:center;
+  transition:transform .14s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.jal-link:hover{ transform:translateY(-1px); border-color:#fff; box-shadow:0 0 18px #fff8; }
+
+.jal-cta{ display:grid; gap:12px; margin-top:20px; justify-content:center; }
 
 /* ===============================
-   VAULT (placeholder styles)
+   MODAL (Reusable)
+=================================*/
+@keyframes modalIn { from{opacity:0; transform:translateY(8px) scale(.96)} to{opacity:1; transform:none} }
+.modal-overlay{
+  position:fixed; inset:0;
+  background: radial-gradient(1200px 600px at 50% 30%, rgba(255,255,255,.08), transparent 60%), rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+  z-index:95; animation: fadeIn .25s ease-out;
+}
+.modal-host{
+  position:fixed; inset:0; display:grid; place-items:center; pointer-events:none; z-index:100;
+}
+.modal{
+  background:rgba(0,0,0,.78);
+  border:1.6px solid rgba(255,255,255,.9);
+  border-radius:18px;
+  padding:12px;
+  animation: modalIn .28s ease-out both, glowPulse 2.4s ease-in-out infinite;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 24px rgba(255,255,255,.28);
+  width:min(560px,94vw);
+  pointer-events:auto;
+}
+.modal-header{
+  display:flex; align-items:center; gap:10px; justify-content:space-between; padding:4px 6px 10px;
+}
+.modal-spacer{ width:36px; }
+.modal-title{ text-align:center; color:#fff; letter-spacing:.06em; font-weight:700; }
+.modal-title-main{ opacity:.92; }
+.modal-title-sub{ font-size:12px; opacity:.7; margin-top:2px; }
+.modal-close{
+  border:1px solid #fff; background:transparent; color:#fff; border-radius:10px; padding:6px 10px; cursor:pointer;
+  transition: transform .14s ease, box-shadow .2s ease;
+}
+.modal-close:hover{ transform:translateY(-1px); box-shadow:0 0 18px #fff8; }
+.modal-iframe{ width:100%; height:600px; border:0; border-radius:14px; }
+.modal-footer{ text-align:center; margin-top:8px; }
+
+/* ===============================
+   VAULT (placeholder)
 =================================*/
 .vault-screen{
   position:relative; display:flex; flex-direction:column; align-items:center;
@@ -430,22 +461,6 @@ header .social-links a:hover::after{
   box-shadow:0 0 12px #fff6; transition:transform .2s ease, box-shadow .3s ease; cursor:pointer;
 }
 .vault-button:hover{ transform:scale(1.05); box-shadow:0 0 22px #fff, 0 0 30px #fff; }
-.vault-button:focus-visible{
-  outline:3px solid #fff; outline-offset:3px; box-shadow:0 0 0 4px #fff8, 0 0 18px #fff;
-}
-
-/* ===============================
-   MODAL (Raydium / Jal Swap, reusable)
-=================================*/
-@keyframes modalIn { from{opacity:0; transform:translateY(8px) scale(.96)} to{opacity:1; transform:none} }
-.modal{
-  background:rgba(0,0,0,.78);
-  border:1.6px solid rgba(255,255,255,.9);
-  border-radius:18px;
-  padding:12px;
-  animation: modalIn .28s ease-out both, glowPulse 2.4s ease-in-out infinite;
-  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 24px rgba(255,255,255,.28);
-}
 
 /* ===============================
    FOOTER / MISC
@@ -470,6 +485,32 @@ header .social-links a:hover::after{
 }
 
 /* ===============================
+   PAGE TRANSITIONS (Hub → Jal)
+=================================*/
+@keyframes hubSlideUpFade {
+  from { opacity:1; transform:translateY(0); filter:blur(0); }
+  to   { opacity:0; transform:translateY(-60px) scale(.985); filter:blur(2px); }
+}
+@keyframes jalFadeIn {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+/* Applied to Hub overlay on leave */
+.route-leave-hub{
+  animation: hubSlideUpFade .38s cubic-bezier(.22,.75,.15,1) forwards;
+  will-change: transform, opacity, filter;
+  z-index: 75; /* stays under header (90) */
+  position: relative;
+}
+/* Applied to Jal page on mount */
+.route-enter-jal{
+  animation: jalFadeIn .35s ease-out both;
+  will-change: transform, opacity;
+  z-index: 20;
+  position: relative;
+}
+
+/* ===============================
    REDUCED MOTION
 =================================*/
 @media (prefers-reduced-motion: reduce){
@@ -480,7 +521,6 @@ header .social-links a:hover::after{
    RESPONSIVE
 =================================*/
 @media (max-width:768px){
-  .main-nav{ gap:1rem; }
   .nav-link{ font-size:1rem; }
   .logo{ height:112px; }
   .hub-panel{ width:min(96vw,980px); }
@@ -489,186 +529,3 @@ header .social-links a:hover::after{
 @media (max-height:700px){
   .hub-title{ font-size:clamp(1.6rem,4.8vw,2.2rem); }
 }
-/* ========= JAL PAGE ========= */
-.jal-page{
-  min-height:100vh;
-  display:grid;
-  place-items:center;
-  background:transparent;
-  position:relative;
-  padding:24px;
-}
-
-/* Transparent premium panel */
-.jal-panel{
-  width:min(960px,96vw);
-  background:var(--panel-bg);
-  border-top:2px solid var(--panel-stroke-strong);
-  border-bottom:2px solid var(--panel-stroke-strong);
-  padding:32px 24px;
-  box-shadow:
-    0 0 24px rgba(255,255,255,0.35),
-    0 0 2px rgba(255,255,255,0.8) inset;
-  backdrop-filter: blur(6px);
-  color:#fff;
-}
-
-.jal-title{
-  margin:0;
-  color:#fff;
-  text-align:center;
-  text-shadow:0 0 12px #fff, 0 0 22px #fff8;
-}
-
-.jal-subtitle{
-  margin-top:12px;
-  color:rgba(255,255,255,.8);
-  text-align:center;
-}
-
-/* Mint actions row */
-.jal-actions{
-  display:flex;
-  justify-content:center;
-  gap:12px;
-  margin-top:16px;
-  flex-wrap:wrap;
-}
-
-.jal-chip{
-  background:#000;
-  color:#fff;
-  padding:6px 10px;
-  border-radius:8px;
-  font-size:.9rem;
-  border:1px solid rgba(255,255,255,.7);
-  box-shadow:0 0 8px #fff3 inset;
-}
-
-.jal-btn{
-  border:1px solid #fff;
-  background:transparent;
-  color:#fff;
-  border-radius:8px;
-  padding:6px 12px;
-  cursor:pointer;
-  transition:transform .14s ease, box-shadow .2s ease, filter .2s ease, border-color .2s ease;
-}
-.jal-btn:hover{
-  transform:translateY(-1px);
-  border-color:#fff;
-  box-shadow:0 0 18px #fff8;
-  filter:saturate(1.05);
-}
-.jal-btn:active{ transform:translateY(0); }
-
-.jal-btn--primary{
-  border:2px solid #fff;
-  font-weight:800;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  padding:.85rem 1.25rem;
-  border-radius:12px;
-  box-shadow:0 0 18px rgba(255,255,255,.25), 0 0 1px rgba(255,255,255,.8) inset;
-}
-
-.jal-link{
-  border:1px solid #fff;
-  background:transparent;
-  color:#fff;
-  border-radius:8px;
-  padding:6px 12px;
-  text-decoration:none;
-  display:inline-grid;
-  place-items:center;
-  transition:transform .14s ease, box-shadow .2s ease, border-color .2s ease;
-}
-.jal-link:hover{
-  transform:translateY(-1px);
-  border-color:#fff;
-  box-shadow:0 0 18px #fff8;
-}
-
-.jal-cta{
-  display:grid;
-  gap:12px;
-  margin-top:20px;
-  justify-content:center;
-}
-
-/* ========= MODAL WIRING (reuses .modal) ========= */
-.modal-overlay{
-  position:fixed;
-  inset:0;
-  background:
-    radial-gradient(1200px 600px at 50% 30%, rgba(255,255,255,.08), transparent 60%),
-    rgba(0,0,0,.55);
-  backdrop-filter: blur(2px);
-  z-index:70;
-  animation: fadeIn .25s ease-out;
-}
-
-.modal-host{
-  position:fixed;
-  inset:0;
-  display:grid;
-  place-items:center;
-  pointer-events:none;
-  z-index:80;
-}
-.modal-host .modal{
-  width:min(560px,94vw);
-  pointer-events:auto;
-}
-
-.modal-header{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  justify-content:space-between;
-  padding:4px 6px 10px;
-}
-.modal-spacer{ width:36px; }
-.modal-title{ text-align:center; color:#fff; letter-spacing:.06em; font-weight:700; }
-.modal-title-main{ opacity:.92; }
-.modal-title-sub{ font-size:12px; opacity:.7; margin-top:2px; }
-
-.modal-close{
-  border:1px solid #fff;
-  background:transparent;
-  color:#fff;
-  border-radius:10px;
-  padding:6px 10px;
-  cursor:pointer;
-  transition: transform .14s ease, box-shadow .2s ease;
-}
-.modal-close:hover{ transform:translateY(-1px); box-shadow:0 0 18px #fff8; }
-
-.modal-iframe{
-  width:100%;
-  height:600px;
-  border:0;
-  border-radius:14px;
-}
-
-.modal-footer{
-  text-align:center;
-  margin-top:8px;
-}
-/* Hub panel: responsive min-height & padding are already set on .hub-panel;
-   this adds an optional min-height clamp for larger canvas layouts. */
-.hub-panel--fit{
-  width: clamp(320px, 92vw, 980px);
-  min-height: clamp(420px, 80vh, 900px);
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-/* Responsive gaps for the main action list */
-.hub-stack--responsive{
-  display: grid;
-  gap: clamp(12px, 2vw, 20px);
-}
-

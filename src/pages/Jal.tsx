@@ -1,8 +1,7 @@
 // src/pages/Jal.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-const JAL_MINT =
-  "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
+const JAL_MINT = "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
 const RAYDIUM_URL =
   "https://raydium.io/swap/?inputMint=sol&outputMint=9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
 
@@ -10,274 +9,174 @@ export default function Jal() {
   const [swapOpen, setSwapOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // close on ESC
+  // Page mount animation (CSS-only)
+  const pageRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const node = pageRef.current;
+    if (!node) return;
+    node.classList.add("route-enter-jal");
+    const t = setTimeout(() => node.classList.remove("route-enter-jal"), 420);
+    return () => {
+      node.classList.remove("route-enter-jal");
+      clearTimeout(t);
+    };
+  }, []);
+
+  // Modal a11y/focus
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     if (!swapOpen) return;
-    const onKey = (e: KeyboardEvent) => {
+    // Focus first actionable in modal
+    closeBtnRef.current?.focus();
+
+    // Trap Tab focus within modal
+    const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSwapOpen(false);
+      if (e.key !== "Tab") return;
+      const root = modalRef.current;
+      if (!root) return;
+      const focusables = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'a[href], button, textarea, input, select, iframe, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"));
+      if (focusables.length === 0) return;
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          last.focus();
+          e.preventDefault();
+        }
+      } else {
+        if (document.activeElement === last) {
+          first.focus();
+          e.preventDefault();
+        }
+      }
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+
+    document.addEventListener("keydown", onKeyDown);
+    // Prevent body scroll underneath modal
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [swapOpen]);
 
+  // Shorten mint for chip display
   const shortMint = useMemo(
-    () =>
-      JAL_MINT.length > 12
-        ? `${JAL_MINT.slice(0, 6)}...${JAL_MINT.slice(-6)}`
-        : JAL_MINT,
+    () => (JAL_MINT.length > 12 ? `${JAL_MINT.slice(0, 6)}...${JAL_MINT.slice(-6)}` : JAL_MINT),
     []
   );
 
+  // Copy mint address
   const copyMint = async () => {
     try {
       await navigator.clipboard.writeText(JAL_MINT);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1000);
-    } catch {}
+      setTimeout(() => setCopied(false), 900);
+    } catch {
+      // noop
+    }
+  };
+
+  // Close on clicking backdrop (outside modal card)
+  const onOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) setSwapOpen(false);
   };
 
   return (
-    <main
-      className="jal-page"
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background: "transparent",
-        position: "relative",
-        padding: "24px",
-      }}
-    >
-      {/* Transparent panel */}
-      <section
-        className="jal-panel"
-        style={{
-          width: "min(960px, 96vw)",
-          background: "rgba(0,0,0,0.35)",
-          borderTop: "2px solid rgba(255,255,255,0.85)",
-          borderBottom: "2px solid rgba(255,255,255,0.85)",
-          padding: "32px 24px",
-          boxShadow:
-            "0 0 24px rgba(255,255,255,0.35), 0 0 2px rgba(255,255,255,0.8) inset",
-          backdropFilter: "blur(6px)",
-        }}
-      >
-        <h1 style={{ margin: 0, color: "#fff", textAlign: "center" }}>JAL</h1>
-        <p
-          style={{
-            marginTop: 12,
-            color: "rgba(255,255,255,0.8)",
-            textAlign: "center",
-          }}
-        >
-          About JAL — story, mission, and how SOL ⇄ JAL works.
-        </p>
+    <main ref={pageRef} className="jal-page">
+      {/* Panel */}
+      <section className="jal-panel" aria-labelledby="jal-title">
+        <h1 id="jal-title" className="jal-title">JAL</h1>
+        <p className="jal-subtitle">About JAL — story, mission, and how SOL ⇄ JAL works.</p>
 
         {/* Mint actions */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 12,
-            marginTop: 16,
-            flexWrap: "wrap",
-          }}
-        >
-          <code
-            style={{
-              background: "#000",
-              color: "#fff",
-              padding: "6px 10px",
-              borderRadius: 8,
-              fontSize: "0.9rem",
-              border: "1px solid rgba(255,255,255,.7)",
-            }}
-            title={JAL_MINT}
-          >
+        <div className="jal-actions" role="group" aria-label="Token address and actions">
+          <code className="jal-chip" title={JAL_MINT} aria-label={`Mint address ${JAL_MINT}`}>
             {shortMint}
           </code>
-          <button
-            onClick={copyMint}
-            style={{
-              border: "1px solid #fff",
-              background: "transparent",
-              color: "#fff",
-              borderRadius: 8,
-              padding: "6px 12px",
-              cursor: "pointer",
-            }}
-          >
+
+          <button type="button" className="jal-btn" onClick={copyMint} aria-live="polite">
             {copied ? "Copied!" : "Copy Mint"}
           </button>
+
           <a
+            className="jal-link"
             href={`https://explorer.solana.com/address/${JAL_MINT}`}
             target="_blank"
             rel="noreferrer"
-            style={{
-              border: "1px solid #fff",
-              background: "transparent",
-              color: "#fff",
-              borderRadius: 8,
-              padding: "6px 12px",
-              textDecoration: "none",
-            }}
           >
             View on Explorer
           </a>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gap: 12,
-            marginTop: 20,
-            justifyContent: "center",
-          }}
-        >
+        {/* CTA */}
+        <div className="jal-cta">
           <button
+            type="button"
+            className="jal-btn jal-btn--primary"
             onClick={() => setSwapOpen(true)}
-            style={{
-              border: "2px solid #fff",
-              background: "transparent",
-              color: "#fff",
-              fontWeight: 800,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              padding: "0.85rem 1.25rem",
-              borderRadius: 12,
-              cursor: "pointer",
-              boxShadow:
-                "0 0 18px rgba(255,255,255,.25), 0 0 1px rgba(255,255,255,.8) inset",
-            }}
+            aria-haspopup="dialog"
+            aria-controls="jal-swap-dialog"
           >
             Open SOL ⇄ JAL Swap
           </button>
         </div>
       </section>
 
-      {/* Stylized swap overlay with Raydium */}
+      {/* Modal */}
       {swapOpen && (
         <>
+          <div className="modal-overlay" onClick={onOverlayClick} />
           <div
-            onClick={() => setSwapOpen(false)}
-            style={{
-              position: "fixed",
-              inset: 0,
-              background:
-                "radial-gradient(1200px 600px at 50% 30%, rgba(255,255,255,.08), transparent 60%) , rgba(0,0,0,0.55)",
-              backdropFilter: "blur(2px)",
-            }}
-          />
-          <div
+            className="modal-host"
             role="dialog"
             aria-modal="true"
-            style={{
-              position: "fixed",
-              inset: 0,
-              display: "grid",
-              placeItems: "center",
-              pointerEvents: "none",
-            }}
+            aria-labelledby="swap-title"
+            id="jal-swap-dialog"
           >
-            <div
-              style={{
-                width: "min(560px, 94vw)",
-                background: "rgba(0,0,0,0.78)",
-                border: "1.6px solid rgba(255,255,255,0.9)",
-                borderRadius: 18,
-                padding: 12,
-                pointerEvents: "auto",
-                transform: "translateY(4px) scale(0.98)",
-                opacity: 0,
-                animation:
-                  "modalIn .28s ease-out forwards, glowPulse 2.4s ease-in-out infinite",
-                boxShadow:
-                  "0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 24px rgba(255,255,255,.28)",
-              }}
-            >
-              {/* small inline keyframes */}
-              <style>
-                {`
-                  @keyframes modalIn {
-                    to { transform: translateY(0) scale(1); opacity: 1; }
-                  }
-                  @keyframes glowPulse {
-                    0%, 100% { box-shadow: 0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 18px rgba(255,255,255,.22); }
-                    50% { box-shadow: 0 0 0 1px rgba(255,255,255,.22) inset, 0 16px 42px rgba(0,0,0,.6), 0 0 28px rgba(255,255,255,.36); }
-                  }
-                `}
-              </style>
-
-              {/* header */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  justifyContent: "space-between",
-                  padding: "4px 6px 10px",
-                }}
-              >
-                <div style={{ width: 36 }} />
-                <div
-                  style={{
-                    textAlign: "center",
-                    color: "#fff",
-                    letterSpacing: ".06em",
-                    fontWeight: 700,
-                  }}
-                >
-                  <div style={{ opacity: 0.92 }}>SOL ⇄ JAL Swap</div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      opacity: 0.7,
-                      marginTop: 2,
-                    }}
-                  >
-                    Powered by Raydium
-                  </div>
+            <div ref={modalRef} className="modal">
+              {/* Header */}
+              <div className="modal-header">
+                <div className="modal-spacer" />
+                <div className="modal-title" id="swap-title">
+                  <div className="modal-title-main">SOL ⇄ JAL Swap</div>
+                  <div className="modal-title-sub">Powered by Raydium</div>
                 </div>
                 <button
+                  ref={closeBtnRef}
+                  type="button"
+                  className="modal-close"
                   onClick={() => setSwapOpen(false)}
-                  aria-label="Close"
-                  style={{
-                    border: "1px solid #fff",
-                    background: "transparent",
-                    color: "#fff",
-                    borderRadius: 10,
-                    padding: "6px 10px",
-                    cursor: "pointer",
-                  }}
+                  aria-label="Close swap dialog"
                 >
                   ✕
                 </button>
               </div>
 
-              {/* iframe */}
+              {/* Swap iframe */}
               <iframe
                 title="Raydium Swap"
                 src={RAYDIUM_URL}
-                style={{
-                  width: "100%",
-                  height: "600px",
-                  border: 0,
-                  borderRadius: 14,
-                }}
+                className="modal-iframe"
               />
 
-              {/* footer link */}
-              <div style={{ textAlign: "center", marginTop: 8 }}>
+              {/* Footer link */}
+              <div className="modal-footer">
                 <a
+                  className="jal-link"
                   href={RAYDIUM_URL}
                   target="_blank"
                   rel="noreferrer"
-                  style={{
-                    color: "#fff",
-                    fontSize: "0.92rem",
-                    textDecoration: "underline",
-                    opacity: 0.95,
-                  }}
                 >
                   Open on Raydium
                 </a>

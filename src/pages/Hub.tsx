@@ -1,3 +1,4 @@
+// src/pages/Hub.tsx
 import React, {
   useEffect,
   useMemo,
@@ -10,6 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 
+/* ---- Reduced motion hook ---- */
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
@@ -21,6 +23,37 @@ function usePrefersReducedMotion() {
     return () => mq.removeEventListener?.("change", update);
   }, []);
   return reduced;
+}
+
+/* ---- Tiny helper: run a CSS leave animation on Hub, then navigate ---- */
+function runLeaveTransition({
+  selector = ".hub-overlay",
+  leaveClass = "route-leave-hub",
+  durationMs = 380,
+  onDone,
+}: {
+  selector?: string;
+  leaveClass?: string;
+  durationMs?: number;
+  onDone: () => void;
+}) {
+  const node = document.querySelector<HTMLElement>(selector);
+  if (!node) {
+    onDone();
+    return;
+  }
+  node.classList.add(leaveClass);
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    node.classList.remove(leaveClass);
+    onDone();
+  };
+
+  node.addEventListener("animationend", cleanup, { once: true });
+  setTimeout(cleanup, durationMs + 60); // safety
 }
 
 export default function Hub() {
@@ -54,23 +87,18 @@ export default function Hub() {
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // Keyboard shortcuts (1=JAL, 2=Utility, 3=Vault, 4=How It Works)
-  useEffect(() => {
-    if (!connected) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && /input|textarea|select/.test(t.tagName.toLowerCase())) return;
+  // Smooth close back to landing
+  const startClose = () => {
+    setClosing(true);
+    setTimeout(() => {
+      navigate("/", { replace: true });
+    }, reducedMotion ? 0 : 300);
+  };
 
-      if (e.key === "1") navigate("/jal");
-      if (e.key === "2") navigate("/utility");
-      if (e.key === "3") navigate("/vault");
-      if (e.key === "4") navigate("/how-it-works");
-      if (e.key === "Escape") startClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [connected, navigate]);
+  // Intercept background clicks
+  const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) startClose();
+  };
 
   // Focus trap
   const panelRef = useRef<HTMLElement | null>(null);
@@ -110,19 +138,33 @@ export default function Hub() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Smooth close
-  const startClose = () => {
-    setClosing(true);
-    setTimeout(() => {
-      navigate("/", { replace: true });
-    }, reducedMotion ? 0 : 300);
-  };
+  /* ---- Keyboard shortcuts with animated leaving ---- */
+  useEffect(() => {
+    if (!connected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && /input|textarea|select/.test(t.tagName.toLowerCase())) return;
 
-  const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) startClose();
-  };
+      const go = (path: string) => {
+        if (reducedMotion) {
+          navigate(path);
+        } else {
+          runLeaveTransition({ onDone: () => navigate(path) });
+        }
+      };
 
-  // Image Action link
+      if (e.key === "1") { e.preventDefault(); go("/jal"); }
+      if (e.key === "2") { e.preventDefault(); go("/utility"); }
+      if (e.key === "3") { e.preventDefault(); go("/vault"); }
+      if (e.key === "4") { e.preventDefault(); go("/how-it-works"); }
+      if (e.key === "Escape") startClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [connected, navigate, reducedMotion]);
+
+  /* ---- Image Action link ---- */
   const ImgAction = useCallback(
     ({
       to,
@@ -131,6 +173,7 @@ export default function Hub() {
       delayMs,
       innerRef,
       float,
+      onClick,
     }: {
       to: string;
       src: string;
@@ -138,12 +181,20 @@ export default function Hub() {
       delayMs?: number;
       innerRef?: React.Ref<HTMLAnchorElement>;
       float?: boolean;
+      onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
     }) => (
       <Link
         ref={innerRef}
         to={to}
         className="hub-btn img-btn"
         aria-label={alt}
+        onClick={(e) => {
+          if (onClick) return onClick(e);
+          if (reducedMotion) return; // default Link behavior
+          // Animate leave, then navigate programmatically
+          e.preventDefault();
+          runLeaveTransition({ onDone: () => navigate(to) });
+        }}
         style={
           reducedMotion
             ? undefined
@@ -159,7 +210,7 @@ export default function Hub() {
         />
       </Link>
     ),
-    [reducedMotion]
+    [navigate, reducedMotion]
   );
 
   const titleId = useId();
