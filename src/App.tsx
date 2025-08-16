@@ -25,6 +25,14 @@ import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
+/* 🔁 Mobile deep-link handoff (approve in app → return connected) */
+import {
+  SolanaMobileWalletAdapter,
+  createDefaultAuthorizationResultCache,
+  createDefaultAddressSelector,
+  createDefaultWalletNotFoundHandler,
+} from "@solana-mobile/wallet-adapter-mobile";
+
 /* === Pages === */
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
@@ -71,8 +79,7 @@ function Shell() {
   const closeMenu = () => setMenuOpen(false);
 
   const vaultPath = useMemo(
-    () =>
-      userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard",
+    () => (userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard"),
     [userSymbol]
   );
   const vaultLabel = useMemo(
@@ -105,43 +112,22 @@ function Shell() {
         <header>
           <div className="header-inner">
             <NavLink to="/" onClick={closeMenu} aria-label="Go to Landing">
-              <img
-                src="/JALSOL1.gif"
-                alt="JAL/SOL Logo"
-                className="logo header-logo"
-              />
+              <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
             </NavLink>
 
             <nav className="main-nav" aria-label="Primary">
               {links.map((l) => renderNavLink(l.to, l.label))}
-              {publicKey && (
-                <WalletDisconnectButton className="wallet-disconnect-btn" />
-              )}
+              {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
             </nav>
 
             <div className="social-links" aria-label="Social links">
-              <a
-                href="https://x.com/JAL358"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="X / Twitter"
-              >
+              <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
                 <img src="/icons/X.png" alt="" />
               </a>
-              <a
-                href="https://t.me/jalsolcommute"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Telegram"
-              >
+              <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
                 <img src="/icons/Telegram.png" alt="" />
               </a>
-              <a
-                href="https://www.tiktok.com/@358jalsol"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="TikTok"
-              >
+              <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
                 <img src="/icons/TikTok.png" alt="" />
               </a>
             </div>
@@ -162,16 +148,9 @@ function Shell() {
       {menuOpen && !isLanding && !isHub && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
-          <div
-            id="sidebar-nav"
-            className="sidebar-nav"
-            role="dialog"
-            aria-modal="true"
-          >
+          <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
             {links.map((l) => renderNavLink(l.to, l.label))}
-            {publicKey && (
-              <WalletDisconnectButton className="wallet-disconnect-btn" />
-            )}
+            {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
           </div>
         </>
       )}
@@ -248,28 +227,38 @@ export default function App() {
       ? WalletAdapterNetwork.Devnet
       : WalletAdapterNetwork.Mainnet;
 
-  // Wallet adapters
+  // Wallet adapters (desktop + mobile handoff)
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
+
+      // ✅ Works when VITE_WALLETCONNECT_PROJECT_ID is set
       new WalletConnectWalletAdapter({
         network,
         options: {
-          projectId:
-            (import.meta as any).env?.VITE_WALLETCONNECT_PROJECT_ID ??
-            "<YOUR_PROJECT_ID>",
+          projectId: (import.meta as any).env?.VITE_WALLETCONNECT_PROJECT_ID,
           relayUrl: "wss://relay.walletconnect.com",
           metadata: {
             name: "JAL/SOL Dapp",
             description: "Swap SOL→JAL and use utilities",
-            url:
-              typeof window !== "undefined"
-                ? window.location.origin
-                : "https://jalsol.com",
+            url: typeof window !== "undefined" ? window.location.origin : "https://jalsol.com",
             icons: ["https://jalsol.com/icons/icon-512.png"],
           },
         },
+      }),
+
+      // ✅ Mobile deep-link adapter (handles open → approve → return)
+      new SolanaMobileWalletAdapter({
+        addressSelector: createDefaultAddressSelector(),
+        appIdentity: {
+          name: "JAL/SOL",
+          uri: "https://jalsol.com",      // use apex for stable return origin
+          icon: "/icons/icon-512.png",    // ensure this asset exists
+        },
+        authorizationResultCache: createDefaultAuthorizationResultCache(),
+        cluster: "mainnet-beta",
+        walletNotFoundHandler: createDefaultWalletNotFoundHandler(),
       }),
     ],
     [network]
