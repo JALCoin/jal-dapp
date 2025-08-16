@@ -214,11 +214,17 @@ header .social-links a:hover::after{
    HUB OVERLAY
 =================================*/
 .hub-overlay{
-  position:fixed; inset:0; z-index:40; display:grid; place-items:center;
-  background:rgba(0,0,0,.12);
-  backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
-  -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
-  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,.12);
+  backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
+  -webkit-backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
+  /* allow page to scroll if content taller than viewport */
+  overflow: auto;
+  padding: 16px;
 }
 .hub-overlay.is-closing { animation: hubClose 0.3s ease forwards; }
 @keyframes hubClose { from {opacity:1} to {opacity:0} }
@@ -226,10 +232,11 @@ header .social-links a:hover::after{
 .hub-backdrop{ position:absolute; inset:0; z-index:0; pointer-events:none; }
 .hub-ghost{ opacity:.15; }
 
-/* Centered glassy panel */
+/* Centered glassy panel (capped by viewport) */
 .hub-panel{
-  position:relative; width:min(980px,92vw);
-  margin:clamp(8px,2vh,20px);
+  position:relative;
+  width:min(980px,92vw);
+  margin:0 auto;
   padding:clamp(18px,2.8vw,28px);
   background:var(--panel-bg);
   border:1.5px solid rgba(255,255,255,.65);
@@ -242,12 +249,23 @@ header .social-links a:hover::after{
   transform-origin:center center;
   animation:hubPopIn .45s cubic-bezier(.22,.75,.15,1) both;
   backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
+
+  /* critical: fit viewport */
+  max-height: calc(100svh - 32px);
+  display:flex;
+  flex-direction:column;
 }
 .hub-panel.is-pre{ opacity:0; transform:scale(.92); }
 @keyframes hubPopIn{ 0%{opacity:0; transform:scale(.92)} 100%{opacity:1; transform:scale(1)} }
 
-.hub-panel-top{ display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
-.hub-panel-body{ position:relative; z-index:1; }
+.hub-panel-top{
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  margin-bottom:1rem; flex:0 0 auto;
+}
+.hub-panel-body{
+  position:relative; z-index:1; flex:1 1 auto;
+  overflow:auto; padding-bottom:4px;
+}
 
 .hub-title{
   margin:0 0 .35rem; text-align:center; color:#fff;
@@ -290,9 +308,7 @@ header .social-links a:hover::after{
     filter:saturate(1.05);
   }
 }
-@media (hover:none){
-  .hub-btn:active{ transform:scale(.985); }
-}
+@media (hover:none){ .hub-btn:active{ transform:scale(.985); } }
 .hub-btn:focus-visible{
   outline:3px solid #fff; outline-offset:3px;
   box-shadow:0 0 0 4px #fff8, 0 0 18px #fff !important;
@@ -313,16 +329,15 @@ header .social-links a:hover::after{
   box-shadow:0 0 0 1.5px #fff inset, 0 0 24px #fff, 0 0 36px #fff8;
 }
 
-/* GIF itself — size by height + contain so nothing is cropped */
+/* GIFs scale by viewport height so panel always fits */
 .hub-gif{
   display:block;
   width:100%;
-  height:clamp(110px, 18vw, 220px);
+  height:clamp(80px, 14vh, 180px);
   object-fit:contain;
   background:#000;
   transition:transform .18s ease, filter .25s ease, box-shadow .25s ease;
 }
-/* Optional banner behavior for some tiles */
 .hub-gif--cover{ object-fit:cover; }
 
 @media (hover:hover){
@@ -332,9 +347,7 @@ header .social-links a:hover::after{
     box-shadow:0 0 26px #fff9, 0 0 44px #fff8;
   }
 }
-@media (hover:none){
-  .img-btn:active .hub-gif{ transform:scale(.992); }
-}
+@media (hover:none){ .img-btn:active .hub-gif{ transform:scale(.992); } }
 
 /* Stagger anim used by Hub.tsx */
 @keyframes fadeInUp{
@@ -359,7 +372,7 @@ header .social-links a:hover::after{
 }
 
 /* ===============================
-   VAULT
+   VAULT (placeholder styles)
 =================================*/
 .vault-screen{
   position:relative; display:flex; flex-direction:column; align-items:center;
@@ -423,9 +436,8 @@ header .social-links a:hover::after{
   .nav-link{ font-size:1rem; }
   .logo{ height:112px; }
   .hub-panel{ width:min(96vw,980px); }
-  .hub-gif{ height:clamp(120px, 22vw, 220px); } /* a bit taller on mobile */
+  .hub-gif{ height:clamp(90px, 16vh, 160px); }
 }
-@media (max-height:640px){
+@media (max-height:700px){
   .hub-title{ font-size:clamp(1.6rem,4.8vw,2.2rem); }
-  .hub-btn{ padding:.85rem 1rem; }
 }
