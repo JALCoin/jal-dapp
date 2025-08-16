@@ -1,17 +1,14 @@
 // src/pages/Landing.tsx
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
   WalletMultiButton,
   WalletDisconnectButton,
-  useWalletModal,
 } from "@solana/wallet-adapter-react-ui";
-import { WalletConnectWalletName } from "@solana/wallet-adapter-walletconnect";
 
 export default function Landing() {
-  const { publicKey, connected, select, connect } = useWallet();
-  const { setVisible } = useWalletModal();
+  const { publicKey, connected } = useWallet();
   const navigate = useNavigate();
 
   const [merging, setMerging] = useState(false);
@@ -20,11 +17,6 @@ export default function Landing() {
   const reducedMotion =
     typeof window !== "undefined" &&
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-  // Detect mobile + Phantom in-app browser
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
-  const inPhantomBrowser = /Phantom/i.test(ua);
 
   // Auto-redirect to hub when connected (desktop + mobile)
   useEffect(() => {
@@ -52,25 +44,6 @@ export default function Landing() {
     }
   }, [connected, publicKey]);
 
-  // Deep-link to Phantom in-app browser (preserve current URL)
-  const openInPhantom = useCallback(() => {
-    const target =
-      typeof window !== "undefined" ? encodeURIComponent(window.location.href) : "https://jalsol.com";
-    window.location.href = `https://phantom.app/ul/browse/${target}`;
-  }, []);
-
-  // Mobile one-tap: programmatically select WalletConnect, then connect
-  const connectWithWalletConnect = useCallback(async () => {
-    try {
-      await select?.(WalletConnectWalletName); // typed WalletName ✅
-      await connect?.();
-    } catch (e) {
-      console.error("WalletConnect mobile connect failed:", e);
-      // Fallback: open modal so the user can pick manually
-      setVisible(true);
-    }
-  }, [select, connect, setVisible]);
-
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
       <div className="landing-social" aria-hidden={merging}>
@@ -97,22 +70,7 @@ export default function Landing() {
         </div>
 
         {!connected && (
-          <>
-            {/* Desktop / injected wallets / in-app browsers */}
-            <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
-
-            {/* Mobile enhancements if not already inside Phantom */}
-            {isMobile && !inPhantomBrowser && (
-              <>
-                <button className="landing-wallet" onClick={connectWithWalletConnect}>
-                  Connect (WalletConnect)
-                </button>
-                <button className="landing-wallet" onClick={openInPhantom}>
-                  Open in Phantom
-                </button>
-              </>
-            )}
-          </>
+          <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
         )}
       </div>
     </main>
