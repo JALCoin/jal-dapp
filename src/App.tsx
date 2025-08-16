@@ -237,7 +237,7 @@ export default function App() {
       new WalletConnectWalletAdapter({
         network,
         options: {
-          projectId: (import.meta as any).env?.VITE_WALLETCONNECT_PROJECT_ID,
+          projectId: "1bb9e8b5e5b18eafdd0cef6047b67773",
           relayUrl: "wss://relay.walletconnect.com",
           metadata: {
             name: "JAL/SOL Dapp",
