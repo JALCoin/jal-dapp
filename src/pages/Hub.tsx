@@ -11,7 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 
-/* ---- Reduced motion hook ---- */
+/* ---------------- Prefers-reduced-motion ---------------- */
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
@@ -25,7 +25,24 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
-/* ---- Tiny helper: run a CSS leave animation on Hub, then navigate ---- */
+/* ---------------- Real viewport height (mobile-safe) ---------------- */
+function useViewportVar() {
+  useEffect(() => {
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+    setVH();
+    window.addEventListener("resize", setVH);
+    window.addEventListener("orientationchange", setVH);
+    return () => {
+      window.removeEventListener("resize", setVH);
+      window.removeEventListener("orientationchange", setVH);
+    };
+  }, []);
+}
+
+/* ---------------- Animate Hub leaving, then navigate ---------------- */
 function runLeaveTransition({
   selector = ".hub-overlay",
   leaveClass = "route-leave-hub",
@@ -38,10 +55,7 @@ function runLeaveTransition({
   onDone: () => void;
 }) {
   const node = document.querySelector<HTMLElement>(selector);
-  if (!node) {
-    onDone();
-    return;
-  }
+  if (!node) return onDone();
   node.classList.add(leaveClass);
 
   let cleaned = false;
@@ -53,63 +67,64 @@ function runLeaveTransition({
   };
 
   node.addEventListener("animationend", cleanup, { once: true });
-  setTimeout(cleanup, durationMs + 60); // safety
+  setTimeout(cleanup, durationMs + 80); // safety
 }
 
 export default function Hub() {
   const { connected, publicKey } = useWallet();
   const navigate = useNavigate();
   const reducedMotion = usePrefersReducedMotion();
+  useViewportVar();
 
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
 
-  // Redirect if disconnected
+  // Guard: if wallet disconnects, bounce to landing
   useEffect(() => {
     if (!connected) navigate("/", { replace: true });
   }, [connected, navigate]);
 
-  // Scroll to top on mount
+  // Scroll to top on mount (for desktop)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
   }, [reducedMotion]);
 
-  // Short PK
+  // Short display of PK
   const shortPk = useMemo(() => {
     if (!publicKey) return "";
     const s = publicKey.toBase58();
     return `${s.slice(0, 4)}…${s.slice(-4)}`;
   }, [publicKey]);
 
-  // Animate in after mount
+  // Fade/scale in once
   useEffect(() => {
     const t = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // Smooth close back to landing
-  const startClose = () => {
+  // Close back to landing
+  const startClose = useCallback(() => {
     setClosing(true);
-    setTimeout(() => {
-      navigate("/", { replace: true });
-    }, reducedMotion ? 0 : 300);
-  };
+    const go = () => navigate("/", { replace: true });
+    if (reducedMotion) go();
+    else setTimeout(go, 300);
+  }, [navigate, reducedMotion]);
 
-  // Intercept background clicks
-  const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Background click -> close (only if truly the overlay)
+  const onOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) startClose();
   };
 
-  // Focus trap
+  // Focus trap inside the panel
   const panelRef = useRef<HTMLElement | null>(null);
   const firstActionRef = useRef<HTMLAnchorElement | null>(null);
-
   useEffect(() => {
     firstActionRef.current?.focus();
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
       const root = panelRef.current;
       if (!root) return;
+
       const focusables = Array.from(
         root.querySelectorAll<HTMLElement>(
           'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])'
@@ -117,28 +132,24 @@ export default function Hub() {
       ).filter(
         (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden")
       );
-      if (focusables.length === 0) return;
+      if (focusables.length < 2) return;
 
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
 
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          last.focus();
-          e.preventDefault();
-        }
-      } else {
-        if (document.activeElement === last) {
-          first.focus();
-          e.preventDefault();
-        }
+      if (e.shiftKey && document.activeElement === first) {
+        last.focus();
+        e.preventDefault();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        first.focus();
+        e.preventDefault();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  /* ---- Keyboard shortcuts with animated leaving ---- */
+  // Keyboard shortcuts with leaving animation
   useEffect(() => {
     if (!connected) return;
     const onKey = (e: KeyboardEvent) => {
@@ -147,11 +158,8 @@ export default function Hub() {
       if (t && /input|textarea|select/.test(t.tagName.toLowerCase())) return;
 
       const go = (path: string) => {
-        if (reducedMotion) {
-          navigate(path);
-        } else {
-          runLeaveTransition({ onDone: () => navigate(path) });
-        }
+        if (reducedMotion) navigate(path);
+        else runLeaveTransition({ onDone: () => navigate(path) });
       };
 
       if (e.key === "1") { e.preventDefault(); go("/jal"); }
@@ -162,9 +170,9 @@ export default function Hub() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [connected, navigate, reducedMotion]);
+  }, [connected, navigate, reducedMotion, startClose]);
 
-  /* ---- Image Action link ---- */
+  /* ---------------- Image Action link ---------------- */
   const ImgAction = useCallback(
     ({
       to,
@@ -191,7 +199,6 @@ export default function Hub() {
         onClick={(e) => {
           if (onClick) return onClick(e);
           if (reducedMotion) return; // default Link behavior
-          // Animate leave, then navigate programmatically
           e.preventDefault();
           runLeaveTransition({ onDone: () => navigate(to) });
         }}
@@ -206,6 +213,7 @@ export default function Hub() {
           src={src}
           alt={alt}
           loading="eager"
+          decoding="async"
           draggable={false}
         />
       </Link>
@@ -223,15 +231,22 @@ export default function Hub() {
       aria-modal="true"
       aria-labelledby={titleId}
       id={dialogId}
-      onClick={onBackdropClick}
+      onClick={onOverlayClick}
+      // lock to true viewport height even on mobile address-bar resize
+      style={{
+        minHeight: "calc(var(--vh, 1vh) * 100)",
+        overscrollBehavior: "contain",
+      }}
     >
+      {/* keep backdrop light + non-interactive */}
       <div className="hub-backdrop" aria-hidden="true">
-        <div className="landing-gradient hub-ghost" />
+        <div className="landing-gradient hub-ghost" style={{ height: "100%" }} />
       </div>
 
       <section
         ref={panelRef}
         className={`hub-panel hub-panel--fit${mounted ? "" : " is-pre"}`}
+        onClick={(e) => e.stopPropagation()} // prevent overlay close when clicking inside
       >
         <div className="hub-panel-top">
           <div className="hub-connection" role="status" aria-live="polite">
@@ -242,9 +257,7 @@ export default function Hub() {
         </div>
 
         <div className="hub-panel-body">
-          <h1 className="hub-title" id={titleId}>
-            Welcome
-          </h1>
+          <h1 className="hub-title" id={titleId}>Welcome</h1>
 
           <nav className="hub-stack hub-stack--responsive" aria-label="Main actions">
             <ImgAction
