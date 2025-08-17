@@ -1,4 +1,3 @@
-// src/App.tsx
 import { useState, useEffect, useMemo, type ReactElement } from "react";
 import {
   BrowserRouter as Router,
@@ -25,13 +24,16 @@ import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-/* 🔁 Mobile deep-link handoff (approve in app → return connected) */
+/* 🔁 Mobile deep-link handoff */
 import {
   SolanaMobileWalletAdapter,
   createDefaultAuthorizationResultCache,
   createDefaultAddressSelector,
   createDefaultWalletNotFoundHandler,
 } from "@solana-mobile/wallet-adapter-mobile";
+
+/* ✨ Page transition */
+import { AnimatePresence, motion } from "framer-motion";
 
 /* === Pages === */
 import Landing from "./pages/Landing";
@@ -68,11 +70,13 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
+  // Auto-close sidebar on route change
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+
+  // Prevent body scroll when sidebar is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
@@ -106,10 +110,18 @@ function Shell() {
     </NavLink>
   );
 
+  /* ✨ Variants for route transitions */
+  const hubExit = { opacity: 0, y: -60, scale: 0.985, filter: "blur(2px)" as any };
+  const hubIdle = { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" as any };
+  const jalIn   = { opacity: 1, y: 0 };
+  const jalOut  = { opacity: 0, y: 18 };
+
   return (
     <>
-      {!isLanding && !isHub && (
-        <header>
+      {/* Header: keep mounted even on /hub so Hub can slide behind it.
+          We hide it visually on /hub with .header--hidden */}
+      {!isLanding && (
+        <header className={isHub ? "header--hidden" : undefined}>
           <div className="header-inner">
             <NavLink to="/" onClick={closeMenu} aria-label="Go to Landing">
               <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
@@ -132,16 +144,21 @@ function Shell() {
               </a>
             </div>
 
+            {/* Animated hamburger */}
             <button
-              className="hamburger"
+              className={`hamburger ${menuOpen ? "is-open" : ""}`}
               onClick={toggleMenu}
               aria-label="Toggle menu"
               aria-expanded={menuOpen}
               aria-controls="sidebar-nav"
             >
-              {menuOpen ? "✕" : "☰"}
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
             </button>
           </div>
+
+          <div className="header-rule" aria-hidden="true" />
         </header>
       )}
 
@@ -155,65 +172,66 @@ function Shell() {
         </>
       )}
 
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route
-          path="/hub"
-          element={
-            <Protected>
-              <Hub />
-            </Protected>
-          }
-        />
-        <Route path="/home" element={<Home />} />
-        <Route path="/crypto-generator" element={<CryptoGenerator />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/vault/:symbol" element={<Vault />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/manifesto" element={<Manifesto />} />
-        <Route path="/content" element={<Content />} />
-        <Route path="/learn" element={<Learn />} />
-        <Route
-          path="/jal"
-          element={
-            <Protected>
-              <Jal />
-            </Protected>
-          }
-        />
-        <Route
-          path="/start"
-          element={
-            <Protected>
-              <div style={{ padding: 24 }}>Start flow…</div>
-            </Protected>
-          }
-        />
-        <Route
-          path="/utility"
-          element={
-            <Protected>
-              <div style={{ padding: 24 }}>Utility…</div>
-            </Protected>
-          }
-        />
-        <Route
-          path="/terms"
-          element={
-            <Protected>
-              <div style={{ padding: 24 }}>Terms…</div>
-            </Protected>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      {/* ✨ Animated routes */}
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<Landing />} />
+
+          <Route
+            path="/hub"
+            element={
+              <Protected>
+                <motion.div
+                  initial={hubIdle}
+                  animate={hubIdle}
+                  exit={hubExit}
+                  transition={{ duration: 0.38, ease: [0.22, 0.75, 0.15, 1] }}
+                  style={{ zIndex: 50, position: "relative" }}  // under the header
+                >
+                  <Hub />
+                </motion.div>
+              </Protected>
+            }
+          />
+
+          <Route path="/home" element={<Home />} />
+          <Route path="/crypto-generator" element={<CryptoGenerator />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/vault/:symbol" element={<Vault />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/manifesto" element={<Manifesto />} />
+          <Route path="/content" element={<Content />} />
+          <Route path="/learn" element={<Learn />} />
+
+          <Route
+            path="/jal"
+            element={
+              <Protected>
+                <motion.div
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={jalIn}
+                  exit={jalOut}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  style={{ zIndex: 20, position: "relative" }}
+                >
+                  <Jal />
+                </motion.div>
+              </Protected>
+            }
+          />
+
+          <Route path="/start" element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
+          <Route path="/utility" element={<Protected><div style={{ padding: 24 }}>Utility…</div></Protected>} />
+          <Route path="/terms" element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AnimatePresence>
     </>
   );
 }
 
 /* -------- Root Providers (Unified) -------- */
 export default function App() {
-  // Endpoint (localhost proxy in dev, Railway in prod)
   const endpoint = useMemo(() => {
     if (typeof window !== "undefined" && window.location.hostname === "localhost") {
       return "http://localhost:3001/api/solana";
@@ -221,19 +239,15 @@ export default function App() {
     return "https://solana-proxy-production.up.railway.app";
   }, []);
 
-  // Choose network (default Mainnet)
   const network =
     (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
       ? WalletAdapterNetwork.Devnet
       : WalletAdapterNetwork.Mainnet;
 
-  // Wallet adapters (desktop + mobile handoff)
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
-
-      // ✅ Works when VITE_WALLETCONNECT_PROJECT_ID is set
       new WalletConnectWalletAdapter({
         network,
         options: {
@@ -247,19 +261,17 @@ export default function App() {
           },
         },
       }),
-
-      // ✅ Mobile deep-link adapter (handles open → approve → return)
-new SolanaMobileWalletAdapter({
-  addressSelector: createDefaultAddressSelector(),
-  appIdentity: {
-    name: "JAL/SOL",
-    uri: "https://jalsol.com",
-    icon: "/icons/icon-512.png",
-  },
-  authorizationResultCache: createDefaultAuthorizationResultCache(),
-  cluster: "mainnet-beta",
-  onWalletNotFound: createDefaultWalletNotFoundHandler(), // ✅ correct key
-}),
+      new SolanaMobileWalletAdapter({
+        addressSelector: createDefaultAddressSelector(),
+        appIdentity: {
+          name: "JAL/SOL",
+          uri: "https://jalsol.com",
+          icon: "/icons/icon-512.png",
+        },
+        authorizationResultCache: createDefaultAuthorizationResultCache(),
+        cluster: "mainnet-beta",
+        onWalletNotFound: createDefaultWalletNotFoundHandler(),
+      }),
     ],
     [network]
   );
