@@ -1,5 +1,6 @@
 // src/pages/Jal.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 const JAL_MINT = "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
 const RAYDIUM_URL =
@@ -9,38 +10,52 @@ export default function Jal() {
   const [swapOpen, setSwapOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Page mount animation (CSS-only)
-  const pageRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    const node = pageRef.current;
-    if (!node) return;
-    node.classList.add("route-enter-jal");
-    const t = setTimeout(() => node.classList.remove("route-enter-jal"), 420);
-    return () => {
-      node.classList.remove("route-enter-jal");
-      clearTimeout(t);
-    };
-  }, []);
+  // Shorten mint for chip display
+  const shortMint = useMemo(
+    () =>
+      JAL_MINT.length > 12
+        ? `${JAL_MINT.slice(0, 6)}...${JAL_MINT.slice(-6)}`
+        : JAL_MINT,
+    []
+  );
 
-  // Modal a11y/focus
+  // Copy mint address
+  const copyMint = async () => {
+    try {
+      await navigator.clipboard.writeText(JAL_MINT);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 900);
+    } catch {
+      /* noop */
+    }
+  };
+
+  // ----- Modal a11y / focus management -----
   const modalRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+
   useEffect(() => {
     if (!swapOpen) return;
-    // Focus first actionable in modal
+
+    // focus first interactive element
     closeBtnRef.current?.focus();
 
-    // Trap Tab focus within modal
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSwapOpen(false);
       if (e.key !== "Tab") return;
+
       const root = modalRef.current;
       if (!root) return;
+
       const focusables = Array.from(
         root.querySelectorAll<HTMLElement>(
           'a[href], button, textarea, input, select, iframe, [tabindex]:not([tabindex="-1"])'
         )
-      ).filter((el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"));
+      ).filter(
+        (el) =>
+          !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden")
+      );
+
       if (focusables.length === 0) return;
 
       const first = focusables[0];
@@ -60,7 +75,8 @@ export default function Jal() {
     };
 
     document.addEventListener("keydown", onKeyDown);
-    // Prevent body scroll underneath modal
+
+    // lock body scroll under modal
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -70,42 +86,36 @@ export default function Jal() {
     };
   }, [swapOpen]);
 
-  // Shorten mint for chip display
-  const shortMint = useMemo(
-    () => (JAL_MINT.length > 12 ? `${JAL_MINT.slice(0, 6)}...${JAL_MINT.slice(-6)}` : JAL_MINT),
-    []
-  );
-
-  // Copy mint address
-  const copyMint = async () => {
-    try {
-      await navigator.clipboard.writeText(JAL_MINT);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 900);
-    } catch {
-      // noop
-    }
-  };
-
-  // Close on clicking backdrop (outside modal card)
+  // Close on backdrop click
   const onOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) setSwapOpen(false);
   };
 
   return (
-    <main ref={pageRef} className="jal-page">
+    <main className="jal-page">
       {/* Panel */}
       <section className="jal-panel" aria-labelledby="jal-title">
         <h1 id="jal-title" className="jal-title">JAL</h1>
-        <p className="jal-subtitle">About JAL — story, mission, and how SOL ⇄ JAL works.</p>
+        <p className="jal-subtitle">
+          About JAL — story, mission, and how SOL ⇄ JAL works.
+        </p>
 
         {/* Mint actions */}
         <div className="jal-actions" role="group" aria-label="Token address and actions">
-          <code className="jal-chip" title={JAL_MINT} aria-label={`Mint address ${JAL_MINT}`}>
+          <code
+            className="jal-chip"
+            title={JAL_MINT}
+            aria-label={`Mint address ${JAL_MINT}`}
+          >
             {shortMint}
           </code>
 
-          <button type="button" className="jal-btn" onClick={copyMint} aria-live="polite">
+          <button
+            type="button"
+            className="jal-btn"
+            onClick={copyMint}
+            aria-live="polite"
+          >
             {copied ? "Copied!" : "Copy Mint"}
           </button>
 
@@ -133,58 +143,60 @@ export default function Jal() {
         </div>
       </section>
 
-      {/* Modal */}
-      {swapOpen && (
-        <>
-          <div className="modal-overlay" onClick={onOverlayClick} />
-          <div
-            className="modal-host"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="swap-title"
-            id="jal-swap-dialog"
-          >
-            <div ref={modalRef} className="modal">
-              {/* Header */}
-              <div className="modal-header">
-                <div className="modal-spacer" />
-                <div className="modal-title" id="swap-title">
-                  <div className="modal-title-main">SOL ⇄ JAL Swap</div>
-                  <div className="modal-title-sub">Powered by Raydium</div>
+      {/* Modal (ported to document.body so it's truly centered/fixed) */}
+      {swapOpen &&
+        createPortal(
+          <>
+            <div className="modal-overlay" onClick={onOverlayClick} />
+            <div
+              className="modal-host"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="swap-title"
+              id="jal-swap-dialog"
+            >
+              <div ref={modalRef} className="modal">
+                {/* Header */}
+                <div className="modal-header">
+                  <div className="modal-spacer" />
+                  <div className="modal-title" id="swap-title">
+                    <div className="modal-title-main">SOL ⇄ JAL Swap</div>
+                    <div className="modal-title-sub">Powered by Raydium</div>
+                  </div>
+                  <button
+                    ref={closeBtnRef}
+                    type="button"
+                    className="modal-close"
+                    onClick={() => setSwapOpen(false)}
+                    aria-label="Close swap dialog"
+                  >
+                    ✕
+                  </button>
                 </div>
-                <button
-                  ref={closeBtnRef}
-                  type="button"
-                  className="modal-close"
-                  onClick={() => setSwapOpen(false)}
-                  aria-label="Close swap dialog"
-                >
-                  ✕
-                </button>
-              </div>
 
-              {/* Swap iframe */}
-              <iframe
-                title="Raydium Swap"
-                src={RAYDIUM_URL}
-                className="modal-iframe"
-              />
+                {/* Swap iframe */}
+                <iframe
+                  title="Raydium Swap"
+                  src={RAYDIUM_URL}
+                  className="modal-iframe"
+                />
 
-              {/* Footer link */}
-              <div className="modal-footer">
-                <a
-                  className="jal-link"
-                  href={RAYDIUM_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open on Raydium
-                </a>
+                {/* Footer link */}
+                <div className="modal-footer">
+                  <a
+                    className="jal-link"
+                    href={RAYDIUM_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open on Raydium
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
-        </>
-      )}
+          </>,
+          document.body
+        )}
     </main>
   );
 }
