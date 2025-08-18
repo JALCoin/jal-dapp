@@ -1,19 +1,23 @@
 // src/pages/Landing.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 
+type Panel = "none" | "shop" | "jal" | "vault";
+type TileKey = Exclude<Panel, "none">;
+
 type LandingProps = {
-  /** open a specific panel on load (local state only) */
-  initialPanel?: "none" | "shop" | "jal" | "vault";
+  /** optional: open a specific panel on initial load (overridden by ?panel=) */
+  initialPanel?: Panel;
 };
-type TileKey = Exclude<Required<LandingProps>["initialPanel"], "none">;
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected } = useWallet();
+  const [params, setParams] = useSearchParams();
 
   const [merging, setMerging] = useState(false);
-  const [activePanel, setActivePanel] = useState<LandingProps["initialPanel"]>(initialPanel);
+  const [activePanel, setActivePanel] = useState<Panel>("none");
   const timerRef = useRef<number | null>(null);
 
   const reducedMotion = useMemo(() => {
@@ -21,18 +25,54 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // Preload hub GIFs (STORE removed)
+  // ---- Tiles ----
+  const tiles: { key: TileKey; title: string; sub?: string; gif: string }[] = [
+    { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
+    { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
+    { key: "vault", title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
+  ];
+
+  // ---- Preload GIFs (cleanup on unmount) ----
   useEffect(() => {
-    const srcs = ["/JAL.gif", "/JALSOL.gif", "/VAULT.gif"];
-    const imgs: HTMLImageElement[] = srcs.map((src) => {
+    const imgs = tiles.map((t) => {
       const i = new Image();
-      i.src = src;
+      i.decoding = "async";
+      i.loading = "eager";
+      i.src = t.gif;
       return i;
     });
     return () => imgs.forEach((i) => (i.src = ""));
+  }, [tiles]);
+
+  // ---- Resolve starting panel: URL ?panel > session > prop ----
+  useEffect(() => {
+    const fromUrl = params.get("panel") as Panel | null;
+    const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
+    const start: Panel =
+      (fromUrl && ["none", "shop", "jal", "vault"].includes(fromUrl) ? fromUrl : null) ??
+      (fromSession && ["none", "shop", "jal", "vault"].includes(fromSession) ? fromSession : null) ??
+      initialPanel;
+    setActivePanel(start);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // subtle merge animation on connect (stay on landing)
+  // ---- Keep URL + session in sync ----
+  useEffect(() => {
+    if (!activePanel) return;
+    sessionStorage.setItem("landing:lastPanel", activePanel);
+    const urlPanel = params.get("panel");
+    if (activePanel === "none") {
+      if (urlPanel) {
+        params.delete("panel");
+        setParams(params, { replace: true });
+      }
+    } else if (urlPanel !== activePanel) {
+      params.set("panel", activePanel);
+      setParams(params, { replace: true });
+    }
+  }, [activePanel, params, setParams]);
+
+  // ---- Subtle merge animation on connect (stays on landing) ----
   useEffect(() => {
     if (!connected || !publicKey) return;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -45,7 +85,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [connected, publicKey, reducedMotion]);
 
-  // reset on disconnect
+  // ---- Reset on disconnect ----
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
@@ -54,31 +94,32 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [connected, publicKey]);
 
-  const tiles: { key: TileKey; title: string; sub?: string; gif: string }[] = [
-    { key: "jal",   title: "JAL",            sub: "About & Swap",       gif: "/JAL.gif" },
-    { key: "shop",  title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
-    { key: "vault", title: "VAULT",          sub: "Your assets",        gif: "/VAULT.gif" },
-  ];
+  // ---- ESC closes any open panel back to hub ----
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && activePanel !== "none") setActivePanel("none");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activePanel]);
 
-  const openPanel = (id: LandingProps["initialPanel"]) => setActivePanel(id);
+  const openPanel = (id: Panel) => setActivePanel(id);
 
   const panelTitle =
-    activePanel === "shop"  ? "Shop"  :
-    activePanel === "jal"   ? "JAL"   :
-    activePanel === "vault" ? "Vault" : "Welcome";
+    activePanel === "shop" ? "Shop" : activePanel === "jal" ? "JAL" : activePanel === "vault" ? "Vault" : "Welcome";
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
       {/* top-center social row */}
       <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
-          <img src="/icons/X.png" alt="" />
+          <img src="/icons/X.png" alt="" width={20} height={20} />
         </a>
         <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
-          <img src="/icons/Telegram.png" alt="" />
+          <img src="/icons/Telegram.png" alt="" width={20} height={20} />
         </a>
         <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-          <img src="/icons/TikTok.png" alt="" />
+          <img src="/icons/TikTok.png" alt="" width={20} height={20} />
         </a>
       </div>
 
@@ -100,6 +141,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <button
             className="landing-wallet"
             onClick={() => openPanel(activePanel === "none" ? "shop" : "none")}
+            aria-expanded={activePanel !== "none"}
+            aria-controls="hub-panel"
           >
             {activePanel === "none" ? "Open Hub" : "Back to Hub"}
           </button>
@@ -108,6 +151,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
       {/* === TRANSPARENT HUB CONTAINER (in-panel pages) === */}
       <section
+        id="hub-panel"
         className={[
           "hub-panel",
           "hub-panel--fit",
@@ -121,20 +165,23 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         <div className="hub-panel-body">
-          {/* tiles list */}
-          <div className="hub-stack hub-stack--responsive">
+          {/* tiles list (overlay style) */}
+          <div className="hub-stack hub-stack--responsive" role="list">
             {tiles.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 className="img-btn"
                 onClick={() => openPanel(t.key)}
+                role="listitem"
               >
                 <img
                   src={t.gif}
                   alt=""
-                  className="hub-gif"
+                  className="hub-gif float"
                   loading="lazy"
+                  width={960}
+                  height={540}
                   onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
                 />
                 <div className="hub-btn">
