@@ -20,7 +20,7 @@
 *{ box-sizing:border-box }
 
 html,body,#root{
-  margin:0; padding:0; min-height:100%;
+  margin:0; padding:0; min-height:100dvh;              /* dvh for mobile chrome */
   background:var(--jal-bg); color:var(--jal-text);
   font-family:'Orbitron',system-ui,sans-serif; line-height:1.6;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
@@ -224,22 +224,37 @@ header .social-links img:hover{
 /* ===============================
    HUB OVERLAY + PANEL
 =================================*/
+/* HUB OVERLAY + PANEL */
 .hub-overlay{
   position:fixed; inset:0;
   min-height:100dvh;
   padding: max(16px, env(safe-area-inset-top)) 16px 16px 16px;
   z-index:70;
   display:grid; place-items:center;
-  background:rgba(0,0,0,.12);
-  backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
-  -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
+
+  /* remove the dark wash so only bright colors show */
+  background: transparent;
+  backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
+  -webkit-backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
+
   overflow:auto;
 }
 .hub-overlay.is-closing { animation: hubClose .3s ease forwards; }
-@keyframes hubClose { from {opacity:1} to {opacity:0} }
 
-.hub-backdrop{ position:absolute; inset:0; z-index:0; pointer-events:none; }
-.hub-ghost{ opacity:.15; }
+/* Full-bleed bright gradient specifically for the Hub */
+.hub-backdrop{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+
+  /* same vibe as body::before, but no black areas */
+  background:
+    radial-gradient(55% 45% at 50% 30%, rgba(255,255,255,.12), transparent 60%),
+    conic-gradient(from 0deg at 50% 50%, #11f1a7, #ffd700, #ffffff, #11f1a7);
+  filter: saturate(1.08) contrast(1.03);
+  will-change: transform, opacity;
+  animation: bgDrift 28s ease-in-out infinite;
+}
+
+.hub-ghost{ opacity:.15; } /* retained if referenced elsewhere */
 
 .hub-panel{
   position:relative;
