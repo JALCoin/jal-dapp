@@ -1,10 +1,6 @@
 /* =============================================================
    JAL/SOL — Global Theme & Layout (full rewrite)
    Date: 2025-08-18
-   Notes:
-   - Cyberpunk glass + glow aesthetic
-   - Fixed, full-bleed gradient backdrop (no clipping)
-   - Mobile-safe (safe areas), accessible focus, reduced-motion support
    ============================================================= */
 
 /* ===============================
@@ -69,7 +65,6 @@ html,body,#root{
 
 /* ===============================
    GLOBAL FULL-BLEED BACKDROP
-   (site-wide ambient gradient)
 =================================*/
 body::before{
   content:"";
@@ -81,11 +76,10 @@ body::before{
   will-change:transform,opacity;
   animation:bgDrift 28s ease-in-out infinite;
 }
-
 @keyframes bgDrift{
-  0%   { transform:translate3d(0,0,0) rotate(0deg) scale(1.02); opacity:.95; }
-  50%  { transform:translate3d(0,-1.2%,0) rotate(180deg) scale(1.04); opacity:1; }
-  100% { transform:translate3d(0,0,0) rotate(360deg) scale(1.02); opacity:.95; }
+  0%{transform:translate3d(0,0,0) rotate(0deg) scale(1.02);opacity:.95}
+  50%{transform:translate3d(0,-1.2%,0) rotate(180deg) scale(1.04);opacity:1}
+  100%{transform:translate3d(0,0,0) rotate(360deg) scale(1.02);opacity:.95}
 }
 
 /* ===============================
@@ -155,7 +149,7 @@ header .social-links img:hover{
 .nav-link:hover{ color:#fff; text-shadow:0 0 10px #fff, 0 0 24px #fff; }
 
 /* ===============================
-   SIDEBAR NAV (off-canvas)
+   SIDEBAR NAV
 =================================*/
 .sidebar-overlay{
   position:fixed; inset:0; background:rgba(0,0,0,.65); backdrop-filter:blur(6px);
@@ -200,7 +194,11 @@ header .social-links img:hover{
 }
 
 /* Logo + soft glow */
-.landing-inner{ display:flex; flex-direction:column; align-items:center; gap:1.25rem; }
+.landing-inner{
+  display:flex; flex-direction:column; align-items:center;
+  gap:12px;                  /* tighter spacing logo<->wallet */
+  margin-bottom:8px;         /* ensures hub sits just below */
+}
 .landing-logo-wrapper{ position:relative; display:inline-block; }
 .landing-logo-wrapper::before{
   content:''; position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%);
@@ -231,7 +229,6 @@ header .social-links img:hover{
   -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
   overflow:hidden; overscroll-behavior:contain; isolation:isolate;
 }
-/* full-viewport animated gradient pinned to overlay */
 .hub-overlay::after{
   content:""; position:fixed; left:50%; top:50%; width:220vmax; height:220vmax;
   transform:translate(-50%,-50%) translateZ(0); pointer-events:none; z-index:-1;
@@ -243,7 +240,6 @@ header .social-links img:hover{
 .hub-overlay.is-closing{ animation: hubClose .3s ease forwards; }
 @keyframes hubClose{ from{opacity:1} to{opacity:0} }
 
-/* Legacy node no longer needed */
 .hub-backdrop{ display:none !important; }
 
 .hub-panel{
@@ -263,7 +259,10 @@ header .social-links img:hover{
   border-radius:16px; display:flex; flex-direction:column; justify-content:space-between;
 }
 .hub-panel-top{ display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; flex:0 0 auto; }
-.hub-panel-body{ position:relative; z-index:1; flex:1 1 auto; overflow:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+.hub-panel-body{
+  position:relative; z-index:1; flex:1 1 auto; overflow:auto; padding-bottom:4px;
+  -webkit-overflow-scrolling:touch; scrollbar-gutter:stable both-edges; /* prevents layout jump */
+}
 
 .hub-title{
   margin:0 0 .35rem; text-align:center; color:#fff; font-size:clamp(2rem,3.2vw,2.8rem); letter-spacing:.02em;
@@ -276,6 +275,7 @@ header .social-links img:hover{
 .hub-stack{ display:grid; gap:1rem; }
 .hub-stack--responsive{ gap:clamp(12px,2vw,20px); }
 
+/* Buttons under GIFs */
 .hub-btn{
   display:block; width:100%; text-align:center; text-decoration:none;
   padding:clamp(1rem,2.6vw,1.4rem) clamp(1rem,2.6vw,1.6rem);
@@ -285,17 +285,31 @@ header .social-links img:hover{
   transition:transform .14s ease, box-shadow .2s ease, filter .2s ease;
 }
 .hub-btn .sub{ display:block; margin-top:.42rem; font-weight:600; letter-spacing:.03em; text-transform:none; opacity:.92; color:#eaeaea; }
-@keyframes floatY { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-4px) } }
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @media (hover:hover){ .hub-btn:hover{ transform:translateY(-2px) scale(1.015); box-shadow:0 0 26px #fff9, 0 0 40px #fff8, inset 0 0 12px #fff6; filter:saturate(1.05); } }
 @media (hover:none){ .hub-btn:active{ transform:scale(.985); } }
 
 /* Image-style buttons */
-.img-btn{ padding:0; background:transparent; border:none; border-radius:14px; overflow:hidden; box-shadow:0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25); display:block; }
+.img-btn{
+  padding:0; background:transparent; border:none; border-radius:14px; overflow:hidden;
+  box-shadow:0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
+  display:block; position:relative;
+}
 .img-btn:focus-visible{ outline:3px solid #fff; outline-offset:4px; box-shadow:0 0 0 1.5px #fff inset, 0 0 24px #fff, 0 0 36px #fff8; }
 
-.hub-gif{ display:block; width:100%; height:clamp(80px,14vh,180px); object-fit:contain; background:#000; transition:transform .18s ease, filter .25s ease, box-shadow .25s ease; }
-.hub-gif--cover{ object-fit:cover; }
-.hub-gif.float { animation: floatY 4.5s ease-in-out infinite; }
+/* ✅ GIFs: no crop + consistent responsive height */
+.hub-gif{
+  display:block;
+  width:100%;
+  height:clamp(180px, 32vh, 360px);
+  object-fit:contain;
+  object-position:center;
+  background:#000;
+  padding:6px;
+  transition:transform .18s ease, filter .25s ease, box-shadow .25s ease;
+}
+.hub-gif--cover{ object-fit:cover; } /* (unused now) */
+.hub-gif.float{ animation:floatY 4.5s ease-in-out infinite; }
 
 /* ===============================
    JAL PAGE
@@ -322,7 +336,7 @@ header .social-links img:hover{
 /* ===============================
    MODAL (Reusable)
 =================================*/
-@keyframes modalIn { from{opacity:0; transform:translateY(8px) scale(.96)} to{opacity:1; transform:none} }
+@keyframes modalIn{from{opacity:0; transform:translateY(8px) scale(.96)} to{opacity:1; transform:none}}
 .modal-overlay{ position:fixed; inset:0; background: radial-gradient(1200px 600px at 50% 30%, rgba(255,255,255,.08), transparent 60%), rgba(0,0,0,.55); backdrop-filter: blur(2px); z-index:var(--z-modal-overlay); animation: fadeIn .25s ease-out; }
 .modal-host{ position:fixed; inset:0; display:grid; place-items:center; pointer-events:none; z-index:var(--z-modal); }
 .modal{ background:rgba(0,0,0,.78); border:1.6px solid rgba(255,255,255,.9); border-radius:18px; padding:12px; animation: modalIn .28s ease-out both, glowPulse 2.4s ease-in-out infinite; box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 24px rgba(255,255,255,.28); width:min(560px,94vw); pointer-events:auto; }
@@ -362,22 +376,16 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
 ::-webkit-scrollbar-thumb{ background:#fff; border-radius:4px; }
 ::-webkit-scrollbar-thumb:hover{ background:#e5e5e5; }
 
-/* --- in-panel content spacing (used when rendering pages inside Hub) --- */
-.in-hub { padding: 8px 2px 2px; }
+/* --- in-panel content spacing --- */
+.in-hub{ padding:8px 2px 2px; }
+.hub-content{ display:block; }
 
-.hub-content { /* optional: a light wrapper for headings/forms in-panel */
-  display: block;
-}
-
-/* --- landing disconnect button (visible while merging) --- */
+/* --- landing disconnect bubble --- */
 .landing-disconnect{
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 3;
+  position:absolute; top:1rem; right:1rem; z-index:3;
 }
 
-/* --- wallet disconnect buttons (header/hub) --- */
+/* --- wallet disconnect buttons --- */
 .wallet-disconnect-btn,
 .hub-disconnect-btn{
   border:2px solid #fff !important;
@@ -405,12 +413,12 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
 .wallet-adapter-button-trigger{ border-radius:10px !important; border:2px solid #fff !important; background:#000 !important; color:#fff !important; text-transform:uppercase !important; font-weight:800 !important; }
 
 /* ===============================
-   PAGE TRANSITIONS (Hub → Jal)
+   PAGE TRANSITIONS
 =================================*/
-@keyframes hubSlideUpFade { from { opacity:1; transform:translateY(0); filter:blur(0); } to { opacity:0; transform:translateY(-60px) scale(.985); filter:blur(2px); } }
-@keyframes jalFadeIn { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
-.route-leave-hub{ animation: hubSlideUpFade .38s cubic-bezier(.22,.75,.15,1) forwards; will-change: transform, opacity, filter; z-index:75; position:relative; }
-.route-enter-jal{ animation: jalFadeIn .35s ease-out both; will-change: transform, opacity; z-index:20; position:relative; }
+@keyframes hubSlideUpFade{from{opacity:1; transform:translateY(0); filter:blur(0)} to{opacity:0; transform:translateY(-60px) scale(.985); filter:blur(2px)}}
+@keyframes jalFadeIn{from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:translateY(0)}}
+.route-leave-hub{ animation:hubSlideUpFade .38s cubic-bezier(.22,.75,.15,1) forwards; will-change:transform,opacity,filter; z-index:75; position:relative; }
+.route-enter-jal{ animation:jalFadeIn .35s ease-out both; will-change:transform,opacity; z-index:20; position:relative; }
 
 /* ===============================
    REDUCED MOTION
@@ -424,9 +432,12 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
   .nav-link{ font-size:1rem; }
   .logo{ height:112px; }
   .hub-panel{ width:min(96vw,980px); }
-  .hub-gif{ height:clamp(90px, 16vh, 160px); }
+  .hub-gif{ height:clamp(160px, 28vh, 260px); } /* mobile-friendly height */
 }
-@media (max-height:700px){ .hub-title{ font-size:clamp(1.6rem,4.8vw,2.2rem); } }
+@media (max-height:700px){
+  .hub-title{ font-size:clamp(1.6rem,4.8vw,2.2rem); }
+  .hub-gif{ height:clamp(150px, 26vh, 240px); } /* short screens */
+}
 
 /* ===============================
    BACKDROP-FILTER FALLBACK
@@ -435,61 +446,40 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
   .hub-overlay{ background: rgba(0,0,0,.35); }
   .hub-panel{ background: rgba(0,0,0,.78); }
 }
+
 /* ===============================
    LANDING → HUB PREVIEW (read-only)
-   =============================== */
+=================================*/
 .hub-preview{
-  margin-top: clamp(14px, 3.2vh, 24px);
-  pointer-events: none;                        /* make the whole panel non-interactive */
-  filter: saturate(.95) contrast(.98);
-  backdrop-filter: blur(var(--blur-amt)) saturate(1.06);
-  -webkit-backdrop-filter: blur(var(--blur-amt)) saturate(1.06);
+  margin-top:clamp(14px,3.2vh,24px);
+  pointer-events:none;
+  filter:saturate(.95) contrast(.98);
+  backdrop-filter:blur(var(--blur-amt)) saturate(1.06);
+  -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.06);
 }
-
 .hub-preview .hub-title{ opacity:.88; }
-
 .hub-preview-card{
-  box-shadow:
-    0 0 0 1.5px rgba(255,255,255,.5) inset,
-    0 8px 22px rgba(0,0,0,.28),
-    0 0 18px rgba(255,255,255,.20);
-  filter: blur(1px) brightness(.95) opacity(.78);
+  box-shadow:0 0 0 1.5px rgba(255,255,255,.5) inset, 0 8px 22px rgba(0,0,0,.28), 0 0 18px rgba(255,255,255,.20);
+  filter:blur(1px) brightness(.95) opacity(.78);
 }
+.landing-merge .hub-preview{ opacity:0; transition:opacity .45s ease; }
+.hub-preview .hub-gif{ transition:none; animation:none; opacity:.9; }
 
-.landing-merge .hub-preview{
-  opacity:0;
-  transition: opacity .45s ease;
-}
-
-/* (Optional) tone down GIF motion a bit in preview */
-.hub-preview .hub-gif{
-  transition: none;
-  animation: none;
-  opacity:.9;
-}
 /* Landing: transparent Hub panel under the CTA */
 .landing-panel{
-  margin-top: clamp(16px, 4vh, 28px);
-  width: min(980px, 92vw);
-  padding: clamp(18px, 2.8vw, 28px);
-  background: var(--panel-bg);
-  border: 1.5px solid rgba(255,255,255,.65);
-  border-radius: 16px;
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.18) inset,
-    0 10px 34px rgba(0,0,0,.40),
-    0 0 18px rgba(255,255,255,.25);
-  backdrop-filter: blur(var(--blur-amt)) saturate(1.08);
-  -webkit-backdrop-filter: blur(var(--blur-amt)) saturate(1.08);
-  pointer-events: none;               /* 🔒 preview only */
+  margin-top:clamp(16px,4vh,28px);
+  width:min(980px,92vw);
+  padding:clamp(18px,2.8vw,28px);
+  background:var(--panel-bg);
+  border:1.5px solid rgba(255,255,255,.65);
+  border-radius:16px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 10px 34px rgba(0,0,0,.40), 0 0 18px rgba(255,255,255,.25);
+  backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
+  -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
+  pointer-events:none; /* preview only */
 }
 
-.preview-grid{
-  display: grid;
-  gap: clamp(12px, 2vw, 20px);
-}
+.preview-grid{ display:grid; gap:clamp(12px,2vw,20px); }
 .preview-btn{
-  /* Looks like hub buttons but remains inert */
-  box-shadow: 0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
+  box-shadow:0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
 }
-
