@@ -1,5 +1,5 @@
 // src/pages/Landing.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
@@ -14,13 +14,31 @@ export default function Landing() {
   const [merging, setMerging] = useState(false);
   const timerRef = useRef<number | null>(null);
 
-  const reducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const reducedMotion = useMemo(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  // Preload hub images to avoid a flash when the panel opens
+  useEffect(() => {
+    const imgs = ["/JAL.gif", "/JALSOL.gif", "/VAULT.gif", "/HOW-IT-WORKS.gif"];
+    const elms: HTMLImageElement[] = [];
+    imgs.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+      elms.push(img);
+    });
+    return () => { elms.forEach((img) => (img.src = "")); };
+  }, []);
 
   // Auto-redirect to hub when connected (desktop + mobile)
   useEffect(() => {
     if (!connected || !publicKey) return;
+
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
 
     setMerging(true);
     const delay = reducedMotion ? 0 : 450;
@@ -45,7 +63,11 @@ export default function Landing() {
   }, [connected, publicKey]);
 
   return (
-    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+    <main
+      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
+      aria-live="polite"
+    >
+      {/* Top social icons */}
       <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
           <img src="/icons/X.png" alt="" />
@@ -58,21 +80,58 @@ export default function Landing() {
         </a>
       </div>
 
+      {/* Quick disconnect while merging */}
       {merging && (
         <div className="landing-disconnect">
           <WalletDisconnectButton className="wallet-disconnect-btn" />
         </div>
       )}
 
+      {/* Logo + wallet button */}
       <div className="landing-inner">
         <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
-        {!connected && (
+        {!connected ? (
           <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
+        ) : (
+          <button
+            className="landing-wallet"
+            onClick={() => navigate("/hub")}
+            disabled={merging}
+            aria-label="Enter Hub"
+          >
+            Enter Hub
+          </button>
         )}
       </div>
+
+      {/* -------- Non-interactive Hub preview (glass, blurred) -------- */}
+      <section
+        className={`landing-preview-wrap ${merging ? "fade-out" : ""}`}
+        aria-hidden="true"
+      >
+        <div className="landing-preview">
+          <h2 className="hub-title" tabIndex={-1}>Welcome</h2>
+
+          <div className="hub-stack hub-stack--responsive" role="presentation">
+            <div className="img-btn" tabIndex={-1}>
+              <img className="hub-gif float" src="/JAL.gif" alt="" aria-hidden="true" />
+            </div>
+            <div className="img-btn" tabIndex={-1}>
+              <img className="hub-gif float" src="/JALSOL.gif" alt="" aria-hidden="true" />
+            </div>
+            <div className="img-btn" tabIndex={-1}>
+              <img className="hub-gif float" src="/VAULT.gif" alt="" aria-hidden="true" />
+            </div>
+            <div className="img-btn" tabIndex={-1}>
+              <img className="hub-gif float" src="/HOW-IT-WORKS.gif" alt="" aria-hidden="true" />
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* ------------------------------------------------------------- */}
     </main>
   );
 }
