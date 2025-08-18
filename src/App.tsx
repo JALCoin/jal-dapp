@@ -73,6 +73,7 @@ function Shell() {
   }, []);
 
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -109,19 +110,19 @@ function Shell() {
     </NavLink>
   );
 
-  /* Framer variants — simple and smooth */
+  /* Framer variants — keep TS-friendly transitions */
   const hubIdle  = { opacity: 1, y: 0,   scale: 1 };
   const hubExit  = { opacity: 0, y: -36, scale: 0.99 };
-  const hubTx    = { duration: 0.35, ease: [0.4, 0.0, 0.2, 1] };
+  const hubTx    = { duration: 0.35 };              // removed ease array
 
   const jalInit  = { opacity: 0, y: 18 };
   const jalIn    = { opacity: 1, y: 0 };
   const jalOut   = { opacity: 0, y: 12 };
-  const jalTx    = { duration: 0.35, ease: "easeOut", delay: 0.06 };
+  const jalTx    = { duration: 0.35, delay: 0.06 }; // removed "ease" string
 
   return (
     <>
-      {/* Keep header mounted ALWAYS (no fade on /hub) so Hub cleanly slides UNDER it */}
+      {/* Keep header mounted ALWAYS so Hub slides UNDER it */}
       {!isLanding && (
         <header style={{ position: "relative", zIndex: 90 }}>
           <div className="header-inner">
@@ -189,7 +190,7 @@ function Shell() {
                   exit={hubExit}
                   transition={hubTx}
                   style={{
-                    zIndex: 50,             // underneath the header
+                    zIndex: 50,
                     position: "relative",
                     willChange: "transform, opacity",
                   }}
@@ -219,7 +220,7 @@ function Shell() {
                   exit={jalOut}
                   transition={jalTx}
                   style={{
-                    zIndex: 20,             // page content under header
+                    zIndex: 20,
                     position: "relative",
                     willChange: "transform, opacity",
                   }}
