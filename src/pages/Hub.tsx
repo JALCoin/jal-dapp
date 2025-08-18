@@ -239,9 +239,7 @@ export default function Hub() {
       }}
     >
       {/* keep backdrop light + non-interactive */}
-      <div className="hub-backdrop" aria-hidden="true">
-        <div className="landing-gradient hub-ghost" style={{ height: "100%" }} />
-      </div>
+	<div className="hub-backdrop" aria-hidden="true" />
 
       <section
         ref={panelRef}
