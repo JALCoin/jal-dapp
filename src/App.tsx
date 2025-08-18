@@ -23,10 +23,9 @@ import {
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect";
-  import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-/* Mobile deep-link handoff */
 import {
   SolanaMobileWalletAdapter,
   createDefaultAuthorizationResultCache,
@@ -34,7 +33,6 @@ import {
   createDefaultWalletNotFoundHandler,
 } from "@solana-mobile/wallet-adapter-mobile";
 
-/* Optional page transitions container */
 import { AnimatePresence } from "framer-motion";
 
 /* Pages */
@@ -55,7 +53,7 @@ function Protected({ children }: { children: ReactElement }) {
   return connected ? children : <Navigate to="/" replace />;
 }
 
-/* -------- Header (define, then memoize) -------- */
+/* -------- Header -------- */
 type HeaderProps = {
   isLanding: boolean;
   links: { to: string; label: string }[];
@@ -78,12 +76,11 @@ function HeaderView({
   return (
     <header style={{ position: "relative", zIndex: 90 }}>
       <div className="header-inner">
-        <NavLink to="/" onClick={closeMenu} aria-label="Go to Landing">
+        <NavLink to="/" onClick={closeMenu}>
           <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
         </NavLink>
 
-        <nav className="main-nav" aria-label="Primary">
-          {/* Normal route links */}
+        <nav className="main-nav">
           {links.map(({ to, label }) => (
             <NavLink
               key={`${to}-${label}`}
@@ -94,24 +91,18 @@ function HeaderView({
               {label}
             </NavLink>
           ))}
-
-          {/* Hub now lives on Landing as an in-page panel */}
-          <a className="nav-link" href="/#hub" onClick={closeMenu}>
-            HUB
-          </a>
-
           {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
         </nav>
 
-        <div className="social-links" aria-label="Social links">
-          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
-            <img src="/icons/X.png" alt="" />
+        <div className="social-links">
+          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer">
+            <img src="/icons/X.png" alt="X" />
           </a>
-          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
-            <img src="/icons/Telegram.png" alt="" />
+          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer">
+            <img src="/icons/Telegram.png" alt="Telegram" />
           </a>
-          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-            <img src="/icons/TikTok.png" alt="" />
+          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer">
+            <img src="/icons/TikTok.png" alt="TikTok" />
           </a>
         </div>
 
@@ -119,12 +110,10 @@ function HeaderView({
           className={`hamburger ${menuOpen ? "is-open" : ""}`}
           onClick={toggleMenu}
           aria-label="Toggle menu"
-          aria-expanded={menuOpen}
-          aria-controls="sidebar-nav"
         >
-          <span aria-hidden="true" />
-          <span aria-hidden="true" />
-          <span aria-hidden="true" />
+          <span />
+          <span />
+          <span />
         </button>
       </div>
     </header>
@@ -132,28 +121,25 @@ function HeaderView({
 }
 const Header = memo(HeaderView);
 
-/* -------- Sidebar (define, then memoize) -------- */
-type SidebarProps = {
-  open: boolean;
-  isLanding: boolean;
-  links: { to: string; label: string }[];
-  closeMenu: () => void;
-  publicKey: any;
-};
-
+/* -------- Sidebar -------- */
 function SidebarView({
   open,
   isLanding,
   links,
   closeMenu,
   publicKey,
-}: SidebarProps): ReactElement | null {
+}: {
+  open: boolean;
+  isLanding: boolean;
+  links: { to: string; label: string }[];
+  closeMenu: () => void;
+  publicKey: any;
+}): ReactElement | null {
   if (!open || isLanding) return null;
-
   return (
     <>
       <div className="sidebar-overlay" onClick={closeMenu} />
-      <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
+      <div className="sidebar-nav" role="dialog" aria-modal="true">
         {links.map(({ to, label }) => (
           <NavLink
             key={`${to}-${label}`}
@@ -164,11 +150,6 @@ function SidebarView({
             {label}
           </NavLink>
         ))}
-        {/* Hub hash link inside sidebar */}
-        <a className="nav-link" href="/#hub" onClick={closeMenu}>
-          HUB
-        </a>
-
         {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
       </div>
     </>
@@ -190,25 +171,7 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
-
-  // Lock scroll only when sidebar is open
-  useEffect(() => {
-    const root = document.documentElement;
-    if (menuOpen) {
-      root.style.overflow = "hidden";
-      document.body.style.overflow = "hidden";
-    } else {
-      root.style.overflow = "";
-      document.body.style.overflow = "";
-    }
-    return () => {
-      root.style.overflow = "";
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
+  useEffect(() => setMenuOpen(false), [location.pathname]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
@@ -225,8 +188,9 @@ function Shell() {
   const links = useMemo(
     () => [
       { to: "/", label: "JAL/SOL" },
-      // HUB removed from router; shown as hash link in the header/sidebar
+      { to: "/jal", label: "JAL" },
       { to: vaultPath, label: vaultLabel },
+      { to: "/shop", label: "SHOP" }, // ✅ Added SHOP link
       { to: "/learn", label: "LEARN/SOL" },
       { to: "/about", label: "About JAL" },
     ],
@@ -243,7 +207,6 @@ function Shell() {
         closeMenu={closeMenu}
         publicKey={publicKey}
       />
-
       <Sidebar
         open={menuOpen}
         isLanding={isLanding}
@@ -253,44 +216,23 @@ function Shell() {
       />
 
       <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          {/* Landing now includes the Hub panel inline */}
-          <Route path="/" element={<Landing />} />
-
-          {/* Standalone/legacy pages */}
-          <Route path="/home" element={<Home />} />
-          <Route path="/crypto-generator" element={<CryptoGenerator />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/vault/:symbol" element={<Vault />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/manifesto" element={<Manifesto />} />
-          <Route path="/content" element={<Content />} />
-          <Route path="/learn" element={<Learn />} />
-
-          {/* JAL is a normal page now (no inHub prop) */}
-          <Route path="/jal" element={<Jal />} />
-
-          {/* Misc protected placeholders */}
-          <Route
-            path="/start"
-            element={
-              <Protected>
-                <div style={{ padding: 24 }}>Start flow…</div>
-              </Protected>
-            }
-          />
-          <Route
-            path="/terms"
-            element={
-              <Protected>
-                <div style={{ padding: 24 }}>Terms…</div>
-              </Protected>
-            }
-          />
-
-          {/* catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+// src/App.tsx (only the routes array changed here)
+<Routes location={location} key={location.pathname}>
+  <Route path="/" element={<Landing />} />
+  <Route path="/shop" element={<Landing initialPanel="shop" />} />  {/* 👈 deep-link into panel */}
+  <Route path="/home" element={<Home />} />
+  <Route path="/crypto-generator" element={<CryptoGenerator />} />
+  <Route path="/dashboard" element={<Dashboard />} />
+  <Route path="/vault/:symbol" element={<Vault />} />
+  <Route path="/jal" element={<Protected><Jal inHub={false} /></Protected>} />
+  <Route path="/about" element={<About />} />
+  <Route path="/manifesto" element={<Manifesto />} />
+  <Route path="/content" element={<Content />} />
+  <Route path="/learn" element={<Learn />} />
+  <Route path="/start" element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
+  <Route path="/terms" element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
+  <Route path="*" element={<Navigate to="/" replace />} />
+</Routes>
       </AnimatePresence>
     </>
   );
@@ -322,10 +264,7 @@ export default function App() {
           metadata: {
             name: "JAL/SOL Dapp",
             description: "Swap SOL→JAL and use utilities",
-            url:
-              typeof window !== "undefined"
-                ? window.location.origin
-                : "https://jalsol.com",
+            url: typeof window !== "undefined" ? window.location.origin : "https://jalsol.com",
             icons: ["https://jalsol.com/icons/icon-512.png"],
           },
         },
@@ -341,11 +280,9 @@ export default function App() {
     [network]
   );
 
-  const onError = (e: any) => console.error("Wallet error:", e);
-
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect onError={onError}>
+      <WalletProvider wallets={wallets} autoConnect onError={(e) => console.error("Wallet error:", e)}>
         <WalletModalProvider>
           <Router>
             <Shell />
