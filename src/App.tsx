@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState, useEffect, useMemo, type ReactElement, memo } from "react";
+import { useState, useEffect, useMemo, type ReactElement } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -56,26 +56,24 @@ function Protected({ children }: { children: ReactElement }) {
   return connected ? children : <Navigate to="/" replace />;
 }
 
-/* -------- Memoized Header -------- */
+/* -------- Header (define, then memoize) -------- */
 type HeaderProps = {
   isLanding: boolean;
   links: { to: string; label: string }[];
   menuOpen: boolean;
   toggleMenu: () => void;
   closeMenu: () => void;
-  publicKey: unknown;
+  publicKey: any;
 };
-
-const Header = memo(function Header({
+function HeaderView({
   isLanding,
   links,
   menuOpen,
   toggleMenu,
   closeMenu,
   publicKey,
-}: HeaderProps) {
+}: HeaderProps): JSX.Element | null {
   if (isLanding) return null;
-
   return (
     <header style={{ position: "relative", zIndex: 90 }}>
       <div className="header-inner">
@@ -109,7 +107,6 @@ const Header = memo(function Header({
           </a>
         </div>
 
-        {/* Animated hamburger */}
         <button
           className={`hamburger ${menuOpen ? "is-open" : ""}`}
           onClick={toggleMenu}
@@ -124,24 +121,25 @@ const Header = memo(function Header({
       </div>
     </header>
   );
-});
+}
+import { memo } from "react";
+const Header = memo(HeaderView);
 
-/* -------- Memoized Sidebar -------- */
+/* -------- Sidebar (define, then memoize) -------- */
 type SidebarProps = {
   open: boolean;
   isLanding: boolean;
   links: { to: string; label: string }[];
   closeMenu: () => void;
-  publicKey: unknown;
+  publicKey: any;
 };
-
-const Sidebar = memo(function Sidebar({
+function SidebarView({
   open,
   isLanding,
   links,
   closeMenu,
   publicKey,
-}: SidebarProps) {
+}: SidebarProps): JSX.Element | null {
   if (!open || isLanding) return null;
   return (
     <>
@@ -161,7 +159,8 @@ const Sidebar = memo(function Sidebar({
       </div>
     </>
   );
-});
+}
+const Sidebar = memo(SidebarView);
 
 /* -------- App Shell -------- */
 function Shell() {
@@ -178,25 +177,21 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // Close menu on route change
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
-  // Lock page scroll when sidebar is open or Hub overlay is active
   useEffect(() => {
     const lock = menuOpen || isHub;
     const root = document.documentElement;
     if (lock) {
       root.style.overflow = "hidden";
-      (document.body || {}).style && (document.body.style.overflow = "hidden");
+      document.body.style.overflow = "hidden";
     } else {
       root.style.overflow = "";
-      (document.body || {}).style && (document.body.style.overflow = "");
+      document.body.style.overflow = "";
     }
     return () => {
       root.style.overflow = "";
-      (document.body || {}).style && (document.body.style.overflow = "");
+      document.body.style.overflow = "";
     };
   }, [menuOpen, isHub]);
 
@@ -247,12 +242,11 @@ function Shell() {
         publicKey={publicKey}
       />
 
-      {/* Routes with exit animation */}
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Landing />} />
 
-          {/* -------- Hub as parent shell with nested pages -------- */}
+          {/* Hub as parent shell with nested pages */}
           <Route
             path="/hub"
             element={
@@ -269,16 +263,14 @@ function Shell() {
               </Protected>
             }
           >
-            {/* index: Hub shows its welcome grid inside the panel */}
             <Route index element={<div />} />
-            {/* children render inside Hub panel via <Outlet/> */}
             <Route path="jal" element={<Jal inHub />} />
             <Route path="utility" element={<div style={{ padding: 12 }}>Utility…</div>} />
             <Route path="vault" element={<Vault />} />
             <Route path="how-it-works" element={<div style={{ padding: 12 }}>How it works…</div>} />
           </Route>
 
-          {/* -------- Legacy/standalone routes (kept) -------- */}
+          {/* legacy / standalone routes */}
           <Route path="/home" element={<Home />} />
           <Route path="/crypto-generator" element={<CryptoGenerator />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -287,28 +279,9 @@ function Shell() {
           <Route path="/manifesto" element={<Manifesto />} />
           <Route path="/content" element={<Content />} />
           <Route path="/learn" element={<Learn />} />
-
-          {/* Legacy direct JAL -> redirect to hub child */}
           <Route path="/jal" element={<Navigate to="/hub/jal" replace />} />
-
-          {/* Misc protected placeholders */}
-          <Route
-            path="/start"
-            element={
-              <Protected>
-                <div style={{ padding: 24 }}>Start flow…</div>
-              </Protected>
-            }
-          />
-          <Route
-            path="/terms"
-            element={
-              <Protected>
-                <div style={{ padding: 24 }}>Terms…</div>
-              </Protected>
-            }
-          />
-
+          <Route path="/start" element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
+          <Route path="/terms" element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
