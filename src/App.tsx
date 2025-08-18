@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useState, useEffect, useMemo, type ReactElement } from "react";
 import {
   BrowserRouter as Router,
@@ -7,6 +8,7 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
+
 import {
   ConnectionProvider,
   WalletProvider,
@@ -24,7 +26,7 @@ import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-/* 🔁 Mobile deep-link handoff */
+/* Mobile deep-link handoff */
 import {
   SolanaMobileWalletAdapter,
   createDefaultAuthorizationResultCache,
@@ -32,10 +34,10 @@ import {
   createDefaultWalletNotFoundHandler,
 } from "@solana-mobile/wallet-adapter-mobile";
 
-/* ✨ Page transition */
+/* Page transitions */
 import { AnimatePresence, motion } from "framer-motion";
 
-/* === Pages === */
+/* Pages */
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import CryptoGenerator from "./pages/CryptoGenerator";
@@ -70,16 +72,13 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // Auto-close sidebar on route change
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
-
-  // Prevent body scroll when sidebar is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
-  const toggleMenu = () => setMenuOpen((s) => !s);
+  const toggleMenu = () => setMenuOpen(s => !s);
   const closeMenu = () => setMenuOpen(false);
 
   const vaultPath = useMemo(
@@ -110,18 +109,21 @@ function Shell() {
     </NavLink>
   );
 
-  /* ✨ Variants for route transitions */
-  const hubExit = { opacity: 0, y: -60, scale: 0.985, filter: "blur(2px)" as any };
-  const hubIdle = { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" as any };
-  const jalIn   = { opacity: 1, y: 0 };
-  const jalOut  = { opacity: 0, y: 18 };
+  /* Framer variants — simple and smooth */
+  const hubIdle  = { opacity: 1, y: 0,   scale: 1 };
+  const hubExit  = { opacity: 0, y: -36, scale: 0.99 };
+  const hubTx    = { duration: 0.35, ease: [0.4, 0.0, 0.2, 1] };
+
+  const jalInit  = { opacity: 0, y: 18 };
+  const jalIn    = { opacity: 1, y: 0 };
+  const jalOut   = { opacity: 0, y: 12 };
+  const jalTx    = { duration: 0.35, ease: "easeOut", delay: 0.06 };
 
   return (
     <>
-      {/* Header: keep mounted even on /hub so Hub can slide behind it.
-          We hide it visually on /hub with .header--hidden */}
+      {/* Keep header mounted ALWAYS (no fade on /hub) so Hub cleanly slides UNDER it */}
       {!isLanding && (
-        <header className={isHub ? "header--hidden" : undefined}>
+        <header style={{ position: "relative", zIndex: 90 }}>
           <div className="header-inner">
             <NavLink to="/" onClick={closeMenu} aria-label="Go to Landing">
               <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
@@ -172,7 +174,7 @@ function Shell() {
         </>
       )}
 
-      {/* ✨ Animated routes */}
+      {/* Animated routes */}
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Landing />} />
@@ -185,8 +187,12 @@ function Shell() {
                   initial={hubIdle}
                   animate={hubIdle}
                   exit={hubExit}
-                  transition={{ duration: 0.38, ease: [0.22, 0.75, 0.15, 1] }}
-                  style={{ zIndex: 50, position: "relative" }}  // under the header
+                  transition={hubTx}
+                  style={{
+                    zIndex: 50,             // underneath the header
+                    position: "relative",
+                    willChange: "transform, opacity",
+                  }}
                 >
                   <Hub />
                 </motion.div>
@@ -208,11 +214,15 @@ function Shell() {
             element={
               <Protected>
                 <motion.div
-                  initial={{ opacity: 0, y: 18 }}
+                  initial={jalInit}
                   animate={jalIn}
                   exit={jalOut}
-                  transition={{ duration: 0.35, ease: "easeOut" }}
-                  style={{ zIndex: 20, position: "relative" }}
+                  transition={jalTx}
+                  style={{
+                    zIndex: 20,             // page content under header
+                    position: "relative",
+                    willChange: "transform, opacity",
+                  }}
                 >
                   <Jal />
                 </motion.div>
@@ -220,17 +230,17 @@ function Shell() {
             }
           />
 
-          <Route path="/start" element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
+          <Route path="/start"   element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
           <Route path="/utility" element={<Protected><div style={{ padding: 24 }}>Utility…</div></Protected>} />
-          <Route path="/terms" element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/terms"   element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
+          <Route path="*"        element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
     </>
   );
 }
 
-/* -------- Root Providers (Unified) -------- */
+/* -------- Root Providers -------- */
 export default function App() {
   const endpoint = useMemo(() => {
     if (typeof window !== "undefined" && window.location.hostname === "localhost") {
