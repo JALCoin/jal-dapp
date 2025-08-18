@@ -20,21 +20,21 @@
 *{ box-sizing:border-box }
 
 html,body,#root{
-  margin:0; padding:0; min-height:100dvh;              /* dvh for mobile chrome */
+  margin:0; padding:0; min-height:100dvh;
   background:var(--jal-bg); color:var(--jal-text);
   font-family:'Orbitron',system-ui,sans-serif; line-height:1.6;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   scroll-behavior:smooth;
 }
 
-/* Screen-reader only text */
+/* A11y: screen-reader only */
 .sr-only{
   position:absolute!important; width:1px; height:1px; padding:0; margin:-1px;
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
 
 /* ===============================
-   GLOBAL BACKDROP
+   GLOBAL BACKDROP (site-wide)
 =================================*/
 body::before{
   content:"";
@@ -132,7 +132,7 @@ header::after{
   box-shadow:0 0 10px #fff, 0 0 20px #fff8;
 }
 
-/* Fully collapse when hidden (e.g., on /hub) */
+/* Completely collapsed header (kept mounted, e.g. /hub) */
 .header--hidden{
   position:fixed; inset:0 0 auto 0;
   height:0; padding:0; margin:0;
@@ -148,12 +148,12 @@ header:not(.header--hidden){ transition:opacity .25s ease; }
 }
 .logo{ height:clamp(100px,15vw,140px); filter:drop-shadow(0 0 10px rgba(255,255,255,.8)); }
 
-/* Primary nav (hidden inline; use sidebar on mobile) */
+/* Primary nav (hidden inline; we use sidebar on mobile) */
 .main-nav{ display:none !important; }
 .nav-link{ color:#fff; font-weight:700; text-decoration:none; transition:all .25s ease; }
 .nav-link:hover{ color:#fff; text-shadow:0 0 10px #fff, 0 0 24px #fff; }
 
-/* Animated hamburger */
+/* Hamburger */
 .hamburger{
   position:absolute; top:1.1rem; right:1rem;
   width:44px; height:44px; border-radius:12px; border:1px solid #ffffff30;
@@ -163,10 +163,8 @@ header:not(.header--hidden){ transition:opacity .25s ease; }
 }
 .hamburger:hover{ border-color:#ffffff80; transform: translateY(-2px); }
 .hamburger span{
-  display:block; width:22px; height:2px; background:#fff; border-radius:2px;
-  box-shadow:0 0 8px #fff8;
-  transition: transform .35s ease, opacity .35s ease, top .35s ease;
-  position:relative;
+  position:relative; display:block; width:22px; height:2px; background:#fff; border-radius:2px;
+  box-shadow:0 0 8px #fff8; transition: transform .35s ease, opacity .35s ease, top .35s ease;
 }
 .hamburger span:nth-child(1){ top:-6px; }
 .hamburger span:nth-child(2){ top:0; }
@@ -223,29 +221,25 @@ header .social-links img:hover{
 
 /* ===============================
    HUB OVERLAY + PANEL
+   (bright-only background, no dark wedges)
 =================================*/
-/* HUB OVERLAY + PANEL */
 .hub-overlay{
   position:fixed; inset:0;
   min-height:100dvh;
   padding: max(16px, env(safe-area-inset-top)) 16px 16px 16px;
   z-index:70;
   display:grid; place-items:center;
-
-  /* remove the dark wash so only bright colors show */
-  background: transparent;
+  background:transparent;
   backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
   -webkit-backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
-
   overflow:auto;
 }
-.hub-overlay.is-closing { animation: hubClose .3s ease forwards; }
+.hub-overlay.is-closing{ animation: hubClose .3s ease forwards; }
+@keyframes hubClose{ from{opacity:1} to{opacity:0} }
 
-/* Full-bleed bright gradient specifically for the Hub */
+/* Full-bleed bright gradient just for the Hub */
 .hub-backdrop{
   position:absolute; inset:0; z-index:0; pointer-events:none;
-
-  /* same vibe as body::before, but no black areas */
   background:
     radial-gradient(55% 45% at 50% 30%, rgba(255,255,255,.12), transparent 60%),
     conic-gradient(from 0deg at 50% 50%, #11f1a7, #ffd700, #ffffff, #11f1a7);
@@ -253,8 +247,7 @@ header .social-links img:hover{
   will-change: transform, opacity;
   animation: bgDrift 28s ease-in-out infinite;
 }
-
-.hub-ghost{ opacity:.15; } /* retained if referenced elsewhere */
+.hub-ghost{ opacity:.15; }
 
 .hub-panel{
   position:relative;
@@ -406,7 +399,6 @@ header .social-links img:hover{
   transition:transform .14s ease, box-shadow .2s ease, border-color .2s ease;
 }
 .jal-link:hover{ transform:translateY(-1px); border-color:#fff; box-shadow:0 0 18px #fff8; }
-
 .jal-cta{ display:grid; gap:12px; margin-top:20px; justify-content:center; }
 
 /* ===============================
@@ -425,12 +417,10 @@ header .social-links img:hover{
 .modal{
   background:rgba(0,0,0,.78);
   border:1.6px solid rgba(255,255,255,.9);
-  border-radius:18px;
-  padding:12px;
+  border-radius:18px; padding:12px;
   animation: modalIn .28s ease-out both, glowPulse 2.4s ease-in-out infinite;
   box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 24px rgba(255,255,255,.28);
-  width:min(560px,94vw);
-  pointer-events:auto;
+  width:min(560px,94vw); pointer-events:auto;
 }
 .modal-header{
   display:flex; align-items:center; gap:10px; justify-content:space-between; padding:4px 6px 10px;
