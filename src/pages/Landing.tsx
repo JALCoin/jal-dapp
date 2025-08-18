@@ -106,7 +106,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const openPanel = (id: Panel) => setActivePanel(id);
 
   const panelTitle =
-    activePanel === "shop" ? "Shop" : activePanel === "jal" ? "JAL" : activePanel === "vault" ? "Vault" : "";
+    activePanel === "shop" ? "Shop" : activePanel === "jal" ? "JAL" : activePanel === "vault" ? "Vault" : "Welcome";
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
@@ -135,18 +135,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
-        {!connected ? (
-          <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
-        ) : (
-          <button
-            className="landing-wallet"
-            onClick={() => openPanel(activePanel === "none" ? "shop" : "none")}
-            aria-expanded={activePanel !== "none"}
-            aria-controls="hub-panel"
-          >
-            {activePanel === "none" ? "Open Hub" : "Back to Hub"}
-          </button>
-        )}
+      {!connected ? (
+        <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
+      ) : (
+        <button
+          className="landing-wallet"
+          onClick={() => openPanel(activePanel === "none" ? "shop" : "none")}
+          aria-expanded={activePanel !== "none"}
+          aria-controls="hub-panel"
+        >
+          {activePanel === "none" ? "Open Hub" : "Back to Hub"}
+        </button>
+      )}
       </div>
 
       {/* === TRANSPARENT HUB CONTAINER (in-panel pages) === */}
