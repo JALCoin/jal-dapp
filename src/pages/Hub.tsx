@@ -15,9 +15,9 @@ import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (!mq) return;
-    const update = () => setReduced(!!mq.matches);
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(mq.matches);
     update();
     mq.addEventListener?.("change", update);
     return () => mq.removeEventListener?.("change", update);
@@ -28,6 +28,7 @@ function usePrefersReducedMotion() {
 /* ---------------- Real viewport height (mobile-safe) ---------------- */
 function useViewportVar() {
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const setVH = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
@@ -42,7 +43,7 @@ function useViewportVar() {
   }, []);
 }
 
-/* ---------------- Animate Hub leaving, then navigate ---------------- */
+/* ---------------- Leave transition helper ---------------- */
 function runLeaveTransition({
   selector = ".hub-overlay",
   leaveClass = "route-leave-hub",
@@ -67,7 +68,8 @@ function runLeaveTransition({
   };
 
   node.addEventListener("animationend", cleanup, { once: true });
-  setTimeout(cleanup, durationMs + 80); // safety
+  // safety timeout in case animationend is missed
+  window.setTimeout(cleanup, durationMs + 100);
 }
 
 export default function Hub() {
@@ -86,6 +88,7 @@ export default function Hub() {
 
   // Scroll to top on mount (for desktop)
   useEffect(() => {
+    if (typeof window === "undefined") return;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
   }, [reducedMotion]);
 
@@ -115,11 +118,13 @@ export default function Hub() {
     if (e.target === e.currentTarget) startClose();
   };
 
-  // Focus trap inside the panel
+  /* ---------------- Focus trap inside the panel ---------------- */
   const panelRef = useRef<HTMLElement | null>(null);
   const firstActionRef = useRef<HTMLAnchorElement | null>(null);
+
   useEffect(() => {
     firstActionRef.current?.focus();
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
       const root = panelRef.current;
@@ -145,13 +150,15 @@ export default function Hub() {
         e.preventDefault();
       }
     };
+
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Keyboard shortcuts with leaving animation
+  /* ---------------- Keyboard shortcuts with leaving animation ---------------- */
   useEffect(() => {
     if (!connected) return;
+
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       const t = e.target as HTMLElement | null;
@@ -162,17 +169,34 @@ export default function Hub() {
         else runLeaveTransition({ onDone: () => navigate(path) });
       };
 
-      if (e.key === "1") { e.preventDefault(); go("/jal"); }
-      if (e.key === "2") { e.preventDefault(); go("/utility"); }
-      if (e.key === "3") { e.preventDefault(); go("/vault"); }
-      if (e.key === "4") { e.preventDefault(); go("/how-it-works"); }
-      if (e.key === "Escape") startClose();
+      switch (e.key) {
+        case "1":
+          e.preventDefault();
+          go("/jal");
+          break;
+        case "2":
+          e.preventDefault();
+          go("/utility");
+          break;
+        case "3":
+          e.preventDefault();
+          go("/vault");
+          break;
+        case "4":
+          e.preventDefault();
+          go("/how-it-works");
+          break;
+        case "Escape":
+          startClose();
+          break;
+      }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [connected, navigate, reducedMotion, startClose]);
 
-  /* ---------------- Image Action link ---------------- */
+  /* ---------------- Image Action link (inline component) ---------------- */
   const ImgAction = useCallback(
     ({
       to,
@@ -205,7 +229,10 @@ export default function Hub() {
         style={
           reducedMotion
             ? undefined
-            : { animation: "fadeInUp .35s ease-out both", animationDelay: `${delayMs ?? 0}ms` }
+            : {
+                animation: "fadeInUp .35s ease-out both",
+                animationDelay: `${delayMs ?? 0}ms`,
+              }
         }
       >
         <img
@@ -238,8 +265,7 @@ export default function Hub() {
         overscrollBehavior: "contain",
       }}
     >
-      {/* keep backdrop light + non-interactive */}
-	<div className="hub-backdrop" aria-hidden="true" />
+      {/* No separate backdrop node—gradient comes from .hub-overlay::after */}
 
       <section
         ref={panelRef}
@@ -255,7 +281,9 @@ export default function Hub() {
         </div>
 
         <div className="hub-panel-body">
-          <h1 className="hub-title" id={titleId}>Welcome</h1>
+          <h1 className="hub-title" id={titleId}>
+            Welcome
+          </h1>
 
           <nav className="hub-stack hub-stack--responsive" aria-label="Main actions">
             <ImgAction
