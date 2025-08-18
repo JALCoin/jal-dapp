@@ -106,7 +106,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const openPanel = (id: Panel) => setActivePanel(id);
 
   const panelTitle =
-    activePanel === "shop" ? "Shop" : activePanel === "jal" ? "JAL" : activePanel === "vault" ? "Vault" : "Welcome";
+    activePanel === "shop" ? "Shop" : activePanel === "jal" ? "JAL" : activePanel === "vault" ? "Vault" : "";
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
