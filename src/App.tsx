@@ -23,7 +23,7 @@ import {
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+  import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 /* Mobile deep-link handoff */
@@ -72,12 +72,26 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
+  // Close menu when navigating
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
+  // Lock page scroll when sidebar is open OR when Hub overlay is active.
+  // This prevents the "double scrollbar" (page + overlay) situation.
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [menuOpen]);
+    const lock = menuOpen || isHub;
+    const root = document.documentElement;
+    if (lock) {
+      root.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      root.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+    return () => {
+      root.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen, isHub]);
 
   const toggleMenu = () => setMenuOpen(s => !s);
   const closeMenu = () => setMenuOpen(false);
@@ -110,15 +124,15 @@ function Shell() {
     </NavLink>
   );
 
-  /* Framer variants — keep TS-friendly transitions */
+  /* Framer variants — TS-friendly (no invalid ease types) */
   const hubIdle  = { opacity: 1, y: 0,   scale: 1 };
   const hubExit  = { opacity: 0, y: -36, scale: 0.99 };
-  const hubTx    = { duration: 0.35 };              // removed ease array
+  const hubTx    = { duration: 0.35 };
 
   const jalInit  = { opacity: 0, y: 18 };
   const jalIn    = { opacity: 1, y: 0 };
   const jalOut   = { opacity: 0, y: 12 };
-  const jalTx    = { duration: 0.35, delay: 0.06 }; // removed "ease" string
+  const jalTx    = { duration: 0.35, delay: 0.06 };
 
   return (
     <>
@@ -165,7 +179,8 @@ function Shell() {
         </header>
       )}
 
-      {menuOpen && !isLanding && !isHub && (
+      {/* Sidebar now allowed on /hub as well */}
+      {menuOpen && !isLanding && (
         <>
           <div className="sidebar-overlay" onClick={closeMenu} />
           <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
@@ -190,7 +205,7 @@ function Shell() {
                   exit={hubExit}
                   transition={hubTx}
                   style={{
-                    zIndex: 50,
+                    zIndex: 50, // below header
                     position: "relative",
                     willChange: "transform, opacity",
                   }}
