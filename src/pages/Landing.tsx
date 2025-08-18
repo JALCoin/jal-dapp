@@ -133,7 +133,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <img
                   src={t.gif}
                   alt=""
-                  className="hub-gif hub-gif--cover"
+                  className="hub-gif"
                   loading="lazy"
                   onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
                 />
