@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState, useEffect, useMemo, type ReactElement } from "react";
+import { useState, useEffect, useMemo, memo, type ReactElement } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -65,6 +65,7 @@ type HeaderProps = {
   closeMenu: () => void;
   publicKey: any;
 };
+
 function HeaderView({
   isLanding,
   links,
@@ -72,8 +73,9 @@ function HeaderView({
   toggleMenu,
   closeMenu,
   publicKey,
-}: HeaderProps): JSX.Element | null {
+}: HeaderProps): ReactElement | null {
   if (isLanding) return null;
+
   return (
     <header style={{ position: "relative", zIndex: 90 }}>
       <div className="header-inner">
@@ -122,7 +124,6 @@ function HeaderView({
     </header>
   );
 }
-import { memo } from "react";
 const Header = memo(HeaderView);
 
 /* -------- Sidebar (define, then memoize) -------- */
@@ -133,14 +134,16 @@ type SidebarProps = {
   closeMenu: () => void;
   publicKey: any;
 };
+
 function SidebarView({
   open,
   isLanding,
   links,
   closeMenu,
   publicKey,
-}: SidebarProps): JSX.Element | null {
+}: SidebarProps): ReactElement | null {
   if (!open || isLanding) return null;
+
   return (
     <>
       <div className="sidebar-overlay" onClick={closeMenu} />
@@ -177,7 +180,9 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const lock = menuOpen || isHub;
