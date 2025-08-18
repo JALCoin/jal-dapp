@@ -467,4 +467,29 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
   animation: none;
   opacity:.9;
 }
+/* Landing: transparent Hub panel under the CTA */
+.landing-panel{
+  margin-top: clamp(16px, 4vh, 28px);
+  width: min(980px, 92vw);
+  padding: clamp(18px, 2.8vw, 28px);
+  background: var(--panel-bg);
+  border: 1.5px solid rgba(255,255,255,.65);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.18) inset,
+    0 10px 34px rgba(0,0,0,.40),
+    0 0 18px rgba(255,255,255,.25);
+  backdrop-filter: blur(var(--blur-amt)) saturate(1.08);
+  -webkit-backdrop-filter: blur(var(--blur-amt)) saturate(1.08);
+  pointer-events: none;               /* 🔒 preview only */
+}
+
+.preview-grid{
+  display: grid;
+  gap: clamp(12px, 2vw, 20px);
+}
+.preview-btn{
+  /* Looks like hub buttons but remains inert */
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
+}
 

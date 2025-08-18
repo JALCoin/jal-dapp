@@ -1,4 +1,3 @@
-// src/pages/Landing.tsx
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -19,7 +18,7 @@ export default function Landing() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // Preload hub images to avoid a flash when the panel opens
+  // Preload Hub images (prevents flash later)
   useEffect(() => {
     const imgs = ["/JAL.gif", "/JALSOL.gif", "/VAULT.gif", "/HOW-IT-WORKS.gif"];
     const elms: HTMLImageElement[] = [];
@@ -31,7 +30,7 @@ export default function Landing() {
     return () => { elms.forEach((img) => (img.src = "")); };
   }, []);
 
-  // Auto-redirect to hub when connected (desktop + mobile)
+  // Auto-redirect when connected (nice merge)
   useEffect(() => {
     if (!connected || !publicKey) return;
 
@@ -39,7 +38,6 @@ export default function Landing() {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-
     setMerging(true);
     const delay = reducedMotion ? 0 : 450;
 
@@ -53,7 +51,7 @@ export default function Landing() {
     };
   }, [connected, publicKey, navigate, reducedMotion]);
 
-  // Reset merge state if disconnected
+  // Reset if disconnected
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
@@ -63,11 +61,8 @@ export default function Landing() {
   }, [connected, publicKey]);
 
   return (
-    <main
-      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
-      aria-live="polite"
-    >
-      {/* Top social icons */}
+    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+      {/* Socials */}
       <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
           <img src="/icons/X.png" alt="" />
@@ -87,7 +82,7 @@ export default function Landing() {
         </div>
       )}
 
-      {/* Logo + wallet button */}
+      {/* Logo + CTA */}
       <div className="landing-inner">
         <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
@@ -107,31 +102,28 @@ export default function Landing() {
         )}
       </div>
 
-      {/* -------- Non-interactive Hub preview (glass, blurred) -------- */}
+      {/* ▼ Transparent Hub preview panel (non-interactive) */}
       <section
-        className={`landing-preview-wrap ${merging ? "fade-out" : ""}`}
-        aria-hidden="true"
+        className={`landing-panel ${merging ? "fade-out" : ""}`}
+        aria-label="Preview of Hub actions"
       >
-        <div className="landing-preview">
-          <h2 className="hub-title" tabIndex={-1}>Welcome</h2>
+        <h2 className="hub-title" aria-hidden="true">Welcome</h2>
 
-          <div className="hub-stack hub-stack--responsive" role="presentation">
-            <div className="img-btn" tabIndex={-1}>
-              <img className="hub-gif float" src="/JAL.gif" alt="" aria-hidden="true" />
-            </div>
-            <div className="img-btn" tabIndex={-1}>
-              <img className="hub-gif float" src="/JALSOL.gif" alt="" aria-hidden="true" />
-            </div>
-            <div className="img-btn" tabIndex={-1}>
-              <img className="hub-gif float" src="/VAULT.gif" alt="" aria-hidden="true" />
-            </div>
-            <div className="img-btn" tabIndex={-1}>
-              <img className="hub-gif float" src="/HOW-IT-WORKS.gif" alt="" aria-hidden="true" />
-            </div>
+        <nav className="hub-stack hub-stack--responsive preview-grid" aria-hidden="true">
+          <div className="img-btn preview-btn">
+            <img className="hub-gif float" src="/JAL.gif" alt="" draggable={false} />
           </div>
-        </div>
+          <div className="img-btn preview-btn">
+            <img className="hub-gif float" src="/JALSOL.gif" alt="" draggable={false} />
+          </div>
+          <div className="img-btn preview-btn">
+            <img className="hub-gif float" src="/VAULT.gif" alt="" draggable={false} />
+          </div>
+          <div className="img-btn preview-btn">
+            <img className="hub-gif float" src="/HOW-IT-WORKS.gif" alt="" draggable={false} />
+          </div>
+        </nav>
       </section>
-      {/* ------------------------------------------------------------- */}
     </main>
   );
 }
