@@ -1,5 +1,5 @@
 // src/pages/Jal.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useId } from "react";
 import { createPortal } from "react-dom";
 
 type Props = { inHub?: boolean };
@@ -11,6 +11,11 @@ const RAYDIUM_URL =
 export default function Jal({ inHub = false }: Props) {
   const [swapOpen, setSwapOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Unique IDs for a11y
+  const jalTitleId = useId();
+  const swapDialogId = useId();
+  const swapTitleId = useId();
 
   // Shorten mint for chip display
   const shortMint = useMemo(
@@ -28,7 +33,7 @@ export default function Jal({ inHub = false }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 900);
     } catch {
-      /* noop */
+      // no-op
     }
   };
 
@@ -39,7 +44,7 @@ export default function Jal({ inHub = false }: Props) {
   useEffect(() => {
     if (!swapOpen) return;
 
-    // focus first interactive element
+    // Focus first interactive element
     closeBtnRef.current?.focus();
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -92,10 +97,10 @@ export default function Jal({ inHub = false }: Props) {
     if (e.target === e.currentTarget) setSwapOpen(false);
   };
 
-  // ---------- Inner content (shared) ----------
+  // ---------- Shared content ----------
   const Content = (
     <>
-      <h1 id="jal-title" className="jal-title">JAL</h1>
+      <h1 id={jalTitleId} className="jal-title">JAL</h1>
       <p className="jal-subtitle">
         About JAL — story, mission, and how SOL ⇄ JAL works.
       </p>
@@ -136,7 +141,7 @@ export default function Jal({ inHub = false }: Props) {
           className="jal-btn jal-btn--primary"
           onClick={() => setSwapOpen(true)}
           aria-haspopup="dialog"
-          aria-controls="jal-swap-dialog"
+          aria-controls={swapDialogId}
         >
           Open SOL ⇄ JAL Swap
         </button>
@@ -144,57 +149,62 @@ export default function Jal({ inHub = false }: Props) {
     </>
   );
 
+  // ---------- Modal ----------
+  const Modal = swapOpen
+    ? createPortal(
+        <>
+          <div className="modal-overlay" onClick={onOverlayClick} />
+          <div
+            className="modal-host"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={swapTitleId}
+            id={swapDialogId}
+          >
+            <div ref={modalRef} className="modal">
+              {/* Header */}
+              <div className="modal-header">
+                <div className="modal-spacer" />
+                <div className="modal-title" id={swapTitleId}>
+                  <div className="modal-title-main">SOL ⇄ JAL Swap</div>
+                  <div className="modal-title-sub">Powered by Raydium</div>
+                </div>
+                <button
+                  ref={closeBtnRef}
+                  type="button"
+                  className="modal-close"
+                  onClick={() => setSwapOpen(false)}
+                  aria-label="Close swap dialog"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Swap iframe */}
+              <iframe title="Raydium Swap" src={RAYDIUM_URL} className="modal-iframe" />
+
+              {/* Footer link */}
+              <div className="modal-footer">
+                <a className="jal-link" href={RAYDIUM_URL} target="_blank" rel="noreferrer">
+                  Open on Raydium
+                </a>
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
+      )
+    : null;
+
   // ---------- Render ----------
   if (inHub) {
     // In-panel mode: render content only inside Hub’s glass panel
     return (
       <>
-        <section className="hub-content" aria-labelledby="jal-title">
+        <section className="hub-content in-hub" aria-labelledby={jalTitleId}>
           {Content}
         </section>
-
-        {/* Modal (portal to body) */}
-        {swapOpen &&
-          createPortal(
-            <>
-              <div className="modal-overlay" onClick={onOverlayClick} />
-              <div
-                className="modal-host"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="swap-title"
-                id="jal-swap-dialog"
-              >
-                <div ref={modalRef} className="modal">
-                  <div className="modal-header">
-                    <div className="modal-spacer" />
-                    <div className="modal-title" id="swap-title">
-                      <div className="modal-title-main">SOL ⇄ JAL Swap</div>
-                      <div className="modal-title-sub">Powered by Raydium</div>
-                    </div>
-                    <button
-                      ref={closeBtnRef}
-                      type="button"
-                      className="modal-close"
-                      onClick={() => setSwapOpen(false)}
-                      aria-label="Close swap dialog"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <iframe title="Raydium Swap" src={RAYDIUM_URL} className="modal-iframe" />
-
-                  <div className="modal-footer">
-                    <a className="jal-link" href={RAYDIUM_URL} target="_blank" rel="noreferrer">
-                      Open on Raydium
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </>,
-            document.body
-          )}
+        {Modal}
       </>
     );
   }
@@ -202,51 +212,10 @@ export default function Jal({ inHub = false }: Props) {
   // Standalone page mode (legacy / direct route)
   return (
     <main className="jal-page">
-      <section className="jal-panel" aria-labelledby="jal-title">
+      <section className="jal-panel" aria-labelledby={jalTitleId}>
         {Content}
       </section>
-
-      {swapOpen &&
-        createPortal(
-          <>
-            <div className="modal-overlay" onClick={onOverlayClick} />
-            <div
-              className="modal-host"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="swap-title"
-              id="jal-swap-dialog"
-            >
-              <div ref={modalRef} className="modal">
-                <div className="modal-header">
-                  <div className="modal-spacer" />
-                  <div className="modal-title" id="swap-title">
-                    <div className="modal-title-main">SOL ⇄ JAL Swap</div>
-                    <div className="modal-title-sub">Powered by Raydium</div>
-                  </div>
-                  <button
-                    ref={closeBtnRef}
-                    type="button"
-                    className="modal-close"
-                    onClick={() => setSwapOpen(false)}
-                    aria-label="Close swap dialog"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <iframe title="Raydium Swap" src={RAYDIUM_URL} className="modal-iframe" />
-
-                <div className="modal-footer">
-                  <a className="jal-link" href={RAYDIUM_URL} target="_blank" rel="noreferrer">
-                    Open on Raydium
-                  </a>
-                </div>
-              </div>
-            </div>
-          </>,
-          document.body
-        )}
+      {Modal}
     </main>
   );
 }
