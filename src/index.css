@@ -19,6 +19,9 @@
 
 *{ box-sizing:border-box }
 
+/* single scroll lane + no horizontal jiggle */
+html, body{ overflow-x:hidden; }
+
 html,body,#root{
   margin:0; padding:0; min-height:100dvh;
   background:var(--jal-bg); color:var(--jal-text);
@@ -189,7 +192,7 @@ header .social-links img:hover{
 }
 
 /* ===============================
-   SIDEBAR NAV (raises above Hub)
+   SIDEBAR NAV (above header)
 =================================*/
 .sidebar-overlay{
   position:fixed; inset:0;
@@ -220,7 +223,7 @@ header .social-links img:hover{
 
 /* ===============================
    HUB OVERLAY + PANEL
-   (bright-only background, no dark wedges, no outer scroll)
+   (no outer scroll; bright-only background)
 =================================*/
 .hub-overlay{
   position:fixed; inset:0;
@@ -231,23 +234,29 @@ header .social-links img:hover{
   background:transparent;
   backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
   -webkit-backdrop-filter: blur(var(--blur-amt)) saturate(1.05);
-
-  /* IMPORTANT: remove outer scrollbar to avoid double-bars */
-  overflow:hidden;
+  overflow:hidden;                       /* kills double scrollbar */
   overscroll-behavior:contain;
 }
 .hub-overlay.is-closing{ animation: hubClose .3s ease forwards; }
 @keyframes hubClose{ from{opacity:1} to{opacity:0} }
 
-/* Full-bleed bright gradient just for the Hub */
+/* ---- Fixed, over-sized gradient layer (no rectangular edges on rotate) ---- */
 .hub-backdrop{
-  position:absolute; inset:0; z-index:0; pointer-events:none;
+  position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+}
+.hub-backdrop::before{
+  content:"";
+  position:fixed;                         /* stays put on rotation/scroll */
+  left:50%; top:50%;
+  width:160vmax; height:160vmax;          /* larger than either side in any orientation */
+  transform:translate(-50%,-50%);
+  border-radius:50%;
   background:
     radial-gradient(55% 45% at 50% 30%, rgba(255,255,255,.12), transparent 60%),
     conic-gradient(from 0deg at 50% 50%, #11f1a7, #ffd700, #ffffff, #11f1a7);
-  filter: saturate(1.08) contrast(1.03);
-  will-change: transform, opacity;
-  animation: bgDrift 28s ease-in-out infinite;
+  filter:saturate(1.08) contrast(1.03);
+  will-change:transform,opacity;
+  animation:bgDrift 28s ease-in-out infinite;
 }
 .hub-ghost{ opacity:.15; }
 
