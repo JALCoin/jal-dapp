@@ -4,7 +4,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 
 type LandingProps = {
-  /** optional deep link: open a specific panel on load (local state only) */
+  /** open a specific panel on load (local state only) */
   initialPanel?: "none" | "shop" | "jal" | "vault";
 };
 type TileKey = Exclude<Required<LandingProps>["initialPanel"], "none">;
@@ -23,7 +23,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   // Preload hub GIFs (STORE removed)
   useEffect(() => {
-    const srcs = ["/JAL.gif", "/JALSOL.gif", "/VAULT.gif", "/HOW-IT-WORKS.gif"];
+    const srcs = ["/JAL.gif", "/JALSOL.gif", "/VAULT.gif"];
     const imgs: HTMLImageElement[] = srcs.map((src) => {
       const i = new Image();
       i.src = src;
@@ -32,7 +32,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => imgs.forEach((i) => (i.src = ""));
   }, []);
 
-  // subtle merge animation on connect
+  // subtle merge animation on connect (stay on landing)
   useEffect(() => {
     if (!connected || !publicKey) return;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -68,9 +68,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     activePanel === "vault" ? "Vault" : "Welcome";
 
   return (
-    <main className={`landing ${merging ? "is-merging" : ""}`} aria-live="polite">
-      {/* Floating social row */}
-      <nav className="landing-social" aria-label="Social links">
+    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+      {/* top-center social row */}
+      <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
           <img src="/icons/X.png" alt="" />
         </a>
@@ -80,12 +80,19 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
           <img src="/icons/TikTok.png" alt="" />
         </a>
-      </nav>
+      </div>
 
-      {/* Logo + wallet */}
-      <header className={`landing-hero ${connected ? "wallet-connected" : ""}`}>
-        <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
-        <p className="landing-tagline">Currency • Vault • Shop • Identity</p>
+      {merging && (
+        <div className="landing-disconnect">
+          <WalletDisconnectButton className="wallet-disconnect-btn" />
+        </div>
+      )}
+
+      {/* === CENTERED LOGO + CONNECT BUTTON === */}
+      <div className="landing-inner">
+        <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
+          <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
+        </div>
 
         {!connected ? (
           <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
@@ -93,54 +100,52 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <button
             className="landing-wallet"
             onClick={() => openPanel(activePanel === "none" ? "shop" : "none")}
-            aria-label={activePanel === "none" ? "Open Hub" : "Back to Hub"}
           >
             {activePanel === "none" ? "Open Hub" : "Back to Hub"}
           </button>
         )}
-        <span className="landing-cutline" aria-hidden />
-      </header>
+      </div>
 
-      {/* Disconnect quick action while merging */}
-      {merging && (
-        <div className="landing-disconnect">
-          <WalletDisconnectButton className="wallet-disconnect-btn" />
-        </div>
-      )}
-
-      {/* Transparent Hub panel */}
-      <section className="hub-panel hub-panel--fit" aria-label="JAL/SOL Hub">
+      {/* === TRANSPARENT HUB CONTAINER (in-panel pages) === */}
+      <section
+        className={[
+          "hub-panel",
+          "hub-panel--fit",
+          activePanel === "none" ? "landing-panel hub-preview" : "",
+        ].join(" ")}
+        aria-label="JAL/SOL Hub"
+      >
         <div className="hub-panel-top">
           <h2 className="hub-title">{panelTitle}</h2>
           {connected && <WalletDisconnectButton className="hub-disconnect-btn" />}
         </div>
 
         <div className="hub-panel-body">
-          {/* Uniform tiles */}
-          <div className="hub-tiles">
+          {/* tiles list */}
+          <div className="hub-stack hub-stack--responsive">
             {tiles.map((t) => (
               <button
                 key={t.key}
                 type="button"
-                className="hub-tile"
+                className="img-btn"
                 onClick={() => openPanel(t.key)}
               >
                 <img
                   src={t.gif}
                   alt=""
-                  className="hub-tile-gif"
+                  className="hub-gif hub-gif--cover"
                   loading="lazy"
                   onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
                 />
-                <div className="hub-tile-label">
-                  <span className="hub-tile-title">{t.title}</span>
-                  {t.sub && <span className="hub-tile-sub">{t.sub}</span>}
+                <div className="hub-btn">
+                  {t.title}
+                  {t.sub && <span className="sub">{t.sub}</span>}
                 </div>
               </button>
             ))}
           </div>
 
-          {/* Panel content */}
+          {/* panel body content */}
           <div className="hub-content">
             {activePanel === "shop" && (
               <div className="card">
