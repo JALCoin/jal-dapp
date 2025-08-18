@@ -63,8 +63,9 @@ type HeaderProps = {
   menuOpen: boolean;
   toggleMenu: () => void;
   closeMenu: () => void;
-  publicKey: any;
+  publicKey: unknown;
 };
+
 const Header = memo(function Header({
   isLanding,
   links,
@@ -131,9 +132,16 @@ type SidebarProps = {
   isLanding: boolean;
   links: { to: string; label: string }[];
   closeMenu: () => void;
-  publicKey: any;
+  publicKey: unknown;
 };
-const Sidebar = memo(function Sidebar({ open, isLanding, links, closeMenu, publicKey }: SidebarProps) {
+
+const Sidebar = memo(function Sidebar({
+  open,
+  isLanding,
+  links,
+  closeMenu,
+  publicKey,
+}: SidebarProps) {
   if (!open || isLanding) return null;
   return (
     <>
@@ -171,7 +179,9 @@ function Shell() {
   }, []);
 
   // Close menu on route change
-  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   // Lock page scroll when sidebar is open or Hub overlay is active
   useEffect(() => {
@@ -179,14 +189,14 @@ function Shell() {
     const root = document.documentElement;
     if (lock) {
       root.style.overflow = "hidden";
-      document.body.style.overflow = "hidden";
+      (document.body || {}).style && (document.body.style.overflow = "hidden");
     } else {
       root.style.overflow = "";
-      document.body.style.overflow = "";
+      (document.body || {}).style && (document.body.style.overflow = "");
     }
     return () => {
       root.style.overflow = "";
-      document.body.style.overflow = "";
+      (document.body || {}).style && (document.body.style.overflow = "");
     };
   }, [menuOpen, isHub]);
 
@@ -264,7 +274,7 @@ function Shell() {
             {/* children render inside Hub panel via <Outlet/> */}
             <Route path="jal" element={<Jal inHub />} />
             <Route path="utility" element={<div style={{ padding: 12 }}>Utility…</div>} />
-            <Route path="vault" element={<Vault inHub />} />
+            <Route path="vault" element={<Vault />} />
             <Route path="how-it-works" element={<div style={{ padding: 12 }}>How it works…</div>} />
           </Route>
 
@@ -282,8 +292,22 @@ function Shell() {
           <Route path="/jal" element={<Navigate to="/hub/jal" replace />} />
 
           {/* Misc protected placeholders */}
-          <Route path="/start" element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
-          <Route path="/terms" element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
+          <Route
+            path="/start"
+            element={
+              <Protected>
+                <div style={{ padding: 24 }}>Start flow…</div>
+              </Protected>
+            }
+          />
+          <Route
+            path="/terms"
+            element={
+              <Protected>
+                <div style={{ padding: 24 }}>Terms…</div>
+              </Protected>
+            }
+          />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
