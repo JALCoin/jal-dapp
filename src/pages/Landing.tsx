@@ -1,6 +1,5 @@
 // src/pages/Landing.tsx
 import { useEffect, useRef, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
   WalletMultiButton,
@@ -8,16 +7,19 @@ import {
 } from "@solana/wallet-adapter-react-ui";
 
 type LandingProps = {
-  /** optional deep link: open a specific panel on load */
+  /** optional deep link: open a specific panel on load (local state only) */
   initialPanel?: "none" | "shop" | "jal" | "vault" | "store";
 };
 
+type TileKey = Exclude<Required<LandingProps>["initialPanel"], "none">;
+
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected } = useWallet();
-  const navigate = useNavigate();
 
   const [merging, setMerging] = useState(false);
-  const [activePanel, setActivePanel] = useState<LandingProps["initialPanel"]>(initialPanel);
+  const [activePanel, setActivePanel] = useState<LandingProps["initialPanel"]>(
+    initialPanel
+  );
   const timerRef = useRef<number | null>(null);
 
   const reducedMotion = useMemo(() => {
@@ -25,22 +27,34 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // preload hub images
+  // --- Preload GIFs for the hub tiles ---
   useEffect(() => {
-    const imgs = ["/JAL.gif", "/JALSOL.gif", "/VAULT.gif", "/HOW-IT-WORKS.gif"];
+    const imgs = ["/STORE.gif", "/JAL.gif", "/JALSOL.gif", "/VAULT.gif", "/HOW-IT-WORKS.gif"];
     const elms: HTMLImageElement[] = [];
-    imgs.forEach((src) => { const img = new Image(); img.src = src; elms.push(img); });
-    return () => { elms.forEach((img) => (img.src = "")); };
+    imgs.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+      elms.push(img);
+    });
+    return () => {
+      elms.forEach((img) => (img.src = ""));
+    };
   }, []);
 
-  // if user connects, do the subtle merge → but keep them on landing so panel stays visible
+  // subtle merge animation when a wallet connects (stay on landing)
   useEffect(() => {
     if (!connected || !publicKey) return;
-    if (timerRef.current) { window.clearTimeout(timerRef.current); timerRef.current = null; }
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     setMerging(true);
     const delay = reducedMotion ? 0 : 350;
     timerRef.current = window.setTimeout(() => setMerging(false), delay);
-    return () => { if (timerRef.current) window.clearTimeout(timerRef.current); timerRef.current = null; };
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
   }, [connected, publicKey, reducedMotion]);
 
   // reset when disconnected
@@ -52,14 +66,17 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [connected, publicKey]);
 
-  // ---- helpers
+  // hub tiles (single column, each with a GIF)
+  const tiles: { key: TileKey; title: string; sub?: string; gif: string }[] = [
+    { key: "store", title: "STORE",          sub: "Merch & more",         gif: "/STORE.gif" },
+    { key: "jal",   title: "JAL",            sub: "About & Swap",         gif: "/JAL.gif" },
+    { key: "shop",  title: "JAL/SOL — SHOP", sub: "Buy items with JAL",   gif: "/JALSOL.gif" },
+    { key: "vault", title: "VAULT",          sub: "Your assets",          gif: "/VAULT.gif" },
+    // If you want HOW IT WORKS as a tile later, add it here with "/HOW-IT-WORKS.gif"
+  ];
+
   const openPanel = (id: LandingProps["initialPanel"]) => {
-    setActivePanel(id);
-    // keep URL in sync for deep-linking UX (optional)
-    if (id === "shop") navigate("/shop", { replace: true });
-    else if (id === "jal") navigate("/jal", { replace: true });
-    else if (id === "vault") navigate("/dashboard", { replace: true }); // or a dedicated route if you want
-    else navigate("/", { replace: true });
+    setActivePanel(id); // local state only (no navigation changes)
   };
 
   return (
@@ -102,70 +119,58 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         )}
       </div>
 
-      {/* --- Transparent Hub panel right on the landing page --- */}
+      {/* --- Transparent Hub panel on the landing page --- */}
       <section
         className="hub-panel hub-panel--fit"
         aria-label="JAL/SOL Hub"
         style={{ marginTop: 16, width: "min(980px, 92vw)" }}
       >
-        {/* header / top row */}
         <div className="hub-panel-top">
           <h2 className="hub-title" style={{ margin: "0 auto" }}>
             {activePanel === "shop" ? "Shop" :
              activePanel === "jal" ? "JAL" :
              activePanel === "vault" ? "Vault" :
-             "Welcome"}
+             activePanel === "store" ? "Store" : "Welcome"}
           </h2>
 
-          {/* optional disconnect when connected */}
           {connected && <WalletDisconnectButton className="hub-disconnect-btn" />}
         </div>
 
-        {/* body is scrollable */}
+        {/* body scrolls */}
         <div className="hub-panel-body" style={{ overflowY: "auto" }}>
-          {/* Actions row */}
-          <div className="hub-stack hub-stack--responsive" style={{ gridTemplateColumns: "1fr 1fr", display: "grid" }}>
-            {/* STORE (disabled/blurred until your condition is met) */}
-            <button
-              className="hub-btn"
-              type="button"
-              onClick={() => openPanel("store")}
-              aria-disabled={!connected}
-              style={!connected ? { filter: "blur(2px) opacity(.6)", pointerEvents: "none" } : undefined}
-            >
-              STORE
-              <span className="sub">Merch & more</span>
-            </button>
-
-            {/* JAL */}
-            <button
-              className="hub-btn"
-              type="button"
-              onClick={() => openPanel("jal")}
-            >
-              JAL
-              <span className="sub">About & Swap</span>
-            </button>
-
-            {/* JAL/SOL (SHOP) */}
-            <button
-              className="hub-btn"
-              type="button"
-              onClick={() => openPanel("shop")}
-            >
-              JAL/SOL — SHOP
-              <span className="sub">Buy items with JAL</span>
-            </button>
-
-            {/* VAULT */}
-            <button
-              className="hub-btn"
-              type="button"
-              onClick={() => openPanel("vault")}
-            >
-              VAULT
-              <span className="sub">Your assets</span>
-            </button>
+          {/* Single-column tile list with GIFs */}
+          <div
+            className="hub-stack hub-stack--responsive"
+            style={{ display: "grid", gridTemplateColumns: "1fr" }}
+          >
+            {tiles.map((t) => {
+              const disabled = t.key === "store" && !connected; // example: lock STORE until connected
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  className="img-btn"
+                  onClick={() => openPanel(t.key)}
+                  aria-disabled={disabled}
+                  style={disabled ? { filter: "blur(2px) opacity(.6)", pointerEvents: "none" } : undefined}
+                >
+                  <img
+                    src={t.gif}
+                    alt=""
+                    className="hub-gif hub-gif--cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      // hide image if missing but keep the text button visible
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                  <div className="hub-btn" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
+                    {t.title}
+                    {t.sub && <span className="sub">{t.sub}</span>}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Panel content */}
@@ -186,7 +191,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>JAL</h3>
                 <p>Learn about JAL and swap SOL ⇄ JAL from here.</p>
-                {/* You can embed your <Jal inHub /> if you want the modal swap: */}
+                {/* To embed the full JAL page in-panel, uncomment: */}
                 {/* <Jal inHub /> */}
               </div>
             )}
@@ -195,7 +200,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>Vault</h3>
                 <p>View balances, recent activity, and manage your JAL.</p>
-                {/* You could render a small Vault summary or link to /dashboard */}
               </div>
             )}
 
@@ -205,8 +209,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   {activePanel === "store" ? "Store" : "Welcome to JAL/SOL"}
                 </h3>
                 <p>
-                  Connect your wallet to unlock features. Then pick a tile above —
-                  try <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
+                  Connect your wallet to unlock features. Then pick a tile above — try{" "}
+                  <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
                 </p>
               </div>
             )}
