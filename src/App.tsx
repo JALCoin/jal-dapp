@@ -23,7 +23,7 @@ import {
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+  import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 /* Mobile deep-link handoff */
@@ -34,8 +34,8 @@ import {
   createDefaultWalletNotFoundHandler,
 } from "@solana-mobile/wallet-adapter-mobile";
 
-/* Page transitions */
-import { AnimatePresence, motion } from "framer-motion";
+/* Optional page transitions container */
+import { AnimatePresence } from "framer-motion";
 
 /* Pages */
 import Landing from "./pages/Landing";
@@ -47,7 +47,6 @@ import About from "./pages/About";
 import Manifesto from "./pages/Manifesto";
 import Learn from "./pages/Learn";
 import Content from "./pages/Content";
-import Hub from "./pages/Hub"; // parent shell with <Outlet/>
 import Jal from "./pages/Jal";
 
 /* -------- Guard -------- */
@@ -84,6 +83,7 @@ function HeaderView({
         </NavLink>
 
         <nav className="main-nav" aria-label="Primary">
+          {/* Normal route links */}
           {links.map(({ to, label }) => (
             <NavLink
               key={`${to}-${label}`}
@@ -94,6 +94,12 @@ function HeaderView({
               {label}
             </NavLink>
           ))}
+
+          {/* Hub now lives on Landing as an in-page panel */}
+          <a className="nav-link" href="/#hub" onClick={closeMenu}>
+            HUB
+          </a>
+
           {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
         </nav>
 
@@ -158,6 +164,11 @@ function SidebarView({
             {label}
           </NavLink>
         ))}
+        {/* Hub hash link inside sidebar */}
+        <a className="nav-link" href="/#hub" onClick={closeMenu}>
+          HUB
+        </a>
+
         {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
       </div>
     </>
@@ -173,7 +184,6 @@ function Shell() {
   const location = useLocation();
 
   const isLanding = location.pathname === "/";
-  const isHub = location.pathname.startsWith("/hub");
 
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
@@ -184,10 +194,10 @@ function Shell() {
     setMenuOpen(false);
   }, [location.pathname]);
 
+  // Lock scroll only when sidebar is open
   useEffect(() => {
-    const lock = menuOpen || isHub;
     const root = document.documentElement;
-    if (lock) {
+    if (menuOpen) {
       root.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
     } else {
@@ -198,7 +208,7 @@ function Shell() {
       root.style.overflow = "";
       document.body.style.overflow = "";
     };
-  }, [menuOpen, isHub]);
+  }, [menuOpen]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
@@ -215,18 +225,13 @@ function Shell() {
   const links = useMemo(
     () => [
       { to: "/", label: "JAL/SOL" },
-      { to: "/hub", label: "HUB" },
+      // HUB removed from router; shown as hash link in the header/sidebar
       { to: vaultPath, label: vaultLabel },
       { to: "/learn", label: "LEARN/SOL" },
       { to: "/about", label: "About JAL" },
     ],
     [vaultLabel, vaultPath]
   );
-
-  /* Framer variants */
-  const hubIdle = { opacity: 1, y: 0, scale: 1 };
-  const hubExit = { opacity: 0, y: -36, scale: 0.99 };
-  const hubTx = { duration: 0.35 };
 
   return (
     <>
@@ -249,33 +254,10 @@ function Shell() {
 
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
+          {/* Landing now includes the Hub panel inline */}
           <Route path="/" element={<Landing />} />
 
-          {/* Hub as parent shell with nested pages */}
-          <Route
-            path="/hub"
-            element={
-              <Protected>
-                <motion.div
-                  initial={hubIdle}
-                  animate={hubIdle}
-                  exit={hubExit}
-                  transition={hubTx}
-                  style={{ zIndex: 50, position: "relative", willChange: "transform, opacity" }}
-                >
-                  <Hub />
-                </motion.div>
-              </Protected>
-            }
-          >
-            <Route index element={<div />} />
-            <Route path="jal" element={<Jal inHub />} />
-            <Route path="utility" element={<div style={{ padding: 12 }}>Utility…</div>} />
-            <Route path="vault" element={<Vault />} />
-            <Route path="how-it-works" element={<div style={{ padding: 12 }}>How it works…</div>} />
-          </Route>
-
-          {/* legacy / standalone routes */}
+          {/* Standalone/legacy pages */}
           <Route path="/home" element={<Home />} />
           <Route path="/crypto-generator" element={<CryptoGenerator />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -284,9 +266,29 @@ function Shell() {
           <Route path="/manifesto" element={<Manifesto />} />
           <Route path="/content" element={<Content />} />
           <Route path="/learn" element={<Learn />} />
-          <Route path="/jal" element={<Navigate to="/hub/jal" replace />} />
-          <Route path="/start" element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
-          <Route path="/terms" element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
+
+          {/* JAL is a normal page now (no inHub prop) */}
+          <Route path="/jal" element={<Jal />} />
+
+          {/* Misc protected placeholders */}
+          <Route
+            path="/start"
+            element={
+              <Protected>
+                <div style={{ padding: 24 }}>Start flow…</div>
+              </Protected>
+            }
+          />
+          <Route
+            path="/terms"
+            element={
+              <Protected>
+                <div style={{ padding: 24 }}>Terms…</div>
+              </Protected>
+            }
+          />
+
+          {/* catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
@@ -320,7 +322,10 @@ export default function App() {
           metadata: {
             name: "JAL/SOL Dapp",
             description: "Swap SOL→JAL and use utilities",
-            url: typeof window !== "undefined" ? window.location.origin : "https://jalsol.com",
+            url:
+              typeof window !== "undefined"
+                ? window.location.origin
+                : "https://jalsol.com",
             icons: ["https://jalsol.com/icons/icon-512.png"],
           },
         },
