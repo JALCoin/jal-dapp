@@ -2,7 +2,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
+import {
+  WalletMultiButton,
+  WalletDisconnectButton,
+} from "@solana/wallet-adapter-react-ui";
 
 type Panel = "none" | "shop" | "jal" | "vault";
 type TileKey = Exclude<Panel, "none">;
@@ -13,7 +16,7 @@ type LandingProps = {
 };
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, wallet } = useWallet();
   const [params, setParams] = useSearchParams();
 
   const [merging, setMerging] = useState(false);
@@ -72,7 +75,28 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, params, setParams]);
 
-  // ---- Subtle merge animation on connect (stays on landing) ----
+  // ---- Connect event: ensure UI updates + auto-open hub ----
+  useEffect(() => {
+    if (!wallet) return;
+
+    const onConnect = () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setMerging(true);
+      const delay = reducedMotion ? 0 : 350;
+      timerRef.current = window.setTimeout(() => setMerging(false), delay);
+      // If user was on "none", give a nice handoff into Shop
+      setActivePanel((p) => (p === "none" ? "shop" : p));
+    };
+
+    wallet.adapter.on("connect", onConnect);
+    return () => {
+      wallet.adapter.off("connect", onConnect);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [wallet, reducedMotion]);
+
+  // ---- Subtle merge animation on connect (covers autoConnect restores too) ----
   useEffect(() => {
     if (!connected || !publicKey) return;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -89,6 +113,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
+      setActivePanel("none");
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
     }
@@ -106,7 +131,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const openPanel = (id: Panel) => setActivePanel(id);
 
   const panelTitle =
-    activePanel === "shop" ? "Shop" : activePanel === "jal" ? "JAL" : activePanel === "vault" ? "Vault" : "Welcome";
+    activePanel === "shop" ? "Shop" :
+    activePanel === "jal"  ? "JAL"  :
+    activePanel === "vault"? "Vault": "Welcome";
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
@@ -135,18 +162,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
-      {!connected ? (
-        <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
-      ) : (
-        <button
-          className="landing-wallet"
-          onClick={() => openPanel(activePanel === "none" ? "shop" : "none")}
-          aria-expanded={activePanel !== "none"}
-          aria-controls="hub-panel"
-        >
-          {activePanel === "none" ? "Open Hub" : "Back to Hub"}
-        </button>
-      )}
+        {!connected ? (
+          <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
+        ) : (
+          <button
+            className="landing-wallet"
+            onClick={() => openPanel(activePanel === "none" ? "shop" : "none")}
+            aria-expanded={activePanel !== "none"}
+            aria-controls="hub-panel"
+          >
+            {activePanel === "none" ? "Open Hub" : "Back to Hub"}
+          </button>
+        )}
       </div>
 
       {/* === TRANSPARENT HUB CONTAINER (in-panel pages) === */}
@@ -165,7 +192,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         <div className="hub-panel-body">
-          {/* tiles list (overlay style) */}
+          {/* tiles list */}
           <div className="hub-stack hub-stack--responsive" role="list">
             {tiles.map((t) => (
               <button
@@ -198,11 +225,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3>Shop</h3>
                 <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
-                <ul>
-                  <li>Item A — 10 JAL</li>
-                  <li>Item B — 25 JAL</li>
-                  <li>Item C — 40 JAL</li>
-                </ul>
               </div>
             )}
 
@@ -225,8 +247,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
-                  Connect your wallet to unlock features. Then pick a tile above — try <strong>JAL/SOL — SHOP</strong> to
-                  see in-panel shopping.
+                  Connect your wallet to unlock features. Then pick a tile above — try{" "}
+                  <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
                 </p>
               </div>
             )}
