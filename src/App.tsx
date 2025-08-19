@@ -47,20 +47,20 @@ import Learn from "./pages/Learn";
 import Content from "./pages/Content";
 import Jal from "./pages/Jal";
 
-/* -------- Guard -------- */
+/* ---------------- Guard ---------------- */
 function Protected({ children }: { children: ReactElement }) {
   const { connected } = useWallet();
   return connected ? children : <Navigate to="/" replace />;
 }
 
-/* -------- Header -------- */
+/* ---------------- Header ---------------- */
 type HeaderProps = {
   isLanding: boolean;
   links: { to: string; label: string }[];
   menuOpen: boolean;
   toggleMenu: () => void;
   closeMenu: () => void;
-  publicKey: any;
+  publicKey: string | null | undefined;
 };
 
 function HeaderView({
@@ -74,9 +74,9 @@ function HeaderView({
   if (isLanding) return null;
 
   return (
-    <header style={{ position: "relative", zIndex: 90 }}>
+    <header className="site-header">
       <div className="header-inner">
-        <NavLink to="/" onClick={closeMenu}>
+        <NavLink to="/" onClick={closeMenu} aria-label="JAL/SOL Home">
           <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
         </NavLink>
 
@@ -94,15 +94,15 @@ function HeaderView({
           {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
         </nav>
 
-        <div className="social-links">
-          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer">
-            <img src="/icons/X.png" alt="X" />
+        <div className="social-links" aria-label="Social links">
+          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+            <img src="/icons/X.png" alt="" />
           </a>
-          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer">
-            <img src="/icons/Telegram.png" alt="Telegram" />
+          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+            <img src="/icons/Telegram.png" alt="" />
           </a>
-          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer">
-            <img src="/icons/TikTok.png" alt="TikTok" />
+          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+            <img src="/icons/TikTok.png" alt="" />
           </a>
         </div>
 
@@ -110,6 +110,8 @@ function HeaderView({
           className={`hamburger ${menuOpen ? "is-open" : ""}`}
           onClick={toggleMenu}
           aria-label="Toggle menu"
+          aria-expanded={menuOpen}
+          aria-controls="sidebar-nav"
         >
           <span />
           <span />
@@ -121,7 +123,7 @@ function HeaderView({
 }
 const Header = memo(HeaderView);
 
-/* -------- Sidebar -------- */
+/* ---------------- Sidebar ---------------- */
 function SidebarView({
   open,
   isLanding,
@@ -133,13 +135,13 @@ function SidebarView({
   isLanding: boolean;
   links: { to: string; label: string }[];
   closeMenu: () => void;
-  publicKey: any;
+  publicKey: string | null | undefined;
 }): ReactElement | null {
   if (!open || isLanding) return null;
   return (
     <>
       <div className="sidebar-overlay" onClick={closeMenu} />
-      <div className="sidebar-nav" role="dialog" aria-modal="true">
+      <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
         {links.map(({ to, label }) => (
           <NavLink
             key={`${to}-${label}`}
@@ -157,14 +159,30 @@ function SidebarView({
 }
 const Sidebar = memo(SidebarView);
 
-/* -------- App Shell -------- */
+/* ---------------- App Shell (routes, header, sidebar) ---------------- */
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
   const { publicKey } = useWallet();
   const location = useLocation();
 
-  const isLanding = location.pathname === "/";
+  const isLanding = location.pathname === "/" || location.pathname === "/shop";
+
+  // Reconnect nudge for iOS/Safari when returning from wallet
+  useEffect(() => {
+    const onVisible = () => {
+      // Wake layout/react — adapters handle actual session restore
+      requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+    };
+    const onFocus = () => onVisible();
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
@@ -190,7 +208,7 @@ function Shell() {
       { to: "/", label: "JAL/SOL" },
       { to: "/jal", label: "JAL" },
       { to: vaultPath, label: vaultLabel },
-      { to: "/shop", label: "SHOP" }, // ✅ Added SHOP link
+      { to: "/shop", label: "SHOP" }, // deep-link into Landing's Shop panel
       { to: "/learn", label: "LEARN/SOL" },
       { to: "/about", label: "About JAL" },
     ],
@@ -205,41 +223,61 @@ function Shell() {
         menuOpen={menuOpen}
         toggleMenu={toggleMenu}
         closeMenu={closeMenu}
-        publicKey={publicKey}
+        publicKey={publicKey?.toBase58?.() ?? publicKey?.toString?.() ?? null}
       />
       <Sidebar
         open={menuOpen}
         isLanding={isLanding}
         links={links}
         closeMenu={closeMenu}
-        publicKey={publicKey}
+        publicKey={publicKey?.toBase58?.() ?? publicKey?.toString?.() ?? null}
       />
 
       <AnimatePresence mode="wait">
-// src/App.tsx (only the routes array changed here)
-<Routes location={location} key={location.pathname}>
-  <Route path="/" element={<Landing />} />
-  <Route path="/shop" element={<Landing initialPanel="shop" />} />  {/* 👈 deep-link into panel */}
-  <Route path="/home" element={<Home />} />
-  <Route path="/crypto-generator" element={<CryptoGenerator />} />
-  <Route path="/dashboard" element={<Dashboard />} />
-  <Route path="/vault/:symbol" element={<Vault />} />
-  <Route path="/jal" element={<Protected><Jal inHub={false} /></Protected>} />
-  <Route path="/about" element={<About />} />
-  <Route path="/manifesto" element={<Manifesto />} />
-  <Route path="/content" element={<Content />} />
-  <Route path="/learn" element={<Learn />} />
-  <Route path="/start" element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>} />
-  <Route path="/terms" element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>} />
-  <Route path="*" element={<Navigate to="/" replace />} />
-</Routes>
+        <Routes location={location} key={location.pathname}>
+          {/* Landing: default panel (none), /shop opens shop panel inside Landing */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/shop" element={<Landing initialPanel="shop" />} />
+
+          {/* Other routes */}
+          <Route path="/home" element={<Home />} />
+          <Route path="/crypto-generator" element={<CryptoGenerator />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/vault/:symbol" element={<Vault />} />
+          <Route
+            path="/jal"
+            element={
+              <Protected>
+                <Jal inHub={false} />
+              </Protected>
+            }
+          />
+          <Route path="/about" element={<About />} />
+          <Route path="/manifesto" element={<Manifesto />} />
+          <Route path="/content" element={<Content />} />
+          <Route path="/learn" element={<Learn />} />
+          <Route
+            path="/start"
+            element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>}
+          />
+          <Route
+            path="/terms"
+            element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>}
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </AnimatePresence>
     </>
   );
 }
 
-/* -------- Root Providers -------- */
+/* ---------------- Root Providers ---------------- */
 export default function App() {
+  // Always use absolute origin/URLs for wallet identity metadata (mobile deep-linking quirk)
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://jalsol.com";
+
+  // Your proxy / RPC selection
   const endpoint = useMemo(() => {
     if (typeof window !== "undefined" && window.location.hostname === "localhost") {
       return "http://localhost:3001/api/solana";
@@ -247,6 +285,7 @@ export default function App() {
     return "https://solana-proxy-production.up.railway.app";
   }, []);
 
+  // Keep adapters on the same cluster
   const network =
     (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
       ? WalletAdapterNetwork.Devnet
@@ -264,25 +303,33 @@ export default function App() {
           metadata: {
             name: "JAL/SOL Dapp",
             description: "Swap SOL→JAL and use utilities",
-            url: typeof window !== "undefined" ? window.location.origin : "https://jalsol.com",
-            icons: ["https://jalsol.com/icons/icon-512.png"],
+            url: origin,                               // absolute
+            icons: [`${origin}/icons/icon-512.png`],   // absolute
           },
         },
       }),
       new SolanaMobileWalletAdapter({
         addressSelector: createDefaultAddressSelector(),
-        appIdentity: { name: "JAL/SOL", uri: "https://jalsol.com", icon: "/icons/icon-512.png" },
+        appIdentity: {
+          name: "JAL/SOL",
+          uri: origin,                                 // absolute
+          icon: `${origin}/icons/icon-512.png`,        // absolute
+        },
         authorizationResultCache: createDefaultAuthorizationResultCache(),
         cluster: "mainnet-beta",
         onWalletNotFound: createDefaultWalletNotFoundHandler(),
       }),
     ],
-    [network]
+    [network, origin]
   );
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect onError={(e) => console.error("Wallet error:", e)}>
+      <WalletProvider
+        wallets={wallets}
+        autoConnect
+        onError={(e) => console.error("[wallet-adapter] error:", e)}
+      >
         <WalletModalProvider>
           <Router>
             <Shell />
