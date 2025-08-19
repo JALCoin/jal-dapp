@@ -51,9 +51,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
+    const isPanel = (v: any): v is Panel => ["none", "shop", "jal", "vault"].includes(v);
     const start: Panel =
-      (fromUrl && ["none", "shop", "jal", "vault"].includes(fromUrl) ? fromUrl : null) ??
-      (fromSession && ["none", "shop", "jal", "vault"].includes(fromSession) ? fromSession : null) ??
+      (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
+      (fromSession && isPanel(fromSession) ? fromSession : null) ??
       initialPanel;
     setActivePanel(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,16 +76,15 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, params, setParams]);
 
-  // ---- Connect event: ensure UI updates + auto-open hub ----
+  // ---- Connect event (explicit connect) → merge + auto-open Shop if closed ----
   useEffect(() => {
-    if (!wallet) return;
+    if (!wallet?.adapter) return;
 
     const onConnect = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       setMerging(true);
       const delay = reducedMotion ? 0 : 350;
       timerRef.current = window.setTimeout(() => setMerging(false), delay);
-      // If user was on "none", give a nice handoff into Shop
       setActivePanel((p) => (p === "none" ? "shop" : p));
     };
 
@@ -96,7 +96,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [wallet, reducedMotion]);
 
-  // ---- Subtle merge animation on connect (covers autoConnect restores too) ----
+  // ---- Subtle merge animation on (auto)connect restore ----
   useEffect(() => {
     if (!connected || !publicKey) return;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -135,6 +135,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     activePanel === "jal"  ? "JAL"  :
     activePanel === "vault"? "Vault": "Welcome";
 
+  const isPreview = activePanel === "none";
+
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
       {/* top-center social row */}
@@ -167,11 +169,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         ) : (
           <button
             className="landing-wallet"
-            onClick={() => openPanel(activePanel === "none" ? "shop" : "none")}
-            aria-expanded={activePanel !== "none"}
+            onClick={() => openPanel(isPreview ? "shop" : "none")}
+            aria-expanded={!isPreview}
             aria-controls="hub-panel"
           >
-            {activePanel === "none" ? "Open Hub" : "Back to Hub"}
+            {isPreview ? "Open Hub" : "Back to Hub"}
           </button>
         )}
       </div>
@@ -182,9 +184,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         className={[
           "hub-panel",
           "hub-panel--fit",
-          activePanel === "none" ? "landing-panel hub-preview" : "",
+          isPreview ? "landing-panel hub-preview" : "",
         ].join(" ")}
         aria-label="JAL/SOL Hub"
+        aria-live="polite"
       >
         <div className="hub-panel-top">
           <h2 className="hub-title">{panelTitle}</h2>
@@ -192,32 +195,34 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         <div className="hub-panel-body">
-          {/* tiles list */}
-          <div className="hub-stack hub-stack--responsive" role="list">
-            {tiles.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                className="img-btn"
-                onClick={() => openPanel(t.key)}
-                role="listitem"
-              >
-                <img
-                  src={t.gif}
-                  alt=""
-                  className="hub-gif float"
-                  loading="lazy"
-                  width={960}
-                  height={540}
-                  onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
-                />
-                <div className="hub-btn">
-                  {t.title}
-                  {t.sub && <span className="sub">{t.sub}</span>}
-                </div>
-              </button>
-            ))}
-          </div>
+          {/* tiles list — render ONLY when hub is open */}
+          {!isPreview && (
+            <div className="hub-stack hub-stack--responsive" role="list">
+              {tiles.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  className="img-btn"
+                  onClick={() => openPanel(t.key)}
+                  role="listitem"
+                >
+                  <img
+                    src={t.gif}
+                    alt=""
+                    className="hub-gif float"
+                    loading="lazy"
+                    width={960}
+                    height={540}
+                    onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+                  />
+                  <div className="hub-btn">
+                    {t.title}
+                    {t.sub && <span className="sub">{t.sub}</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* panel body content */}
           <div className="hub-content">
@@ -243,7 +248,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {activePanel === "none" && (
+            {isPreview && (
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
