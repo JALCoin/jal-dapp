@@ -1,6 +1,6 @@
 /* =============================================================
    JAL/SOL — Global Theme & Layout
-   Updated: ensure hub is fully hidden when closed
+   Updated: hub is fully hidden when closed (preview state)
    ============================================================= */
 
 /* ===============================
@@ -301,7 +301,7 @@ header .social-links img:hover{
 }
 .img-btn:focus-visible{ outline:3px solid #fff; outline-offset:4px; box-shadow:0 0 0 1.5px #fff inset, 0 0 24px #fff, 0 0 36px #fff8; }
 
-/* ✅ GIFs: no crop + consistent responsive height */
+/* ✅ GIFs */
 .hub-gif{
   display:block;
   width:100%;
@@ -452,10 +452,10 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
 }
 
 /* ===============================
-   HUB CLOSED (preview) — make it truly closed
-   - no tile grid
-   - no interactions
-   - no scroll jiggle
+   HUB CLOSED (preview) — truly closed
+   - hide tile grid
+   - block interactions & tab focus
+   - disable inner scroll & dim visuals
 =================================*/
 .hub-preview{
   margin-top:clamp(16px,4vh,28px);
@@ -469,19 +469,30 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
   -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
 }
 
-/* Hide tiles grid and prevent inner scroll when closed */
+/* Hide tiles + stop inner scroll when closed */
 .hub-preview .hub-stack{ display:none !important; }
 .hub-preview .hub-panel-body{ overflow:hidden !important; }
 
-/* keep container scrollable if needed, but block interactive children */
-.hub-preview .img-btn,
-.hub-preview .hub-btn,
-.hub-preview a { pointer-events:none; }
+/* Block interactions AND keyboard tabbing inside preview */
+.hub-preview :is(button, a, [role="button"], [tabindex]){
+  pointer-events:none !important;
+}
+.hub-preview :is(button, a, [role="button"], [tabindex]){ 
+  user-select:none !important;
+}
+.hub-preview :is(button, a, [role="button"], [tabindex]):not([tabindex="-1"]){
+  tabindex:-1;
+}
 
+/* Subtle dim */
 .hub-preview .hub-title{ opacity:.88; }
-.hub-preview-card{
+.hub-preview .card{
   box-shadow:0 0 0 1.5px rgba(255,255,255,.5) inset, 0 8px 22px rgba(0,0,0,.28), 0 0 18px rgba(255,255,255,.20);
   filter:blur(1px) brightness(.95) opacity(.78);
 }
-.landing-merge .hub-preview{ opacity:0; transition:opacity .45s ease; }
+
+/* Preview GIFs: no float/anim */
 .hub-preview .hub-gif{ transition:none; animation:none; opacity:.9; }
+
+/* Fade the entire preview during the merge moment */
+.landing-merge .hub-preview{ opacity:0; transition:opacity .45s ease; }

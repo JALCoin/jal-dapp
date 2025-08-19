@@ -11,7 +11,7 @@ type Panel = "none" | "shop" | "jal" | "vault";
 type TileKey = Exclude<Panel, "none">;
 
 type LandingProps = {
-  /** optional: open a specific panel on initial load (overridden by ?panel=) */
+  /** Optional: open a specific panel on initial load (overridden by ?panel=) */
   initialPanel?: Panel;
 };
 
@@ -23,6 +23,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [activePanel, setActivePanel] = useState<Panel>("none");
   const timerRef = useRef<number | null>(null);
 
+  const panelRef = useRef<HTMLElement | null>(null);
+
   const reducedMotion = useMemo(() => {
     if (typeof window === "undefined" || !window.matchMedia) return false;
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -30,9 +32,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   // ---- Tiles ----
   const tiles: { key: TileKey; title: string; sub?: string; gif: string }[] = [
-    { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
+    { key: "jal", title: "JAL",            sub: "About & Swap",       gif: "/JAL.gif" },
     { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
-    { key: "vault", title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
+    { key: "vault", title: "VAULT",         sub: "Your assets",        gif: "/VAULT.gif" },
   ];
 
   // ---- Preload GIFs (cleanup on unmount) ----
@@ -49,13 +51,15 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   // ---- Resolve starting panel: URL ?panel > session > prop ----
   useEffect(() => {
-    const fromUrl = params.get("panel") as Panel | null;
-    const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
-    const isPanel = (v: any): v is Panel => ["none", "shop", "jal", "vault"].includes(v);
+    const isPanel = (v: unknown): v is Panel => v === "none" || v === "shop" || v === "jal" || v === "vault";
+    const fromUrl = params.get("panel");
+    const fromSession = sessionStorage.getItem("landing:lastPanel");
+
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
-      (fromSession && isPanel(fromSession) ? fromSession : null) ??
+      (fromSession && isPanel(fromSession) ? (fromSession as Panel) : null) ??
       initialPanel;
+
     setActivePanel(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -64,6 +68,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     if (!activePanel) return;
     sessionStorage.setItem("landing:lastPanel", activePanel);
+
     const urlPanel = params.get("panel");
     if (activePanel === "none") {
       if (urlPanel) {
@@ -128,6 +133,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [activePanel]);
 
+  // ---- Inert/aria-hidden when preview (fully disable hub) ----
+  const isPreview = activePanel === "none";
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    if (isPreview) {
+      el.setAttribute("inert", "");
+      el.setAttribute("aria-hidden", "true");
+    } else {
+      el.removeAttribute("inert");
+      el.removeAttribute("aria-hidden");
+    }
+  }, [isPreview]);
+
   const openPanel = (id: Panel) => setActivePanel(id);
 
   const panelTitle =
@@ -135,10 +154,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     activePanel === "jal"  ? "JAL"  :
     activePanel === "vault"? "Vault": "Welcome";
 
-  const isPreview = activePanel === "none";
-
   return (
-    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+    <main
+      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
+      aria-live="polite"
+      aria-busy={merging || undefined}
+    >
       {/* top-center social row */}
       <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
@@ -180,6 +201,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
       {/* === TRANSPARENT HUB CONTAINER (in-panel pages) === */}
       <section
+        ref={panelRef}
         id="hub-panel"
         className={[
           "hub-panel",
@@ -187,7 +209,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           isPreview ? "landing-panel hub-preview" : "",
         ].join(" ")}
         aria-label="JAL/SOL Hub"
-        aria-live="polite"
       >
         <div className="hub-panel-top">
           <h2 className="hub-title">{panelTitle}</h2>
