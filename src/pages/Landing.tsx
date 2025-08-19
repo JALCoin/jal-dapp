@@ -1,17 +1,18 @@
 // src/pages/Landing.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
   WalletMultiButton,
   WalletDisconnectButton,
 } from "@solana/wallet-adapter-react-ui";
+import Jal from "./Jal"; // 👈 render JAL inside the hub
 
 type Panel = "none" | "shop" | "jal" | "vault";
 type TileKey = Exclude<Panel, "none">;
 
 type LandingProps = {
-  /** Optional: open a specific panel on initial load (overridden by ?panel=) */
+  /** optional: open a specific panel on initial load (overridden by ?panel=) */
   initialPanel?: Panel;
 };
 
@@ -23,7 +24,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [activePanel, setActivePanel] = useState<Panel>("none");
   const timerRef = useRef<number | null>(null);
 
-  const panelRef = useRef<HTMLElement | null>(null);
+  // scroll target for hub panel body
+  const hubBodyRef = useRef<HTMLDivElement | null>(null);
 
   const reducedMotion = useMemo(() => {
     if (typeof window === "undefined" || !window.matchMedia) return false;
@@ -32,12 +34,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   // ---- Tiles ----
   const tiles: { key: TileKey; title: string; sub?: string; gif: string }[] = [
-    { key: "jal", title: "JAL",            sub: "About & Swap",       gif: "/JAL.gif" },
+    { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
     { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
-    { key: "vault", title: "VAULT",         sub: "Your assets",        gif: "/VAULT.gif" },
+    { key: "vault", title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
   ];
 
-  // ---- Preload GIFs (cleanup on unmount) ----
+  // ---- Preload GIFs ----
   useEffect(() => {
     const imgs = tiles.map((t) => {
       const i = new Image();
@@ -51,15 +53,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   // ---- Resolve starting panel: URL ?panel > session > prop ----
   useEffect(() => {
-    const isPanel = (v: unknown): v is Panel => v === "none" || v === "shop" || v === "jal" || v === "vault";
-    const fromUrl = params.get("panel");
-    const fromSession = sessionStorage.getItem("landing:lastPanel");
-
+    const fromUrl = params.get("panel") as Panel | null;
+    const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
+    const isPanel = (v: any): v is Panel => ["none", "shop", "jal", "vault"].includes(v);
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
-      (fromSession && isPanel(fromSession) ? (fromSession as Panel) : null) ??
+      (fromSession && isPanel(fromSession) ? fromSession : null) ??
       initialPanel;
-
     setActivePanel(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -68,7 +68,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     if (!activePanel) return;
     sessionStorage.setItem("landing:lastPanel", activePanel);
-
     const urlPanel = params.get("panel");
     if (activePanel === "none") {
       if (urlPanel) {
@@ -133,19 +132,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [activePanel]);
 
-  // ---- Inert/aria-hidden when preview (fully disable hub) ----
-  const isPreview = activePanel === "none";
+  // ---- When switching panels, ensure hub body scroll is at top ----
   useEffect(() => {
-    const el = panelRef.current;
-    if (!el) return;
-    if (isPreview) {
-      el.setAttribute("inert", "");
-      el.setAttribute("aria-hidden", "true");
-    } else {
-      el.removeAttribute("inert");
-      el.removeAttribute("aria-hidden");
-    }
-  }, [isPreview]);
+    if (!hubBodyRef.current) return;
+    hubBodyRef.current.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+  }, [activePanel, reducedMotion]);
 
   const openPanel = (id: Panel) => setActivePanel(id);
 
@@ -154,12 +145,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     activePanel === "jal"  ? "JAL"  :
     activePanel === "vault"? "Vault": "Welcome";
 
+  const isPreview = activePanel === "none";
+
   return (
-    <main
-      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
-      aria-live="polite"
-      aria-busy={merging || undefined}
-    >
+    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
       {/* top-center social row */}
       <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
@@ -199,9 +188,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         )}
       </div>
 
-      {/* === TRANSPARENT HUB CONTAINER (in-panel pages) === */}
+      {/* === HUB CONTAINER === */}
       <section
-        ref={panelRef}
         id="hub-panel"
         className={[
           "hub-panel",
@@ -209,13 +197,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           isPreview ? "landing-panel hub-preview" : "",
         ].join(" ")}
         aria-label="JAL/SOL Hub"
+        aria-live="polite"
       >
         <div className="hub-panel-top">
           <h2 className="hub-title">{panelTitle}</h2>
           {connected && <WalletDisconnectButton className="hub-disconnect-btn" />}
         </div>
 
-        <div className="hub-panel-body">
+        <div className="hub-panel-body" ref={hubBodyRef}>
           {/* tiles list — render ONLY when hub is open */}
           {!isPreview && (
             <div className="hub-stack hub-stack--responsive" role="list">
@@ -255,10 +244,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             )}
 
             {activePanel === "jal" && (
-              <div className="card">
-                <h3>JAL</h3>
-                <p>Learn about JAL and swap SOL ⇄ JAL from here.</p>
-                {/* <Jal inHub /> */}
+              <div className="in-hub">
+                {/* Render the real JAL page inside the hub */}
+                <Suspense fallback={<div className="card">Loading JAL…</div>}>
+                  <Jal inHub />
+                </Suspense>
               </div>
             )}
 
