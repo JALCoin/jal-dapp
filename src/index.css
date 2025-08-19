@@ -1,6 +1,6 @@
 /* =============================================================
-   JAL/SOL — Global Theme & Layout (full rewrite)
-   Date: 2025-08-18
+   JAL/SOL — Global Theme & Layout
+   Updated: ensure hub is fully hidden when closed
    ============================================================= */
 
 /* ===============================
@@ -85,12 +85,14 @@ body::before{
 /* ===============================
    HEADER
 =================================*/
-header{
+header,
+.site-header{
   position:relative; width:100%; background:#000;
   padding:2rem 1rem 1.25rem; box-shadow:0 4px 20px #0006;
   z-index:var(--z-header);
 }
-header::after{
+header::after,
+.site-header::after{
   content:""; position:absolute; left:0; right:0; bottom:0; height:2px;
   background:linear-gradient(90deg, transparent 0%, #fff 15%, #fff 85%, transparent 100%);
   box-shadow:0 0 10px #fff, 0 0 20px #fff8;
@@ -196,8 +198,9 @@ header .social-links img:hover{
 /* Logo + soft glow */
 .landing-inner{
   display:flex; flex-direction:column; align-items:center;
-  gap:12px;                  /* tighter spacing logo<->wallet */
-  margin-bottom:8px;         /* ensures hub sits just below */
+  gap:12px;
+  margin-bottom:8px;
+  position:relative; z-index:2; /* keep wallet CTA above hub */
 }
 .landing-logo-wrapper{ position:relative; display:inline-block; }
 .landing-logo-wrapper::before{
@@ -250,6 +253,7 @@ header .social-links img:hover{
   color:#fff; transform-origin:center center; animation:hubPopIn .45s cubic-bezier(.22,.75,.15,1) both;
   backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
   max-height:calc(100dvh - 32px); display:flex; flex-direction:column;
+  z-index:1; /* under wallet CTA */
 }
 .hub-panel.is-pre{ opacity:0; transform:scale(.92); }
 @keyframes hubPopIn{ 0%{opacity:0; transform:scale(.92)} 100%{opacity:1; transform:scale(1)} }
@@ -261,7 +265,7 @@ header .social-links img:hover{
 .hub-panel-top{ display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; flex:0 0 auto; }
 .hub-panel-body{
   position:relative; z-index:1; flex:1 1 auto; overflow:auto; padding-bottom:4px;
-  -webkit-overflow-scrolling:touch; scrollbar-gutter:stable both-edges; /* prevents layout jump */
+  -webkit-overflow-scrolling:touch; scrollbar-gutter:stable both-edges;
 }
 
 .hub-title{
@@ -308,7 +312,7 @@ header .social-links img:hover{
   padding:6px;
   transition:transform .18s ease, filter .25s ease, box-shadow .25s ease;
 }
-.hub-gif--cover{ object-fit:cover; } /* (unused now) */
+.hub-gif--cover{ object-fit:cover; }
 .hub-gif.float{ animation:floatY 4.5s ease-in-out infinite; }
 
 /* ===============================
@@ -432,11 +436,11 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
   .nav-link{ font-size:1rem; }
   .logo{ height:112px; }
   .hub-panel{ width:min(96vw,980px); }
-  .hub-gif{ height:clamp(160px, 28vh, 260px); } /* mobile-friendly height */
+  .hub-gif{ height:clamp(160px, 28vh, 260px); }
 }
 @media (max-height:700px){
   .hub-title{ font-size:clamp(1.6rem,4.8vw,2.2rem); }
-  .hub-gif{ height:clamp(150px, 26vh, 240px); } /* short screens */
+  .hub-gif{ height:clamp(150px, 26vh, 240px); }
 }
 
 /* ===============================
@@ -447,31 +451,13 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
   .hub-panel{ background: rgba(0,0,0,.78); }
 }
 
-/* Preview container: allow scroll, block clicks only on interactive children */
+/* ===============================
+   HUB CLOSED (preview) — make it truly closed
+   - no tile grid
+   - no interactions
+   - no scroll jiggle
+=================================*/
 .hub-preview{
-  margin-top:clamp(14px,3.2vh,24px);
-  /* pointer-events: none;  ← REMOVE */
-  filter:saturate(.95) contrast(.98);
-  backdrop-filter:blur(var(--blur-amt)) saturate(1.06);
-  -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.06);
-}
-/* disable clicks on buttons/tiles inside preview, but keep container scrollable */
-.hub-preview .img-btn,
-.hub-preview .hub-btn,
-.hub-preview a { pointer-events:none; }
-
-.hub-preview .hub-title{ opacity:.88; }
-
-.hub-preview-card{
-  box-shadow:0 0 0 1.5px rgba(255,255,255,.5) inset, 0 8px 22px rgba(0,0,0,.28), 0 0 18px rgba(255,255,255,.20);
-  filter:blur(1px) brightness(.95) opacity(.78);
-}
-
-.landing-merge .hub-preview{ opacity:0; transition:opacity .45s ease; }
-.hub-preview .hub-gif{ transition:none; animation:none; opacity:.9; }
-
-/* Landing: transparent Hub panel under the CTA */
-.landing-panel{
   margin-top:clamp(16px,4vh,28px);
   width:min(980px,92vw);
   padding:clamp(18px,2.8vw,28px);
@@ -481,15 +467,21 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
   box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 10px 34px rgba(0,0,0,.40), 0 0 18px rgba(255,255,255,.25);
   backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
   -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
-  /* pointer-events: none;  ← REMOVE */
 }
 
-/* keep existing */
-.preview-grid{ display:grid; gap:clamp(12px,2vw,20px); }
-.preview-btn{
-  box-shadow:0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
-}
+/* Hide tiles grid and prevent inner scroll when closed */
+.hub-preview .hub-stack{ display:none !important; }
+.hub-preview .hub-panel-body{ overflow:hidden !important; }
 
-/* ensure wallet button stays above hub */
-.landing-inner{ position:relative; z-index:2; }
-.hub-panel{ position:relative; z-index:1; }
+/* keep container scrollable if needed, but block interactive children */
+.hub-preview .img-btn,
+.hub-preview .hub-btn,
+.hub-preview a { pointer-events:none; }
+
+.hub-preview .hub-title{ opacity:.88; }
+.hub-preview-card{
+  box-shadow:0 0 0 1.5px rgba(255,255,255,.5) inset, 0 8px 22px rgba(0,0,0,.28), 0 0 18px rgba(255,255,255,.20);
+  filter:blur(1px) brightness(.95) opacity(.78);
+}
+.landing-merge .hub-preview{ opacity:0; transition:opacity .45s ease; }
+.hub-preview .hub-gif{ transition:none; animation:none; opacity:.9; }
