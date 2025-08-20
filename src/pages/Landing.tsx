@@ -6,10 +6,16 @@ import {
   WalletMultiButton,
   WalletDisconnectButton,
 } from "@solana/wallet-adapter-react-ui";
-import Jal from "./Jal"; // 👈 render JAL inside the hub
+import Jal from "./Jal"; // render JAL inside the hub
 
-type Panel = "none" | "shop" | "jal" | "vault";
-type TileKey = Exclude<Panel, "none">;
+/* ----------------------------------------
+   Panel state:
+   - "none": landing preview (hub hidden)
+   - "grid": hub open with tile grid
+   - "shop" | "jal" | "vault": panel content
+---------------------------------------- */
+type Panel = "none" | "grid" | "shop" | "jal" | "vault";
+type TileKey = Exclude<Panel, "none" | "grid">;
 
 type LandingProps = {
   /** optional: open a specific panel on initial load (overridden by ?panel=) */
@@ -55,7 +61,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
-    const isPanel = (v: any): v is Panel => ["none", "shop", "jal", "vault"].includes(v);
+    const isPanel = (v: any): v is Panel => ["none", "grid", "shop", "jal", "vault"].includes(v);
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
       (fromSession && isPanel(fromSession) ? fromSession : null) ??
@@ -80,7 +86,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, params, setParams]);
 
-  // ---- Connect event (explicit connect) → merge + auto-open Shop if closed ----
+  // ---- Connect event → merge + open grid if closed ----
   useEffect(() => {
     if (!wallet?.adapter) return;
 
@@ -89,7 +95,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       setMerging(true);
       const delay = reducedMotion ? 0 : 350;
       timerRef.current = window.setTimeout(() => setMerging(false), delay);
-      setActivePanel((p) => (p === "none" ? "shop" : p));
+      setActivePanel((p) => (p === "none" ? "grid" : p));
     };
 
     wallet.adapter.on("connect", onConnect);
@@ -123,7 +129,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [connected, publicKey]);
 
-  // ---- ESC closes any open panel back to hub ----
+  // ---- ESC closes any open panel back to preview ----
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && activePanel !== "none") setActivePanel("none");
@@ -141,6 +147,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const openPanel = (id: Panel) => setActivePanel(id);
 
   const panelTitle =
+    activePanel === "grid" ? "Hub" :
     activePanel === "shop" ? "Shop" :
     activePanel === "jal"  ? "JAL"  :
     activePanel === "vault"? "Vault": "Welcome";
@@ -168,7 +175,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
       )}
 
-      {/* === CENTERED LOGO + CONNECT BUTTON === */}
+      {/* === CENTERED LOGO + CONNECT/OPEN HUB BUTTON === */}
       <div className="landing-inner">
         <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
@@ -179,11 +186,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         ) : (
           <button
             className="landing-wallet"
-            onClick={() => openPanel(isPreview ? "shop" : "none")}
+            onClick={() => openPanel(isPreview ? "grid" : "none")}
             aria-expanded={!isPreview}
             aria-controls="hub-panel"
           >
-            {isPreview ? "Open Hub" : "Back to Hub"}
+            {isPreview ? "Open Hub" : "Back to Landing"}
           </button>
         )}
       </div>
@@ -198,6 +205,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         ].join(" ")}
         aria-label="JAL/SOL Hub"
         aria-live="polite"
+        // Prevent focus/interaction when previewed/hidden
+        {...(isPreview ? { inert: true as any } : {})}
       >
         <div className="hub-panel-top">
           <h2 className="hub-title">{panelTitle}</h2>
@@ -205,8 +214,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
-          {/* tiles list — render ONLY when hub is open */}
-          {!isPreview && (
+          {/* Tile grid — ONLY in explicit 'grid' mode */}
+          {activePanel === "grid" && (
             <div className="hub-stack hub-stack--responsive" role="list">
               {tiles.map((t) => (
                 <button
@@ -234,7 +243,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             </div>
           )}
 
-          {/* panel body content */}
+          {/* Panel body content */}
           <div className="hub-content">
             {activePanel === "shop" && (
               <div className="card">
@@ -245,7 +254,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
             {activePanel === "jal" && (
               <div className="in-hub">
-                {/* Render the real JAL page inside the hub */}
                 <Suspense fallback={<div className="card">Loading JAL…</div>}>
                   <Jal inHub />
                 </Suspense>
@@ -263,8 +271,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
-                  Connect your wallet to unlock features. Then pick a tile above — try{" "}
-                  <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
+                  Connect your wallet to unlock features. Then open the Hub to pick a tile —
+                  try <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
                 </p>
               </div>
             )}
