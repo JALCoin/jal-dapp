@@ -1,6 +1,6 @@
 /* =============================================================
    JAL/SOL — Global Theme & Layout
-   Updated: modal is absolute-top; hub cannot overlayer it
+   Updated: modal is absolute-top; wallet modal always clickable
    ============================================================= */
 
 /* ===============================
@@ -39,7 +39,7 @@
   --z-sidebar:210;
   --z-hub:70;
 
-  /* Absolute-top modal layers (safest near-int max values) */
+  /* Absolute-top modal layers */
   --z-modal-overlay: 2147483000; /* overlay below modal, above everything */
   --z-modal:        2147483001;
 
@@ -236,7 +236,6 @@ header .social-links img:hover{
   -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
   overflow:hidden; overscroll-behavior:contain; isolation:isolate;
 
-  /* Prevent new stacking contexts that could rival the modal */
   transform:none; filter:none; opacity:1;
 }
 .hub-overlay::after{
@@ -261,7 +260,6 @@ header .social-links img:hover{
   backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
   max-height:calc(100dvh - 32px); display:flex; flex-direction:column;
 
-  /* Do not create a higher stacking context */
   z-index:auto; transform:none; filter:none; opacity:1;
 }
 .hub-panel.is-pre{ opacity:0; transform:scale(.92); }
@@ -358,7 +356,10 @@ header .social-links img:hover{
   z-index:var(--z-modal-overlay);
   animation: fadeIn .25s ease-out;
 
-  /* Safeguards for backdrop/filter browsers */
+  /* Do not block clicks (wallet modal needs to be clickable) */
+  pointer-events:none;
+
+  /* Safeguards */
   isolation:isolate;
   contain:layout paint style;
 }
@@ -370,10 +371,7 @@ header .social-links img:hover{
   z-index:var(--z-modal);
   isolation:isolate;
 }
-.modal.modal--top{
-  top: 8vh;
-  transform: translate(-50%, 0);
-}
+
 .modal{
   background:rgba(0,0,0,.78);
   border:1.6px solid rgba(255,255,255,.9);
@@ -382,14 +380,19 @@ header .social-links img:hover{
   animation: modalIn .28s ease-out both, glowPulse 2.4s ease-in-out infinite;
   box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 24px rgba(255,255,255,.28);
   width:min(560px,94vw);
-  max-height:90dvh;           /* prevent offscreen */
+  max-height:90dvh;
   overflow:hidden;
   pointer-events:auto;
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+
+  /* true viewport center */
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%, -50%);
 }
+
+/* Optional: top variant */
+.modal.modal--top{ top:8vh; transform:translate(-50%, 0); }
 
 .modal-header{ display:flex; align-items:center; gap:10px; justify-content:space-between; padding:4px 6px 10px; }
 .modal-spacer{ width:36px; }
@@ -401,7 +404,7 @@ header .social-links img:hover{
 
 .modal-iframe{
   width:100%;
-  height:min(640px, 70dvh);   /* responsive; keeps footer link visible */
+  height:min(640px, 70dvh);
   border:0; border-radius:14px;
 }
 
@@ -473,12 +476,11 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
 }
 
 /* ===============================
-   WALLET ADAPTER THEMING
-   (keep above the modal if needed)
+   WALLET ADAPTER THEMING (always on top)
 =================================*/
 .wallet-adapter-modal,
 .wallet-adapter-modal-container{
-  z-index: 2147483600 !important;
+  z-index: 2147483640 !important;
   backdrop-filter:blur(8px) saturate(1.05);
 }
 .wallet-adapter-modal-container{
@@ -488,6 +490,15 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
 .wallet-adapter-button-trigger{
   border-radius:10px !important; border:2px solid #fff !important; background:#000 !important;
   color:#fff !important; text-transform:uppercase !important; font-weight:800 !important;
+}
+
+/* While wallet modal exists, further de-prioritize our modal */
+body:has(.wallet-adapter-modal){
+  --z-modal-overlay: 10;
+  --z-modal: 11;
+}
+body:has(.wallet-adapter-modal) .hub-overlay{
+  pointer-events:none !important;
 }
 
 /* ===============================
@@ -541,21 +552,16 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
   backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
   -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
 }
-/* Hide tiles + stop inner scroll when closed */
 .hub-preview .hub-stack{ display:none !important; }
 .hub-preview .hub-panel-body{ overflow:hidden !important; }
-/* Block interactions in preview */
 .hub-preview :is(button, a, [role="button"], [tabindex]){
   pointer-events:none !important;
   user-select:none !important;
 }
-/* Subtle dim */
 .hub-preview .hub-title{ opacity:.88; }
 .hub-preview .card{
   box-shadow:0 0 0 1.5px rgba(255,255,255,.5) inset, 0 8px 22px rgba(0,0,0,.28), 0 0 18px rgba(255,255,255,.20);
   filter:blur(1px) brightness(.95) opacity(.78);
 }
-/* Preview GIFs: no float/anim */
 .hub-preview .hub-gif{ transition:none; animation:none; opacity:.9; }
-/* Fade the entire preview during the merge moment */
 .landing-merge .hub-preview{ opacity:0; transition:opacity .45s ease; }
