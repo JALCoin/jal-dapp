@@ -6,8 +6,8 @@ import {
   WalletMultiButton,
   WalletDisconnectButton,
 } from "@solana/wallet-adapter-react-ui";
-import { usePreviewFocus } from "@/hooks/usePreviewFocus";
-import Jal from "./Jal"; // render JAL inside the hub
+import { usePreviewFocus } from "../hooks/usePreviewFocus"; // ← fixed path
+import Jal from "./Jal";
 
 /* ----------------------------------------
    Panel state:
@@ -42,6 +42,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
+  // Extra safety: flag body when wallet modal is in the DOM
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const body = document.body;
+    const check = () =>
+      !!document.querySelector(".wallet-adapter-modal, .wallet-adapter-modal-container");
+    const apply = () => body.classList.toggle("wallet-modal-open", check());
+
+    apply();
+    const mo = new MutationObserver(apply);
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
+
   // ---- Tiles ----
   const tiles: { key: TileKey; title: string; sub?: string; gif: string }[] = [
     { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
@@ -64,12 +78,17 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   // ---- Resolve starting panel: URL ?panel > session > prop ----
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
-    const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
-    const isPanel = (v: any): v is Panel => ["none", "grid", "shop", "jal", "vault"].includes(v);
+    const fromSession =
+      (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
+
+    const isPanel = (v: any): v is Panel =>
+      ["none", "grid", "shop", "jal", "vault"].includes(v);
+
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
       (fromSession && isPanel(fromSession) ? fromSession : null) ??
       initialPanel;
+
     setActivePanel(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -127,7 +146,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
-      // restore focus to the toggle button if hub is closing
       if (activePanel !== "none") {
         requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
       }
@@ -153,10 +171,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   // ---- When switching panels, ensure hub body scroll is at top & focus the title ----
   useEffect(() => {
     if (hubBodyRef.current) {
-      hubBodyRef.current.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+      hubBodyRef.current.scrollTo({
+        top: 0,
+        behavior: reducedMotion ? "auto" : "smooth",
+      });
     }
     if (activePanel !== "none") {
-      // shift SR/keyboard focus to the panel heading
       requestAnimationFrame(() => hubTitleRef.current?.focus?.());
     }
   }, [activePanel, reducedMotion]);
@@ -169,14 +189,19 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   };
 
   const panelTitle =
-    activePanel === "grid" ? "Hub" :
-    activePanel === "shop" ? "Shop" :
-    activePanel === "jal"  ? "JAL"  :
-    activePanel === "vault"? "Vault": "Welcome";
+    activePanel === "grid"
+      ? "Hub"
+      : activePanel === "shop"
+      ? "Shop"
+      : activePanel === "jal"
+      ? "JAL"
+      : activePanel === "vault"
+      ? "Vault"
+      : "Welcome";
 
   const isPreview = activePanel === "none";
 
-  // Make preview truly unfocusable & non-interactive in all browsers
+  // Make preview truly unfocusable & non-interactive
   usePreviewFocus(hubRef, isPreview);
 
   return (
@@ -186,13 +211,28 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     >
       {/* top-center social row */}
       <div className="landing-social" aria-hidden={merging}>
-        <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+        <a
+          href="https://x.com/JAL358"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="X"
+        >
           <img src="/icons/X.png" alt="" width={20} height={20} />
         </a>
-        <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+        <a
+          href="https://t.me/jalsolcommute"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Telegram"
+        >
           <img src="/icons/Telegram.png" alt="" width={20} height={20} />
         </a>
-        <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+        <a
+          href="https://www.tiktok.com/@358jalsol"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="TikTok"
+        >
           <img src="/icons/TikTok.png" alt="" width={20} height={20} />
         </a>
       </div>
@@ -205,12 +245,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
       {/* === CENTERED LOGO + CONNECT/OPEN HUB BUTTON === */}
       <div className="landing-inner">
-        <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
+        <div
+          className={`landing-logo-wrapper ${
+            connected ? "wallet-connected" : ""
+          }`}
+        >
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
         {!connected ? (
-          <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
+          <WalletMultiButton
+            className={`landing-wallet ${merging ? "fade-out" : ""}`}
+          />
         ) : (
           <button
             ref={toggleBtnRef}
@@ -242,11 +288,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <h2
             className="hub-title"
             ref={hubTitleRef}
-            tabIndex={-1} /* focus target when the hub opens */
+            tabIndex={-1} // focus target when the hub opens
           >
             {panelTitle}
           </h2>
-          {connected && <WalletDisconnectButton className="hub-disconnect-btn" />}
+          {connected && (
+            <WalletDisconnectButton className="hub-disconnect-btn" />
+          )}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
@@ -269,11 +317,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     loading="lazy"
                     width={960}
                     height={540}
-                    onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+                    onError={(e) =>
+                      ((e.currentTarget as HTMLImageElement).style.display =
+                        "none")
+                    }
                   />
                   <div className="hub-btn">
                     {t.title}
-                    {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
+                    {t.sub && (
+                      <span id={`tile-sub-${t.key}`} className="sub">
+                        {t.sub}
+                      </span>
+                    )}
                   </div>
                 </button>
               ))}
@@ -285,7 +340,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             {activePanel === "shop" && (
               <div className="card">
                 <h3>Shop</h3>
-                <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
+                <p>
+                  🛒 Browse items purchasable with JAL. (Hook your product list
+                  here.)
+                </p>
               </div>
             )}
 
@@ -308,8 +366,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
-                  Connect your wallet to unlock features. Then open the Hub to pick a tile —
-                  try <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
+                  Connect your wallet to unlock features. Then open the Hub to
+                  pick a tile — try <strong>JAL/SOL — SHOP</strong> to see
+                  in-panel shopping.
                 </p>
               </div>
             )}
