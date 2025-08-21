@@ -1,4 +1,5 @@
 // src/pages/Jal.tsx
+import type React from "react"; // for React.MouseEvent typing
 import { useEffect, useMemo, useRef, useState, useId } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
@@ -14,31 +15,29 @@ export default function Jal({ inHub = false }: Props) {
   const [copied, setCopied] = useState(false);
   const [params, setParams] = useSearchParams();
 
-  // Unique IDs for a11y
+  // a11y IDs
   const jalTitleId = useId();
   const swapDialogId = useId();
   const swapTitleId = useId();
   const swapDescId = useId();
+  const copiedRegionId = useId();
 
-  // Deep-link support: ?swap=1 opens the modal on load
+  // Deep-link: ?swap=1
   useEffect(() => {
     if (params.get("swap") === "1") setSwapOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep URL param in sync with modal state
+  // Sync URL param
   useEffect(() => {
     const next = new URLSearchParams(params);
-    if (swapOpen) {
-      next.set("swap", "1");
-    } else {
-      if (next.get("swap") === "1") next.delete("swap");
-    }
+    if (swapOpen) next.set("swap", "1");
+    else if (next.get("swap") === "1") next.delete("swap");
     setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [swapOpen]);
 
-  // Shorten mint for chip display
+  // Short mint
   const shortMint = useMemo(
     () =>
       JAL_MINT.length > 12
@@ -47,37 +46,34 @@ export default function Jal({ inHub = false }: Props) {
     []
   );
 
-  // Copy mint address
+  // Copy
   const copyMint = async () => {
     try {
       await navigator.clipboard.writeText(JAL_MINT);
       setCopied(true);
       setTimeout(() => setCopied(false), 900);
     } catch {
-      // no-op
+      /* no-op */
     }
   };
 
-  // ----- Modal a11y / focus management -----
+  // ----- Modal focus management -----
   const modalRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
 
-  // Open: remember opener and focus close button; Close: restore focus
   const openSwap = () => {
     lastFocusedRef.current = (document.activeElement as HTMLElement) ?? null;
     setSwapOpen(true);
   };
   const closeSwap = () => {
     setSwapOpen(false);
-    // restore focus after next paint
     requestAnimationFrame(() => lastFocusedRef.current?.focus?.());
   };
 
   useEffect(() => {
     if (!swapOpen) return;
 
-    // Focus first interactive element
     closeBtnRef.current?.focus();
 
     const getFocusables = (root: HTMLElement) =>
@@ -86,7 +82,10 @@ export default function Jal({ inHub = false }: Props) {
           'a[href], button, textarea, input, select, iframe, [tabindex]:not([tabindex="-1"])'
         )
       ).filter(
-        (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden")
+        (el) =>
+          !el.hasAttribute("disabled") &&
+          el.getAttribute("aria-hidden") !== "true" &&
+          el.tabIndex !== -1
       );
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -121,7 +120,6 @@ export default function Jal({ inHub = false }: Props) {
 
     document.addEventListener("keydown", onKeyDown);
 
-    // lock body scroll under modal
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -131,7 +129,7 @@ export default function Jal({ inHub = false }: Props) {
     };
   }, [swapOpen]);
 
-  // Close on backdrop click
+  // Backdrop click
   const onOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) closeSwap();
   };
@@ -139,9 +137,7 @@ export default function Jal({ inHub = false }: Props) {
   // ---------- Shared content ----------
   const Content = (
     <>
-      <h1 id={jalTitleId} className="jal-title">
-        JAL
-      </h1>
+      <h1 id={jalTitleId} className="jal-title">JAL</h1>
       <p className="jal-subtitle">
         About JAL — story, mission, and how SOL ⇄ JAL works.
       </p>
@@ -160,9 +156,10 @@ export default function Jal({ inHub = false }: Props) {
           type="button"
           className="jal-btn"
           onClick={copyMint}
-          aria-live="polite"
+          aria-controls={copiedRegionId}
+          aria-describedby={copiedRegionId}
         >
-          {copied ? "Copied!" : "Copy Mint"}
+          Copy Mint
         </button>
 
         <a
@@ -173,6 +170,11 @@ export default function Jal({ inHub = false }: Props) {
         >
           View on Explorer
         </a>
+      </div>
+
+      {/* live region for copy feedback */}
+      <div id={copiedRegionId} aria-live="polite" className="sr-only">
+        {copied ? "Copied!" : ""}
       </div>
 
       {/* CTA */}
@@ -229,6 +231,9 @@ export default function Jal({ inHub = false }: Props) {
                 title="Raydium Swap"
                 src={RAYDIUM_URL}
                 className="modal-iframe"
+                loading="eager"
+                referrerPolicy="no-referrer"
+                allow="clipboard-read; clipboard-write; fullscreen"
               />
 
               {/* Footer link */}
@@ -251,7 +256,6 @@ export default function Jal({ inHub = false }: Props) {
 
   // ---------- Render ----------
   if (inHub) {
-    // In-panel mode: render content only inside Hub’s glass panel
     return (
       <>
         <section className="hub-content in-hub" aria-labelledby={jalTitleId}>
@@ -262,7 +266,6 @@ export default function Jal({ inHub = false }: Props) {
     );
   }
 
-  // Standalone page mode (direct route)
   return (
     <main className="jal-page">
       <section className="jal-panel" aria-labelledby={jalTitleId}>
