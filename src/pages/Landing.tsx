@@ -6,6 +6,7 @@ import {
   WalletMultiButton,
   WalletDisconnectButton,
 } from "@solana/wallet-adapter-react-ui";
+import { usePreviewFocus } from "@/hooks/usePreviewFocus";
 import Jal from "./Jal"; // render JAL inside the hub
 
 /* ----------------------------------------
@@ -30,8 +31,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [activePanel, setActivePanel] = useState<Panel>("none");
   const timerRef = useRef<number | null>(null);
 
-  // scroll target for hub panel body
+  // Refs for focus management
   const hubBodyRef = useRef<HTMLDivElement | null>(null);
+  const hubRef = useRef<HTMLElement | null>(null);
+  const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const toggleBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const reducedMotion = useMemo(() => {
     if (typeof window === "undefined" || !window.matchMedia) return false;
@@ -123,28 +127,46 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
+      // restore focus to the toggle button if hub is closing
+      if (activePanel !== "none") {
+        requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
+      }
       setActivePanel("none");
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, publicKey]);
 
   // ---- ESC closes any open panel back to preview ----
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && activePanel !== "none") setActivePanel("none");
+      if (e.key === "Escape" && activePanel !== "none") {
+        setActivePanel("none");
+        requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [activePanel]);
 
-  // ---- When switching panels, ensure hub body scroll is at top ----
+  // ---- When switching panels, ensure hub body scroll is at top & focus the title ----
   useEffect(() => {
-    if (!hubBodyRef.current) return;
-    hubBodyRef.current.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+    if (hubBodyRef.current) {
+      hubBodyRef.current.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+    }
+    if (activePanel !== "none") {
+      // shift SR/keyboard focus to the panel heading
+      requestAnimationFrame(() => hubTitleRef.current?.focus?.());
+    }
   }, [activePanel, reducedMotion]);
 
-  const openPanel = (id: Panel) => setActivePanel(id);
+  const openPanel = (id: Panel) => {
+    setActivePanel(id);
+    if (id === "none") {
+      requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
+    }
+  };
 
   const panelTitle =
     activePanel === "grid" ? "Hub" :
@@ -154,8 +176,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   const isPreview = activePanel === "none";
 
+  // Make preview truly unfocusable & non-interactive in all browsers
+  usePreviewFocus(hubRef, isPreview);
+
   return (
-    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+    <main
+      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
+      aria-live="polite"
+    >
       {/* top-center social row */}
       <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
@@ -185,6 +213,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
         ) : (
           <button
+            ref={toggleBtnRef}
             className="landing-wallet"
             onClick={() => openPanel(isPreview ? "grid" : "none")}
             aria-expanded={!isPreview}
@@ -198,18 +227,25 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       {/* === HUB CONTAINER === */}
       <section
         id="hub-panel"
+        ref={hubRef}
         className={[
           "hub-panel",
           "hub-panel--fit",
           isPreview ? "landing-panel hub-preview" : "",
         ].join(" ")}
+        role="region"
         aria-label="JAL/SOL Hub"
         aria-live="polite"
-        // Prevent focus/interaction when previewed/hidden
-        {...(isPreview ? { inert: true as any } : {})}
+        aria-hidden={isPreview || undefined}
       >
         <div className="hub-panel-top">
-          <h2 className="hub-title">{panelTitle}</h2>
+          <h2
+            className="hub-title"
+            ref={hubTitleRef}
+            tabIndex={-1} /* focus target when the hub opens */
+          >
+            {panelTitle}
+          </h2>
           {connected && <WalletDisconnectButton className="hub-disconnect-btn" />}
         </div>
 
@@ -224,6 +260,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   className="img-btn"
                   onClick={() => openPanel(t.key)}
                   role="listitem"
+                  aria-describedby={`tile-sub-${t.key}`}
                 >
                   <img
                     src={t.gif}
@@ -236,7 +273,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   />
                   <div className="hub-btn">
                     {t.title}
-                    {t.sub && <span className="sub">{t.sub}</span>}
+                    {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
                   </div>
                 </button>
               ))}

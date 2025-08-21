@@ -1,6 +1,6 @@
 /* =============================================================
    JAL/SOL — Global Theme & Layout
-   Updated: modal is absolute-top; wallet modal always clickable
+   Modal is absolute-top; wallet modal always clickable
    ============================================================= */
 
 /* ===============================
@@ -39,8 +39,8 @@
   --z-sidebar:210;
   --z-hub:70;
 
-  /* Absolute-top modal layers */
-  --z-modal-overlay: 2147483000; /* overlay below modal, above everything */
+  /* App modal layers (overrides unless wallet is open) */
+  --z-modal-overlay: 2147483000;
   --z-modal:        2147483001;
 
   color-scheme:dark;
@@ -219,7 +219,7 @@ header .social-links img:hover{
 /* Connect wallet button */
 .landing-wallet{
   border-radius:12px!important; border:2px solid var(--jal-text)!important;
-  background:#000!important; color:var(--jal-text)!important; box-shadow:0 0 12px var(--jal-glow)!important;
+  background:#000!important; color:#11f1a7!important; box-shadow:0 0 12px var(--jal-glow)!important;
   text-transform:uppercase!important; font-weight:700!important; padding:.75rem 1.25rem!important; cursor:pointer;
   transition:opacity .45s ease, transform .45s ease, border-color .2s ease, box-shadow .2s ease;
 }
@@ -235,7 +235,6 @@ header .social-links img:hover{
   backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
   -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
   overflow:hidden; overscroll-behavior:contain; isolation:isolate;
-
   transform:none; filter:none; opacity:1;
 }
 .hub-overlay::after{
@@ -259,7 +258,6 @@ header .social-links img:hover{
   color:#fff; transform-origin:center center; animation:hubPopIn .45s cubic-bezier(.22,.75,.15,1) both;
   backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
   max-height:calc(100dvh - 32px); display:flex; flex-direction:column;
-
   z-index:auto; transform:none; filter:none; opacity:1;
 }
 .hub-panel.is-pre{ opacity:0; transform:scale(.92); }
@@ -355,11 +353,7 @@ header .social-links img:hover{
   backdrop-filter: blur(2px);
   z-index:var(--z-modal-overlay);
   animation: fadeIn .25s ease-out;
-
-  /* Do not block clicks (wallet modal needs to be clickable) */
-  pointer-events:none;
-
-  /* Safeguards */
+  pointer-events:auto; /* app modal should capture clicks normally */
   isolation:isolate;
   contain:layout paint style;
 }
@@ -384,14 +378,8 @@ header .social-links img:hover{
   overflow:hidden;
   pointer-events:auto;
 
-  /* true viewport center */
-  position:fixed;
-  left:50%;
-  top:50%;
-  transform:translate(-50%, -50%);
+  position:fixed; left:50%; top:50%; transform:translate(-50%, -50%);
 }
-
-/* Optional: top variant */
 .modal.modal--top{ top:8vh; transform:translate(-50%, 0); }
 
 .modal-header{ display:flex; align-items:center; gap:10px; justify-content:space-between; padding:4px 6px 10px; }
@@ -480,7 +468,8 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
 =================================*/
 .wallet-adapter-modal,
 .wallet-adapter-modal-container{
-  z-index: 2147483640 !important;
+  position:fixed !important;
+  z-index:2147483647 !important; /* win the stack war */
   backdrop-filter:blur(8px) saturate(1.05);
 }
 .wallet-adapter-modal-container{
@@ -492,13 +481,25 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
   color:#fff !important; text-transform:uppercase !important; font-weight:800 !important;
 }
 
-/* While wallet modal exists, further de-prioritize our modal */
-body:has(.wallet-adapter-modal){
-  --z-modal-overlay: 10;
-  --z-modal: 11;
-}
-body:has(.wallet-adapter-modal) .hub-overlay{
+/* ===========================================
+   WHEN WALLET MODAL IS VISIBLE
+   (Landing.tsx sets body[data-wallet-visible="true"])
+   Push every app overlay behind + disable hit testing
+===========================================*/
+body[data-wallet-visible="true"] .modal-overlay,
+body[data-wallet-visible="true"] .modal-host,
+body[data-wallet-visible="true"] .hub-overlay,
+body[data-wallet-visible="true"] .hub-panel {
+  z-index:1 !important;
   pointer-events:none !important;
+  transform:none !important;
+  filter:none !important;
+}
+
+/* Keep wallet dialog interactive */
+body[data-wallet-visible="true"] .wallet-adapter-modal,
+body[data-wallet-visible="true"] .wallet-adapter-modal *{
+  pointer-events:auto !important;
 }
 
 /* ===============================
@@ -539,7 +540,7 @@ body:has(.wallet-adapter-modal) .hub-overlay{
 }
 
 /* ===============================
-   HUB CLOSED (preview) — truly closed
+   HUB CLOSED (preview)
 =================================*/
 .hub-preview{
   margin-top:clamp(16px,4vh,28px);
