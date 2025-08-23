@@ -1,6 +1,6 @@
 /* =============================================================
    JAL/SOL — Global Theme & Layout
-   Modal is absolute-top; wallet modal always clickable
+   Wallet modal is absolute-top; hub & app modals yield to it
    ============================================================= */
 
 /* ===============================
@@ -34,12 +34,12 @@
   /* Sizing */
   --container-max:1200px;
 
-  /* Z-layers */
+  /* Base z-layers */
   --z-header:190;
   --z-sidebar:210;
   --z-hub:70;
 
-  /* App modal layers (overrides unless wallet is open) */
+  /* App modal layers (used when wallet is not open) */
   --z-modal-overlay: 2147483000;
   --z-modal:        2147483001;
 
@@ -86,15 +86,13 @@ body::before{
 /* ===============================
    HEADER
 =================================*/
-header,
-.site-header{
+header, .site-header{
   position:relative; width:100%; background:#000;
   padding:calc(2rem + env(safe-area-inset-top)) 1rem 1.25rem;
   box-shadow:0 4px 20px #0006;
   z-index:var(--z-header);
 }
-header::after,
-.site-header::after{
+header::after, .site-header::after{
   content:""; position:absolute; left:0; right:0; bottom:0; height:2px;
   background:linear-gradient(90deg, transparent 0%, #fff 15%, #fff 85%, transparent 100%);
   box-shadow:0 0 10px #fff, 0 0 20px #fff8;
@@ -202,9 +200,7 @@ header .social-links img:hover{
 /* Logo + soft glow */
 .landing-inner{
   display:flex; flex-direction:column; align-items:center;
-  gap:12px;
-  margin-bottom:8px;
-  position:relative; z-index:2; /* keep wallet CTA above hub */
+  gap:12px; margin-bottom:8px; position:relative; z-index:2;
 }
 .landing-logo-wrapper{ position:relative; display:inline-block; }
 .landing-logo-wrapper::before{
@@ -280,11 +276,8 @@ header .social-links img:hover{
 .hub-connection{ margin:.15rem 0 1.25rem; display:flex; justify-content:center; gap:.5rem; font-size:.85rem; color:var(--jal-muted); }
 .hub-connection .pill{ background:#000; color:#fff; border:1px solid #fff; padding:.25rem .55rem; border-radius:999px; box-shadow:0 0 12px #fff6; }
 
-/* HUB: action stack */
-.hub-stack{ display:grid; gap:1rem; }
-.hub-stack--responsive{ gap:clamp(12px,2vw,20px); }
-
-/* Buttons under GIFs */
+/* HUB buttons / tiles */
+.hub-stack{ display:grid; gap:clamp(12px,2vw,20px); }
 .hub-btn{
   display:block; width:100%; text-align:center; text-decoration:none;
   padding:clamp(1rem,2.6vw,1.4rem) clamp(1rem,2.6vw,1.6rem);
@@ -298,7 +291,6 @@ header .social-links img:hover{
 @media (hover:hover){ .hub-btn:hover{ transform:translateY(-2px) scale(1.015); box-shadow:0 0 26px #fff9, 0 0 40px #fff8, inset 0 0 12px #fff6; filter:saturate(1.05); } }
 @media (hover:none){ .hub-btn:active{ transform:scale(.985); } }
 
-/* Image-style buttons */
 .img-btn{
   padding:0; background:transparent; border:none; border-radius:14px; overflow:hidden;
   box-shadow:0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
@@ -306,15 +298,12 @@ header .social-links img:hover{
 }
 .img-btn:focus-visible{ outline:3px solid #fff; outline-offset:4px; box-shadow:0 0 0 1.5px #fff inset, 0 0 24px #fff, 0 0 36px #fff8; }
 
-/* ✅ GIFs */
+/* GIFs */
 .hub-gif{
-  display:block;
-  width:100%;
+  display:block; width:100%;
   height:clamp(180px, 32vh, 360px);
-  object-fit:contain;
-  object-position:center;
-  background:#000;
-  padding:6px;
+  object-fit:contain; object-position:center;
+  background:#000; padding:6px;
   transition:transform .18s ease, filter .25s ease, box-shadow .25s ease;
 }
 .hub-gif--cover{ object-fit:cover; }
@@ -330,20 +319,17 @@ header .social-links img:hover{
 }
 .jal-title{ margin:0; color:#fff; text-align:center; text-shadow:0 0 12px #fff, 0 0 22px #fff8; }
 .jal-subtitle{ margin-top:12px; color:rgba(255,255,255,.8); text-align:center; }
-
-/* Mint actions */
 .jal-actions{ display:flex; justify-content:center; gap:12px; margin-top:16px; flex-wrap:wrap; }
 .jal-chip{ background:#000; color:#fff; padding:6px 10px; border-radius:8px; font-size:.9rem; border:1px solid rgba(255,255,255,.7); box-shadow:0 0 8px #fff3 inset; }
 .jal-btn{ border:1px solid #fff; background:transparent; color:#fff; border-radius:8px; padding:6px 12px; cursor:pointer; transition:transform .14s ease, box-shadow .2s ease, filter .2s ease, border-color .2s ease; }
 .jal-btn:hover{ transform:translateY(-1px); border-color:#fff; box-shadow:0 0 18px #fff8; filter:saturate(1.05); }
-.jal-btn:active{ transform:translateY(0); }
 .jal-btn--primary{ border:2px solid #fff; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:.85rem 1.25rem; border-radius:12px; box-shadow:0 0 18px rgba(255,255,255,.25), 0 0 1px rgba(255,255,255,.8) inset; }
 .jal-link{ border:1px solid #fff; background:transparent; color:#fff; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-grid; place-items:center; transition:transform .14s ease, box-shadow .2s ease, border-color .2s ease; }
 .jal-link:hover{ transform:translateY(-1px); border-color:#fff; box-shadow:0 0 18px #fff8; }
 .jal-cta{ display:grid; gap:12px; margin-top:20px; justify-content:center; }
 
 /* ===============================
-   MODAL (Reusable)
+   APP MODAL (reusable)
 =================================*/
 @keyframes modalIn{from{opacity:0; transform:translateY(8px) scale(.96)} to{opacity:1; transform:none}}
 
@@ -353,170 +339,132 @@ header .social-links img:hover{
   backdrop-filter: blur(2px);
   z-index:var(--z-modal-overlay);
   animation: fadeIn .25s ease-out;
-  pointer-events:auto; /* app modal should capture clicks normally */
+  pointer-events:auto;
   isolation:isolate;
   contain:layout paint style;
 }
-
 .modal-host{
-  position:fixed; inset:0;
-  display:grid; place-items:center;
-  pointer-events:none;
-  z-index:var(--z-modal);
-  isolation:isolate;
+  position:fixed; inset:0; display:grid; place-items:center;
+  pointer-events:none; z-index:var(--z-modal); isolation:isolate;
 }
-
 .modal{
   background:rgba(0,0,0,.78);
   border:1.6px solid rgba(255,255,255,.9);
-  border-radius:18px;
-  padding:12px;
+  border-radius:18px; padding:12px;
   animation: modalIn .28s ease-out both, glowPulse 2.4s ease-in-out infinite;
   box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 24px rgba(255,255,255,.28);
-  width:min(560px,94vw);
-  max-height:90dvh;
-  overflow:hidden;
-  pointer-events:auto;
-
-  position:fixed; left:50%; top:50%; transform:translate(-50%, -50%);
+  width:min(560px,94vw); max-height:90dvh; overflow:hidden; pointer-events:auto;
+  position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
 }
 .modal.modal--top{ top:8vh; transform:translate(-50%, 0); }
-
 .modal-header{ display:flex; align-items:center; gap:10px; justify-content:space-between; padding:4px 6px 10px; }
-.modal-spacer{ width:36px; }
 .modal-title{ text-align:center; color:#fff; letter-spacing:.06em; font-weight:700; }
-.modal-title-main{ opacity:.92; }
 .modal-title-sub{ font-size:12px; opacity:.7; margin-top:2px; }
 .modal-close{ border:1px solid #fff; background:transparent; color:#fff; border-radius:10px; padding:6px 10px; cursor:pointer; transition: transform .14s ease, box-shadow .2s ease; }
 .modal-close:hover{ transform:translateY(-1px); box-shadow:0 0 18px #fff8; }
-
-.modal-iframe{
-  width:100%;
-  height:min(640px, 70dvh);
-  border:0; border-radius:14px;
-}
-
+.modal-iframe{ width:100%; height:min(640px, 70dvh); border:0; border-radius:14px; }
 .modal-footer{ text-align:center; margin-top:8px; }
 
 /* ===============================
-   FOOTER
+   UTILITIES
 =================================*/
 .site-footer{
   margin-top:auto; text-align:center; padding:1rem 0;
   font-size:.85rem; color:var(--jal-muted); text-shadow:0 0 4px var(--jal-glow);
 }
-
-/* ===============================
-   UTILITIES
-=================================*/
 .button{
   display:inline-block; padding:.85rem 1.2rem; border-radius:12px; border:2px solid #fff;
   text-decoration:none; color:#fff; font-weight:800; text-transform:uppercase; letter-spacing:.06em;
   box-shadow:0 0 16px #fff4; transition:transform .14s ease, box-shadow .2s ease;
 }
 .button:hover{ transform:translateY(-2px); box-shadow:0 0 26px #fff8, inset 0 0 12px #fff6; }
-
 .card{
   background:var(--panel-bg); border:1px solid rgba(255,255,255,.55); border-radius:16px;
   padding:clamp(14px,2vw,18px); box-shadow:0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
 }
-
-/* Focus-visible enhancements */
 a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-visible, .jal-link:focus-visible, .button:focus-visible{
   outline:3px solid #fff; outline-offset:3px; box-shadow:0 0 18px #fff8, 0 0 1px #fff inset;
 }
 
-/* ===============================
-   SCROLLBARS
-=================================*/
+/* Scrollbars */
 *{ scrollbar-width: thin; scrollbar-color: #fff transparent; }
 ::-webkit-scrollbar{ width:8px; }
 ::-webkit-scrollbar-thumb{ background:#fff; border-radius:4px; }
 ::-webkit-scrollbar-thumb:hover{ background:#e5e5e5; }
 
-/* --- in-panel content spacing --- */
-.in-hub{ padding:8px 2px 2px; }
-.hub-content{ display:block; }
-
-/* --- landing disconnect bubble --- */
-.landing-disconnect{
-  position:absolute; top:1rem; right:1rem; z-index:3;
-}
-
-/* --- wallet disconnect buttons --- */
-.wallet-disconnect-btn,
-.hub-disconnect-btn{
-  border:2px solid #fff !important;
-  background:#000 !important;
-  color:#fff !important;
-  border-radius:10px !important;
-  font-weight:700 !important;
-  text-transform:uppercase !important;
-  box-shadow:0 0 14px #fff7 !important;
-  padding:.5rem 1rem !important;
-  cursor:pointer;
+/* Disconnect btns */
+.landing-disconnect{ position:absolute; top:1rem; right:1rem; z-index:3; }
+.wallet-disconnect-btn, .hub-disconnect-btn{
+  border:2px solid #fff !important; background:#000 !important; color:#fff !important;
+  border-radius:10px !important; font-weight:700 !important; text-transform:uppercase !important;
+  box-shadow:0 0 14px #fff7 !important; padding:.5rem 1rem !important; cursor:pointer;
   transition: transform .14s ease, box-shadow .2s ease;
 }
-.wallet-disconnect-btn:hover,
-.hub-disconnect-btn:hover{
-  transform:translateY(-1px);
-  box-shadow:0 0 22px #fff, 0 0 30px #fff !important;
+.wallet-disconnect-btn:hover, .hub-disconnect-btn:hover{
+  transform:translateY(-1px); box-shadow:0 0 22px #fff, 0 0 30px #fff !important;
 }
 
 /* ===============================
-   WALLET ADAPTER THEMING (always on top)
+   WALLET ADAPTER (absolute top)
 =================================*/
 .wallet-adapter-modal,
 .wallet-adapter-modal-container,
-.wallet-adapter-modal-wrapper {
-  position: fixed !important;
-  z-index: 2147483647 !important; /* ensure absolute top */
+.wallet-adapter-modal-wrapper{
+  position:fixed !important;
+  z-index:2147483647 !important; /* win the stack war */
+}
+.wallet-adapter-modal-container{
+  background:rgba(0,0,0,.85) !important;
+  border:1.5px solid rgba(255,255,255,.6) !important;
+  box-shadow:0 8px 28px rgba(0,0,0,.55), 0 0 22px rgba(255,255,255,.35) !important;
+}
+.wallet-adapter-button-trigger{
+  border-radius:10px !important; border:2px solid #fff !important; background:#000 !important;
+  color:#fff !important; text-transform:uppercase !important; font-weight:800 !important;
 }
 
-.wallet-adapter-modal-container {
-  background: rgba(0,0,0,.85) !important;
-  border: 1.5px solid rgba(255,255,255,.6) !important;
-  box-shadow: 0 8px 28px rgba(0,0,0,.55), 0 0 22px rgba(255,255,255,.35) !important;
-}
+/* ===============================
+   FREEZE APP WHEN WALLET IS OPEN
+   (works two ways: :has selector OR data flag)
+   - JS may set: <body data-wallet-visible="true">
+   - fallback auto: body:has(.wallet-adapter-modal)
+=================================*/
 
-.wallet-adapter-button-trigger {
-  border-radius: 10px !important;
-  border: 2px solid #fff !important;
-  background: #000 !important;
-  color: #fff !important;
-  text-transform: uppercase !important;
-  font-weight: 800 !important;
-}
-
-/* When wallet modal is open, freeze hub completely */
-body:has(.wallet-adapter-modal) .hub-overlay,
-body:has(.wallet-adapter-modal) .hub-panel {
-  z-index: 1 !important;
-  pointer-events: none !important;
-  opacity: 0.25 !important;
-  filter: blur(4px) brightness(.8);
-}
-
-/* ===========================================
-   WHEN WALLET MODAL IS VISIBLE
-   (Landing.tsx sets body[data-wallet-visible="true"])
-   Push every app overlay behind + disable hit testing
-===========================================*/
+/* Preferred: body attribute toggled by Landing.tsx MutationObserver */
 body[data-wallet-visible="true"] .modal-overlay,
 body[data-wallet-visible="true"] .modal-host,
 body[data-wallet-visible="true"] .hub-overlay,
-body[data-wallet-visible="true"] .hub-panel {
-  z-index:1 !important;
+body[data-wallet-visible="true"] .hub-panel{
   pointer-events:none !important;
-  transform:none !important;
-  filter:none !important;
+  opacity:.25 !important;
+  filter:blur(4px) brightness(.85);
 }
 
-/* Keep wallet dialog interactive */
-body[data-wallet-visible="true"] .wallet-adapter-modal,
-body[data-wallet-visible="true"] .wallet-adapter-modal *{
-  pointer-events:auto !important;
+/* Fallback for environments where the attribute isn’t set */
+body:has(.wallet-adapter-modal) .modal-overlay,
+body:has(.wallet-adapter-modal) .modal-host,
+body:has(.wallet-adapter-modal) .hub-overlay,
+body:has(.wallet-adapter-modal) .hub-panel{
+  pointer-events:none !important;
+  opacity:.25 !important;
+  filter:blur(4px) brightness(.85);
 }
+
+/* Optional: if you prefer to HARD-hide hub (no layout) while wallet is open, un-comment: */
+/*
+body[data-wallet-visible="true"] .hub-overlay,
+body[data-wallet-visible="true"] .hub-panel,
+body:has(.wallet-adapter-modal) .hub-overlay,
+body:has(.wallet-adapter-modal) .hub-panel{
+  display:none !important;
+}
+*/
+
+/* Keep wallet dialog interactive even when others are frozen */
+body[data-wallet-visible="true"] .wallet-adapter-modal,
+body[data-wallet-visible="true"] .wallet-adapter-modal *{ pointer-events:auto !important; }
+body:has(.wallet-adapter-modal) .wallet-adapter-modal,
+body:has(.wallet-adapter-modal) .wallet-adapter-modal *{ pointer-events:auto !important; }
 
 /* ===============================
    PAGE TRANSITIONS
@@ -581,10 +529,3 @@ body[data-wallet-visible="true"] .wallet-adapter-modal *{
   filter:blur(1px) brightness(.95) opacity(.78);
 }
 .hub-preview .hub-gif{ transition:none; animation:none; opacity:.9; }
-.landing-merge .hub-preview{ opacity:0; transition:opacity .45s ease; }
-/* 🚑 Force hub completely inactive when wallet modal is open */
-body:has(.wallet-adapter-modal) .hub-overlay,
-body:has(.wallet-adapter-modal) .hub-panel {
-  display: none !important;   /* remove hub while wallet is active */
-}
-
