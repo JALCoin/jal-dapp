@@ -224,6 +224,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       : "Welcome";
 
   const isPreview = activePanel === "none";
+  const showOverlay = !isPreview; // <- hub floats over landing now
 
   return (
     <main
@@ -264,20 +265,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
       )}
 
-      {/* centered logo + connect/open hub */}
+      {/* landing hero stays visible at all times */}
       <div className="landing-inner">
-        <div
-          className={`landing-logo-wrapper ${
-            connected ? "wallet-connected" : ""
-          }`}
-        >
+        <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
         {!connected ? (
-          <WalletMultiButton
-            className={`landing-wallet ${merging ? "fade-out" : ""}`}
-          />
+          <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
         ) : (
           <button
             ref={toggleBtnRef}
@@ -291,106 +286,114 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         )}
       </div>
 
-      {/* hub container */}
-      <section
-        id="hub-panel"
-        className={[
-          "hub-panel",
-          "hub-panel--fit",
-          isPreview ? "landing-panel hub-preview" : "",
-        ].join(" ")}
-        role="region"
-        aria-label="JAL/SOL Hub"
-        aria-live="polite"
-        aria-hidden={isPreview || undefined}
-      >
-        <div className="hub-panel-top">
-          <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
-            {panelTitle}
-          </h2>
-          {connected && (
-            <WalletDisconnectButton className="hub-disconnect-btn" />
-          )}
-        </div>
-
-        <div className="hub-panel-body" ref={hubBodyRef}>
-          {/* Tile grid — ONLY in explicit 'grid' mode */}
-          {activePanel === "grid" && (
-            <div className="hub-stack hub-stack--responsive" role="list">
-              {tiles.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  className="img-btn"
-                  onClick={() => openPanel(t.key)}
-                  role="listitem"
-                  aria-describedby={`tile-sub-${t.key}`}
-                >
-                  <img
-                    src={t.gif}
-                    alt=""
-                    className="hub-gif float"
-                    loading="lazy"
-                    width={960}
-                    height={540}
-                    onError={(e) =>
-                      ((e.currentTarget as HTMLImageElement).style.display =
-                        "none")
-                    }
-                  />
-                  <div className="hub-btn">
-                    {t.title}
-                    {t.sub && (
-                      <span id={`tile-sub-${t.key}`} className="sub">
-                        {t.sub}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Panel content */}
-          <div className="hub-content">
-            {activePanel === "shop" && (
-              <div className="card">
-                <h3>Shop</h3>
-                <p>
-                  🛒 Browse items purchasable with JAL. (Hook your product list
-                  here.)
-                </p>
-              </div>
-            )}
-
-            {activePanel === "jal" && (
-              <div className="in-hub">
-                <Suspense fallback={<div className="card">Loading JAL…</div>}>
-                  <Jal inHub />
-                </Suspense>
-              </div>
-            )}
-
-            {activePanel === "vault" && (
-              <div className="card">
-                <h3>Vault</h3>
-                <p>View balances, recent activity, and manage your JAL.</p>
-              </div>
-            )}
-
-            {isPreview && (
+      {/* PREVIEW CARD lives in the page flow (only when no overlay) */}
+      {isPreview && (
+        <section
+          id="hub-panel"
+          className="hub-panel hub-panel--fit landing-panel hub-preview"
+          role="region"
+          aria-label="JAL/SOL Hub"
+          aria-live="polite"
+        >
+          <div className="hub-panel-top">
+            <h2 className="hub-title" tabIndex={-1}>
+              {panelTitle}
+            </h2>
+            {connected && <WalletDisconnectButton className="hub-disconnect-btn" />}
+          </div>
+          <div className="hub-panel-body">
+            <div className="hub-content">
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
-                  Connect your wallet to unlock features. Then open the Hub to
-                  pick a tile — try <strong>JAL/SOL — SHOP</strong> to see
-                  in‑panel shopping.
+                  Connect your wallet to unlock features. Then open the Hub to pick a tile — try{" "}
+                  <strong>JAL/SOL — SHOP</strong> to see in‑panel shopping.
                 </p>
               </div>
-            )}
+            </div>
           </div>
+        </section>
+      )}
+
+      {/* OVERLAY: floats above landing but landing stays visible behind */}
+      {showOverlay && (
+        <div className="hub-overlay" aria-hidden={undefined}>
+          <section
+            id="hub-panel"
+            className="hub-panel hub-panel--fit"
+            role="dialog"
+            aria-modal="true"
+            aria-label="JAL/SOL Hub"
+          >
+            <div className="hub-panel-top">
+              <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
+                {panelTitle}
+              </h2>
+              {connected && <WalletDisconnectButton className="hub-disconnect-btn" />}
+            </div>
+
+            <div className="hub-panel-body" ref={hubBodyRef}>
+              {activePanel === "grid" && (
+                <div className="hub-stack hub-stack--responsive" role="list">
+                  {tiles.map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      className="img-btn"
+                      onClick={() => openPanel(t.key)}
+                      role="listitem"
+                      aria-describedby={`tile-sub-${t.key}`}
+                    >
+                      <img
+                        src={t.gif}
+                        alt=""
+                        className="hub-gif float"
+                        loading="lazy"
+                        width={960}
+                        height={540}
+                        onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+                      />
+                      <div className="hub-btn">
+                        {t.title}
+                        {t.sub && (
+                          <span id={`tile-sub-${t.key}`} className="sub">
+                            {t.sub}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Panel content */}
+              <div className="hub-content">
+                {activePanel === "shop" && (
+                  <div className="card">
+                    <h3>Shop</h3>
+                    <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
+                  </div>
+                )}
+
+                {activePanel === "jal" && (
+                  <div className="in-hub">
+                    <Suspense fallback={<div className="card">Loading JAL…</div>}>
+                      <Jal inHub />
+                    </Suspense>
+                  </div>
+                )}
+
+                {activePanel === "vault" && (
+                  <div className="card">
+                    <h3>Vault</h3>
+                    <p>View balances, recent activity, and manage your JAL.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
-      </section>
+      )}
     </main>
   );
 }
