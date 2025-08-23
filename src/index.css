@@ -466,6 +466,13 @@ body[data-wallet-visible="true"] .wallet-adapter-modal *{ pointer-events:auto !i
 body:has(.wallet-adapter-modal) .wallet-adapter-modal,
 body:has(.wallet-adapter-modal) .wallet-adapter-modal *{ pointer-events:auto !important; }
 
+/* 🚑 When the wallet adapter modal is open, hide ALL hub UI (preview + open) */
+body:has(.wallet-adapter-modal) .hub-overlay,
+body:has(.wallet-adapter-modal) .hub-panel,
+body:has(.wallet-adapter-modal) .hub-preview {
+  display: none !important;
+}
+
 /* ===============================
    PAGE TRANSITIONS
 =================================*/
