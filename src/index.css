@@ -582,3 +582,9 @@ body[data-wallet-visible="true"] .wallet-adapter-modal *{
 }
 .hub-preview .hub-gif{ transition:none; animation:none; opacity:.9; }
 .landing-merge .hub-preview{ opacity:0; transition:opacity .45s ease; }
+/* 🚑 Force hub completely inactive when wallet modal is open */
+body:has(.wallet-adapter-modal) .hub-overlay,
+body:has(.wallet-adapter-modal) .hub-panel {
+  display: none !important;   /* remove hub while wallet is active */
+}
+
