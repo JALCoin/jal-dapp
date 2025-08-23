@@ -406,72 +406,98 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
 
 /* ===============================
    WALLET ADAPTER (absolute top)
+   — Keep ONLY the modal itself at max z-index.
+   — Do NOT force container/wrapper to fixed/z-index to avoid layout clashes.
 =================================*/
-.wallet-adapter-modal,
-.wallet-adapter-modal-container,
-.wallet-adapter-modal-wrapper{
-  position:fixed !important;
-  z-index:2147483647 !important; /* win the stack war */
+.wallet-adapter-modal {
+  position: fixed !important;
+  z-index: 2147483647 !important; /* always on top */
 }
-.wallet-adapter-modal-container{
-  background:rgba(0,0,0,.85) !important;
-  border:1.5px solid rgba(255,255,255,.6) !important;
-  box-shadow:0 8px 28px rgba(0,0,0,.55), 0 0 22px rgba(255,255,255,.35) !important;
+
+.wallet-adapter-modal-container {
+  background: rgba(0,0,0,.85) !important;
+  border: 1.5px solid rgba(255,255,255,.6) !important;
+  box-shadow:
+    0 8px 28px rgba(0,0,0,.55),
+    0 0 22px rgba(255,255,255,.35) !important;
 }
-.wallet-adapter-button-trigger{
-  border-radius:10px !important; border:2px solid #fff !important; background:#000 !important;
-  color:#fff !important; text-transform:uppercase !important; font-weight:800 !important;
+
+/* Optional: style the trigger button */
+.wallet-adapter-button-trigger {
+  border-radius: 10px !important;
+  border: 2px solid #fff !important;
+  background: #000 !important;
+  color: #fff !important;
+  text-transform: uppercase !important;
+  font-weight: 800 !important;
 }
 
 /* ===============================
-   FREEZE APP WHEN WALLET IS OPEN
-   (works two ways: :has selector OR data flag)
-   - JS may set: <body data-wallet-visible="true">
-   - fallback auto: body:has(.wallet-adapter-modal)
+   FREEZE / HIDE APP WHEN WALLET UI IS OPEN
+   Two mechanisms:
+   1) Attribute driven by Landing.tsx: <body data-wallet-visible="true">
+   2) Pure CSS fallback using :has() for adapter + WalletConnect (.wcm-modal)
 =================================*/
 
-/* Preferred: body attribute toggled by Landing.tsx MutationObserver */
+/* 1) Attribute-driven freeze (preferred) */
 body[data-wallet-visible="true"] .modal-overlay,
 body[data-wallet-visible="true"] .modal-host,
 body[data-wallet-visible="true"] .hub-overlay,
-body[data-wallet-visible="true"] .hub-panel{
-  pointer-events:none !important;
-  opacity:.25 !important;
-  filter:blur(4px) brightness(.85);
+body[data-wallet-visible="true"] .hub-panel,
+body[data-wallet-visible="true"] .hub-preview {
+  pointer-events: none !important;
+  opacity: .25 !important;
+  filter: blur(4px) brightness(.85);
 }
 
-/* Fallback for environments where the attribute isn’t set */
+/* Keep the wallet dialog interactive */
+body[data-wallet-visible="true"] .wallet-adapter-modal,
+body[data-wallet-visible="true"] .wallet-adapter-modal * {
+  pointer-events: auto !important;
+}
+
+/* 2) :has() fallback (also covers WalletConnect modal .wcm-modal) */
+body:has(.wallet-adapter-modal),
+body:has(.wcm-modal) {
+  /* nothing here; we scope effects below */
+}
+
 body:has(.wallet-adapter-modal) .modal-overlay,
 body:has(.wallet-adapter-modal) .modal-host,
 body:has(.wallet-adapter-modal) .hub-overlay,
-body:has(.wallet-adapter-modal) .hub-panel{
-  pointer-events:none !important;
-  opacity:.25 !important;
-  filter:blur(4px) brightness(.85);
+body:has(.wallet-adapter-modal) .hub-panel,
+body:has(.wallet-adapter-modal) .hub-preview,
+body:has(.wcm-modal) .modal-overlay,
+body:has(.wcm-modal) .modal-host,
+body:has(.wcm-modal) .hub-overlay,
+body:has(.wcm-modal) .hub-panel,
+body:has(.wcm-modal) .hub-preview {
+  pointer-events: none !important;
+  opacity: .25 !important;
+  filter: blur(4px) brightness(.85);
 }
 
-/* Optional: if you prefer to HARD-hide hub (no layout) while wallet is open, un-comment: */
+/* Ensure wallet UI remains clickable */
+body:has(.wallet-adapter-modal) .wallet-adapter-modal,
+body:has(.wallet-adapter-modal) .wallet-adapter-modal * {
+  pointer-events: auto !important;
+}
+
+/* 🚑 If you prefer HARD hiding the hub while a wallet is open, use this instead: */
+/* (uncomment to replace the blur/freeze above) */
 /*
 body[data-wallet-visible="true"] .hub-overlay,
 body[data-wallet-visible="true"] .hub-panel,
-body:has(.wallet-adapter-modal) .hub-overlay,
-body:has(.wallet-adapter-modal) .hub-panel{
-  display:none !important;
-}
-*/
-
-/* Keep wallet dialog interactive even when others are frozen */
-body[data-wallet-visible="true"] .wallet-adapter-modal,
-body[data-wallet-visible="true"] .wallet-adapter-modal *{ pointer-events:auto !important; }
-body:has(.wallet-adapter-modal) .wallet-adapter-modal,
-body:has(.wallet-adapter-modal) .wallet-adapter-modal *{ pointer-events:auto !important; }
-
-/* 🚑 When the wallet adapter modal is open, hide ALL hub UI (preview + open) */
+body[data-wallet-visible="true"] .hub-preview,
 body:has(.wallet-adapter-modal) .hub-overlay,
 body:has(.wallet-adapter-modal) .hub-panel,
-body:has(.wallet-adapter-modal) .hub-preview {
+body:has(.wallet-adapter-modal) .hub-preview,
+body:has(.wcm-modal) .hub-overlay,
+body:has(.wcm-modal) .hub-panel,
+body:has(.wcm-modal) .hub-preview {
   display: none !important;
 }
+*/
 
 /* ===============================
    PAGE TRANSITIONS
