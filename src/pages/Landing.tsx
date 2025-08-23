@@ -1,5 +1,13 @@
 // src/pages/Landing.tsx
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
@@ -21,6 +29,9 @@ type LandingProps = {
   initialPanel?: Panel;
 };
 
+const WALLET_MODAL_SELECTORS =
+  '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
+
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, wallet } = useWallet();
   const [params, setParams] = useSearchParams();
@@ -39,12 +50,22 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // Static tiles
-  const tiles: { key: TileKey; title: string; sub?: string; gif: string }[] = [
-    { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
-    { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
-    { key: "vault", title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
-  ];
+  // Static tiles (memoized so effects don't re-run)
+  const tiles = useMemo<
+    { key: TileKey; title: string; sub?: string; gif: string }[]
+  >(
+    () => [
+      { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
+      {
+        key: "shop",
+        title: "JAL/SOL — SHOP",
+        sub: "Buy items with JAL",
+        gif: "/JALSOL.gif",
+      },
+      { key: "vault", title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
+    ],
+    []
+  );
 
   // Preload GIFs once
   useEffect(() => {
@@ -56,18 +77,21 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       return i;
     });
     return () => imgs.forEach((i) => (i.src = ""));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tiles]);
 
   // Resolve starting panel: URL ?panel > session > prop
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
-    const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
-    const isPanel = (v: any): v is Panel => ["none", "grid", "shop", "jal", "vault"].includes(v);
+    const fromSession =
+      (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
+    const isPanel = (v: unknown): v is Panel =>
+      v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault";
+
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
       (fromSession && isPanel(fromSession) ? fromSession : null) ??
       initialPanel;
+
     setActivePanel(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -150,30 +174,37 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   // When switching panels, scroll to top & focus heading
   useEffect(() => {
     if (hubBodyRef.current) {
-      hubBodyRef.current.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+      hubBodyRef.current.scrollTo({
+        top: 0,
+        behavior: reducedMotion ? "auto" : "smooth",
+      });
     }
     if (activePanel !== "none") {
       requestAnimationFrame(() => hubTitleRef.current?.focus?.());
     }
   }, [activePanel, reducedMotion]);
 
-  // Flag body when wallet modal is visible (drives CSS to freeze/hide hub)
-  useEffect(() => {
+  // Flag body when ANY wallet modal is visible (Solana adapter or WalletConnect)
+  const setWalletFlag = useCallback((on: boolean) => {
     const root = document.body;
-    const setFlag = (on: boolean) =>
-      on ? root.setAttribute("data-wallet-visible", "true") : root.removeAttribute("data-wallet-visible");
+    if (on) root.setAttribute("data-wallet-visible", "true");
+    else root.removeAttribute("data-wallet-visible");
+  }, []);
 
-    const check = () => setFlag(!!document.querySelector(".wallet-adapter-modal"));
+  useEffect(() => {
+    const check = () =>
+      setWalletFlag(!!document.querySelector(WALLET_MODAL_SELECTORS));
+
+    // initial + observe DOM for wallet modals
     check();
-
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       obs.disconnect();
-      setFlag(false);
+      setWalletFlag(false);
     };
-  }, []);
+  }, [setWalletFlag]);
 
   // Helpers
   const openPanel = (id: Panel) => {
@@ -182,24 +213,47 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   };
 
   const panelTitle =
-    activePanel === "grid" ? "Hub" :
-    activePanel === "shop" ? "Shop" :
-    activePanel === "jal"  ? "JAL"  :
-    activePanel === "vault"? "Vault": "Welcome";
+    activePanel === "grid"
+      ? "Hub"
+      : activePanel === "shop"
+      ? "Shop"
+      : activePanel === "jal"
+      ? "JAL"
+      : activePanel === "vault"
+      ? "Vault"
+      : "Welcome";
 
   const isPreview = activePanel === "none";
 
   return (
-    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+    <main
+      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
+      aria-live="polite"
+    >
       {/* top-center social row */}
       <div className="landing-social" aria-hidden={merging}>
-        <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+        <a
+          href="https://x.com/JAL358"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="X"
+        >
           <img src="/icons/X.png" alt="" width={20} height={20} />
         </a>
-        <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+        <a
+          href="https://t.me/jalsolcommute"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Telegram"
+        >
           <img src="/icons/Telegram.png" alt="" width={20} height={20} />
         </a>
-        <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+        <a
+          href="https://www.tiktok.com/@358jalsol"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="TikTok"
+        >
           <img src="/icons/TikTok.png" alt="" width={20} height={20} />
         </a>
       </div>
@@ -212,12 +266,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
       {/* centered logo + connect/open hub */}
       <div className="landing-inner">
-        <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
+        <div
+          className={`landing-logo-wrapper ${
+            connected ? "wallet-connected" : ""
+          }`}
+        >
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
         </div>
 
         {!connected ? (
-          <WalletMultiButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
+          <WalletMultiButton
+            className={`landing-wallet ${merging ? "fade-out" : ""}`}
+          />
         ) : (
           <button
             ref={toggleBtnRef}
@@ -234,7 +294,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       {/* hub container */}
       <section
         id="hub-panel"
-        className={["hub-panel", "hub-panel--fit", isPreview ? "landing-panel hub-preview" : ""].join(" ")}
+        className={[
+          "hub-panel",
+          "hub-panel--fit",
+          isPreview ? "landing-panel hub-preview" : "",
+        ].join(" ")}
         role="region"
         aria-label="JAL/SOL Hub"
         aria-live="polite"
@@ -244,7 +308,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
             {panelTitle}
           </h2>
-          {connected && <WalletDisconnectButton className="hub-disconnect-btn" />}
+          {connected && (
+            <WalletDisconnectButton className="hub-disconnect-btn" />
+          )}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
@@ -267,11 +333,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     loading="lazy"
                     width={960}
                     height={540}
-                    onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+                    onError={(e) =>
+                      ((e.currentTarget as HTMLImageElement).style.display =
+                        "none")
+                    }
                   />
                   <div className="hub-btn">
                     {t.title}
-                    {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
+                    {t.sub && (
+                      <span id={`tile-sub-${t.key}`} className="sub">
+                        {t.sub}
+                      </span>
+                    )}
                   </div>
                 </button>
               ))}
@@ -283,7 +356,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             {activePanel === "shop" && (
               <div className="card">
                 <h3>Shop</h3>
-                <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
+                <p>
+                  🛒 Browse items purchasable with JAL. (Hook your product list
+                  here.)
+                </p>
               </div>
             )}
 
@@ -306,8 +382,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
-                  Connect your wallet to unlock features. Then open the Hub to pick a tile — try{" "}
-                  <strong>JAL/SOL — SHOP</strong> to see in‑panel shopping.
+                  Connect your wallet to unlock features. Then open the Hub to
+                  pick a tile — try <strong>JAL/SOL — SHOP</strong> to see
+                  in‑panel shopping.
                 </p>
               </div>
             )}
