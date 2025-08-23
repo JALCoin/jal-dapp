@@ -9,12 +9,13 @@ import {
 import Jal from "./Jal";
 
 /* ----------------------------------------
-   Panel state:
----------------------------------------- */
+   Panel state
+----------------------------------------- */
 type Panel = "none" | "grid" | "shop" | "jal" | "vault";
 type TileKey = Exclude<Panel, "none" | "grid">;
 
 type LandingProps = {
+  /** optionally open a specific panel on initial load (overridden by ?panel=) */
   initialPanel?: Panel;
 };
 
@@ -26,7 +27,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [activePanel, setActivePanel] = useState<Panel>("none");
   const timerRef = useRef<number | null>(null);
 
-  // Refs
+  // Refs for focus/scroll management
   const hubBodyRef = useRef<HTMLDivElement | null>(null);
   const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
   const toggleBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -36,14 +37,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // Tiles
+  // ---- Tiles ----
   const tiles: { key: TileKey; title: string; sub?: string; gif: string }[] = [
     { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
     { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
     { key: "vault", title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
   ];
 
-  // Preload GIFs
+  // ---- Preload GIFs ----
   useEffect(() => {
     const imgs = tiles.map((t) => {
       const i = new Image();
@@ -53,9 +54,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       return i;
     });
     return () => imgs.forEach((i) => (i.src = ""));
-  }, [tiles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Resolve starting panel
+  // ---- Resolve starting panel: URL ?panel > session > prop ----
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
@@ -68,7 +70,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep URL + session in sync
+  // ---- Keep URL + session in sync ----
   useEffect(() => {
     if (!activePanel) return;
     sessionStorage.setItem("landing:lastPanel", activePanel);
@@ -84,7 +86,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, params, setParams]);
 
-  // Connect event → merge + open grid if closed
+  // ---- Connect event → merge + open grid if closed ----
   useEffect(() => {
     if (!wallet?.adapter) return;
 
@@ -104,7 +106,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [wallet, reducedMotion]);
 
-  // Subtle merge on autoconnect restore
+  // ---- Subtle merge animation on (auto)connect restore ----
   useEffect(() => {
     if (!connected || !publicKey) return;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -117,7 +119,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [connected, publicKey, reducedMotion]);
 
-  // Reset on disconnect
+  // ---- Reset on disconnect ----
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
@@ -131,7 +133,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, publicKey]);
 
-  // ESC closes any open panel
+  // ---- ESC closes any open panel back to preview ----
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && activePanel !== "none") {
@@ -143,7 +145,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [activePanel]);
 
-  // When switching panels, scroll to top & focus heading
+  // ---- When switching panels, ensure hub body scroll is at top & focus the title ----
   useEffect(() => {
     if (hubBodyRef.current) {
       hubBodyRef.current.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
@@ -153,7 +155,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, reducedMotion]);
 
-  // ===== CRITICAL: flag body when wallet modal is visible =====
+  // ---- CRITICAL: flag body when wallet modal is visible (drives CSS) ----
   useEffect(() => {
     const root = document.body;
     const setFlag = (on: boolean) => {
@@ -161,20 +163,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       else root.removeAttribute("data-wallet-visible");
     };
 
-    // initial check + observer for wallet modal mount/unmount
+    // initial + observe DOM for the wallet modal
     const check = () => setFlag(!!document.querySelector(".wallet-adapter-modal"));
     check();
 
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true });
 
-    // also clear on unmount
     return () => {
       obs.disconnect();
       setFlag(false);
     };
   }, []);
 
+  // ---- helpers ----
   const openPanel = (id: Panel) => {
     setActivePanel(id);
     if (id === "none") {
@@ -211,7 +213,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
       )}
 
-      {/* Centered logo + connect/open hub */}
+      {/* centered logo + connect/open hub */}
       <div className="landing-inner">
         <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
@@ -232,10 +234,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         )}
       </div>
 
-      {/* Hub container */}
+      {/* hub container */}
       <section
         id="hub-panel"
-        className={["hub-panel","hub-panel--fit", isPreview ? "landing-panel hub-preview" : ""].join(" ")}
+        className={["hub-panel", "hub-panel--fit", isPreview ? "landing-panel hub-preview" : ""].join(" ")}
         role="region"
         aria-label="JAL/SOL Hub"
         aria-live="polite"
@@ -249,6 +251,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
+          {/* Tile grid — ONLY in explicit 'grid' mode */}
           {activePanel === "grid" && (
             <div className="hub-stack hub-stack--responsive" role="list">
               {tiles.map((t) => (
@@ -278,6 +281,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             </div>
           )}
 
+          {/* Panel content */}
           <div className="hub-content">
             {activePanel === "shop" && (
               <div className="card">
@@ -305,8 +309,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
-                  Connect your wallet to unlock features. Then open the Hub to pick a tile —
-                  try <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
+                  Connect your wallet to unlock features. Then open the Hub to pick a tile — try{" "}
+                  <strong>JAL/SOL — SHOP</strong> to see in‑panel shopping.
                 </p>
               </div>
             )}

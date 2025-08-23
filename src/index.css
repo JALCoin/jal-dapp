@@ -467,18 +467,34 @@ a:focus-visible, button:focus-visible, .hub-btn:focus-visible, .jal-btn:focus-vi
    WALLET ADAPTER THEMING (always on top)
 =================================*/
 .wallet-adapter-modal,
-.wallet-adapter-modal-container{
-  position:fixed !important;
-  z-index:2147483647 !important; /* win the stack war */
-  backdrop-filter:blur(8px) saturate(1.05);
+.wallet-adapter-modal-container,
+.wallet-adapter-modal-wrapper {
+  position: fixed !important;
+  z-index: 2147483647 !important; /* ensure absolute top */
 }
-.wallet-adapter-modal-container{
-  background:rgba(0,0,0,.72) !important; border:1.5px solid rgba(255,255,255,.55) !important;
-  box-shadow:0 8px 28px rgba(0,0,0,.45), 0 0 18px rgba(255,255,255,.25) !important;
+
+.wallet-adapter-modal-container {
+  background: rgba(0,0,0,.85) !important;
+  border: 1.5px solid rgba(255,255,255,.6) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,.55), 0 0 22px rgba(255,255,255,.35) !important;
 }
-.wallet-adapter-button-trigger{
-  border-radius:10px !important; border:2px solid #fff !important; background:#000 !important;
-  color:#fff !important; text-transform:uppercase !important; font-weight:800 !important;
+
+.wallet-adapter-button-trigger {
+  border-radius: 10px !important;
+  border: 2px solid #fff !important;
+  background: #000 !important;
+  color: #fff !important;
+  text-transform: uppercase !important;
+  font-weight: 800 !important;
+}
+
+/* When wallet modal is open, freeze hub completely */
+body:has(.wallet-adapter-modal) .hub-overlay,
+body:has(.wallet-adapter-modal) .hub-panel {
+  z-index: 1 !important;
+  pointer-events: none !important;
+  opacity: 0.25 !important;
+  filter: blur(4px) brightness(.8);
 }
 
 /* ===========================================

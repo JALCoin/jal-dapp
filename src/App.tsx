@@ -1,5 +1,12 @@
 // src/App.tsx
-import { useState, useEffect, useMemo, memo, type ReactElement } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  memo,
+  useRef,
+  type ReactElement,
+} from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -77,31 +84,54 @@ function HeaderView({
     <header className="site-header">
       <div className="header-inner">
         <NavLink to="/" onClick={closeMenu} aria-label="JAL/SOL Home">
-          <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
+          <img
+            src="/JALSOL1.gif"
+            alt="JAL/SOL Logo"
+            className="logo header-logo"
+          />
         </NavLink>
 
-        <nav className="main-nav">
+        <nav className="main-nav" aria-label="Primary">
           {links.map(({ to, label }) => (
             <NavLink
               key={`${to}-${label}`}
               to={to}
               onClick={closeMenu}
-              className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
+              className={({ isActive }) =>
+                `nav-link${isActive ? " active" : ""}`
+              }
             >
               {label}
             </NavLink>
           ))}
-          {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
+          {publicKey && (
+            <WalletDisconnectButton className="wallet-disconnect-btn" />
+          )}
         </nav>
 
         <div className="social-links" aria-label="Social links">
-          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <a
+            href="https://x.com/JAL358"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="X"
+          >
             <img src="/icons/X.png" alt="" />
           </a>
-          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+          <a
+            href="https://t.me/jalsolcommute"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Telegram"
+          >
             <img src="/icons/Telegram.png" alt="" />
           </a>
-          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+          <a
+            href="https://www.tiktok.com/@358jalsol"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="TikTok"
+          >
             <img src="/icons/TikTok.png" alt="" />
           </a>
         </div>
@@ -137,22 +167,101 @@ function SidebarView({
   closeMenu: () => void;
   publicKey: string | null | undefined;
 }): ReactElement | null {
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const firstLinkRef = useRef<HTMLAnchorElement | null>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open || isLanding) return;
+
+    // remember invoker to restore focus later
+    lastFocusedRef.current = (document.activeElement as HTMLElement) ?? null;
+
+    // focus first actionable
+    const toFocus =
+      firstLinkRef.current ??
+      sidebarRef.current?.querySelector<HTMLElement>(
+        'a, button, [tabindex]:not([tabindex="-1"])'
+      );
+    toFocus?.focus?.();
+
+    // lock scroll under the drawer
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeMenu();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const root = sidebarRef.current;
+      if (!root) return;
+
+      const focusables = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'a, button, [role="button"], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(
+        (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden")
+      );
+
+      if (!focusables.length) return;
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          last.focus();
+          e.preventDefault();
+        }
+      } else {
+        if (document.activeElement === last) {
+          first.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+      lastFocusedRef.current?.focus?.();
+    };
+  }, [open, isLanding, closeMenu]);
+
   if (!open || isLanding) return null;
+
   return (
     <>
       <div className="sidebar-overlay" onClick={closeMenu} />
-      <div id="sidebar-nav" className="sidebar-nav" role="dialog" aria-modal="true">
-        {links.map(({ to, label }) => (
+      <div
+        id="sidebar-nav"
+        className="sidebar-nav"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation"
+        ref={sidebarRef}
+      >
+        {links.map(({ to, label }, idx) => (
           <NavLink
             key={`${to}-${label}`}
             to={to}
             onClick={closeMenu}
-            className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
+            className={({ isActive }) =>
+              `nav-link${isActive ? " active" : ""}`
+            }
+            ref={idx === 0 ? firstLinkRef : undefined}
           >
             {label}
           </NavLink>
         ))}
-        {publicKey && <WalletDisconnectButton className="wallet-disconnect-btn" />}
+        {publicKey && (
+          <WalletDisconnectButton className="wallet-disconnect-btn" />
+        )}
       </div>
     </>
   );
@@ -163,33 +272,52 @@ const Sidebar = memo(SidebarView);
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
-  const { publicKey } = useWallet();
+  const { publicKey, wallet, connected, connecting } = useWallet();
   const location = useLocation();
+  const mainRef = useRef<HTMLElement | null>(null);
 
   const isLanding = location.pathname === "/" || location.pathname === "/shop";
 
   // Reconnect nudge for iOS/Safari when returning from wallet
   useEffect(() => {
     const onVisible = () => {
-      // Wake layout/react — adapters handle actual session restore
       requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
     };
-    const onFocus = () => onVisible();
-
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onFocus);
+    window.addEventListener("focus", onVisible);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", onVisible);
     };
   }, []);
+
+  // Basic diagnostics in dev
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.info("[wallet]", {
+        connected,
+        connecting,
+        pubkey: publicKey?.toString(),
+        wallet: wallet?.adapter?.name,
+      });
+    }
+  }, [connected, connecting, publicKey, wallet]);
 
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
+  // Close menu when route changes
   useEffect(() => setMenuOpen(false), [location.pathname]);
+
+  // Move focus to main content after route change or menu close
+  useEffect(() => {
+    if (!menuOpen) {
+      requestAnimationFrame(() => mainRef.current?.focus?.());
+    }
+  }, [menuOpen, location.pathname]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
@@ -233,40 +361,56 @@ function Shell() {
         publicKey={publicKey?.toBase58?.() ?? publicKey?.toString?.() ?? null}
       />
 
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          {/* Landing: default panel (none), /shop opens shop panel inside Landing */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/shop" element={<Landing initialPanel="shop" />} />
+      <main
+        ref={mainRef}
+        role="main"
+        tabIndex={-1}
+        aria-live="polite"
+        aria-label="JAL/SOL content"
+      >
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            {/* Landing: default panel (none), /shop opens shop panel inside Landing */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/shop" element={<Landing initialPanel="shop" />} />
 
-          {/* Other routes */}
-          <Route path="/home" element={<Home />} />
-          <Route path="/crypto-generator" element={<CryptoGenerator />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/vault/:symbol" element={<Vault />} />
-          <Route
-            path="/jal"
-            element={
-              <Protected>
-                <Jal inHub={false} />
-              </Protected>
-            }
-          />
-          <Route path="/about" element={<About />} />
-          <Route path="/manifesto" element={<Manifesto />} />
-          <Route path="/content" element={<Content />} />
-          <Route path="/learn" element={<Learn />} />
-          <Route
-            path="/start"
-            element={<Protected><div style={{ padding: 24 }}>Start flow…</div></Protected>}
-          />
-          <Route
-            path="/terms"
-            element={<Protected><div style={{ padding: 24 }}>Terms…</div></Protected>}
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AnimatePresence>
+            {/* Other routes */}
+            <Route path="/home" element={<Home />} />
+            <Route path="/crypto-generator" element={<CryptoGenerator />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/vault/:symbol" element={<Vault />} />
+            <Route
+              path="/jal"
+              element={
+                <Protected>
+                  <Jal inHub={false} />
+                </Protected>
+              }
+            />
+            <Route path="/about" element={<About />} />
+            <Route path="/manifesto" element={<Manifesto />} />
+            <Route path="/content" element={<Content />} />
+            <Route path="/learn" element={<Learn />} />
+            <Route
+              path="/start"
+              element={
+                <Protected>
+                  <div style={{ padding: 24 }}>Start flow…</div>
+                </Protected>
+              }
+            />
+            <Route
+              path="/terms"
+              element={
+                <Protected>
+                  <div style={{ padding: 24 }}>Terms…</div>
+                </Protected>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
+      </main>
     </>
   );
 }
@@ -303,8 +447,8 @@ export default function App() {
           metadata: {
             name: "JAL/SOL Dapp",
             description: "Swap SOL→JAL and use utilities",
-            url: origin,                               // absolute
-            icons: [`${origin}/icons/icon-512.png`],   // absolute
+            url: origin, // absolute
+            icons: [`${origin}/icons/icon-512.png`], // absolute
           },
         },
       }),
@@ -312,8 +456,8 @@ export default function App() {
         addressSelector: createDefaultAddressSelector(),
         appIdentity: {
           name: "JAL/SOL",
-          uri: origin,                                 // absolute
-          icon: `${origin}/icons/icon-512.png`,        // absolute
+          uri: origin, // absolute
+          icon: `${origin}/icons/icon-512.png`, // absolute
         },
         authorizationResultCache: createDefaultAuthorizationResultCache(),
         cluster: "mainnet-beta",
