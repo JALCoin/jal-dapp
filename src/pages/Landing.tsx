@@ -1,12 +1,14 @@
 // src/pages/Landing.tsx
-import { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
   WalletMultiButton,
   WalletDisconnectButton,
 } from "@solana/wallet-adapter-react-ui";
-import Jal from "./Jal";
+
+// Lazy-load the heavy JAL page when needed
+const Jal = lazy(() => import("./Jal"));
 
 /* ----------------------------------------
    Panel state
@@ -37,14 +39,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // ---- Tiles ----
+  // Static tiles
   const tiles: { key: TileKey; title: string; sub?: string; gif: string }[] = [
     { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
     { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
     { key: "vault", title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
   ];
 
-  // ---- Preload GIFs ----
+  // Preload GIFs once
   useEffect(() => {
     const imgs = tiles.map((t) => {
       const i = new Image();
@@ -57,7 +59,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---- Resolve starting panel: URL ?panel > session > prop ----
+  // Resolve starting panel: URL ?panel > session > prop
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
@@ -70,7 +72,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---- Keep URL + session in sync ----
+  // Keep URL + session in sync
   useEffect(() => {
     if (!activePanel) return;
     sessionStorage.setItem("landing:lastPanel", activePanel);
@@ -86,7 +88,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, params, setParams]);
 
-  // ---- Connect event → merge + open grid if closed ----
+  // Wallet connect → subtle merge + open grid if closed
   useEffect(() => {
     if (!wallet?.adapter) return;
 
@@ -106,7 +108,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [wallet, reducedMotion]);
 
-  // ---- Subtle merge animation on (auto)connect restore ----
+  // Subtle merge on autoconnect restore
   useEffect(() => {
     if (!connected || !publicKey) return;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -119,7 +121,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [connected, publicKey, reducedMotion]);
 
-  // ---- Reset on disconnect ----
+  // Reset on disconnect
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
@@ -133,7 +135,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, publicKey]);
 
-  // ---- ESC closes any open panel back to preview ----
+  // ESC closes any open panel
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && activePanel !== "none") {
@@ -145,7 +147,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [activePanel]);
 
-  // ---- When switching panels, ensure hub body scroll is at top & focus the title ----
+  // When switching panels, scroll to top & focus heading
   useEffect(() => {
     if (hubBodyRef.current) {
       hubBodyRef.current.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
@@ -155,15 +157,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, reducedMotion]);
 
-  // ---- CRITICAL: flag body when wallet modal is visible (drives CSS) ----
+  // Flag body when wallet modal is visible (drives CSS to freeze/hide hub)
   useEffect(() => {
     const root = document.body;
-    const setFlag = (on: boolean) => {
-      if (on) root.setAttribute("data-wallet-visible", "true");
-      else root.removeAttribute("data-wallet-visible");
-    };
+    const setFlag = (on: boolean) =>
+      on ? root.setAttribute("data-wallet-visible", "true") : root.removeAttribute("data-wallet-visible");
 
-    // initial + observe DOM for the wallet modal
     const check = () => setFlag(!!document.querySelector(".wallet-adapter-modal"));
     check();
 
@@ -176,12 +175,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, []);
 
-  // ---- helpers ----
+  // Helpers
   const openPanel = (id: Panel) => {
     setActivePanel(id);
-    if (id === "none") {
-      requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
-    }
+    if (id === "none") requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
   };
 
   const panelTitle =
