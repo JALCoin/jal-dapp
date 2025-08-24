@@ -25,7 +25,6 @@ import {
 import {
   WalletModalProvider,
   WalletDisconnectButton,
-  useWalletModal, // ⬅️ NEW
 } from "@solana/wallet-adapter-react-ui";
 import {
   PhantomWalletAdapter,
@@ -57,7 +56,6 @@ import Content from "./pages/Content";
 import Jal from "./pages/Jal";
 
 /* ---------------- Guard ---------------- */
-// Remember intended route, send to "/" if disconnected.
 function Protected({ children }: { children: ReactElement }) {
   const { connected } = useWallet();
   const location = useLocation();
@@ -188,10 +186,8 @@ function SidebarView({
   useEffect(() => {
     if (!open || isLanding) return;
 
-    // Remember invoker to restore focus later
     lastFocusedRef.current = (document.activeElement as HTMLElement) ?? null;
 
-    // Focus first actionable
     const toFocus =
       firstLinkRef.current ??
       sidebarRef.current?.querySelector<HTMLElement>(
@@ -199,7 +195,6 @@ function SidebarView({
       );
     toFocus?.focus?.();
 
-    // Lock scroll under drawer
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -282,14 +277,11 @@ function SidebarView({
 }
 const Sidebar = memo(SidebarView);
 
-/* ---------------- App Shell (routes, header, sidebar) ---------------- */
+/* ---------------- App Shell ---------------- */
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
-
-  // We’ll use select/connect + wallet modal for robust mobile flows
   const { publicKey, wallet, connected, connecting, select, connect } = useWallet();
-  const walletModal = useWalletModal(); // ⬅️ NEW
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -297,7 +289,7 @@ function Shell() {
 
   const isLanding = location.pathname === "/" || location.pathname === "/shop";
 
-  // Nudge some adapters when tab returns
+  // Small nudge when app resumes (helps some adapters)
   useEffect(() => {
     const onVisible = () =>
       requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
@@ -309,15 +301,7 @@ function Shell() {
     };
   }, []);
 
-  // Detect a mobile browser
-  const isMobile = useMemo(
-    () =>
-      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-      navigator.userAgent.includes("Mobile"),
-    []
-  );
-
-  // Persist current adapter name to help reconnect choose the same wallet
+  // Remember adapter name for reconnection
   useEffect(() => {
     const name = wallet?.adapter?.name;
     if (name) {
@@ -327,7 +311,7 @@ function Shell() {
     }
   }, [wallet?.adapter?.name]);
 
-  // 🔁 Eager reconnect after returning from wallet (mobile deep link) + on first mount
+  // Gentle eager reconnect (after returning from wallet / on mount)
   useEffect(() => {
     let reconnecting = false;
     let raf = 0;
@@ -346,23 +330,25 @@ function Shell() {
       reconnecting = true;
       try {
         if (!wallet || wallet.adapter?.name !== stored) {
-          // @ts-ignore string is acceptable for select()
+          // @ts-ignore: string is fine here
           await select?.(stored);
           await new Promise((r) => setTimeout(r, 0));
         }
         await connect?.();
       } catch {
-        // swallow errors; user can connect via WalletMultiButton
+        // user can use WalletMultiButton manually
       } finally {
         reconnecting = false;
       }
     };
 
-    // run once after mount (helps when coming back via full reload)
-    raf = requestAnimationFrame(() => { void tryReconnect(); });
+    raf = requestAnimationFrame(() => {
+      void tryReconnect();
+    });
 
-    // run whenever the tab/app resumes
-    const onResume = () => { void tryReconnect(); };
+    const onResume = () => {
+      void tryReconnect();
+    };
     window.addEventListener("focus", onResume);
     document.addEventListener("visibilitychange", onResume);
 
@@ -373,28 +359,9 @@ function Shell() {
     };
   }, [connected, connecting, wallet, select, connect]);
 
-  // 📣 Mobile: if no remembered wallet and not connected, open modal once/session
-  useEffect(() => {
-    if (!isMobile) return;
-    if (connected || connecting) return;
-
-    const KEY = "wallet:autoPrompted";
-    if (sessionStorage.getItem(KEY)) return;
-
-    const t = window.setTimeout(() => {
-      try {
-        walletModal.setVisible(true);
-        sessionStorage.setItem(KEY, "1");
-      } catch {}
-    }, 400);
-
-    return () => window.clearTimeout(t);
-  }, [isMobile, connected, connecting, walletModal]);
-
-  // Dev diagnostics
+  // Debug
   useEffect(() => {
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.info("[wallet]", {
         connected,
         connecting,
@@ -418,12 +385,10 @@ function Shell() {
   // Redirect back to intended route once connected
   useEffect(() => {
     if (!connected) return;
-
     let target: string | null = null;
     try {
       target = sessionStorage.getItem("returnTo");
     } catch {}
-
     const here = location.pathname + location.search + location.hash;
     if (target && target !== here) {
       try {
@@ -437,7 +402,8 @@ function Shell() {
   const closeMenu = () => setMenuOpen(false);
 
   const vaultPath = useMemo(
-    () => (userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard"),
+    () =>
+      userSymbol ? `/vault/${encodeURIComponent(userSymbol)}` : "/dashboard",
     [userSymbol]
   );
   const vaultLabel = useMemo(
@@ -467,6 +433,14 @@ function Shell() {
         closeMenu={closeMenu}
         publicKey={publicKey?.toBase58?.() ?? publicKey?.toString?.() ?? null}
       />
+
+      {/* ✅ Floating disconnect on landing (outside hub preview) */}
+      {isLanding && connected && (
+        <div className="landing-disconnect" style={{ position: "fixed", top: 12, right: 12, zIndex: 9999 }}>
+          <WalletDisconnectButton className="wallet-disconnect-btn" />
+        </div>
+      )}
+
       <Sidebar
         open={menuOpen}
         isLanding={isLanding}
@@ -484,11 +458,9 @@ function Shell() {
       >
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            {/* Landing: default panel (none). /shop opens shop panel inside Landing */}
             <Route path="/" element={<Landing />} />
             <Route path="/shop" element={<Landing initialPanel="shop" />} />
 
-            {/* Other routes */}
             <Route path="/home" element={<Home />} />
             <Route path="/crypto-generator" element={<CryptoGenerator />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -531,11 +503,9 @@ function Shell() {
 
 /* ---------------- Root Providers ---------------- */
 export default function App() {
-  // Absolute origin/URLs for wallet deep-link metadata
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://jalsol.com";
 
-  // RPC endpoint
   const endpoint = useMemo(() => {
     if (typeof window !== "undefined" && window.location.hostname === "localhost") {
       return "http://localhost:3001/api/solana";
@@ -543,15 +513,24 @@ export default function App() {
     return "https://solana-proxy-production.up.railway.app";
   }, []);
 
-  // Cluster config
   const network =
     (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
       ? WalletAdapterNetwork.Devnet
       : WalletAdapterNetwork.Mainnet;
   const clusterStr = network === WalletAdapterNetwork.Devnet ? "devnet" : "mainnet-beta";
 
-  const wallets = useMemo(
-    () => [
+  // ✅ Detect Phantom in-app browser and simplify adapters there
+  const isClient = typeof window !== "undefined";
+  const isPhantomInApp =
+    isClient && (window as any)?.solana?.isPhantom === true;
+
+  const wallets = useMemo(() => {
+    if (isPhantomInApp) {
+      // Inside Phantom’s own browser, use injected Phantom only
+      return [new PhantomWalletAdapter()];
+    }
+
+    return [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
       new WalletConnectWalletAdapter({
@@ -578,15 +557,17 @@ export default function App() {
         cluster: clusterStr,
         onWalletNotFound: createDefaultWalletNotFoundHandler(),
       }),
-    ],
-    [network, origin, clusterStr]
-  );
+    ];
+  }, [isPhantomInApp, network, origin, clusterStr]);
+
+  // ❗Disable autoConnect specifically inside Phantom’s in-app browser
+  const shouldAutoConnect = !isPhantomInApp;
 
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider
         wallets={wallets}
-        autoConnect
+        autoConnect={shouldAutoConnect}
         onError={(e) => console.error("[wallet-adapter] error:", e)}
       >
         <WalletModalProvider>
