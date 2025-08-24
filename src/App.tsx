@@ -30,13 +30,6 @@ import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-import {
-  SolanaMobileWalletAdapter,
-  createDefaultAuthorizationResultCache,
-  createDefaultAddressSelector,
-  createDefaultWalletNotFoundHandler,
-} from "@solana-mobile/wallet-adapter-mobile";
-
 import { AnimatePresence } from "framer-motion";
 
 /* Pages */
@@ -51,13 +44,13 @@ import Learn from "./pages/Learn";
 import Content from "./pages/Content";
 import Jal from "./pages/Jal";
 
-/* ---------------- Guard ---------------- */
+/* -------- Guard -------- */
 function Protected({ children }: { children: ReactElement }) {
   const { connected } = useWallet();
   return connected ? children : <Navigate to="/" replace />;
 }
 
-/* ---------------- Local, reliable Disconnect ---------------- */
+/* -------- Local, reliable Disconnect -------- */
 function DisconnectButton({ className }: { className?: string }) {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
@@ -79,7 +72,7 @@ function DisconnectButton({ className }: { className?: string }) {
   );
 }
 
-/* ---------------- Header ---------------- */
+/* -------- Header -------- */
 type HeaderProps = {
   isLanding: boolean;
   links: { to: string; label: string }[];
@@ -103,11 +96,7 @@ function HeaderView({
     <header className="site-header">
       <div className="header-inner">
         <NavLink to="/" onClick={closeMenu} aria-label="JAL/SOL Home">
-          <img
-            src="/JALSOL1.gif"
-            alt="JAL/SOL Logo"
-            className="logo header-logo"
-          />
+          <img src="/JALSOL1.gif" alt="JAL/SOL Logo" className="logo header-logo" />
         </NavLink>
 
         <nav className="main-nav" aria-label="Primary">
@@ -116,9 +105,7 @@ function HeaderView({
               key={`${to}-${label}`}
               to={to}
               onClick={closeMenu}
-              className={({ isActive }) =>
-                `nav-link${isActive ? " active" : ""}`
-              }
+              className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
             >
               {label}
             </NavLink>
@@ -127,28 +114,13 @@ function HeaderView({
         </nav>
 
         <div className="social-links" aria-label="Social links">
-          <a
-            href="https://x.com/JAL358"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="X"
-          >
+          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
             <img src="/icons/X.png" alt="" />
           </a>
-          <a
-            href="https://t.me/jalsolcommute"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Telegram"
-          >
+          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
             <img src="/icons/Telegram.png" alt="" />
           </a>
-          <a
-            href="https://www.tiktok.com/@358jalsol"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="TikTok"
-          >
+          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
             <img src="/icons/TikTok.png" alt="" />
           </a>
         </div>
@@ -170,7 +142,7 @@ function HeaderView({
 }
 const Header = memo(HeaderView);
 
-/* ---------------- Sidebar ---------------- */
+/* -------- Sidebar -------- */
 function SidebarView({
   open,
   isLanding,
@@ -191,10 +163,8 @@ function SidebarView({
   useEffect(() => {
     if (!open || isLanding) return;
 
-    // remember invoker to restore focus later
     lastFocusedRef.current = (document.activeElement as HTMLElement) ?? null;
 
-    // focus first actionable
     const toFocus =
       firstLinkRef.current ??
       sidebarRef.current?.querySelector<HTMLElement>(
@@ -202,7 +172,6 @@ function SidebarView({
       );
     toFocus?.focus?.();
 
-    // lock scroll under the drawer
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -220,9 +189,7 @@ function SidebarView({
         root.querySelectorAll<HTMLElement>(
           'a, button, [role="button"], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         )
-      ).filter(
-        (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden")
-      );
+      ).filter((el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"));
 
       if (!focusables.length) return;
 
@@ -268,9 +235,7 @@ function SidebarView({
             key={`${to}-${label}`}
             to={to}
             onClick={closeMenu}
-            className={({ isActive }) =>
-              `nav-link${isActive ? " active" : ""}`
-            }
+            className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
             ref={idx === 0 ? firstLinkRef : undefined}
           >
             {label}
@@ -283,88 +248,16 @@ function SidebarView({
 }
 const Sidebar = memo(SidebarView);
 
-/* ---------------- App Shell (routes, header, sidebar) ---------------- */
+/* -------- App Shell -------- */
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
-
-  // pull select/connect so we can eager-reconnect on mobile return
-  const { publicKey, wallet, connected, connecting, select, connect } = useWallet();
-
+  const { publicKey, wallet, connected, connecting } = useWallet();
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
 
   const isLanding = location.pathname === "/" || location.pathname === "/shop";
 
-  // Reconnect nudge for iOS/Safari when returning from wallet
-  useEffect(() => {
-    const onVisible = () => {
-      requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
-    };
-  }, []);
-
-  // Remember which adapter the user used (for reconnection)
-  useEffect(() => {
-    const name = wallet?.adapter?.name;
-    if (name) {
-      try {
-        localStorage.setItem("walletAdapter", name);
-      } catch {}
-    }
-  }, [wallet?.adapter?.name]);
-
-  // Eager reconnect after deep-link return (and on first mount)
-  useEffect(() => {
-    let trying = false;
-    let raf = 0;
-
-    const getStored = () =>
-      localStorage.getItem("walletAdapter") || localStorage.getItem("walletName");
-
-    const tryReconnect = async () => {
-      if (trying) return;
-      if (connected || connecting) return;
-      if (document.hidden) return;
-
-      const stored = getStored();
-      if (!stored) return;
-
-      trying = true;
-      try {
-        // @ts-ignore: string name is ok for select()
-        await select?.(stored);
-        await new Promise((r) => setTimeout(r, 0));
-        await connect?.();
-      } catch (e) {
-        if (import.meta.env.DEV) {
-          // eslint-disable-next-line no-console
-          console.warn("[wallet] eager reconnect failed:", e);
-        }
-      } finally {
-        trying = false;
-      }
-    };
-
-    raf = requestAnimationFrame(() => { void tryReconnect(); });
-
-    const onResume = () => { void tryReconnect(); };
-    window.addEventListener("focus", onResume);
-    document.addEventListener("visibilitychange", onResume);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("focus", onResume);
-      document.removeEventListener("visibilitychange", onResume);
-    };
-  }, [connected, connecting, select, connect]);
-
-  // Basic diagnostics in dev
   useEffect(() => {
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
@@ -382,14 +275,9 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // Close menu when route changes
   useEffect(() => setMenuOpen(false), [location.pathname]);
-
-  // Focus main after route/menu change
   useEffect(() => {
-    if (!menuOpen) {
-      requestAnimationFrame(() => mainRef.current?.focus?.());
-    }
+    if (!menuOpen) requestAnimationFrame(() => mainRef.current?.focus?.());
   }, [menuOpen, location.pathname]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
@@ -409,7 +297,7 @@ function Shell() {
       { to: "/", label: "JAL/SOL" },
       { to: "/jal", label: "JAL" },
       { to: vaultPath, label: vaultLabel },
-      { to: "/shop", label: "SHOP" }, // deep-link into Landing's Shop panel
+      { to: "/shop", label: "SHOP" },
       { to: "/learn", label: "LEARN/SOL" },
       { to: "/about", label: "About JAL" },
     ],
@@ -434,20 +322,11 @@ function Shell() {
         publicKey={publicKey?.toBase58?.() ?? publicKey?.toString?.() ?? null}
       />
 
-      <main
-        ref={mainRef}
-        role="main"
-        tabIndex={-1}
-        aria-live="polite"
-        aria-label="JAL/SOL content"
-      >
+      <main ref={mainRef} role="main" tabIndex={-1} aria-live="polite" aria-label="JAL/SOL content">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            {/* Landing: default panel (none), /shop opens shop panel inside Landing */}
             <Route path="/" element={<Landing />} />
             <Route path="/shop" element={<Landing initialPanel="shop" />} />
-
-            {/* Other routes */}
             <Route path="/home" element={<Home />} />
             <Route path="/crypto-generator" element={<CryptoGenerator />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -488,24 +367,19 @@ function Shell() {
   );
 }
 
-/* ---------------- Root Providers ---------------- */
+/* -------- Root Providers -------- */
 export default function App() {
-  // Absolute origin/URLs for wallet identity metadata (mobile deep-link)
+  // Absolute origin for wallet metadata (helps deep-links)
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://jalsol.com";
 
-  // RPC endpoint
   const endpoint = useMemo(() => {
-    if (
-      typeof window !== "undefined" &&
-      window.location.hostname === "localhost"
-    ) {
+    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
       return "http://localhost:3001/api/solana";
     }
     return "https://solana-proxy-production.up.railway.app";
   }, []);
 
-  // Cluster
   const network =
     (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
       ? WalletAdapterNetwork.Devnet
@@ -513,8 +387,10 @@ export default function App() {
 
   const wallets = useMemo(
     () => [
+      // Keep Phantom first for mobile deep-link
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
+      // WalletConnect as a fallback/QR path
       new WalletConnectWalletAdapter({
         network,
         options: {
@@ -528,20 +404,8 @@ export default function App() {
           },
         },
       }),
-      new SolanaMobileWalletAdapter({
-        addressSelector: createDefaultAddressSelector(),
-        appIdentity: {
-          name: "JAL/SOL",
-          uri: origin,
-          icon: `${origin}/icons/icon-512.png`,
-        },
-        authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster:
-          (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
-            ? "devnet"
-            : "mainnet-beta",
-        onWalletNotFound: createDefaultWalletNotFoundHandler(),
-      }),
+      // NOTE: intentionally NOT including SolanaMobileWalletAdapter
+      // to avoid MWA flow colliding with Phantom on Android.
     ],
     [network, origin]
   );
@@ -550,7 +414,7 @@ export default function App() {
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider
         wallets={wallets}
-        autoConnect
+        autoConnect={false} // ← Manual only (no auto-connect)
         onError={(e) => console.error("[wallet-adapter] error:", e)}
       >
         <WalletModalProvider>
