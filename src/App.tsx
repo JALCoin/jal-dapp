@@ -13,7 +13,7 @@ import {
   Route,
   NavLink,
   useLocation,
-  useNavigate,   // ⬅️ added
+  useNavigate,
   Navigate,
 } from "react-router-dom";
 
@@ -56,7 +56,7 @@ import Content from "./pages/Content";
 import Jal from "./pages/Jal";
 
 /* ---------------- Guard ---------------- */
-// Minimal change: remember where the user wanted to go when disconnected.
+// Remember where the user wanted to go, then bounce to "/" if disconnected.
 function Protected({ children }: { children: ReactElement }) {
   const { connected } = useWallet();
   const location = useLocation();
@@ -187,10 +187,10 @@ function SidebarView({
   useEffect(() => {
     if (!open || isLanding) return;
 
-    // remember invoker to restore focus later
+    // Remember the opener to restore focus later
     lastFocusedRef.current = (document.activeElement as HTMLElement) ?? null;
 
-    // focus first actionable
+    // Focus first actionable
     const toFocus =
       firstLinkRef.current ??
       sidebarRef.current?.querySelector<HTMLElement>(
@@ -198,7 +198,7 @@ function SidebarView({
       );
     toFocus?.focus?.();
 
-    // lock scroll under the drawer
+    // Lock scroll under the drawer
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -285,9 +285,12 @@ const Sidebar = memo(SidebarView);
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
-  const { publicKey, wallet, connected, connecting } = useWallet();
+
+  // Pull select/connect so we can eagerly reconnect on mobile resume
+  const { publicKey, wallet, connected, connecting, select, connect } = useWallet();
+
   const location = useLocation();
-  const navigate = useNavigate(); // ⬅️ added
+  const navigate = useNavigate();
   const mainRef = useRef<HTMLElement | null>(null);
 
   const isLanding = location.pathname === "/" || location.pathname === "/shop";
@@ -304,6 +307,45 @@ function Shell() {
       window.removeEventListener("focus", onVisible);
     };
   }, []);
+
+  // 🔁 Eager reconnect after coming back from wallet app (mobile)
+  useEffect(() => {
+    let busy = false;
+
+    const getStoredWalletName = () =>
+      localStorage.getItem("walletAdapter") || localStorage.getItem("walletName");
+
+    const maybeReconnect = async () => {
+      if (document.hidden) return;
+      if (busy) return;
+      if (connected || connecting) return;
+
+      const stored = getStoredWalletName();
+      if (!stored) return;
+
+      busy = true;
+      try {
+        if (!wallet || wallet.adapter?.name !== stored) {
+          // @ts-ignore: wallet name string is fine here
+          await select?.(stored);
+        }
+        await connect?.();
+      } catch {
+        // swallow; user can open modal manually
+      } finally {
+        busy = false;
+      }
+    };
+
+    const onFocusOrVisible = () => void maybeReconnect();
+
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
+    return () => {
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
+    };
+  }, [connected, connecting, wallet, select, connect]);
 
   // Basic diagnostics in dev
   useEffect(() => {
@@ -333,7 +375,7 @@ function Shell() {
     }
   }, [menuOpen, location.pathname]);
 
-  // ⬇️ Minimal redirect after connect:
+  // Redirect back to intended route once connected
   useEffect(() => {
     if (!connected) return;
 
@@ -368,7 +410,7 @@ function Shell() {
       { to: "/", label: "JAL/SOL" },
       { to: "/jal", label: "JAL" },
       { to: vaultPath, label: vaultLabel },
-      { to: "/shop", label: "SHOP" }, // deep-link into Landing's Shop panel
+      { to: "/shop", label: "SHOP" },
       { to: "/learn", label: "LEARN/SOL" },
       { to: "/about", label: "About JAL" },
     ],
@@ -449,11 +491,11 @@ function Shell() {
 
 /* ---------------- Root Providers ---------------- */
 export default function App() {
-  // Keep origin-based metadata (your existing behavior)
+  // Absolute origin/URLs for wallet deep-link metadata
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://jalsol.com";
 
-  // Your proxy / RPC selection
+  // RPC endpoint selection
   const endpoint = useMemo(() => {
     if (typeof window !== "undefined" && window.location.hostname === "localhost") {
       return "http://localhost:3001/api/solana";
@@ -461,11 +503,12 @@ export default function App() {
     return "https://solana-proxy-production.up.railway.app";
   }, []);
 
-  // Keep adapters on the same cluster
+  // Cluster config
   const network =
     (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
       ? WalletAdapterNetwork.Devnet
       : WalletAdapterNetwork.Mainnet;
+  const clusterStr = network === WalletAdapterNetwork.Devnet ? "devnet" : "mainnet-beta";
 
   const wallets = useMemo(
     () => [
@@ -492,14 +535,11 @@ export default function App() {
           icon: `${origin}/icons/icon-512.png`, // absolute
         },
         authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster:
-          (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
-            ? "devnet"
-            : "mainnet-beta",
+        cluster: clusterStr,
         onWalletNotFound: createDefaultWalletNotFoundHandler(),
       }),
     ],
-    [network, origin]
+    [network, origin, clusterStr]
   );
 
   return (

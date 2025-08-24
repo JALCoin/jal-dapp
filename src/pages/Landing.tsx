@@ -13,7 +13,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import {
   WalletMultiButton,
   WalletDisconnectButton,
-  useWalletModal, // ⬅️ added
+  useWalletModal,
 } from "@solana/wallet-adapter-react-ui";
 
 // Lazy-load the heavy JAL page when needed
@@ -32,7 +32,7 @@ type LandingProps = {
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, wallet } = useWallet();
-  const walletModal = useWalletModal(); // ⬅️ added
+  const walletModal = useWalletModal();
   const [params, setParams] = useSearchParams();
 
   const [merging, setMerging] = useState(false);
@@ -75,7 +75,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       i.src = t.gif;
       return i;
     });
-    return () => imgs.forEach((i) => (i.src = "")); // help GC on route change
+    return () => imgs.forEach((i) => (i.src = ""));
   }, [tiles]);
 
   // Resolve starting panel: URL ?panel > session > prop
@@ -183,7 +183,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, reducedMotion]);
 
-  // Auto-open wallet modal once per session if not connected (mobile-friendly prompt)
+  // Auto-open wallet modal once per session if not connected (gentle nudge)
   useEffect(() => {
     const KEY = "wallet:autoPrompted";
     const already = sessionStorage.getItem(KEY);
@@ -205,9 +205,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     } else {
       root.removeAttribute("data-wallet-visible");
     }
-    return () => {
-      root.removeAttribute("data-wallet-visible");
-    };
+    return () => root.removeAttribute("data-wallet-visible");
   }, [walletModal.visible]);
 
   // Helpers
