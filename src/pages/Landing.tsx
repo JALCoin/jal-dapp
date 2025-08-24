@@ -2,11 +2,11 @@
 import {
   lazy,
   Suspense,
-  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  useCallback,
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -28,9 +28,6 @@ type LandingProps = {
   /** optionally open a specific panel on initial load (overridden by ?panel=) */
   initialPanel?: Panel;
 };
-
-const WALLET_MODAL_SELECTORS =
-  '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, wallet } = useWallet();
@@ -76,7 +73,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       i.src = t.gif;
       return i;
     });
-    return () => imgs.forEach((i) => (i.src = ""));
+    return () => imgs.forEach((i) => (i.src = "")); // help GC on route change
   }, [tiles]);
 
   // Resolve starting panel: URL ?panel > session > prop
@@ -184,33 +181,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, reducedMotion]);
 
-  // Flag body when ANY wallet modal is visible (Solana adapter or WalletConnect)
-  const setWalletFlag = useCallback((on: boolean) => {
-    const root = document.body;
-    if (on) root.setAttribute("data-wallet-visible", "true");
-    else root.removeAttribute("data-wallet-visible");
-  }, []);
-
-  useEffect(() => {
-    const check = () =>
-      setWalletFlag(!!document.querySelector(WALLET_MODAL_SELECTORS));
-
-    // initial + observe DOM for wallet modals
-    check();
-    const obs = new MutationObserver(check);
-    obs.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      obs.disconnect();
-      setWalletFlag(false);
-    };
-  }, [setWalletFlag]);
-
   // Helpers
-  const openPanel = (id: Panel) => {
+  const openPanel = useCallback((id: Panel) => {
     setActivePanel(id);
     if (id === "none") requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
-  };
+  }, []);
 
   const panelTitle =
     activePanel === "grid"
@@ -224,7 +199,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       : "Welcome";
 
   const isPreview = activePanel === "none";
-  const showOverlay = !isPreview; // <- hub floats over landing now
+  const showOverlay = !isPreview; // hub floats over landing
 
   return (
     <main
@@ -286,7 +261,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         )}
       </div>
 
-      {/* PREVIEW CARD lives in the page flow (only when no overlay) */}
+      {/* PREVIEW CARD: in normal flow when no overlay */}
       {isPreview && (
         <section
           id="hub-panel"
@@ -315,7 +290,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </section>
       )}
 
-      {/* OVERLAY: floats above landing but landing stays visible behind */}
+      {/* OVERLAY: floats above landing; landing remains visible behind */}
       {showOverlay && (
         <div className="hub-overlay" aria-hidden={undefined}>
           <section
@@ -351,7 +326,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                         loading="lazy"
                         width={960}
                         height={540}
-                        onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
                       />
                       <div className="hub-btn">
                         {t.title}

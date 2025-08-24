@@ -42,6 +42,10 @@ import {
 
 import { AnimatePresence } from "framer-motion";
 
+/* Bridges (new) */
+import WalletUiVisibilityBridge from "./components/WalletUiVisibilityBridge";
+import WalletAutoReconnectBridge from "./components/WalletAutoReconnectBridge";
+
 /* Pages */
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
@@ -475,6 +479,9 @@ export default function App() {
         onError={(e) => console.error("[wallet-adapter] error:", e)}
       >
         <WalletModalProvider>
+          {/* NEW: global bridges for consistent wallet behavior across routes */}
+          <WalletUiVisibilityBridge />
+          <WalletAutoReconnectBridge />
           <Router>
             <Shell />
           </Router>
