@@ -1,389 +1,565 @@
-/* =============================================================
-   JAL/SOL — Global Theme & Layout (Final Iteration)
-   - Preserves your visual style
-   - Stabilizes wallet modal layering & page-freeze across ALL routes
-   - Pairs with root bridges (WalletUiVisibilityBridge + WalletAutoReconnectBridge)
-   - Landing.tsx no longer needs to toggle body[data-wallet-visible]
-   ============================================================= */
+/\* =============================================================
+JAL/SOL — Global Theme & Layout
+Wallet modal is absolute-top; hub & app modals yield to it
+\============================================================= \*/
 
-/* ===============================
-   THEME TOKENS
-=================================*/
-:root{
-  /* Surfaces */
-  --jal-bg:#121212;
-  --jal-surface:#1e1e1e;
-  --panel-bg:rgba(0,0,0,.35);
+/\* ===============================
+THEME TOKENS
+\=================================*/
+\:root{
+/* Surfaces \*/
+\--jal-bg:#121212;
+\--jal-surface:#1e1e1e;
+\--panel-bg\:rgba(0,0,0,.35);
 
-  /* Brand */
-  --jal-text:#11f1a7;
-  --jal-muted:rgba(17,241,167,.55);
-  --jal-glow:#0ffdd4;
-  --jal-border:#11f1a766;
-  --white:#ffffff;
+/\* Brand \*/
+\--jal-text:#11f1a7;
+\--jal-muted\:rgba(17,241,167,.55);
+\--jal-glow:#0ffdd4;
+\--jal-border:#11f1a766;
+\--white:#ffffff;
 
-  /* Lines */
-  --panel-stroke:rgba(255,255,255,.5);
-  --panel-stroke-strong:rgba(255,255,255,.85);
+/\* Lines \*/
+\--panel-stroke\:rgba(255,255,255,.5);
+\--panel-stroke-strong\:rgba(255,255,255,.85);
 
-  /* Effects */
-  --blur-amt:10px;
-  --shadow-soft:0 0 14px rgba(255,255,255,.25);
-  --shadow-strong:0 0 26px rgba(255,255,255,.6);
+/\* Effects \*/
+\--blur-amt:10px;
+\--shadow-soft:0 0 14px rgba(255,255,255,.25);
+\--shadow-strong:0 0 26px rgba(255,255,255,.6);
 
-  /* Radii */
-  --r-xs:8px; --r-sm:10px; --r-md:12px; --r-lg:16px; --r-xl:20px;
+/\* Radii \*/
+\--r-xs:8px; --r-sm:10px; --r-md:12px; --r-lg:16px; --r-xl:20px;
 
-  /* Sizing */
-  --container-max:1200px;
+/\* Sizing \*/
+\--container-max:1200px;
 
-  /* Base z-layers */
-  --z-header:190;
-  --z-sidebar:210;
-  --z-hub:70;
+/\* Base z-layers \*/
+\--z-header:190;
+\--z-sidebar:210;
+\--z-hub:70;
 
-  /* App modal layers (used when wallet is not open) */
-  --z-modal-overlay: 2147483000;
-  --z-modal:        2147483001;
+/\* App modal layers (used when wallet is not open) \*/
+\--z-modal-overlay: 2147483000;
+\--z-modal:        2147483001;
 
-  color-scheme:dark;
+color-scheme\:dark;
 }
 
-/* ===============================
-   RESET & BASE
-=================================*/
-*{ box-sizing:border-box }
-html,body{ overflow-x:hidden }
+/\* ===============================
+RESET & BASE
+\=================================\*/
+\*{ box-sizing\:border-box; }
+html,body{ overflow-x\:hidden; }
 html,body,#root{
-  margin:0; padding:0; min-height:100dvh;
-  background:var(--jal-bg); color:var(--jal-text);
-  font-family:'Orbitron',system-ui,sans-serif; line-height:1.6;
-  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-  scroll-behavior:smooth;
+margin:0; padding:0; min-height:100dvh;
+background\:var(--jal-bg); color\:var(--jal-text);
+font-family:'Orbitron',system-ui,sans-serif; line-height:1.6;
+-webkit-font-smoothing\:antialiased; -moz-osx-font-smoothing\:grayscale;
+scroll-behavior\:smooth;
 }
-img,svg,video,canvas{ max-width:100%; height:auto }
+img,svg,video,canvas{ max-width:100%; height\:auto; }
 .sr-only{
-  position:absolute!important; width:1px; height:1px; padding:0; margin:-1px;
-  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+position\:absolute!important; width:1px; height:1px; padding:0; margin:-1px;
+overflow\:hidden; clip\:rect(0,0,0,0); white-space\:nowrap; border:0;
 }
 
-/* ===============================
-   GLOBAL FULL-BLEED BACKDROP
-=================================*/
+/\* ===============================
+GLOBAL FULL-BLEED BACKDROP
+\=================================\*/
 body::before{
-  content:""; position:fixed; inset:-10%; z-index:-1; pointer-events:none;
-  background:
-    radial-gradient(55% 45% at 50% 30%, rgba(255,255,255,.10), transparent 60%),
-    conic-gradient(from 0deg at 50% 50%, #11f1a7, #ffd700, #ffffff, #11f1a7);
-  filter:saturate(1.05) contrast(1.02);
-  will-change:transform,opacity;
-  animation:bgDrift 28s ease-in-out infinite;
+content:"";
+position\:fixed; inset:-10%; z-index:-1; pointer-events\:none;
+background:
+radial-gradient(55% 45% at 50% 30%, rgba(255,255,255,.10), transparent 60%),
+conic-gradient(from 0deg at 50% 50%, #11f1a7, #ffd700, #ffffff, #11f1a7);
+filter\:saturate(1.05) contrast(1.02);
+will-change\:transform,opacity;
+animation\:bgDrift 28s ease-in-out infinite;
 }
 @keyframes bgDrift{
-  0%{transform:translate3d(0,0,0) rotate(0deg) scale(1.02);opacity:.95}
-  50%{transform:translate3d(0,-1.2%,0) rotate(180deg) scale(1.04);opacity:1}
-  100%{transform:translate3d(0,0,0) rotate(360deg) scale(1.02);opacity:.95}
+0%{transform\:translate3d(0,0,0) rotate(0deg) scale(1.02);opacity:.95}
+50%{transform\:translate3d(0,-1.2%,0) rotate(180deg) scale(1.04);opacity:1}
+100%{transform\:translate3d(0,0,0) rotate(360deg) scale(1.02);opacity:.95}
 }
 
-/* ===============================
-   HEADER
-=================================*/
-header,.site-header{
-  position:relative; width:100%; background:#000;
-  padding:calc(2rem + env(safe-area-inset-top)) 1rem 1.25rem;
-  box-shadow:0 4px 20px #0006; z-index:var(--z-header);
+/\* ===============================
+HEADER
+\=================================\*/
+header, .site-header{
+position\:relative; width:100%; background:#000;
+padding\:calc(2rem + env(safe-area-inset-top)) 1rem 1.25rem;
+box-shadow:0 4px 20px #0006;
+z-index\:var(--z-header);
 }
-header::after,.site-header::after{
-  content:""; position:absolute; left:0; right:0; bottom:0; height:2px;
-  background:linear-gradient(90deg, transparent 0%, #fff 15%, #fff 85%, transparent 100%);
-  box-shadow:0 0 10px #fff, 0 0 20px #fff8;
+header::after, .site-header::after{
+content:""; position\:absolute; left:0; right:0; bottom:0; height:2px;
+background\:linear-gradient(90deg, transparent 0%, #fff 15%, #fff 85%, transparent 100%);
+box-shadow:0 0 10px #fff, 0 0 20px #fff8;
 }
-.header--hidden{ position:fixed; inset:0 auto auto 0; height:0; padding:0; margin:0; opacity:0; pointer-events:none; overflow:hidden; z-index:-1 }
-header:not(.header--hidden){ transition:opacity .25s ease }
+.header--hidden{
+position\:fixed; inset:0 0 auto 0; height:0; padding:0; margin:0;
+opacity:0; pointer-events\:none; overflow\:hidden; z-index:-1;
+}
+header\:not(.header--hidden){ transition\:opacity .25s ease; }
 
-.header-inner{ width:min(100%, var(--container-max)); margin-inline:auto; padding-inline:clamp(16px,4vw,40px); text-align:center; position:relative }
-.logo{ height:clamp(100px,15vw,140px); filter:drop-shadow(0 0 10px rgba(255,255,255,.8)) }
-.header-logo{ display:inline-block }
+.header-inner{
+width\:min(100%, var(--container-max)); margin-inline\:auto;
+padding-inline\:clamp(16px,4vw,40px); text-align\:center; position\:relative;
+}
+.logo{ height\:clamp(100px,15vw,140px); filter\:drop-shadow(0 0 10px rgba(255,255,255,.8)); }
+.header-logo{ display\:inline-block; }
 
-/* Left social icons */
-header .social-links{ position:absolute; top:1.25rem; left:1rem; display:flex; gap:.75rem }
-header .social-links a{ display:inline-flex; align-items:center; justify-content:center }
+/\* Left social icons \*/
+header .social-links{
+position\:absolute; top:1.25rem; left:1rem; display\:flex; gap:.75rem;
+}
+header .social-links a{ display\:inline-flex; align-items\:center; justify-content\:center; }
 header .social-links img{
-  width:34px; height:34px; padding:6px; border-radius:50%; background:rgba(255,255,255,.03);
-  border:1px solid var(--jal-border); box-shadow:0 0 3px var(--jal-muted); object-fit:contain;
-  transition:transform .2s ease, box-shadow .3s ease, border-color .3s ease;
+width:34px; height:34px; padding:6px; border-radius:50%;
+background\:rgba(255,255,255,.03); border:1px solid var(--jal-border);
+box-shadow:0 0 3px var(--jal-muted); object-fit\:contain;
+transition\:transform .2s ease, box-shadow .3s ease, border-color .3s ease;
 }
-header .social-links img:hover{ transform:scale(1.15); border-color:#fff; box-shadow:0 0 10px #fff, 0 0 16px #fff }
+header .social-links img\:hover{
+transform\:scale(1.15); border-color:#fff;
+box-shadow:0 0 10px #fff, 0 0 16px #fff;
+}
 
-/* Right hamburger */
-.hamburger{ position:absolute; top:1.1rem; right:1rem; width:44px; height:44px; border-radius:12px; border:1px solid #ffffff30; background:linear-gradient(180deg,#121318,#0a0b0e); display:grid; place-items:center; cursor:pointer; transition:border-color .25s ease, transform .2s ease }
-.hamburger:hover{ border-color:#ffffff80; transform: translateY(-2px) }
-.hamburger:focus-visible{ outline:3px solid #fff; outline-offset:3px; box-shadow:0 0 18px #fff8 }
-.hamburger span{ position:relative; display:block; width:22px; height:2px; background:#fff; border-radius:2px; box-shadow:0 0 8px #fff8; transition: transform .35s ease, opacity .35s ease, top .35s ease }
-.hamburger span:nth-child(1){ top:-6px }
-.hamburger span:nth-child(2){ top:0 }
-.hamburger span:nth-child(3){ top:6px }
-.hamburger.is-open span:nth-child(1){ top:0; transform:rotate(45deg) }
-.hamburger.is-open span:nth-child(2){ opacity:0 }
-.hamburger.is-open span:nth-child(3){ top:0; transform:rotate(-45deg) }
+/\* Right hamburger \*/
+.hamburger{
+position\:absolute; top:1.1rem; right:1rem;
+width:44px; height:44px; border-radius:12px; border:1px solid #ffffff30;
+background\:linear-gradient(180deg,#121318,#0a0b0e);
+display\:grid; place-items\:center; cursor\:pointer;
+transition\:border-color .25s ease, transform .2s ease;
+}
+.hamburger\:hover{ border-color:#ffffff80; transform: translateY(-2px); }
+.hamburger\:focus-visible{ outline:3px solid #fff; outline-offset:3px; box-shadow:0 0 18px #fff8; }
+.hamburger span{
+position\:relative; display\:block; width:22px; height:2px; background:#fff; border-radius:2px;
+box-shadow:0 0 8px #fff8; transition: transform .35s ease, opacity .35s ease, top .35s ease;
+}
+.hamburger span\:nth-child(1){ top:-6px; }
+.hamburger span\:nth-child(2){ top:0; }
+.hamburger span\:nth-child(3){ top:6px; }
+.hamburger.is-open span\:nth-child(1){ top:0; transform\:rotate(45deg); }
+.hamburger.is-open span\:nth-child(2){ opacity:0; }
+.hamburger.is-open span\:nth-child(3){ top:0; transform\:rotate(-45deg); }
 
-/* Primary nav (desktop only if needed) */
-.main-nav{ display:none !important }
-.nav-link{ color:#fff; font-weight:700; text-decoration:none; transition:all .25s ease }
-.nav-link:hover{ color:#fff; text-shadow:0 0 10px #fff, 0 0 24px #fff }
+/\* Primary nav (desktop only if needed) \*/
+.main-nav{ display\:none !important; }
+.nav-link{ color:#fff; font-weight:700; text-decoration\:none; transition\:all .25s ease; }
+.nav-link\:hover{ color:#fff; text-shadow:0 0 10px #fff, 0 0 24px #fff; }
 
-/* ===============================
-   SIDEBAR NAV
-=================================*/
-.sidebar-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.65); backdrop-filter:blur(6px); z-index:var(--z-sidebar); animation:fadeIn .25s ease-out }
-.sidebar-nav{ position:fixed; top:0; right:0; height:100dvh; width:260px; background:#000; border-left:2px solid #fff; box-shadow:-2px 0 16px #fff8; padding:2rem 1.5rem; display:flex; flex-direction:column; gap:1.25rem; z-index:calc(var(--z-sidebar) + 1); animation:slideInRight .25s ease-out }
-@keyframes slideInRight{ from{transform:translateX(100%);opacity:.2} to{transform:translateX(0);opacity:1} }
+/\* ===============================
+SIDEBAR NAV
+\=================================\*/
+.sidebar-overlay{
+position\:fixed; inset:0; background\:rgba(0,0,0,.65); backdrop-filter\:blur(6px);
+z-index\:var(--z-sidebar); animation\:fadeIn .25s ease-out;
+}
+.sidebar-nav{
+position\:fixed; top:0; right:0; height:100dvh; width:260px;
+background:#000; border-left:2px solid #fff; box-shadow:-2px 0 16px #fff8;
+padding:2rem 1.5rem; display\:flex; flex-direction\:column; gap:1.25rem; z-index\:calc(var(--z-sidebar) + 1);
+animation\:slideInRight .25s ease-out;
+}
+@keyframes slideInRight{ from{transform\:translateX(100%);opacity:.2} to{transform\:translateX(0);opacity:1} }
 @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
 
-/* ===============================
-   LANDING
-=================================*/
-.landing-gradient{ position:relative; height:100dvh; width:100%; display:grid; place-items:center; overflow:hidden; background:transparent }
-.landing-merge{ pointer-events:none }
-.landing-merge.landing-gradient{ opacity:0; transition:opacity .45s ease }
+/\* ===============================
+LANDING
+\=================================\*/
+.landing-gradient{
+position\:relative; height:100dvh; width:100%; display\:grid; place-items\:center;
+overflow\:hidden; background\:transparent;
+}
+.landing-merge{ pointer-events\:none; }
+.landing-merge.landing-gradient{ opacity:0; transition\:opacity .45s ease; }
 
-/* Social icons (top-center) */
-.landing-social{ position:absolute; top:1.25rem; left:50%; transform:translateX(-50%); display:flex; gap:.75rem; z-index:3; transition:opacity .35s ease }
-.landing-merge .landing-social{ opacity:0 }
-.landing-social a{ display:inline-flex; align-items:center; justify-content:center }
+/\* Social icons (top-center) \*/
+.landing-social{
+position\:absolute; top:1.25rem; left:50%; transform\:translateX(-50%);
+display\:flex; gap:.75rem; z-index:3; transition\:opacity .35s ease;
+}
+.landing-merge .landing-social{ opacity:0; }
+.landing-social a{ display\:inline-flex; align-items\:center; justify-content\:center; }
 .landing-social img{
-  width:34px; height:34px; padding:6px; border-radius:50%; background:rgba(255,255,255,.03);
-  border:1px solid var(--jal-border); box-shadow:0 0 3px var(--jal-muted); object-fit:contain; backdrop-filter:blur(6px);
-  transition:transform .2s ease, box-shadow .3s ease, border-color .3s ease;
+width:34px; height:34px; padding:6px; border-radius:50%; background\:rgba(255,255,255,.03);
+border:1px solid var(--jal-border); box-shadow:0 0 3px var(--jal-muted);
+object-fit\:contain; backdrop-filter\:blur(6px);
+transition\:transform .2s ease, box-shadow .3s ease, border-color .3s ease;
 }
-.landing-social img:hover{ transform:scale(1.15); background:rgba(255,255,255,.1); border-color:var(--panel-stroke-strong); box-shadow:0 0 10px #fff, 0 0 20px #fff }
+.landing-social img\:hover{
+transform\:scale(1.15); background\:rgba(255,255,255,.1);
+border-color\:var(--panel-stroke-strong);
+box-shadow:0 0 10px #fff, 0 0 20px #fff;
+}
 
-/* Logo + soft glow */
-.landing-inner{ display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:8px; position:relative; z-index:2 }
-.landing-logo-wrapper{ position:relative; display:inline-block }
-.landing-logo-wrapper::before{ content:''; position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%); width:clamp(280px,44vw,520px); height:clamp(280px,44vw,520px); border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.28) 0%, transparent 65%); filter:blur(42px); animation:glowPulse 6s ease-in-out infinite; z-index:-1 }
-@keyframes glowPulse{ 0%,100%{opacity:.85; transform:translate(-50%,-50%) scale(1)} 50%{opacity:1; transform:translate(-50%,-50%) scale(1.05)} }
-.landing-logo{ width:clamp(220px,38vw,520px); height:auto; filter:drop-shadow(0 0 10px rgba(255,255,255,.8)) }
+/\* Logo + soft glow \*/
+.landing-inner{
+display\:flex; flex-direction\:column; align-items\:center;
+gap:12px; margin-bottom:8px; position\:relative; z-index:2;
+}
+.landing-logo-wrapper{ position\:relative; display\:inline-block; }
+.landing-logo-wrapper::before{
+content:''; position\:absolute; inset:50% auto auto 50%; transform\:translate(-50%,-50%);
+width\:clamp(280px,44vw,520px); height\:clamp(280px,44vw,520px); border-radius:50%;
+background\:radial-gradient(circle, rgba(255,255,255,.28) 0%, transparent 65%);
+filter\:blur(42px); animation\:glowPulse 6s ease-in-out infinite; z-index:-1;
+}
+@keyframes glowPulse{ 0%,100%{opacity:.85; transform\:translate(-50%,-50%) scale(1)} 50%{opacity:1; transform\:translate(-50%,-50%) scale(1.05)} }
+.landing-logo{ width\:clamp(220px,38vw,520px); height\:auto; filter\:drop-shadow(0 0 10px rgba(255,255,255,.8)); }
 
-/* Connect / Toggle button */
+/\* Connect wallet button \*/
 .landing-wallet{
-  border-radius:12px!important; border:2px solid var(--jal-text)!important;
-  background:#000!important; color:#11f1a7!important; box-shadow:0 0 12px var(--jal-glow)!important;
-  text-transform:uppercase!important; font-weight:700!important; padding:.75rem 1.25rem!important; cursor:pointer;
-  transition:opacity .45s ease, transform .45s ease, border-color .2s ease, box-shadow .2s ease;
+border-radius:12px!important; border:2px solid var(--jal-text)!important;
+background:#000!important; color:#11f1a7!important; box-shadow:0 0 12px var(--jal-glow)!important;
+text-transform\:uppercase!important; font-weight:700!important; padding:.75rem 1.25rem!important; cursor\:pointer;
+transition\:opacity .45s ease, transform .45s ease, border-color .2s ease, box-shadow .2s ease;
 }
-.landing-wallet:hover{ border-color:#fff!important; color:#fff!important; box-shadow:0 0 20px #fff, 0 0 28px rgba(255,255,255,.6)!important }
+.landing-wallet\:hover{ border-color:#fff!important; color:#fff!important; box-shadow:0 0 20px #fff, 0 0 28px rgba(255,255,255,.6)!important; }
 
-/* ===============================
-   HUB OVERLAY + PANEL
-=================================*/
+/\* ===============================
+HUB OVERLAY + PANEL
+\=================================\*/
 .hub-overlay{
-  position:fixed; inset:0; min-height:100dvh; padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) 16px; z-index:var(--z-hub);
-  display:grid; place-items:center; background:transparent; backdrop-filter:blur(var(--blur-amt)) saturate(1.05); -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.05);
-  overflow:hidden; overscroll-behavior:contain; isolation:isolate; transform:none; filter:none; opacity:1;
+position\:fixed; inset:0; min-height:100dvh;
+padding\:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) 16px;
+z-index\:var(--z-hub); display\:grid; place-items\:center; background\:transparent;
+backdrop-filter\:blur(var(--blur-amt)) saturate(1.05);
+-webkit-backdrop-filter\:blur(var(--blur-amt)) saturate(1.05);
+overflow\:hidden; overscroll-behavior\:contain; isolation\:isolate;
+transform\:none; filter\:none; opacity:1;
 }
 .hub-overlay::after{
-  content:""; position:fixed; left:50%; top:50%; width:220vmax; height:220vmax; transform:translate(-50%,-50%) translateZ(0); pointer-events:none; z-index:-1;
-  background:
-    radial-gradient(55% 45% at 50% 30%, rgba(255,255,255,.12), transparent 60%),
-    conic-gradient(from 0deg at 50% 50%, #11f1a7, #ffd700, #ffffff, #11f1a7);
-  filter:saturate(1.08) contrast(1.03); animation:bgDrift 28s ease-in-out infinite;
+content:""; position\:fixed; left:50%; top:50%; width:220vmax; height:220vmax;
+transform\:translate(-50%,-50%) translateZ(0); pointer-events\:none; z-index:-1;
+background:
+radial-gradient(55% 45% at 50% 30%, rgba(255,255,255,.12), transparent 60%),
+conic-gradient(from 0deg at 50% 50%, #11f1a7, #ffd700, #ffffff, #11f1a7);
+filter\:saturate(1.08) contrast(1.03); animation\:bgDrift 28s ease-in-out infinite;
 }
-.hub-overlay.is-closing{ animation: hubClose .3s ease forwards }
+.hub-overlay.is-closing{ animation: hubClose .3s ease forwards; }
 @keyframes hubClose{ from{opacity:1} to{opacity:0} }
 
-.hub-backdrop{ display:none !important }
+.hub-backdrop{ display\:none !important; }
 
 .hub-panel{
-  position:relative; width:min(980px,92vw); margin:0 auto; padding:clamp(18px,2.8vw,28px);
-  background:var(--panel-bg); border:1.5px solid rgba(255,255,255,.65); border-radius:16px;
-  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 10px 34px rgba(0,0,0,.40), 0 0 18px rgba(255,255,255,.25);
-  color:#fff; transform-origin:center center; animation:hubPopIn .45s cubic-bezier(.22,.75,.15,1) both;
-  backdrop-filter:blur(var(--blur-amt)) saturate(1.08);
-  max-height:calc(100dvh - 32px); display:flex; flex-direction:column; z-index:auto; transform:none; filter:none; opacity:1;
+position\:relative; width\:min(980px,92vw); margin:0 auto;
+padding\:clamp(18px,2.8vw,28px); background\:var(--panel-bg);
+border:1.5px solid rgba(255,255,255,.65); border-radius:16px;
+box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 10px 34px rgba(0,0,0,.40), 0 0 18px rgba(255,255,255,.25);
+color:#fff; transform-origin\:center center; animation\:hubPopIn .45s cubic-bezier(.22,.75,.15,1) both;
+backdrop-filter\:blur(var(--blur-amt)) saturate(1.08);
+max-height\:calc(100dvh - 32px); display\:flex; flex-direction\:column;
+z-index\:auto; transform\:none; filter\:none; opacity:1;
 }
-.hub-panel.is-pre{ opacity:0; transform:scale(.92) }
-@keyframes hubPopIn{ 0%{opacity:0; transform:scale(.92)} 100%{opacity:1; transform:scale(1)} }
+.hub-panel.is-pre{ opacity:0; transform\:scale(.92); }
+@keyframes hubPopIn{ 0%{opacity:0; transform\:scale(.92)} 100%{opacity:1; transform\:scale(1)} }
 
-.hub-panel--fit{ width:clamp(320px,92vw,980px); min-height:clamp(420px,70dvh,900px); border-radius:16px; display:flex; flex-direction:column; justify-content:space-between }
-.hub-panel-top{ display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; flex:0 0 auto }
-.hub-panel-body{ position:relative; z-index:1; flex:1 1 auto; overflow:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; scrollbar-gutter:stable both-edges }
+.hub-panel--fit{
+width\:clamp(320px,92vw,980px); min-height\:clamp(420px,70dvh,900px);
+border-radius:16px; display\:flex; flex-direction\:column; justify-content\:space-between;
+}
+.hub-panel-top{ display\:flex; align-items\:center; justify-content\:space-between; gap:1rem; margin-bottom:1rem; flex:0 0 auto; }
+.hub-panel-body{
+position\:relative; z-index:1; flex:1 1 auto; overflow\:auto; padding-bottom:4px;
+-webkit-overflow-scrolling\:touch; scrollbar-gutter\:stable both-edges;
+}
 
-.hub-title{ margin:0 0 .35rem; text-align:center; color:#fff; font-size:clamp(2rem,3.2vw,2.8rem); letter-spacing:.02em; text-shadow:0 0 12px #fff, 0 0 28px #fff8 }
-.hub-connection{ margin:.15rem 0 1.25rem; display:flex; justify-content:center; gap:.5rem; font-size:.85rem; color:var(--jal-muted) }
-.hub-connection .pill{ background:#000; color:#fff; border:1px solid #fff; padding:.25rem .55rem; border-radius:999px; box-shadow:0 0 12px #fff6 }
+.hub-title{
+margin:0 0 .35rem; text-align\:center; color:#fff; font-size\:clamp(2rem,3.2vw,2.8rem); letter-spacing:.02em;
+text-shadow:0 0 12px #fff, 0 0 28px #fff8;
+}
+.hub-connection{ margin:.15rem 0 1.25rem; display\:flex; justify-content\:center; gap:.5rem; font-size:.85rem; color\:var(--jal-muted); }
+.hub-connection .pill{ background:#000; color:#fff; border:1px solid #fff; padding:.25rem .55rem; border-radius:999px; box-shadow:0 0 12px #fff6; }
 
-/* HUB buttons / tiles */
-.hub-stack{ display:grid; gap:clamp(12px,2vw,20px) }
-.hub-btn{ display:block; width:100%; text-align:center; text-decoration:none; padding:clamp(1rem,2.6vw,1.4rem) clamp(1rem,2.6vw,1.6rem); border-radius:12px; border:2px solid #fff; cursor:pointer; background:rgba(0,0,0,.75); color:#fff; font-weight:900; letter-spacing:.08em; text-transform:uppercase; box-shadow:0 0 16px #fff4, 0 8px 24px rgba(0,0,0,.25); transition:transform .14s ease, box-shadow .2s ease, filter .2s ease }
-.hub-btn .sub{ display:block; margin-top:.42rem; font-weight:600; letter-spacing:.03em; text-transform:none; opacity:.92; color:#eaeaea }
-@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@media (hover:hover){ .hub-btn:hover{ transform:translateY(-2px) scale(1.015); box-shadow:0 0 26px #fff9, 0 0 40px #fff8, inset 0 0 12px #fff6; filter:saturate(1.05) } }
-@media (hover:none){ .hub-btn:active{ transform:scale(.985) } }
+/\* HUB buttons / tiles \*/
+.hub-stack{ display\:grid; gap\:clamp(12px,2vw,20px); }
+.hub-btn{
+display\:block; width:100%; text-align\:center; text-decoration\:none;
+padding\:clamp(1rem,2.6vw,1.4rem) clamp(1rem,2.6vw,1.6rem);
+border-radius:12px; border:2px solid #fff; cursor\:pointer;
+background\:rgba(0,0,0,.75); color:#fff; font-weight:900; letter-spacing:.08em; text-transform\:uppercase;
+box-shadow:0 0 16px #fff4, 0 8px 24px rgba(0,0,0,.25);
+transition\:transform .14s ease, box-shadow .2s ease, filter .2s ease;
+}
+.hub-btn .sub{ display\:block; margin-top:.42rem; font-weight:600; letter-spacing:.03em; text-transform\:none; opacity:.92; color:#eaeaea; }
+@keyframes floatY{0%,100%{transform\:translateY(0)}50%{transform\:translateY(-4px)}}
+@media (hover\:hover){ .hub-btn\:hover{ transform\:translateY(-2px) scale(1.015); box-shadow:0 0 26px #fff9, 0 0 40px #fff8, inset 0 0 12px #fff6; filter\:saturate(1.05); } }
+@media (hover\:none){ .hub-btn\:active{ transform\:scale(.985); } }
 
-.img-btn{ padding:0; background:transparent; border:none; border-radius:14px; overflow:hidden; box-shadow:0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25); display:block; position:relative }
-.img-btn:focus-visible{ outline:3px solid #fff; outline-offset:4px; box-shadow:0 0 0 1.5px #fff inset, 0 0 24px #fff, 0 0 36px #fff8 }
+.img-btn{
+padding:0; background\:transparent; border\:none; border-radius:14px; overflow\:hidden;
+box-shadow:0 0 0 1.5px rgba(255,255,255,.65) inset, 0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
+display\:block; position\:relative;
+}
+.img-btn\:focus-visible{ outline:3px solid #fff; outline-offset:4px; box-shadow:0 0 0 1.5px #fff inset, 0 0 24px #fff, 0 0 36px #fff8; }
 
-/* GIFs */
-.hub-gif{ display:block; width:100%; height:clamp(180px, 32vh, 360px); object-fit:contain; object-position:center; background:#000; padding:6px; transition:transform .18s ease, filter .25s ease, box-shadow .25s ease }
-.hub-gif--cover{ object-fit:cover }
-.hub-gif.float{ animation:floatY 4.5s ease-in-out infinite }
+/\* GIFs \*/
+.hub-gif{
+display\:block; width:100%;
+height\:clamp(180px, 32vh, 360px);
+object-fit\:contain; object-position\:center;
+background:#000; padding:6px;
+transition\:transform .18s ease, filter .25s ease, box-shadow .25s ease;
+}
+.hub-gif--cover{ object-fit\:cover; }
+.hub-gif.float{ animation\:floatY 4.5s ease-in-out infinite; }
 
-/* ===============================
-   JAL PAGE
-=================================*/
-.jal-page{ min-height:100dvh; display:grid; place-items:center; background:transparent; position:relative; padding:24px }
-.jal-panel{ width:min(960px,96vw); background:var(--panel-bg); border-top:2px solid var(--panel-stroke-strong); border-bottom:2px solid var(--panel-stroke-strong); padding:32px 24px; box-shadow:0 0 24px rgba(255,255,255,0.35), 0 0 2px rgba(255,255,255,0.8) inset; backdrop-filter:blur(6px); color:#fff }
-.jal-title{ margin:0; color:#fff; text-align:center; text-shadow:0 0 12px #fff, 0 0 22px #fff8 }
-.jal-subtitle{ margin-top:12px; color:rgba(255,255,255,.8); text-align:center }
-.jal-actions{ display:flex; justify-content:center; gap:12px; margin-top:16px; flex-wrap:wrap }
-.jal-chip{ background:#000; color:#fff; padding:6px 10px; border-radius:8px; font-size:.9rem; border:1px solid rgba(255,255,255,.7); box-shadow:0 0 8px #fff3 inset }
-.jal-btn{ border:1px solid #fff; background:transparent; color:#fff; border-radius:8px; padding:6px 12px; cursor:pointer; transition:transform .14s ease, box-shadow .2s ease, filter .2s ease, border-color .2s ease }
-.jal-btn:hover{ transform:translateY(-1px); border-color:#fff; box-shadow:0 0 18px #fff8; filter:saturate(1.05) }
-.jal-btn--primary{ border:2px solid #fff; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:.85rem 1.25rem; border-radius:12px; box-shadow:0 0 18px rgba(255,255,255,.25), 0 0 1px rgba(255,255,255,.8) inset }
-.jal-link{ border:1px solid #fff; background:transparent; color:#fff; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-grid; place-items:center; transition:transform .14s ease, box-shadow .2s ease, border-color .2s ease }
-.jal-link:hover{ transform:translateY(-1px); border-color:#fff; box-shadow:0 0 18px #fff8 }
-.jal-cta{ display:grid; gap:12px; margin-top:20px; justify-content:center }
+/\* ===============================
+JAL PAGE
+\=================================\*/
+.jal-page{ min-height:100dvh; display\:grid; place-items\:center; background\:transparent; position\:relative; padding:24px; }
+.jal-panel{
+width\:min(960px,96vw); background\:var(--panel-bg); border-top:2px solid var(--panel-stroke-strong); border-bottom:2px solid var(--panel-stroke-strong);
+padding:32px 24px; box-shadow:0 0 24px rgba(255,255,255,0.35), 0 0 2px rgba(255,255,255,0.8) inset; backdrop-filter\:blur(6px); color:#fff;
+}
+.jal-title{ margin:0; color:#fff; text-align\:center; text-shadow:0 0 12px #fff, 0 0 22px #fff8; }
+.jal-subtitle{ margin-top:12px; color\:rgba(255,255,255,.8); text-align\:center; }
+.jal-actions{ display\:flex; justify-content\:center; gap:12px; margin-top:16px; flex-wrap\:wrap; }
+.jal-chip{ background:#000; color:#fff; padding:6px 10px; border-radius:8px; font-size:.9rem; border:1px solid rgba(255,255,255,.7); box-shadow:0 0 8px #fff3 inset; }
+.jal-btn{ border:1px solid #fff; background\:transparent; color:#fff; border-radius:8px; padding:6px 12px; cursor\:pointer; transition\:transform .14s ease, box-shadow .2s ease, filter .2s ease, border-color .2s ease; }
+.jal-btn\:hover{ transform\:translateY(-1px); border-color:#fff; box-shadow:0 0 18px #fff8; filter\:saturate(1.05); }
+.jal-btn--primary{ border:2px solid #fff; font-weight:800; letter-spacing:.08em; text-transform\:uppercase; padding:.85rem 1.25rem; border-radius:12px; box-shadow:0 0 18px rgba(255,255,255,.25), 0 0 1px rgba(255,255,255,.8) inset; }
+.jal-link{ border:1px solid #fff; background\:transparent; color:#fff; border-radius:8px; padding:6px 12px; text-decoration\:none; display\:inline-grid; place-items\:center; transition\:transform .14s ease, box-shadow .2s ease, border-color .2s ease; }
+.jal-link\:hover{ transform\:translateY(-1px); border-color:#fff; box-shadow:0 0 18px #fff8; }
+.jal-cta{ display\:grid; gap:12px; margin-top:20px; justify-content\:center; }
 
-/* ===============================
-   APP MODAL (reusable)
-=================================*/
-@keyframes modalIn{from{opacity:0; transform:translateY(8px) scale(.96)} to{opacity:1; transform:none}}
+/\* ===============================
+APP MODAL (reusable)
+\=================================\*/
+@keyframes modalIn{from{opacity:0; transform\:translateY(8px) scale(.96)} to{opacity:1; transform\:none}}
 
-.modal-overlay{ position:fixed; inset:0; background: radial-gradient(1200px 600px at 50% 30%, rgba(255,255,255,.08), transparent 60%), rgba(0,0,0,.55); backdrop-filter: blur(2px); z-index:var(--z-modal-overlay); animation: fadeIn .25s ease-out; pointer-events:auto; isolation:isolate; contain:layout paint style }
-.modal-host{ position:fixed; inset:0; display:grid; place-items:center; pointer-events:none; z-index:var(--z-modal); isolation:isolate }
-.modal{ background:rgba(0,0,0,.78); border:1.6px solid rgba(255,255,255,.9); border-radius:18px; padding:12px; animation: modalIn .28s ease-out both, glowPulse 2.4s ease-in-out infinite; box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 24px rgba(255,255,255,.28); width:min(560px,94vw); max-height:90dvh; overflow:hidden; pointer-events:auto; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) }
-.modal.modal--top{ top:8vh; transform:translate(-50%, 0) }
-.modal-header{ display:flex; align-items:center; gap:10px; justify-content:space-between; padding:4px 6px 10px }
-.modal-title{ text-align:center; color:#fff; letter-spacing:.06em; font-weight:700 }
-.modal-title-sub{ font-size:12px; opacity:.7; margin-top:2px }
-.modal-close{ border:1px solid #fff; background:transparent; color:#fff; border-radius:10px; padding:6px 10px; cursor:pointer; transition: transform .14s ease, box-shadow .2s ease }
-.modal-close:hover{ transform:translateY(-1px); box-shadow:0 0 18px #fff8 }
-.modal-iframe{ width:100%; height:min(640px, 70dvh); border:0; border-radius:14px }
-.modal-footer{ text-align:center; margin-top:8px }
+.modal-overlay{
+position\:fixed; inset:0;
+background: radial-gradient(1200px 600px at 50% 30%, rgba(255,255,255,.08), transparent 60%), rgba(0,0,0,.55);
+backdrop-filter: blur(2px);
+z-index\:var(--z-modal-overlay);
+animation: fadeIn .25s ease-out;
+pointer-events\:auto;
+isolation\:isolate;
+contain\:layout paint style;
+}
+.modal-host{
+position\:fixed; inset:0; display\:grid; place-items\:center;
+pointer-events\:none; z-index\:var(--z-modal); isolation\:isolate;
+}
+.modal{
+background\:rgba(0,0,0,.78);
+border:1.6px solid rgba(255,255,255,.9);
+border-radius:18px; padding:12px;
+animation: modalIn .28s ease-out both, glowPulse 2.4s ease-in-out infinite;
+box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 14px 38px rgba(0,0,0,.55), 0 0 24px rgba(255,255,255,.28);
+width\:min(560px,94vw); max-height:90dvh; overflow\:hidden; pointer-events\:auto;
+position\:fixed; left:50%; top:50%; transform\:translate(-50%,-50%);
+}
+.modal.modal--top{ top:8vh; transform\:translate(-50%, 0); }
+.modal-header{ display\:flex; align-items\:center; gap:10px; justify-content\:space-between; padding:4px 6px 10px; }
+.modal-title{ text-align\:center; color:#fff; letter-spacing:.06em; font-weight:700; }
+.modal-title-sub{ font-size:12px; opacity:.7; margin-top:2px; }
+.modal-close{ border:1px solid #fff; background\:transparent; color:#fff; border-radius:10px; padding:6px 10px; cursor\:pointer; transition: transform .14s ease, box-shadow .2s ease; }
+.modal-close\:hover{ transform\:translateY(-1px); box-shadow:0 0 18px #fff8; }
+.modal-iframe{ width:100%; height\:min(640px, 70dvh); border:0; border-radius:14px; }
+.modal-footer{ text-align\:center; margin-top:8px; }
 
-/* ===============================
-   UTILITIES
-=================================*/
-.site-footer{ margin-top:auto; text-align:center; padding:1rem 0; font-size:.85rem; color:var(--jal-muted); text-shadow:0 0 4px var(--jal-glow) }
-.button{ display:inline-block; padding:.85rem 1.2rem; border-radius:12px; border:2px solid #fff; text-decoration:none; color:#fff; font-weight:800; text-transform:uppercase; letter-spacing:.06em; box-shadow:0 0 16px #fff4; transition:transform .14s ease, box-shadow .2s ease }
-.button:hover{ transform:translateY(-2px); box-shadow:0 0 26px #fff8, inset 0 0 12px #fff6 }
-.card{ background:var(--panel-bg); border:1px solid rgba(255,255,255,.55); border-radius:16px; padding:clamp(14px,2vw,18px); box-shadow:0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25) }
+/\* ===============================
+UTILITIES
+\=================================\*/
+.site-footer{
+margin-top\:auto; text-align\:center; padding:1rem 0;
+font-size:.85rem; color\:var(--jal-muted); text-shadow:0 0 4px var(--jal-glow);
+}
+.button{
+display\:inline-block; padding:.85rem 1.2rem; border-radius:12px; border:2px solid #fff;
+text-decoration\:none; color:#fff; font-weight:800; text-transform\:uppercase; letter-spacing:.06em;
+box-shadow:0 0 16px #fff4; transition\:transform .14s ease, box-shadow .2s ease;
+}
+.button\:hover{ transform\:translateY(-2px); box-shadow:0 0 26px #fff8, inset 0 0 12px #fff6; }
+.card{
+background\:var(--panel-bg); border:1px solid rgba(255,255,255,.55); border-radius:16px;
+padding\:clamp(14px,2vw,18px); box-shadow:0 8px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.25);
+}
+a\:focus-visible, button\:focus-visible, .hub-btn\:focus-visible, .jal-btn\:focus-visible, .jal-link\:focus-visible, .button\:focus-visible{
+outline:3px solid #fff; outline-offset:3px; box-shadow:0 0 18px #fff8, 0 0 1px #fff inset;
+}
 
-/* Focus */
-a:focus-visible,button:focus-visible,.hub-btn:focus-visible,.jal-btn:focus-visible,.jal-link:focus-visible,.button:focus-visible{ outline:3px solid #fff; outline-offset:3px; box-shadow:0 0 18px #fff8, 0 0 1px #fff inset }
+/\* Scrollbars \*/
+\*{ scrollbar-width: thin; scrollbar-color: #fff transparent; }
+\::-webkit-scrollbar{ width:8px; }
+\::-webkit-scrollbar-thumb{ background:#fff; border-radius:4px; }
+\::-webkit-scrollbar-thumb\:hover
 
-/* Scrollbars */
-*{ scrollbar-width: thin; scrollbar-color: #fff transparent }
-::-webkit-scrollbar{ width:8px }
-::-webkit-scrollbar-thumb{ background:#fff; border-radius:4px }
-::-webkit-scrollbar-thumb:hover{ background:#e5e5e5 }
+/\* Disconnect btns \*/
+.landing-disconnect{ position\:absolute; top:1rem; right:1rem; z-index:3; }
+.wallet-disconnect-btn, .hub-disconnect-btn{
+border:2px solid #fff !important; background:#000 !important; color:#fff !important;
+border-radius:10px !important; font-weight:700 !important; text-transform\:uppercase !important;
+box-shadow:0 0 14px #fff7 !important; padding:.5rem 1rem !important; cursor\:pointer;
+transition: transform .14s ease, box-shadow .2s ease;
+}
+.wallet-disconnect-btn\:hover, .hub-disconnect-btn\:hover{
+transform\:translateY(-1px); box-shadow:0 0 22px #fff, 0 0 30px #fff !important;
+}
 
-/* Disconnect btns */
-.landing-disconnect{ position:absolute; top:1rem; right:1rem; z-index:3 }
-.wallet-disconnect-btn,.hub-disconnect-btn{ border:2px solid #fff !important; background:#000 !important; color:#fff !important; border-radius:10px !important; font-weight:700 !important; text-transform:uppercase !important; box-shadow:0 0 14px #fff7 !important; padding:.5rem 1rem !important; cursor:pointer; transition: transform .14s ease, box-shadow .2s ease }
-.wallet-disconnect-btn:hover,.hub-disconnect-btn:hover{ transform:translateY(-1px); box-shadow:0 0 22px #fff, 0 0 30px #fff !important }
+/\* ===============================
+WALLET ADAPTER (absolute top)
+— Keep ONLY the modal itself at max z-index.
+— Do NOT force container/wrapper to fixed/z-index to avoid layout clashes.
+\=================================*/
+.wallet-adapter-modal {
+position: fixed !important;
+z-index: 2147483647 !important; /* always on top \*/
+}
 
-/* ===============================
-   WALLET ADAPTER (absolute top)
-   NOTE: Root bridges manage data-wallet-visible globally.
-=================================*/
-.wallet-adapter-modal{ position:fixed !important; z-index:2147483647 !important }
-.wallet-adapter-modal-container{ background:rgba(0,0,0,.85) !important; border:1.5px solid rgba(255,255,255,.6) !important; box-shadow:0 8px 28px rgba(0,0,0,.55), 0 0 22px rgba(255,255,255,.35) !important }
-.wallet-adapter-button-trigger{ border-radius:10px !important; border:2px solid #fff !important; background:#000 !important; color:#fff !important; text-transform:uppercase !important; font-weight:800 !important }
+.wallet-adapter-modal-container {
+background: rgba(0,0,0,.85) !important;
+border: 1.5px solid rgba(255,255,255,.6) !important;
+box-shadow:
+0 8px 28px rgba(0,0,0,.55),
+0 0 22px rgba(255,255,255,.35) !important;
+}
 
-/* ===============================
-   FREEZE / HIDE APP WHEN WALLET UI IS OPEN
-   Driven by body[data-wallet-visible] (set by global bridge) + :has() fallback.
-=================================*/
-body[data-wallet-visible="true"] .modal-overlay,
-body[data-wallet-visible="true"] .modal-host,
-body[data-wallet-visible="true"] .hub-overlay,
-body[data-wallet-visible="true"] .hub-panel,
-body[data-wallet-visible="true"] .hub-preview{ pointer-events:none !important; opacity:.25 !important; filter:blur(4px) brightness(.85) }
-body[data-wallet-visible="true"] .wallet-adapter-modal,
-body[data-wallet-visible="true"] .wallet-adapter-modal *{ pointer-events:auto !important }
+/\* Optional: style the trigger button \*/
+.wallet-adapter-button-trigger {
+border-radius: 10px !important;
+border: 2px solid #fff !important;
+background: #000 !important;
+color: #fff !important;
+text-transform: uppercase !important;
+font-weight: 800 !important;
+}
 
-/* :has() fallback (also covers WalletConnect .wcm-modal) */
-body:has(.wallet-adapter-modal) .modal-overlay,
-body:has(.wallet-adapter-modal) .modal-host,
-body:has(.wallet-adapter-modal) .hub-overlay,
-body:has(.wallet-adapter-modal) .hub-panel,
-body:has(.wallet-adapter-modal) .hub-preview,
-body:has(.wcm-modal) .modal-overlay,
-body:has(.wcm-modal) .modal-host,
-body:has(.wcm-modal) .hub-overlay,
-body:has(.wcm-modal) .hub-panel,
-body:has(.wcm-modal) .hub-preview{ pointer-events:none !important; opacity:.25 !important; filter:blur(4px) brightness(.85) }
-body:has(.wallet-adapter-modal) .wallet-adapter-modal,
-body:has(.wallet-adapter-modal) .wallet-adapter-modal *{ pointer-events:auto !important }
+/\* ===============================
+FREEZE / HIDE APP WHEN WALLET UI IS OPEN
+Two mechanisms:
 
-/* HARD hide option (disabled by default) */
+1. Attribute driven by Landing.tsx: <body data-wallet-visible="true">
+2. Pure CSS fallback using \:has() for adapter + WalletConnect (.wcm-modal)
+   \=================================\*/
+
+/\* 1) Attribute-driven freeze (preferred) \*/
+body\[data-wallet-visible="true"] .modal-overlay,
+body\[data-wallet-visible="true"] .modal-host,
+body\[data-wallet-visible="true"] .hub-overlay,
+body\[data-wallet-visible="true"] .hub-panel,
+body\[data-wallet-visible="true"] .hub-preview {
+pointer-events: none !important;
+opacity: .25 !important;
+filter: blur(4px) brightness(.85);
+}
+
+/\* Keep the wallet dialog interactive \*/
+body\[data-wallet-visible="true"] .wallet-adapter-modal,
+body\[data-wallet-visible="true"] .wallet-adapter-modal \* {
+pointer-events: auto !important;
+}
+
+/\* 2) \:has() fallback (also covers WalletConnect modal .wcm-modal) */
+body\:has(.wallet-adapter-modal),
+body\:has(.wcm-modal) {
+/* nothing here; we scope effects below \*/
+}
+
+body\:has(.wallet-adapter-modal) .modal-overlay,
+body\:has(.wallet-adapter-modal) .modal-host,
+body\:has(.wallet-adapter-modal) .hub-overlay,
+body\:has(.wallet-adapter-modal) .hub-panel,
+body\:has(.wallet-adapter-modal) .hub-preview,
+body\:has(.wcm-modal) .modal-overlay,
+body\:has(.wcm-modal) .modal-host,
+body\:has(.wcm-modal) .hub-overlay,
+body\:has(.wcm-modal) .hub-panel,
+body\:has(.wcm-modal) .hub-preview {
+pointer-events: none !important;
+opacity: .25 !important;
+filter: blur(4px) brightness(.85);
+}
+
+/\* Ensure wallet UI remains clickable \*/
+body\:has(.wallet-adapter-modal) .wallet-adapter-modal,
+body\:has(.wallet-adapter-modal) .wallet-adapter-modal \* {
+pointer-events: auto !important;
+}
+
+/\* 🚑 If you prefer HARD hiding the hub while a wallet is open, use this instead: */
+/* (uncomment to replace the blur/freeze above) */
 /*
-body[data-wallet-visible="true"] .hub-overlay,
-body[data-wallet-visible="true"] .hub-panel,
-body[data-wallet-visible="true"] .hub-preview,
-body:has(.wallet-adapter-modal) .hub-overlay,
-body:has(.wallet-adapter-modal) .hub-panel,
-body:has(.wallet-adapter-modal) .hub-preview,
-body:has(.wcm-modal) .hub-overlay,
-body:has(.wcm-modal) .hub-panel,
-body:has(.wcm-modal) .hub-preview{ display:none !important }
-*/
-
-/* ===============================
-   PAGE TRANSITIONS
-=================================*/
-@keyframes hubSlideUpFade{from{opacity:1; transform:translateY(0); filter:blur(0)} to{opacity:0; transform:translateY(-60px) scale(.985); filter:blur(2px)}}
-@keyframes jalFadeIn{from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:translateY(0)}}
-.route-leave-hub{ animation:hubSlideUpFade .38s cubic-bezier(.22,.75,.15,1) forwards; will-change:transform,opacity,filter; z-index:75; position:relative }
-.route-enter-jal{ animation:jalFadeIn .35s ease-out both; will-change:transform,opacity; z-index:20; position:relative }
-
-/* ===============================
-   REDUCED MOTION
-=================================*/
-@media (prefers-reduced-motion: reduce){ *, *::before, *::after{ animation:none !important; transition:none !important } }
-
-/* ===============================
-   RESPONSIVE
-=================================*/
-@media (max-width:768px){ .nav-link{ font-size:1rem } .logo{ height:112px } .hub-panel{ width:min(96vw,980px) } .hub-gif{ height:clamp(160px, 28vh, 260px) } }
-@media (max-height:700px){ .hub-title{ font-size:clamp(1.6rem,4.8vw,2.2rem) } .hub-gif{ height:clamp(150px, 26vh, 240px) } }
-
-/* ===============================
-   BACKDROP-FILTER FALLBACK
-=================================*/
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){ .hub-overlay{ background: rgba(0,0,0,.35) } .hub-panel{ background: rgba(0,0,0,.78) } }
-
-/* ===============================
-   HUB CLOSED (preview)
-=================================*/
-.hub-preview{ margin-top:clamp(16px,4vh,28px); width:min(980px,92vw); padding:clamp(18px,2.8vw,28px); background:var(--panel-bg); border:1.5px solid rgba(255,255,255,.65); border-radius:16px; box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 10px 34px rgba(0,0,0,.40), 0 0 18px rgba(255,255,255,.25); backdrop-filter:blur(var(--blur-amt)) saturate(1.08); -webkit-backdrop-filter:blur(var(--blur-amt)) saturate(1.08) }
-.hub-preview .hub-stack{ display:none !important }
-.hub-preview .hub-panel-body{ overflow:hidden !important }
-.hub-preview :is(button,a,[role="button"],[tabindex]){ pointer-events:none !important; user-select:none !important }
-.hub-preview .hub-title{ opacity:.88 }
-.hub-preview .card{ box-shadow:0 0 0 1.5px rgba(255,255,255,.5) inset, 0 8px 22px rgba(0,0,0,.28), 0 0 18px rgba(255,255,255,.20); filter:blur(1px) brightness(.95) opacity(.78) }
-.hub-preview .hub-gif{ transition:none; animation:none; opacity:.9 }
-
-/* --- Click-through + stacking for Disconnect buttons --- */
-.landing-disconnect {
-  position: fixed;           /* already absolute earlier; fixed is safer */
-  top: 12px;
-  right: 12px;
-  z-index: 2147482000;       /* above hub/overlay, below wallet modal */
-  pointer-events: none;      /* container ignores clicks... */
+body\[data-wallet-visible="true"] .hub-overlay,
+body\[data-wallet-visible="true"] .hub-panel,
+body\[data-wallet-visible="true"] .hub-preview,
+body\:has(.wallet-adapter-modal) .hub-overlay,
+body\:has(.wallet-adapter-modal) .hub-panel,
+body\:has(.wallet-adapter-modal) .hub-preview,
+body\:has(.wcm-modal) .hub-overlay,
+body\:has(.wcm-modal) .hub-panel,
+body\:has(.wcm-modal) .hub-preview {
+display: none !important;
 }
-.landing-disconnect .wallet-disconnect-btn,
-.hub-disconnect-btn {
-  pointer-events: auto !important; /* ...but the button still can receive them */
+\*/
+
+/\* ===============================
+PAGE TRANSITIONS
+\=================================\*/
+@keyframes hubSlideUpFade{from{opacity:1; transform\:translateY(0); filter\:blur(0)} to{opacity:0; transform\:translateY(-60px) scale(.985); filter\:blur(2px)}}
+@keyframes jalFadeIn{from{opacity:0; transform\:translateY(18px)} to{opacity:1; transform\:translateY(0)}}
+.route-leave-hub{ animation\:hubSlideUpFade .38s cubic-bezier(.22,.75,.15,1) forwards; will-change\:transform,opacity,filter; z-index:75; position\:relative; }
+.route-enter-jal{ animation\:jalFadeIn .35s ease-out both; will-change\:transform,opacity; z-index:20; position\:relative; }
+
+/\* ===============================
+REDUCED MOTION
+\=================================\*/
+@media (prefers-reduced-motion: reduce){
+\*, \*::before, \*::after{ animation\:none !important; transition\:none !important; }
 }
 
-/* Ensure blur/freeze rules never block the floating disconnect */
-body[data-wallet-visible="true"] .landing-disconnect,
-body:has(.wallet-adapter-modal) .landing-disconnect,
-body:has(.wcm-modal) .landing-disconnect {
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  filter: none !important;
+/\* ===============================
+RESPONSIVE
+\=================================\*/
+@media (max-width:768px){
+.nav-link{ font-size:1rem; }
+.logo{ height:112px; }
+.hub-panel{ width\:min(96vw,980px); }
+.hub-gif{ height\:clamp(160px, 28vh, 260px); }
 }
+@media (max-height:700px){
+.hub-title{ font-size\:clamp(1.6rem,4.8vw,2.2rem); }
+.hub-gif{ height\:clamp(150px, 26vh, 240px); }
+}
+
+/\* ===============================
+BACKDROP-FILTER FALLBACK
+\=================================\*/
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
+.hub-overlay{ background: rgba(0,0,0,.35); }
+.hub-panel{ background: rgba(0,0,0,.78); }
+}
+
+/\* ===============================
+HUB CLOSED (preview)
+\=================================\*/
+.hub-preview{
+margin-top\:clamp(16px,4vh,28px);
+width\:min(980px,92vw);
+padding\:clamp(18px,2.8vw,28px);
+background\:var(--panel-bg);
+border:1.5px solid rgba(255,255,255,.65);
+border-radius:16px;
+box-shadow:0 0 0 1px rgba(255,255,255,.18) inset, 0 10px 34px rgba(0,0,0,.40), 0 0 18px rgba(255,255,255,.25);
+backdrop-filter\:blur(var(--blur-amt)) saturate(1.08);
+-webkit-backdrop-filter\:blur(var(--blur-amt)) saturate(1.08);
+}
+.hub-preview .hub-stack{ display\:none !important; }
+.hub-preview .hub-panel-body{ overflow\:hidden !important; }
+.hub-preview \:is(button, a, \[role="button"], \[tabindex]){
+pointer-events\:none !important;
+user-select\:none !important;
+}
+.hub-preview .hub-title{ opacity:.88; }
+.hub-preview .card{
+box-shadow:0 0 0 1.5px rgba(255,255,255,.5) inset, 0 8px 22px rgba(0,0,0,.28), 0 0 18px rgba(255,255,255,.20);
+filter\:blur(1px) brightness(.95) opacity(.78);
+}
+.hub-preview .hub-gif{ transition\:none; animation\:none; opacity:.9; }
