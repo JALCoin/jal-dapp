@@ -57,11 +57,10 @@ function Protected({ children }: { children: ReactElement }) {
   return connected ? children : <Navigate to="/" replace />;
 }
 
-/* ---------------- Safe Disconnect Button ---------------- */
+/* ---------------- Local, reliable Disconnect ---------------- */
 function DisconnectButton({ className }: { className?: string }) {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
-
   return (
     <button
       className={className ?? "wallet-disconnect-btn"}
@@ -288,7 +287,10 @@ const Sidebar = memo(SidebarView);
 function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
-  const { publicKey, wallet, connected, connecting } = useWallet();
+
+  // pull select/connect so we can eager-reconnect on mobile return
+  const { publicKey, wallet, connected, connecting, select, connect } = useWallet();
+
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
 
@@ -306,6 +308,61 @@ function Shell() {
       window.removeEventListener("focus", onVisible);
     };
   }, []);
+
+  // Remember which adapter the user used (for reconnection)
+  useEffect(() => {
+    const name = wallet?.adapter?.name;
+    if (name) {
+      try {
+        localStorage.setItem("walletAdapter", name);
+      } catch {}
+    }
+  }, [wallet?.adapter?.name]);
+
+  // Eager reconnect after deep-link return (and on first mount)
+  useEffect(() => {
+    let trying = false;
+    let raf = 0;
+
+    const getStored = () =>
+      localStorage.getItem("walletAdapter") || localStorage.getItem("walletName");
+
+    const tryReconnect = async () => {
+      if (trying) return;
+      if (connected || connecting) return;
+      if (document.hidden) return;
+
+      const stored = getStored();
+      if (!stored) return;
+
+      trying = true;
+      try {
+        // @ts-ignore: string name is ok for select()
+        await select?.(stored);
+        await new Promise((r) => setTimeout(r, 0));
+        await connect?.();
+      } catch (e) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.warn("[wallet] eager reconnect failed:", e);
+        }
+      } finally {
+        trying = false;
+      }
+    };
+
+    raf = requestAnimationFrame(() => { void tryReconnect(); });
+
+    const onResume = () => { void tryReconnect(); };
+    window.addEventListener("focus", onResume);
+    document.addEventListener("visibilitychange", onResume);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("focus", onResume);
+      document.removeEventListener("visibilitychange", onResume);
+    };
+  }, [connected, connecting, select, connect]);
 
   // Basic diagnostics in dev
   useEffect(() => {
@@ -328,7 +385,7 @@ function Shell() {
   // Close menu when route changes
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
-  // Move focus to main content after route change or menu close
+  // Focus main after route/menu change
   useEffect(() => {
     if (!menuOpen) {
       requestAnimationFrame(() => mainRef.current?.focus?.());
@@ -433,11 +490,11 @@ function Shell() {
 
 /* ---------------- Root Providers ---------------- */
 export default function App() {
-  // Always use absolute origin/URLs for wallet identity metadata (mobile deep-linking quirk)
+  // Absolute origin/URLs for wallet identity metadata (mobile deep-link)
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://jalsol.com";
 
-  // Your proxy / RPC selection
+  // RPC endpoint
   const endpoint = useMemo(() => {
     if (
       typeof window !== "undefined" &&
@@ -448,7 +505,7 @@ export default function App() {
     return "https://solana-proxy-production.up.railway.app";
   }, []);
 
-  // Keep adapters on the same cluster
+  // Cluster
   const network =
     (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
       ? WalletAdapterNetwork.Devnet
@@ -466,8 +523,8 @@ export default function App() {
           metadata: {
             name: "JAL/SOL Dapp",
             description: "Swap SOL→JAL and use utilities",
-            url: origin, // absolute
-            icons: [`${origin}/icons/icon-512.png`], // absolute
+            url: origin,
+            icons: [`${origin}/icons/icon-512.png`],
           },
         },
       }),
@@ -475,11 +532,14 @@ export default function App() {
         addressSelector: createDefaultAddressSelector(),
         appIdentity: {
           name: "JAL/SOL",
-          uri: origin, // absolute
-          icon: `${origin}/icons/icon-512.png`, // absolute
+          uri: origin,
+          icon: `${origin}/icons/icon-512.png`,
         },
         authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster: "mainnet-beta",
+        cluster:
+          (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
+            ? "devnet"
+            : "mainnet-beta",
         onWalletNotFound: createDefaultWalletNotFoundHandler(),
       }),
     ],
@@ -490,7 +550,7 @@ export default function App() {
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider
         wallets={wallets}
-        autoConnect={false}
+        autoConnect
         onError={(e) => console.error("[wallet-adapter] error:", e)}
       >
         <WalletModalProvider>
