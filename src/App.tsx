@@ -25,6 +25,7 @@ import {
 import {
   WalletModalProvider,
   WalletDisconnectButton,
+  useWalletModal, // ⬅️ NEW
 } from "@solana/wallet-adapter-react-ui";
 import {
   PhantomWalletAdapter,
@@ -286,8 +287,9 @@ function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
 
-  // Pull select/connect so we can gently reconnect on mobile resume
+  // We’ll use select/connect + wallet modal for robust mobile flows
   const { publicKey, wallet, connected, connecting, select, connect } = useWallet();
+  const walletModal = useWalletModal(); // ⬅️ NEW
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -295,11 +297,10 @@ function Shell() {
 
   const isLanding = location.pathname === "/" || location.pathname === "/shop";
 
-  // Visual nudge on tab visibility/focus (keeps some adapters happy)
+  // Nudge some adapters when tab returns
   useEffect(() => {
-    const onVisible = () => {
+    const onVisible = () =>
       requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-    };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
     return () => {
@@ -308,7 +309,15 @@ function Shell() {
     };
   }, []);
 
-  // Persist current adapter name when it changes (helps next reconnect)
+  // Detect a mobile browser
+  const isMobile = useMemo(
+    () =>
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      navigator.userAgent.includes("Mobile"),
+    []
+  );
+
+  // Persist current adapter name to help reconnect choose the same wallet
   useEffect(() => {
     const name = wallet?.adapter?.name;
     if (name) {
@@ -318,7 +327,7 @@ function Shell() {
     }
   }, [wallet?.adapter?.name]);
 
-  // 🔁 Robust eager reconnect after returning from wallet (mobile deep link) + on first mount
+  // 🔁 Eager reconnect after returning from wallet (mobile deep link) + on first mount
   useEffect(() => {
     let reconnecting = false;
     let raf = 0;
@@ -349,7 +358,7 @@ function Shell() {
       }
     };
 
-    // run once after mount
+    // run once after mount (helps when coming back via full reload)
     raf = requestAnimationFrame(() => { void tryReconnect(); });
 
     // run whenever the tab/app resumes
@@ -363,6 +372,24 @@ function Shell() {
       document.removeEventListener("visibilitychange", onResume);
     };
   }, [connected, connecting, wallet, select, connect]);
+
+  // 📣 Mobile: if no remembered wallet and not connected, open modal once/session
+  useEffect(() => {
+    if (!isMobile) return;
+    if (connected || connecting) return;
+
+    const KEY = "wallet:autoPrompted";
+    if (sessionStorage.getItem(KEY)) return;
+
+    const t = window.setTimeout(() => {
+      try {
+        walletModal.setVisible(true);
+        sessionStorage.setItem(KEY, "1");
+      } catch {}
+    }, 400);
+
+    return () => window.clearTimeout(t);
+  }, [isMobile, connected, connecting, walletModal]);
 
   // Dev diagnostics
   useEffect(() => {
@@ -382,17 +409,13 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // Close menu on route change
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
-  // Focus main after route/menu change
   useEffect(() => {
-    if (!menuOpen) {
-      requestAnimationFrame(() => mainRef.current?.focus?.());
-    }
+    if (!menuOpen) requestAnimationFrame(() => mainRef.current?.focus?.());
   }, [menuOpen, location.pathname]);
 
-  // Redirect to intended route when connected
+  // Redirect back to intended route once connected
   useEffect(() => {
     if (!connected) return;
 
