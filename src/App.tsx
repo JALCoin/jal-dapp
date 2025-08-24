@@ -56,7 +56,7 @@ import Content from "./pages/Content";
 import Jal from "./pages/Jal";
 
 /* ---------------- Guard ---------------- */
-// Remember where the user wanted to go, then bounce to "/" if disconnected.
+// Remember intended route, send to "/" if disconnected.
 function Protected({ children }: { children: ReactElement }) {
   const { connected } = useWallet();
   const location = useLocation();
@@ -187,7 +187,7 @@ function SidebarView({
   useEffect(() => {
     if (!open || isLanding) return;
 
-    // Remember the opener to restore focus later
+    // Remember invoker to restore focus later
     lastFocusedRef.current = (document.activeElement as HTMLElement) ?? null;
 
     // Focus first actionable
@@ -198,7 +198,7 @@ function SidebarView({
       );
     toFocus?.focus?.();
 
-    // Lock scroll under the drawer
+    // Lock scroll under drawer
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -286,7 +286,7 @@ function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
 
-  // Pull select/connect so we can eagerly reconnect on mobile resume
+  // Pull select/connect so we can gently reconnect on mobile resume
   const { publicKey, wallet, connected, connecting, select, connect } = useWallet();
 
   const location = useLocation();
@@ -295,7 +295,7 @@ function Shell() {
 
   const isLanding = location.pathname === "/" || location.pathname === "/shop";
 
-  // Reconnect nudge for iOS/Safari when returning from wallet
+  // Visual nudge on tab visibility/focus (keeps some adapters happy)
   useEffect(() => {
     const onVisible = () => {
       requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
@@ -308,7 +308,7 @@ function Shell() {
     };
   }, []);
 
-  // 🔁 Eager reconnect after coming back from wallet app (mobile)
+  // 🔁 Eager reconnect after returning from wallet (mobile deep link)
   useEffect(() => {
     let busy = false;
 
@@ -326,12 +326,11 @@ function Shell() {
       busy = true;
       try {
         if (!wallet || wallet.adapter?.name !== stored) {
-          // @ts-ignore: wallet name string is fine here
-          await select?.(stored);
+          await select?.(stored as any);
         }
         await connect?.();
       } catch {
-        // swallow; user can open modal manually
+        // no-op; user can open modal manually
       } finally {
         busy = false;
       }
@@ -347,7 +346,7 @@ function Shell() {
     };
   }, [connected, connecting, wallet, select, connect]);
 
-  // Basic diagnostics in dev
+  // Dev diagnostics
   useEffect(() => {
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
@@ -365,17 +364,17 @@ function Shell() {
     if (stored) setUserSymbol(stored.toUpperCase());
   }, []);
 
-  // Close menu when route changes
+  // Close menu on route change
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
-  // Move focus to main content after route change or menu close
+  // Focus main after route/menu change
   useEffect(() => {
     if (!menuOpen) {
       requestAnimationFrame(() => mainRef.current?.focus?.());
     }
   }, [menuOpen, location.pathname]);
 
-  // Redirect back to intended route once connected
+  // Redirect to intended route when connected
   useEffect(() => {
     if (!connected) return;
 
@@ -444,7 +443,7 @@ function Shell() {
       >
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            {/* Landing: default panel (none), /shop opens shop panel inside Landing */}
+            {/* Landing: default panel (none). /shop opens shop panel inside Landing */}
             <Route path="/" element={<Landing />} />
             <Route path="/shop" element={<Landing initialPanel="shop" />} />
 
@@ -495,7 +494,7 @@ export default function App() {
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://jalsol.com";
 
-  // RPC endpoint selection
+  // RPC endpoint
   const endpoint = useMemo(() => {
     if (typeof window !== "undefined" && window.location.hostname === "localhost") {
       return "http://localhost:3001/api/solana";
@@ -522,8 +521,8 @@ export default function App() {
           metadata: {
             name: "JAL/SOL Dapp",
             description: "Swap SOL→JAL and use utilities",
-            url: origin, // absolute
-            icons: [`${origin}/icons/icon-512.png`], // absolute
+            url: origin,
+            icons: [`${origin}/icons/icon-512.png`],
           },
         },
       }),
@@ -531,8 +530,8 @@ export default function App() {
         addressSelector: createDefaultAddressSelector(),
         appIdentity: {
           name: "JAL/SOL",
-          uri: origin, // absolute
-          icon: `${origin}/icons/icon-512.png`, // absolute
+          uri: origin,
+          icon: `${origin}/icons/icon-512.png`,
         },
         authorizationResultCache: createDefaultAuthorizationResultCache(),
         cluster: clusterStr,
