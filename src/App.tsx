@@ -13,6 +13,7 @@ import {
   Route,
   NavLink,
   useLocation,
+  useNavigate,   // ⬅️ added
   Navigate,
 } from "react-router-dom";
 
@@ -42,10 +43,6 @@ import {
 
 import { AnimatePresence } from "framer-motion";
 
-/* Bridges (new) */
-import WalletUiVisibilityBridge from "./components/WalletUiVisibilityBridge";
-import WalletAutoReconnectBridge from "./components/WalletAutoReconnectBridge";
-
 /* Pages */
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
@@ -59,9 +56,21 @@ import Content from "./pages/Content";
 import Jal from "./pages/Jal";
 
 /* ---------------- Guard ---------------- */
+// Minimal change: remember where the user wanted to go when disconnected.
 function Protected({ children }: { children: ReactElement }) {
   const { connected } = useWallet();
-  return connected ? children : <Navigate to="/" replace />;
+  const location = useLocation();
+
+  if (!connected) {
+    try {
+      sessionStorage.setItem(
+        "returnTo",
+        location.pathname + location.search + location.hash
+      );
+    } catch {}
+    return <Navigate to="/" replace />;
+  }
+  return children;
 }
 
 /* ---------------- Header ---------------- */
@@ -278,6 +287,7 @@ function Shell() {
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
   const { publicKey, wallet, connected, connecting } = useWallet();
   const location = useLocation();
+  const navigate = useNavigate(); // ⬅️ added
   const mainRef = useRef<HTMLElement | null>(null);
 
   const isLanding = location.pathname === "/" || location.pathname === "/shop";
@@ -322,6 +332,24 @@ function Shell() {
       requestAnimationFrame(() => mainRef.current?.focus?.());
     }
   }, [menuOpen, location.pathname]);
+
+  // ⬇️ Minimal redirect after connect:
+  useEffect(() => {
+    if (!connected) return;
+
+    let target: string | null = null;
+    try {
+      target = sessionStorage.getItem("returnTo");
+    } catch {}
+
+    const here = location.pathname + location.search + location.hash;
+    if (target && target !== here) {
+      try {
+        sessionStorage.removeItem("returnTo");
+      } catch {}
+      navigate(target, { replace: true });
+    }
+  }, [connected, location.pathname, location.search, location.hash, navigate]);
 
   const toggleMenu = () => setMenuOpen((s) => !s);
   const closeMenu = () => setMenuOpen(false);
@@ -421,7 +449,7 @@ function Shell() {
 
 /* ---------------- Root Providers ---------------- */
 export default function App() {
-  // Always use absolute origin/URLs for wallet identity metadata (mobile deep-linking quirk)
+  // Keep origin-based metadata (your existing behavior)
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://jalsol.com";
 
@@ -464,7 +492,10 @@ export default function App() {
           icon: `${origin}/icons/icon-512.png`, // absolute
         },
         authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster: "mainnet-beta",
+        cluster:
+          (import.meta as any).env?.VITE_SOLANA_NETWORK === "devnet"
+            ? "devnet"
+            : "mainnet-beta",
         onWalletNotFound: createDefaultWalletNotFoundHandler(),
       }),
     ],
@@ -479,9 +510,6 @@ export default function App() {
         onError={(e) => console.error("[wallet-adapter] error:", e)}
       >
         <WalletModalProvider>
-          {/* NEW: global bridges for consistent wallet behavior across routes */}
-          <WalletUiVisibilityBridge />
-          <WalletAutoReconnectBridge />
           <Router>
             <Shell />
           </Router>
