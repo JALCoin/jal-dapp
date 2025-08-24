@@ -13,6 +13,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import {
   WalletMultiButton,
   WalletDisconnectButton,
+  useWalletModal, // ⬅️ added
 } from "@solana/wallet-adapter-react-ui";
 
 // Lazy-load the heavy JAL page when needed
@@ -31,6 +32,7 @@ type LandingProps = {
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, wallet } = useWallet();
+  const walletModal = useWalletModal(); // ⬅️ added
   const [params, setParams] = useSearchParams();
 
   const [merging, setMerging] = useState(false);
@@ -180,6 +182,33 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       requestAnimationFrame(() => hubTitleRef.current?.focus?.());
     }
   }, [activePanel, reducedMotion]);
+
+  // Auto-open wallet modal once per session if not connected (mobile-friendly prompt)
+  useEffect(() => {
+    const KEY = "wallet:autoPrompted";
+    const already = sessionStorage.getItem(KEY);
+    if (!connected && !already) {
+      try {
+        walletModal.setVisible(true);
+        sessionStorage.setItem(KEY, "1");
+      } catch {
+        // ignore
+      }
+    }
+  }, [connected, walletModal]);
+
+  // Keep body flag in sync with modal visibility (so index.css blur/freeze applies)
+  useEffect(() => {
+    const root = document.body;
+    if (walletModal.visible) {
+      root.setAttribute("data-wallet-visible", "true");
+    } else {
+      root.removeAttribute("data-wallet-visible");
+    }
+    return () => {
+      root.removeAttribute("data-wallet-visible");
+    };
+  }, [walletModal.visible]);
 
   // Helpers
   const openPanel = useCallback((id: Panel) => {
