@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
+// We keep the styles from the UI package, but won't use WalletMultiButton on mobile
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 // Lazy-load the heavy JAL page when needed
@@ -51,8 +52,54 @@ function DisconnectButton({ className }: { className?: string }) {
   );
 }
 
+/* Mobile-friendly connect button:
+   - Mobile: explicitly select Phantom, mark pending, connect (deep link)
+   - Desktop: open the WalletModal (like WalletMultiButton) */
+function ConnectButton({ className }: { className?: string }) {
+  const { select, connect, wallet } = useWallet();
+  const isMobile = useMemo(
+    () =>
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      navigator.userAgent.includes("Mobile"),
+    []
+  );
+
+  const onClick = async () => {
+    try {
+      if (isMobile) {
+        // Prefer Phantom on mobile for a deterministic deep-link
+        sessionStorage.setItem("pendingWallet", "Phantom");
+        if (!wallet || wallet.adapter?.name !== "Phantom") {
+          await select?.("Phantom");
+          await new Promise((r) => setTimeout(r, 0));
+        }
+        await connect?.();
+      } else {
+        // Desktop: trigger the standard WalletModal programmatically
+        document
+          .querySelector<HTMLButtonElement>(".wallet-adapter-button")
+          ?.click();
+      }
+    } catch (e) {
+      console.error("[wallet] connect error:", e);
+      // In case of user cancel or error, clear pending flag
+      sessionStorage.removeItem("pendingWallet");
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      className={className ?? "landing-wallet"}
+      onClick={onClick}
+    >
+      Connect Wallet
+    </button>
+  );
+}
+
 export default function Landing({ initialPanel = "none" }: LandingProps) {
-  const { publicKey, connected, wallet } = useWallet();
+  const { publicKey, connected, connecting, wallet, select, connect } = useWallet();
   const [params, setParams] = useSearchParams();
 
   const [merging, setMerging] = useState(false);
@@ -224,6 +271,43 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [setWalletFlag]);
 
+  // 🔁 Mobile resume: after returning from Phantom, if we initiated a connect and we're not connected, try connect() once.
+  useEffect(() => {
+    const tryResume = async () => {
+      const pending = sessionStorage.getItem("pendingWallet");
+      if (!pending) return;
+      if (connected || connecting) return;
+      if (pending === "Phantom") {
+        try {
+          if (!wallet || wallet.adapter?.name !== "Phantom") {
+            await select?.("Phantom");
+            await new Promise((r) => setTimeout(r, 0));
+          }
+          await connect?.();
+          sessionStorage.removeItem("pendingWallet");
+        } catch (e) {
+          // keep the flag so the user can surface Phantom and return again
+          console.info("[wallet] resume connect failed:", e);
+        }
+      }
+    };
+
+    const onVisible = () => { void tryResume(); };
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    window.addEventListener("pageshow", onVisible); // BFCache
+
+    // run once on mount (covers full reload)
+    void tryResume();
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("pageshow", onVisible);
+    };
+  }, [connected, connecting, wallet, select, connect]);
+
   // Helpers
   const openPanel = (id: Panel) => {
     setActivePanel(id);
@@ -295,9 +379,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         {!connected ? (
-          <WalletMultiButton
-            className={`landing-wallet ${merging ? "fade-out" : ""}`}
-          />
+          // ⬇️ use our mobile‑aware connect button
+          <ConnectButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
         ) : (
           <button
             ref={toggleBtnRef}
