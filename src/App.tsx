@@ -308,41 +308,59 @@ function Shell() {
     };
   }, []);
 
-  // 🔁 Eager reconnect after returning from wallet (mobile deep link)
+  // Persist current adapter name when it changes (helps next reconnect)
   useEffect(() => {
-    let busy = false;
+    const name = wallet?.adapter?.name;
+    if (name) {
+      try {
+        localStorage.setItem("walletAdapter", name);
+      } catch {}
+    }
+  }, [wallet?.adapter?.name]);
+
+  // 🔁 Robust eager reconnect after returning from wallet (mobile deep link) + on first mount
+  useEffect(() => {
+    let reconnecting = false;
+    let raf = 0;
 
     const getStoredWalletName = () =>
       localStorage.getItem("walletAdapter") || localStorage.getItem("walletName");
 
-    const maybeReconnect = async () => {
-      if (document.hidden) return;
-      if (busy) return;
+    const tryReconnect = async () => {
+      if (reconnecting) return;
       if (connected || connecting) return;
+      if (document.hidden) return;
 
       const stored = getStoredWalletName();
       if (!stored) return;
 
-      busy = true;
+      reconnecting = true;
       try {
         if (!wallet || wallet.adapter?.name !== stored) {
-          await select?.(stored as any);
+          // @ts-ignore string is acceptable for select()
+          await select?.(stored);
+          await new Promise((r) => setTimeout(r, 0));
         }
         await connect?.();
       } catch {
-        // no-op; user can open modal manually
+        // swallow errors; user can connect via WalletMultiButton
       } finally {
-        busy = false;
+        reconnecting = false;
       }
     };
 
-    const onFocusOrVisible = () => void maybeReconnect();
+    // run once after mount
+    raf = requestAnimationFrame(() => { void tryReconnect(); });
 
-    window.addEventListener("focus", onFocusOrVisible);
-    document.addEventListener("visibilitychange", onFocusOrVisible);
+    // run whenever the tab/app resumes
+    const onResume = () => { void tryReconnect(); };
+    window.addEventListener("focus", onResume);
+    document.addEventListener("visibilitychange", onResume);
+
     return () => {
-      window.removeEventListener("focus", onFocusOrVisible);
-      document.removeEventListener("visibilitychange", onFocusOrVisible);
+      cancelAnimationFrame(raf);
+      window.removeEventListener("focus", onResume);
+      document.removeEventListener("visibilitychange", onResume);
     };
   }, [connected, connecting, wallet, select, connect]);
 
