@@ -11,6 +11,7 @@ import {
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 
 // Lazy-load the heavy JAL page when needed
 const Jal = lazy(() => import("./Jal"));
@@ -56,9 +57,10 @@ function DisconnectButton({ className }: { className?: string }) {
 
 /* Mobile-friendly connect button:
    - Mobile: explicitly select Phantom, mark pending, connect (deep link)
-   - Desktop: open the WalletModal (click the UI trigger) */
+   - Desktop: open the WalletModal via useWalletModal() */
 function ConnectButton({ className }: { className?: string }) {
   const { select, connect, wallet } = useWallet();
+  const { setVisible } = useWalletModal();
   const isMobile = useMemo(
     () =>
       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -78,14 +80,12 @@ function ConnectButton({ className }: { className?: string }) {
         }
         await connect?.();
       } else {
-        // Desktop: trigger the standard WalletModal programmatically
-        document
-          .querySelector<HTMLButtonElement>(".wallet-adapter-button")
-          ?.click();
+        // Desktop: open official modal programmatically
+        setVisible(true);
       }
     } catch (e) {
       console.error("[wallet] connect error:", e);
-      // If user cancels, keep or clear the flag—clearing is friendlier
+      // Friendlier to clear pending flag on cancel/error
       sessionStorage.removeItem("pendingWallet");
     }
   };
@@ -276,7 +276,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           await connect?.();
           sessionStorage.removeItem("pendingWallet");
         } catch (e) {
-          // keep or clear: keep so the user can retry by returning again
+          // keep so the user can surface Phantom and return again
           console.info("[wallet] resume connect failed:", e);
         }
       }
