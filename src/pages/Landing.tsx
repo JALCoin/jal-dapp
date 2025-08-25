@@ -10,8 +10,8 @@ import {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
-// We keep the styles from the UI package, but won't use WalletMultiButton on mobile
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import type { WalletName } from "@solana/wallet-adapter-base";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 
 // Lazy-load the heavy JAL page when needed
 const Jal = lazy(() => import("./Jal"));
@@ -54,15 +54,17 @@ function DisconnectButton({ className }: { className?: string }) {
 
 /* Mobile-friendly connect button:
    - Mobile: explicitly select Phantom, mark pending, connect (deep link)
-   - Desktop: open the WalletModal (like WalletMultiButton) */
+   - Desktop: open the WalletModal programmatically
+*/
 function ConnectButton({ className }: { className?: string }) {
   const { select, connect, wallet } = useWallet();
-  const isMobile = useMemo(
-    () =>
-      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-      navigator.userAgent.includes("Mobile"),
-    []
-  );
+  const { setVisible } = useWalletModal();
+
+  const isMobile = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    return /Android|iPhone|iPad|iPod/i.test(ua) || ua.includes("Mobile");
+  }, []);
 
   const onClick = async () => {
     try {
@@ -70,19 +72,17 @@ function ConnectButton({ className }: { className?: string }) {
         // Prefer Phantom on mobile for a deterministic deep-link
         sessionStorage.setItem("pendingWallet", "Phantom");
         if (!wallet || wallet.adapter?.name !== "Phantom") {
-          await select?.("Phantom");
+          await select?.("Phantom" as unknown as WalletName);
           await new Promise((r) => setTimeout(r, 0));
         }
         await connect?.();
       } else {
-        // Desktop: trigger the standard WalletModal programmatically
-        document
-          .querySelector<HTMLButtonElement>(".wallet-adapter-button")
-          ?.click();
+        // Desktop: open Wallet modal explicitly
+        setVisible(true);
       }
     } catch (e) {
       console.error("[wallet] connect error:", e);
-      // In case of user cancel or error, clear pending flag
+      // If the user cancels or it errors, clear pending flag
       sessionStorage.removeItem("pendingWallet");
     }
   };
@@ -280,7 +280,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       if (pending === "Phantom") {
         try {
           if (!wallet || wallet.adapter?.name !== "Phantom") {
-            await select?.("Phantom");
+            await select?.("Phantom" as unknown as WalletName);
             await new Promise((r) => setTimeout(r, 0));
           }
           await connect?.();
@@ -292,7 +292,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       }
     };
 
-    const onVisible = () => { void tryResume(); };
+    const onVisible = () => {
+      void tryResume();
+    };
 
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
@@ -327,7 +329,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       : "Welcome";
 
   const isPreview = activePanel === "none";
-  const showOverlay = !isPreview; // hub floats over landing
+  the const showOverlay = !isPreview; // hub floats over landing
 
   return (
     <main
@@ -379,7 +381,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         {!connected ? (
-          // ⬇️ use our mobile‑aware connect button
+          // ⬇️ mobile‑aware connect button
           <ConnectButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
         ) : (
           <button
