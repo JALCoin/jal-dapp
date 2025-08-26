@@ -13,27 +13,21 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 
-// Lazy-load the heavy JAL page when needed
 const Jal = lazy(() => import("./Jal"));
 
-/* ----------------------------------------
-   Panel state
------------------------------------------ */
 type Panel = "none" | "grid" | "shop" | "jal" | "vault";
 type TileKey = Exclude<Panel, "none" | "grid">;
 
 type LandingProps = {
-  /** optionally open a specific panel on initial load (overridden by ?panel=) */
   initialPanel?: Panel;
 };
 
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
-// Strongly-typed wallet names for select()
 const PHANTOM_WALLET = "Phantom" as WalletName;
 
-/* Local, reliable Disconnect button */
+/* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
@@ -55,12 +49,10 @@ function DisconnectButton({ className }: { className?: string }) {
   );
 }
 
-/* Mobile-friendly connect button:
-   - Mobile: explicitly select Phantom, mark pending, connect (deep link)
-   - Desktop: open the WalletModal via useWalletModal() */
 function ConnectButton({ className }: { className?: string }) {
   const { select, connect, wallet } = useWallet();
   const { setVisible } = useWalletModal();
+
   const isMobile = useMemo(
     () =>
       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -71,21 +63,18 @@ function ConnectButton({ className }: { className?: string }) {
   const onClick = async () => {
     try {
       if (isMobile) {
-        // Prefer Phantom on mobile for deterministic deep-link
         sessionStorage.setItem("pendingWallet", "Phantom");
         if (!wallet || wallet.adapter?.name !== PHANTOM_WALLET) {
           await select?.(PHANTOM_WALLET);
-          // allow React state to flush before connect()
           await new Promise((r) => setTimeout(r, 0));
         }
         await connect?.();
       } else {
-        // Desktop: open official modal programmatically
+        // Desktop: open the official wallet modal
         setVisible(true);
       }
     } catch (e) {
       console.error("[wallet] connect error:", e);
-      // Friendlier to clear pending flag on cancel/error
       sessionStorage.removeItem("pendingWallet");
     }
   };
@@ -97,6 +86,7 @@ function ConnectButton({ className }: { className?: string }) {
   );
 }
 
+/* ---------- Page ---------- */
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, connecting, wallet, select, connect } = useWallet();
   const [params, setParams] = useSearchParams();
@@ -105,7 +95,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [activePanel, setActivePanel] = useState<Panel>("none");
   const timerRef = useRef<number | null>(null);
 
-  // Refs for focus/scroll management
+  // Focus / scroll refs
   const hubBodyRef = useRef<HTMLDivElement | null>(null);
   const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
   const toggleBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -115,7 +105,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // Static tiles (memoized so effects don't re-run)
   const tiles = useMemo<{ key: TileKey; title: string; sub?: string; gif: string }[]>(
     () => [
       { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
@@ -153,7 +142,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep URL + session in sync
+  // Sync URL + session
   useEffect(() => {
     if (!activePanel) return;
     sessionStorage.setItem("landing:lastPanel", activePanel);
@@ -169,7 +158,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, params, setParams]);
 
-  // Wallet connect → subtle merge + open grid if closed
+  // Adapter "connect" → subtle merge + open grid
   useEffect(() => {
     if (!wallet?.adapter) return;
 
@@ -188,6 +177,15 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       timerRef.current = null;
     };
   }, [wallet, reducedMotion]);
+
+  // Also open Hub on state transition to connected (covers missed events / resume)
+  const wasConnected = useRef(false);
+  useEffect(() => {
+    if (connected && publicKey && !wasConnected.current) {
+      setActivePanel((p) => (p === "none" ? "grid" : p));
+    }
+    wasConnected.current = connected;
+  }, [connected, publicKey]);
 
   // Subtle merge on autoconnect restore
   useEffect(() => {
@@ -228,7 +226,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [activePanel]);
 
-  // When switching panels, scroll to top & focus heading
+  // Scroll to top & focus heading when switching panels
   useEffect(() => {
     if (hubBodyRef.current) {
       hubBodyRef.current.scrollTo({
@@ -250,7 +248,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   useEffect(() => {
     const check = () => setWalletFlag(!!document.querySelector(WALLET_MODAL_SELECTORS));
-    // initial + observe DOM for wallet modals
     check();
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true });
@@ -261,12 +258,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [setWalletFlag]);
 
-  // 🔁 Mobile resume: after returning from Phantom, if we initiated a connect and we're not connected, try connect() once.
+  // Mobile resume: if we initiated Phantom and we're back not-connected, try once
   useEffect(() => {
     const tryResume = async () => {
       const pending = sessionStorage.getItem("pendingWallet");
-      if (!pending) return;
-      if (connected || connecting) return;
+      if (!pending || connected || connecting) return;
+
       if (pending === "Phantom") {
         try {
           if (!wallet || wallet.adapter?.name !== PHANTOM_WALLET) {
@@ -276,21 +273,16 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           await connect?.();
           sessionStorage.removeItem("pendingWallet");
         } catch (e) {
-          // keep so the user can surface Phantom and return again
           console.info("[wallet] resume connect failed:", e);
         }
       }
     };
 
-    const onVisible = () => {
-      void tryResume();
-    };
+    const onVisible = () => void tryResume();
 
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
-    window.addEventListener("pageshow", onVisible); // BFCache
-
-    // run once on mount (covers full reload)
+    window.addEventListener("pageshow", onVisible);
     void tryResume();
 
     return () => {
@@ -303,9 +295,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   // Helpers
   const openPanel = (id: Panel) => {
     setActivePanel(id);
-    if (id === "none") {
-      requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
-    }
+    if (id === "none") requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
   };
 
   const panelTitle =
@@ -320,11 +310,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       : "Welcome";
 
   const isPreview = activePanel === "none";
-  const showOverlay = !isPreview; // hub floats over landing
+  const showOverlay = !isPreview;
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
-      {/* top-center social row */}
+      {/* Social */}
       <div className="landing-social" aria-hidden={merging}>
         <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
           <img src="/icons/X.png" alt="" width={20} height={20} />
@@ -343,7 +333,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
       )}
 
-      {/* landing hero stays visible at all times */}
+      {/* Hero */}
       <div className="landing-inner">
         <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
@@ -364,7 +354,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         )}
       </div>
 
-      {/* PREVIEW CARD: in normal flow when no overlay */}
+      {/* Preview card */}
       {isPreview && (
         <section
           id="hub-panel"
@@ -385,7 +375,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
                   Connect your wallet to unlock features. Then open the Hub to pick a tile — try{" "}
-                  <strong>JAL/SOL — SHOP</strong> to see in‑panel shopping.
+                  <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
                 </p>
               </div>
             </div>
@@ -393,7 +383,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </section>
       )}
 
-      {/* OVERLAY: floats above landing; landing remains visible behind */}
+      {/* Overlay */}
       {showOverlay && (
         <div className="hub-overlay" aria-hidden={undefined}>
           <section
@@ -446,7 +436,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 </div>
               )}
 
-              {/* Panel content */}
               <div className="hub-content">
                 {activePanel === "shop" && (
                   <div className="card">
