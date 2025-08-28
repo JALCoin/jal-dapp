@@ -102,7 +102,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  const tiles = useMemo<{ key: TileKey; title: string; sub?: string; gif: string }[]>(
+  const tiles = useMemo<{ key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]>(
     () => [
       { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
       { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
@@ -156,7 +156,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, params, setParams]);
 
-  /* ---------- On adapter connect: merge pulse + open hub grid ---------- */
+  /* ---------- On adapter connect ---------- */
   useEffect(() => {
     if (!wallet?.adapter) return;
 
@@ -183,7 +183,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [wallet, reducedMotion]);
 
-  /* ---------- Open grid when first becoming connected ---------- */
+  /* ---------- Open grid on first connected ---------- */
   const wasConnected = useRef(false);
   useEffect(() => {
     if (connected && publicKey && !wasConnected.current) {
@@ -284,9 +284,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- Helpers ---------- */
   const openPanel = (id: Panel) => {
     setActivePanel(id);
-    requestAnimationFrame(() =>
-      hubTitleRef.current?.focus?.()
-    );
+    requestAnimationFrame(() => hubTitleRef.current?.focus?.());
   };
   const backToGrid = () => openPanel("grid");
 
@@ -357,7 +355,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         )}
       </div>
 
-      {/* Embedded Hub panel (the circled container) */}
+      {/* Embedded Hub panel */}
       <section
         id="hub-panel"
         className={`hub-panel hub-panel--fit ${isPreview ? "hub-preview" : ""}`}
@@ -374,7 +372,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
-          {/* Tile grid (visible when connected and on grid/preview) */}
+          {/* Tiles */}
           {connected && (activePanel === "grid" || activePanel === "none") && (
             <div className="hub-stack hub-stack--responsive" role="list">
               {tiles.map((t) => (
@@ -385,6 +383,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   onClick={() => openPanel(t.key)}
                   role="listitem"
                   aria-describedby={`tile-sub-${t.key}`}
+                  disabled={t.disabled}
                 >
                   <img
                     src={t.gif}
@@ -399,11 +398,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   />
                   <div className="hub-btn">
                     {t.title}
-                    {t.sub && (
-                      <span id={`tile-sub-${t.key}`} className="sub">
-                        {t.sub}
-                      </span>
-                    )}
+                    {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
+                    {t.disabled && <span className="locked">Connect wallet to use</span>}
                   </div>
                 </button>
               ))}
