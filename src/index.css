@@ -531,3 +531,9 @@ header.site-header{
   50%{ box-shadow: 0 0 10px rgba(244,200,106,.4), 0 0 20px rgba(244,200,106,.25) }
 }
 .pulse-gold{ animation: pulse-gold 2.4s ease-in-out infinite }
+/* Embedded hub control row */
+.hub-controls{
+  display:flex; justify-content:flex-start; margin-bottom:8px;
+}
+.hub-controls .button.ghost{ padding:.55rem .8rem; border-radius:12px }
+

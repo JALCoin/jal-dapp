@@ -18,13 +18,10 @@ const Jal = lazy(() => import("./Jal"));
 type Panel = "none" | "grid" | "shop" | "jal" | "vault";
 type TileKey = Exclude<Panel, "none" | "grid">;
 
-type LandingProps = {
-  initialPanel?: Panel;
-};
+type LandingProps = { initialPanel?: Panel };
 
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
-
 const PHANTOM_WALLET = "Phantom" as WalletName;
 
 /* ---------- Small helpers ---------- */
@@ -36,11 +33,7 @@ function DisconnectButton({ className }: { className?: string }) {
       type="button"
       className={className ?? "hub-disconnect-btn"}
       onClick={async () => {
-        try {
-          await disconnect();
-        } catch (e) {
-          console.error("[wallet] disconnect error:", e);
-        }
+        try { await disconnect(); } catch (e) { console.error("[wallet] disconnect error:", e); }
       }}
       aria-label="Disconnect wallet"
     >
@@ -52,14 +45,10 @@ function DisconnectButton({ className }: { className?: string }) {
 function ConnectButton({ className }: { className?: string }) {
   const { select, connect, wallet } = useWallet();
   const { setVisible } = useWalletModal();
-
   const isMobile = useMemo(
-    () =>
-      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-      navigator.userAgent.includes("Mobile"),
+    () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.userAgent.includes("Mobile"),
     []
   );
-
   const onClick = async () => {
     try {
       if (isMobile) {
@@ -70,7 +59,6 @@ function ConnectButton({ className }: { className?: string }) {
         }
         await connect?.();
       } else {
-        // Desktop: open the official wallet modal
         setVisible(true);
       }
     } catch (e) {
@@ -78,7 +66,6 @@ function ConnectButton({ className }: { className?: string }) {
       sessionStorage.removeItem("pendingWallet");
     }
   };
-
   return (
     <button type="button" className={className ?? "landing-wallet"} onClick={onClick}>
       Connect Wallet
@@ -99,6 +86,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const hubBodyRef = useRef<HTMLDivElement | null>(null);
   const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
   const toggleBtnRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
 
   const reducedMotion = useMemo(() => {
     if (typeof window === "undefined" || !window.matchMedia) return false;
@@ -118,9 +106,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     const imgs = tiles.map((t) => {
       const i = new Image();
-      i.decoding = "async";
-      i.loading = "eager";
-      i.src = t.gif;
+      i.decoding = "async"; i.loading = "eager"; i.src = t.gif;
       return i;
     });
     return () => imgs.forEach((i) => (i.src = ""));
@@ -132,12 +118,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
     const isPanel = (v: unknown): v is Panel =>
       v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault";
-
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
       (fromSession && isPanel(fromSession) ? fromSession : null) ??
       initialPanel;
-
     setActivePanel(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -148,28 +132,24 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     sessionStorage.setItem("landing:lastPanel", activePanel);
     const urlPanel = params.get("panel");
     if (activePanel === "none") {
-      if (urlPanel) {
-        params.delete("panel");
-        setParams(params, { replace: true });
-      }
+      if (urlPanel) { params.delete("panel"); setParams(params, { replace: true }); }
     } else if (urlPanel !== activePanel) {
-      params.set("panel", activePanel);
-      setParams(params, { replace: true });
+      params.set("panel", activePanel); setParams(params, { replace: true });
     }
   }, [activePanel, params, setParams]);
 
   // Adapter "connect" → subtle merge + open grid
   useEffect(() => {
     if (!wallet?.adapter) return;
-
     const onConnect = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       setMerging(true);
       const delay = reducedMotion ? 0 : 350;
       timerRef.current = window.setTimeout(() => setMerging(false), delay);
       setActivePanel((p) => (p === "none" ? "grid" : p));
+      // bring panel into view
+      requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }));
     };
-
     wallet.adapter.on("connect", onConnect);
     return () => {
       wallet.adapter.off("connect", onConnect);
@@ -178,7 +158,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [wallet, reducedMotion]);
 
-  // Also open Hub on state transition to connected (covers missed events / resume)
+  // Also open Hub on first connected state
   const wasConnected = useRef(false);
   useEffect(() => {
     if (connected && publicKey && !wasConnected.current) {
@@ -194,19 +174,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     setMerging(true);
     const delay = reducedMotion ? 0 : 350;
     timerRef.current = window.setTimeout(() => setMerging(false), delay);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = null;
-    };
   }, [connected, publicKey, reducedMotion]);
 
   // Reset on disconnect
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
-      if (activePanel !== "none") {
-        requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
-      }
+      if (activePanel !== "none") requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
       setActivePanel("none");
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -214,11 +188,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, publicKey]);
 
-  // ESC closes any open panel
+  // ESC → back to grid (or landing)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && activePanel !== "none") {
-        setActivePanel("none");
+      if (e.key === "Escape") {
+        if (activePanel !== "grid" && activePanel !== "none") setActivePanel("grid");
+        else if (activePanel === "grid") setActivePanel("none");
         requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
       }
     };
@@ -226,65 +201,39 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [activePanel]);
 
-  // Scroll to top & focus heading when switching panels
-  useEffect(() => {
-    if (hubBodyRef.current) {
-      hubBodyRef.current.scrollTo({
-        top: 0,
-        behavior: reducedMotion ? "auto" : "smooth",
-      });
-    }
-    if (activePanel !== "none") {
-      requestAnimationFrame(() => hubTitleRef.current?.focus?.());
-    }
-  }, [activePanel, reducedMotion]);
-
-  // Flag body when ANY wallet modal is visible (Solana adapter or WalletConnect)
+  // Wallet modal visibility flag (for body blur etc.)
   const setWalletFlag = useCallback((on: boolean) => {
     const root = document.body;
     if (on) root.setAttribute("data-wallet-visible", "true");
     else root.removeAttribute("data-wallet-visible");
   }, []);
-
   useEffect(() => {
     const check = () => setWalletFlag(!!document.querySelector(WALLET_MODAL_SELECTORS));
     check();
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      obs.disconnect();
-      setWalletFlag(false);
-    };
+    return () => { obs.disconnect(); setWalletFlag(false); };
   }, [setWalletFlag]);
 
-  // Mobile resume: if we initiated Phantom and we're back not-connected, try once
+  // Mobile resume for Phantom
   useEffect(() => {
     const tryResume = async () => {
       const pending = sessionStorage.getItem("pendingWallet");
       if (!pending || connected || connecting) return;
-
       if (pending === "Phantom") {
         try {
           if (!wallet || wallet.adapter?.name !== PHANTOM_WALLET) {
-            await select?.(PHANTOM_WALLET);
-            await new Promise((r) => setTimeout(r, 0));
+            await select?.(PHANTOM_WALLET); await new Promise((r) => setTimeout(r, 0));
           }
-          await connect?.();
-          sessionStorage.removeItem("pendingWallet");
-        } catch (e) {
-          console.info("[wallet] resume connect failed:", e);
-        }
+          await connect?.(); sessionStorage.removeItem("pendingWallet");
+        } catch (e) { console.info("[wallet] resume connect failed:", e); }
       }
     };
-
     const onVisible = () => void tryResume();
-
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
     window.addEventListener("pageshow", onVisible);
     void tryResume();
-
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
@@ -292,25 +241,17 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [connected, connecting, wallet, select, connect]);
 
-  // Helpers
-  const openPanel = (id: Panel) => {
-    setActivePanel(id);
-    if (id === "none") requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
-  };
+  // Panel helpers
+  const openPanel = (id: Panel) => setActivePanel(id);
+  const backToGrid = () => setActivePanel("grid");
 
   const panelTitle =
-    activePanel === "grid"
-      ? "Hub"
-      : activePanel === "shop"
-      ? "Shop"
-      : activePanel === "jal"
-      ? "JAL"
-      : activePanel === "vault"
-      ? "Vault"
-      : "Welcome";
+    activePanel === "grid" ? "Hub" :
+    activePanel === "shop" ? "Shop" :
+    activePanel === "jal"  ? "JAL"  :
+    activePanel === "vault"? "Vault": "Welcome";
 
   const isPreview = activePanel === "none";
-  const showOverlay = !isPreview;
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
@@ -345,7 +286,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <button
             ref={toggleBtnRef}
             className="landing-wallet"
-            onClick={() => openPanel(isPreview ? "grid" : "none")}
+            onClick={() => {
+              const next = isPreview ? "grid" : "none";
+              setActivePanel(next);
+              if (next !== "none") {
+                requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }));
+              }
+            }}
             aria-expanded={!isPreview}
             aria-controls="hub-panel"
           >
@@ -354,115 +301,106 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         )}
       </div>
 
-      {/* Preview card */}
-      {isPreview && (
-        <section
-          id="hub-panel"
-          className="hub-panel hub-panel--fit landing-panel hub-preview"
-          role="region"
-          aria-label="JAL/SOL Hub"
-          aria-live="polite"
-        >
-          <div className="hub-panel-top">
-            <h2 className="hub-title" tabIndex={-1}>
-              {panelTitle}
-            </h2>
-            {connected && <DisconnectButton className="hub-disconnect-btn" />}
-          </div>
-          <div className="hub-panel-body">
-            <div className="hub-content">
+      {/* Embedded Hub panel (this replaces the full-screen overlay) */}
+      <section
+        id="hub-panel"
+        className={`hub-panel hub-panel--fit ${isPreview ? "hub-preview" : ""}`}
+        role={isPreview ? "region" : "dialog"}
+        aria-modal={isPreview ? undefined : true}
+        aria-label="JAL/SOL Hub"
+        ref={panelRef as any}
+      >
+        <div className="hub-panel-top">
+          <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
+            {panelTitle}
+          </h2>
+          {connected && <DisconnectButton className="hub-disconnect-btn" />}
+        </div>
+
+        <div className="hub-panel-body" ref={hubBodyRef}>
+          {/* Tiles */}
+          {connected && (activePanel === "grid" || activePanel === "none") && (
+            <div className="hub-stack hub-stack--responsive" role="list">
+              {tiles.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  className="img-btn"
+                  onClick={() => openPanel(t.key)}
+                  role="listitem"
+                  aria-describedby={`tile-sub-${t.key}`}
+                >
+                  <img
+                    src={t.gif}
+                    alt=""
+                    className="hub-gif float"
+                    loading="lazy"
+                    width={960}
+                    height={540}
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                  <div className="hub-btn">
+                    {t.title}
+                    {t.sub && (
+                      <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Content area */}
+          <div className="hub-content">
+            {!connected && (
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
-                  Connect your wallet to unlock features. Then open the Hub to pick a tile — try{" "}
-                  <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
+                  Connect your wallet to unlock features. Then open the Hub to pick a tile —
+                  try <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
                 </p>
               </div>
-            </div>
-          </div>
-        </section>
-      )}
+            )}
 
-      {/* Overlay */}
-      {showOverlay && (
-        <div className="hub-overlay" aria-hidden={undefined}>
-          <section
-            id="hub-panel"
-            className="hub-panel hub-panel--fit"
-            role="dialog"
-            aria-modal="true"
-            aria-label="JAL/SOL Hub"
-          >
-            <div className="hub-panel-top">
-              <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
-                {panelTitle}
-              </h2>
-              {connected && <DisconnectButton className="hub-disconnect-btn" />}
-            </div>
-
-            <div className="hub-panel-body" ref={hubBodyRef}>
-              {activePanel === "grid" && (
-                <div className="hub-stack hub-stack--responsive" role="list">
-                  {tiles.map((t) => (
-                    <button
-                      key={t.key}
-                      type="button"
-                      className="img-btn"
-                      onClick={() => openPanel(t.key)}
-                      role="listitem"
-                      aria-describedby={`tile-sub-${t.key}`}
-                    >
-                      <img
-                        src={t.gif}
-                        alt=""
-                        className="hub-gif float"
-                        loading="lazy"
-                        width={960}
-                        height={540}
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                      <div className="hub-btn">
-                        {t.title}
-                        {t.sub && (
-                          <span id={`tile-sub-${t.key}`} className="sub">
-                            {t.sub}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+            {connected && activePanel === "shop" && (
+              <>
+                <div className="hub-controls">
+                  <button type="button" className="button ghost" onClick={backToGrid}>← Back to Hub</button>
                 </div>
-              )}
+                <div className="card">
+                  <h3>Shop</h3>
+                  <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
+                </div>
+              </>
+            )}
 
-              <div className="hub-content">
-                {activePanel === "shop" && (
-                  <div className="card">
-                    <h3>Shop</h3>
-                    <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
-                  </div>
-                )}
+            {connected && activePanel === "jal" && (
+              <>
+                <div className="hub-controls">
+                  <button type="button" className="button ghost" onClick={backToGrid}>← Back to Hub</button>
+                </div>
+                <div className="in-hub">
+                  <Suspense fallback={<div className="card">Loading JAL…</div>}>
+                    <Jal inHub />
+                  </Suspense>
+                </div>
+              </>
+            )}
 
-                {activePanel === "jal" && (
-                  <div className="in-hub">
-                    <Suspense fallback={<div className="card">Loading JAL…</div>}>
-                      <Jal inHub />
-                    </Suspense>
-                  </div>
-                )}
-
-                {activePanel === "vault" && (
-                  <div className="card">
-                    <h3>Vault</h3>
-                    <p>View balances, recent activity, and manage your JAL.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
+            {connected && activePanel === "vault" && (
+              <>
+                <div className="hub-controls">
+                  <button type="button" className="button ghost" onClick={backToGrid}>← Back to Hub</button>
+                </div>
+                <div className="card">
+                  <h3>Vault</h3>
+                  <p>View balances, recent activity, and manage your JAL.</p>
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      )}
+      </section>
     </main>
   );
 }
