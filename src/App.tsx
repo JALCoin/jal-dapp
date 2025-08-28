@@ -1,6 +1,6 @@
 // src/App.tsx
-import { useState } from "react";
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 
@@ -16,7 +16,13 @@ function DisconnectBtn() {
   );
 }
 
-function HeaderView({ onMenu }: { onMenu: () => void }) {
+function HeaderView({
+  onMenu,
+  isOpen,
+}: {
+  onMenu: () => void;
+  isOpen: boolean;
+}) {
   return (
     <header className="site-header">
       <div className="header-inner">
@@ -33,11 +39,17 @@ function HeaderView({ onMenu }: { onMenu: () => void }) {
           </a>
         </div>
 
-        {/* Center: logo (GIF ok) */}
+        {/* Center: logo */}
         <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
 
         {/* Right: hamburger */}
-        <button className="hamburger" onClick={onMenu} aria-label="Open menu" aria-haspopup="true">
+        <button
+          className={`hamburger ${isOpen ? "is-open" : ""}`}
+          onClick={onMenu}
+          aria-label="Open menu"
+          aria-haspopup="true"
+          aria-expanded={isOpen}
+        >
           <span></span><span></span><span></span>
         </button>
 
@@ -46,7 +58,6 @@ function HeaderView({ onMenu }: { onMenu: () => void }) {
           <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
             Home
           </NavLink>
-          {/* More routes later if you want */}
         </nav>
       </div>
     </header>
@@ -54,7 +65,8 @@ function HeaderView({ onMenu }: { onMenu: () => void }) {
 }
 
 function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return !open ? null : (
+  if (!open) return null;
+  return (
     <>
       <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
@@ -74,16 +86,26 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Close sidebar on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <BrowserRouter>
-      <HeaderView onMenu={() => setMenuOpen(true)} />
+      <HeaderView onMenu={() => setMenuOpen(true)} isOpen={menuOpen} />
       <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
       <main role="main">
         <Routes>
           <Route path="/" element={<Landing />} />
+          {/* Redirect unknown paths to home to avoid blank previews */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      {/* optional footer */}
       {/* <footer className="site-footer">© {new Date().getFullYear()} JAL/SOL</footer> */}
     </BrowserRouter>
   );
