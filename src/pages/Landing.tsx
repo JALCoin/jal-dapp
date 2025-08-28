@@ -33,7 +33,11 @@ function DisconnectButton({ className }: { className?: string }) {
       type="button"
       className={className ?? "wallet-disconnect-btn"}
       onClick={async () => {
-        try { await disconnect(); } catch (e) { console.error("[wallet] disconnect error:", e); }
+        try {
+          await disconnect();
+        } catch (e) {
+          console.error("[wallet] disconnect error:", e);
+        }
       }}
       aria-label="Disconnect wallet"
     >
@@ -47,7 +51,9 @@ function ConnectButton({ className }: { className?: string }) {
   const { setVisible } = useWalletModal();
 
   const isMobile = useMemo(
-    () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.userAgent.includes("Mobile"),
+    () =>
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      navigator.userAgent.includes("Mobile"),
     []
   );
 
@@ -96,7 +102,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  const tiles = useMemo<{ key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]>(
+  const tiles = useMemo<
+    { key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]
+  >(
     () => [
       { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
       { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
@@ -109,7 +117,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     const imgs = tiles.map((t) => {
       const i = new Image();
-      i.decoding = "async"; i.loading = "eager"; i.src = t.gif;
+      i.decoding = "async";
+      i.loading = "eager";
+      i.src = t.gif;
       return i;
     });
     return () => imgs.forEach((i) => (i.src = ""));
@@ -138,9 +148,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
     const urlPanel = params.get("panel");
     if (activePanel === "none") {
-      if (urlPanel) { params.delete("panel"); setParams(params, { replace: true }); }
+      if (urlPanel) {
+        params.delete("panel");
+        setParams(params, { replace: true });
+      }
     } else if (urlPanel !== activePanel) {
-      params.set("panel", activePanel); setParams(params, { replace: true });
+      params.set("panel", activePanel);
+      setParams(params, { replace: true });
     }
   }, [activePanel, params, setParams]);
 
@@ -156,7 +170,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
       setActivePanel((p) => (p === "none" ? "grid" : p));
       requestAnimationFrame(() =>
-        panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })
+        panelRef.current?.scrollIntoView({
+          behavior: reducedMotion ? "auto" : "smooth",
+          block: "start",
+        })
       );
     };
 
@@ -190,7 +207,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
-      if (activePanel !== "none") requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
+      if (activePanel !== "none") {
+        requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
+      }
       setActivePanel("none");
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -202,8 +221,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (activePanel !== "grid" && activePanel !== "none") setActivePanel("grid");
-      else if (activePanel === "grid") setActivePanel("none");
+      if (activePanel !== "grid" && activePanel !== "none") {
+        setActivePanel("grid");
+      } else if (activePanel === "grid") {
+        setActivePanel("none");
+      }
       requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
     };
     window.addEventListener("keydown", onKey);
@@ -221,7 +243,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     check();
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true });
-    return () => { obs.disconnect(); setWalletFlag(false); };
+    return () => {
+      obs.disconnect();
+      setWalletFlag(false);
+    };
   }, [setWalletFlag]);
 
   /* ---------- Mobile resume (Phantom) ---------- */
@@ -233,19 +258,24 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       if (pending === PHANTOM_WALLET) {
         try {
           if (!wallet || wallet.adapter?.name !== PHANTOM_WALLET) {
-            await select?.(PHANTOM_WALLET); await new Promise((r) => setTimeout(r, 0));
+            await select?.(PHANTOM_WALLET);
+            await new Promise((r) => setTimeout(r, 0));
           }
-          await connect?.(); sessionStorage.removeItem("pendingWallet");
+          await connect?.();
+          sessionStorage.removeItem("pendingWallet");
         } catch (e) {
           console.info("[wallet] resume connect failed:", e);
         }
       }
     };
+
     const onVisible = () => void tryResume();
+
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
     window.addEventListener("pageshow", onVisible);
     void tryResume();
+
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
@@ -261,15 +291,33 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const backToGrid = () => openPanel("grid");
 
   const panelTitle =
-    activePanel === "grid" ? "Hub" :
-    activePanel === "shop" ? "Shop" :
-    activePanel === "jal"  ? "JAL"  :
-    activePanel === "vault"? "Vault": "Welcome";
+    activePanel === "grid"
+      ? "Hub"
+      : activePanel === "shop"
+      ? "Shop"
+      : activePanel === "jal"
+      ? "JAL"
+      : activePanel === "vault"
+      ? "Vault"
+      : "Welcome";
 
   const isPreview = activePanel === "none";
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+      {/* Social */}
+      <div className="landing-social" aria-hidden={merging}>
+        <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <img src="/icons/X.png" alt="" width={20} height={20} />
+        </a>
+        <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+          <img src="/icons/Telegram.png" alt="" width={20} height={20} />
+        </a>
+        <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+          <img src="/icons/TikTok.png" alt="" width={20} height={20} />
+        </a>
+      </div>
+
       {/* (Optional) disconnect during merging pulse */}
       {merging && (
         <div className="landing-disconnect">
@@ -277,33 +325,37 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
       )}
 
-      {/* Hero actions (no duplicate logo/socials — header handles those) */}
-      <div className="landing-inner">
-        {!connected ? (
-          <ConnectButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
-        ) : (
-          <button
-            ref={toggleBtnRef}
-            className="landing-wallet"
-            onClick={() => {
-              const next = isPreview ? "grid" : "none";
-              setActivePanel(next);
-              if (next !== "none") {
+      {/* Hero — only on preview to avoid duplicate logo with header */}
+      {isPreview && (
+        <div className="landing-inner">
+          <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
+            <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
+          </div>
+
+          {!connected ? (
+            <ConnectButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
+          ) : (
+            <button
+              ref={toggleBtnRef}
+              className="landing-wallet"
+              onClick={() => {
+                const next = "grid";
+                setActivePanel(next);
                 requestAnimationFrame(() =>
                   panelRef.current?.scrollIntoView({
                     behavior: reducedMotion ? "auto" : "smooth",
                     block: "start",
                   })
                 );
-              }
-            }}
-            aria-expanded={!isPreview}
-            aria-controls="hub-panel"
-          >
-            {isPreview ? "Open Hub" : "Back to Landing"}
-          </button>
-        )}
-      </div>
+              }}
+              aria-expanded={!isPreview}
+              aria-controls="hub-panel"
+            >
+              Open Hub
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Embedded Hub panel */}
       <section
@@ -342,7 +394,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     loading="lazy"
                     width={960}
                     height={540}
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
                   />
                   <div className="hub-btn">
                     {t.title}
@@ -360,8 +414,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>
-                  Connect your wallet to unlock features. Then open the Hub to pick a tile —
-                  try <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
+                  Connect your wallet to unlock features. Then open the Hub to pick a tile — try{" "}
+                  <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
                 </p>
               </div>
             )}
@@ -369,7 +423,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             {connected && activePanel === "shop" && (
               <>
                 <div className="hub-controls">
-                  <button type="button" className="button ghost" onClick={backToGrid}>← Back to Hub</button>
+                  <button type="button" className="button ghost" onClick={backToGrid}>
+                    ← Back to Hub
+                  </button>
                 </div>
                 <div className="card">
                   <h3>Shop</h3>
@@ -381,7 +437,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             {connected && activePanel === "jal" && (
               <>
                 <div className="hub-controls">
-                  <button type="button" className="button ghost" onClick={backToGrid}>← Back to Hub</button>
+                  <button type="button" className="button ghost" onClick={backToGrid}>
+                    ← Back to Hub
+                  </button>
                 </div>
                 <div className="in-hub">
                   <Suspense fallback={<div className="card">Loading JAL…</div>}>
@@ -394,7 +452,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             {connected && activePanel === "vault" && (
               <>
                 <div className="hub-controls">
-                  <button type="button" className="button ghost" onClick={backToGrid}>← Back to Hub</button>
+                  <button type="button" className="button ghost" onClick={backToGrid}>
+                    ← Back to Hub
+                  </button>
                 </div>
                 <div className="card">
                   <h3>Vault</h3>
