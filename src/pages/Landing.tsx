@@ -9,9 +9,9 @@ import {
   useState,
 } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { JAL_MINT } from "../config/tokens";
 
@@ -45,7 +45,6 @@ function ConnectButton({ className }: { className?: string }) {
 /* ---------- Page ---------- */
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, wallet } = useWallet();
-  const { connection } = useConnection();
   const { setVisible } = useWalletModal();
   const [params, setParams] = useSearchParams();
 
@@ -215,11 +214,16 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       ? "Support"
       : "Welcome";
 
-  /* ---------- LIVE BALANCES ---------- */
+  /* ---------- LIVE BALANCES (SOL + JAL) ---------- */
   const [sol, setSol] = useState<number | null>(null);
   const [jal, setJal] = useState<number | null>(null);
   const [balLoading, setBalLoading] = useState(false);
   const [balErr, setBalErr] = useState<string | null>(null);
+
+  const getEndpoint = () =>
+    (window as any).__SOLANA_RPC_ENDPOINT__ ??
+    import.meta.env.VITE_SOLANA_RPC ??
+    clusterApiUrl("mainnet-beta");
 
   const fetchBalances = useCallback(async () => {
     if (!publicKey || !connected) {
@@ -229,16 +233,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
     setBalErr(null);
     setBalLoading(true);
+
+    const freshConn = new Connection(getEndpoint(), "confirmed");
+
     try {
-      const lamports = await connection.getBalance(publicKey, "confirmed");
+      const lamports = await freshConn.getBalance(publicKey, "confirmed");
       setSol(lamports / LAMPORTS_PER_SOL);
     } catch (e) {
       console.error("[balances] SOL fetch failed:", e);
       setSol(null);
       setBalErr("rpc");
     }
+
     try {
-      const resp = await connection.getParsedTokenAccountsByOwner(
+      const resp = await freshConn.getParsedTokenAccountsByOwner(
         publicKey,
         { programId: TOKEN_PROGRAM_ID },
         "confirmed"
@@ -246,9 +254,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       const total = resp.value.reduce((sum, { account }) => {
         const info = account.data.parsed.info;
         if (info.mint !== JAL_MINT) return sum;
-        const amountStr = String(info.tokenAmount?.amount ?? "0");
+        const raw = Number(info.tokenAmount?.amount ?? 0);
         const dec = Number(info.tokenAmount?.decimals ?? 0);
-        const ui = Number(amountStr) / 10 ** dec;
+        const ui = raw / 10 ** dec;
         return sum + (isFinite(ui) ? ui : 0);
       }, 0);
       setJal(total);
@@ -259,8 +267,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     } finally {
       setBalLoading(false);
     }
-  }, [connection, connected, publicKey]);
+  }, [publicKey, connected]);
 
+  // Initial + polling + live SOL updates (dedicated connection for the subscription)
   useEffect(() => {
     if (!connected || !publicKey) {
       setSol(null);
@@ -268,17 +277,30 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       return;
     }
     void fetchBalances();
+
     const poll = setInterval(fetchBalances, 15000);
-    const subId = connection.onAccountChange(
+
+    const wsConn = new Connection(getEndpoint(), "confirmed");
+    const sub = wsConn.onAccountChange(
       publicKey,
       (ai) => setSol(ai.lamports / LAMPORTS_PER_SOL),
       "confirmed"
     );
+
     return () => {
       clearInterval(poll);
-      connection.removeAccountChangeListener(subId).catch(() => {});
+      wsConn.removeAccountChangeListener(sub).catch(() => {});
     };
-  }, [connection, connected, publicKey, fetchBalances]);
+  }, [connected, publicKey, fetchBalances]);
+
+  // Also refresh immediately when adapter emits "connect"
+  useEffect(() => {
+    const a = wallet?.adapter;
+    if (!a) return;
+    const onConnectBalances = () => void fetchBalances();
+    a.on("connect", onConnectBalances);
+    return () => a.off("connect", onConnectBalances);
+  }, [wallet, fetchBalances]);
 
   const fmt = (n: number | null, digits = 4) =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -348,9 +370,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <button className="chip" onClick={() => openPanel("grid")}>NFT Generator</button>
               </div>
             </div>
-            <div className="icon" aria-hidden>
-              ⚡
-            </div>
+            <div className="icon" aria-hidden>⚡</div>
           </div>
         </div>
 
