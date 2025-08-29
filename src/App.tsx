@@ -1,6 +1,6 @@
 // src/App.tsx
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useSearchParams, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 
@@ -93,7 +93,8 @@ function TabBar() {
     const p = new URLSearchParams(location.search);
     if (!panel) p.delete("panel");
     else p.set("panel", panel);
-    return `${base}?${p.toString()}`;
+    const q = p.toString();
+    return q ? `${base}?${q}` : base;
   };
 
   // Active state = matches current ?panel=...
