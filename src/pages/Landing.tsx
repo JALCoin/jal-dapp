@@ -4,7 +4,7 @@ import {
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -19,7 +19,7 @@ type LandingProps = { initialPanel?: Panel };
 /** Replace if your JAL mint changes */
 const JAL_MINT = new PublicKey("9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v");
 
-const PHANTOM_WALLET = "Phantom" as WalletName;
+const PHANTOM_WALLET = "Phantom" as WalletName; // kept for possible future deep-link use
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
@@ -39,43 +39,16 @@ function DisconnectButton({ className }: { className?: string }) {
   );
 }
 
+/** Use Wallet Adapter’s official multi-wallet button (proper wallet connect) */
 function ConnectButton({ className }: { className?: string }) {
-  const { select, connect, wallet } = useWallet();
-  const { setVisible } = useWalletModal();
-
-  const isMobile = useMemo(
-    () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.userAgent.includes("Mobile"),
-    []
-  );
-
-  const onClick = async () => {
-    try {
-      if (isMobile) {
-        sessionStorage.setItem("pendingWallet", PHANTOM_WALLET);
-        if (!wallet || wallet.adapter?.name !== PHANTOM_WALLET) {
-          await select?.(PHANTOM_WALLET);
-          await new Promise((r) => setTimeout(r, 0));
-        }
-        await connect?.();
-      } else {
-        setVisible(true);
-      }
-    } catch (e) {
-      console.error("[wallet] connect error:", e);
-      sessionStorage.removeItem("pendingWallet");
-    }
-  };
-
-  return (
-    <button type="button" className={className ?? "landing-wallet"} onClick={onClick}>
-      Connect Wallet
-    </button>
-  );
+  // Pass through a custom class for your theme polish; defaults to your .landing-wallet look
+  return <WalletMultiButton className={className ?? "landing-wallet"} />;
 }
 
 /* ---------- Page ---------- */
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, connecting, wallet, select, connect } = useWallet();
+  const { setVisible } = useWalletModal();
   const [params, setParams] = useSearchParams();
 
   const [activePanel, setActivePanel] = useState<Panel>("none");
@@ -186,7 +159,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => { obs.disconnect(); setWalletFlag(false); };
   }, [setWalletFlag]);
 
-  /* ---------- Mobile resume (Phantom) ---------- */
+  /* ---------- Mobile resume (Phantom deep link placeholder) ---------- */
   useEffect(() => {
     const tryResume = async () => {
       const pending = sessionStorage.getItem("pendingWallet");
@@ -234,8 +207,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   }, [overlayOpen]);
 
   /* ---------- Open helpers ---------- */
+  const requiresWallet: Panel[] = ["jal", "vault", "payments", "loans"];
   const openPanel = (id: Panel) => {
     setActivePanel(id);
+    // if the panel is gated and user is disconnected, open the wallet modal (proper connect)
+    if (!connected && requiresWallet.includes(id)) setVisible(true);
     requestAnimationFrame(() =>
       panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })
     );
@@ -371,7 +347,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       >
         <div className="hub-panel-top">
           <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>{panelTitle}</h2>
-          {connected && <DisconnectButton className="wallet-disconnect-btn" />}
+          {connected ? (
+            <DisconnectButton className="wallet-disconnect-btn" />
+          ) : (
+            // Quick access connect inside the overlay header
+            <ConnectButton className="wallet-disconnect-btn" />
+          )}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
@@ -384,7 +365,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             </div>
           )}
 
-          {/* Tile grid — now visible even if not connected */}
+          {/* Tile grid — visible even if not connected */}
           {(activePanel === "grid" || activePanel === "none") && (
             <div className="hub-stack hub-stack--responsive" role="list">
               {tiles.map((t) => (
@@ -392,7 +373,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   key={t.key}
                   type="button"
                   className="img-btn"
-                  onClick={() => setActivePanel(t.key)}
+                  onClick={() => openPanel(t.key)}
                   role="listitem"
                   aria-describedby={`tile-sub-${t.key}`}
                   disabled={t.disabled}
