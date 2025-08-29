@@ -332,6 +332,7 @@ main[role="main"]{
   .hamburger span, .hamburger, .sidebar-nav, .sidebar-overlay,
   .button, .card, .img-btn { transition:none; animation:none }
 }
+
 /* ===============================
    BANKING LANDING LAYOUT PRIMITIVES
    (Additive: safe to append)
@@ -344,6 +345,7 @@ main[role="main"]{
   display:grid; gap:14px;
   grid-template-columns: 1fr 1fr;
 }
+@media (max-width:720px){ .balance-row{ grid-template-columns: 1fr } }
 .balance-card{
   border:1px solid var(--stroke); border-radius:var(--r-lg);
   padding:16px 18px;
@@ -351,6 +353,7 @@ main[role="main"]{
   box-shadow:0 8px 26px rgba(0,0,0,.5);
 }
 .balance-amount{ font-size:clamp(1.4rem, 4.8vw, 2.1rem); font-weight:700; color:var(--gold); text-shadow:var(--glow-gold) }
+.balance-amount small{ font-weight:600; opacity:.9; margin-left:.25ch }
 .balance-label{ opacity:.85; margin-top:6px }
 
 /* 2×2 feature grid */
@@ -358,6 +361,7 @@ main[role="main"]{
   display:grid; gap:16px;
   grid-template-columns: repeat(2, 1fr);
 }
+@media (max-width:720px){ .feature-grid{ grid-template-columns:1fr } }
 .feature-card{
   position:relative; border:1px solid var(--stroke); border-radius:var(--r-lg);
   min-height:150px; padding:16px; overflow:hidden;
@@ -410,11 +414,9 @@ main[role="main"]{
 }
 .chip:hover { transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan); }
 
-/* Balance labels tighter */
-.balance-label { opacity:.85; margin-top:4px; }
-
-/* Optional: right-align the “wallet connected” status line in bank top row */
+/* Status line */
 .bank-status { text-align:right; opacity:.9; }
+
 /* --- Hub as overlay modal --- */
 .hub-overlay{
   position: fixed; inset: 0; z-index: 48;
@@ -422,7 +424,6 @@ main[role="main"]{
   backdrop-filter: blur(2px);
   animation: overlayIn var(--t-slow) both;
 }
-
 .hub-panel--overlay{
   position: fixed;
   z-index: 49;
@@ -431,24 +432,18 @@ main[role="main"]{
   bottom: 74px;              /* room for bottom tab bar */
   width: min(100% - 2rem, 1100px);
 }
-
 @media (max-width: 640px){
   .hub-panel--overlay{ top: 72px; bottom: 72px; }
 }
-
 /* lock background scroll when hub is open */
 body[data-hub-open="true"]{ overflow: hidden; }
-/* in your index.css */
-.swap-embed-wrap { width: 100%; min-height: 700px; }
+
 /* ===============================
    JAL panel + Swap embed
 =================================*/
-
-/* Titles + helper text */
 .jal-title{ margin:0; font-size:clamp(1.3rem,2.8vw,1.6rem); letter-spacing:.02em }
 .jal-subtitle{ margin:.25rem 0 0; opacity:.85 }
 
-/* Mint + actions row */
 .jal-actions{
   display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px;
 }
@@ -475,12 +470,8 @@ body[data-hub-open="true"]{ overflow: hidden; }
 .jal-cta{ margin-top:12px }
 
 /* Card wrapper that holds the embedded swap */
-.swap-embed-card{
-  /* inherits .card; just tighten spacing when used in hub */
-  padding: clamp(.75rem, 2vw, 1rem);
-}
+.swap-embed-card{ padding: clamp(.75rem, 2vw, 1rem); }
 
-/* Header row inside the swap card */
 .swap-embed-header{
   display:flex; align-items:center; justify-content:space-between; gap:8px;
   margin-bottom:10px;
@@ -503,23 +494,16 @@ body[data-hub-open="true"]{ overflow: hidden; }
 .swap-embed-iframe{
   position:absolute; inset:0;
   width:100%; height:100%;
-  border:0;
-  background:transparent;
+  border:0; background:transparent;
 }
 
-/* Optional: simple fade-in when your component toggles .ready/.loading */
+/* Optional: fade-in */
 .swap-embed-wrap .swap-embed-iframe{ opacity:1; transition:opacity var(--t-med) ease }
 .swap-embed-wrap.loading .swap-embed-iframe{ opacity:0 }
 
-/* Mobile tweaks */
 @media (max-width: 640px){
-  .swap-embed-wrap{
-    height: min(72vh, 620px);
-    min-height: 440px;
-  }
+  .swap-embed-wrap{ height: min(72vh, 620px); min-height: 440px; }
 }
-.swap-embed-hint{
-  margin-top:10px; opacity:.85; font-size:.9rem;
-}
-.swap-embed-hint a{ text-decoration: underline; }
 
+.swap-embed-hint{ margin-top:10px; opacity:.85; font-size:.9rem; }
+.swap-embed-hint a{ text-decoration: underline; }

@@ -1,4 +1,3 @@
-// src/pages/Landing.tsx
 import {
   lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
@@ -29,14 +28,13 @@ function DisconnectButton({ className }: { className?: string }) {
     <button
       type="button"
       className={className ?? "wallet-disconnect-btn"}
-      onClick={async () => { try { await disconnect(); } catch (e) { console.error("[wallet] disconnect error:", e); } }}
+      onClick={async () => { try { await disconnect(); } catch {} }}
       aria-label="Disconnect wallet"
     >
       Disconnect
     </button>
   );
 }
-
 function ConnectButton({ className }: { className?: string }) {
   return <WalletMultiButton className={className ?? "landing-wallet"} />;
 }
@@ -112,7 +110,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       const delay = reducedMotion ? 0 : 350;
       timerRef.current = window.setTimeout(() => setMerging(false), delay);
       setActivePanel((p) => (p === "none" ? "grid" : p));
-      requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }));
+      requestAnimationFrame(() =>
+        panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })
+      );
     };
     wallet.adapter.on("connect", onConnect);
     return () => { wallet.adapter.off("connect", onConnect); if (timerRef.current) clearTimeout(timerRef.current); timerRef.current = null; };
@@ -168,7 +168,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           }
           await connect?.();
           sessionStorage.removeItem("pendingWallet");
-        } catch (e) { console.info("[wallet] resume connect failed:", e); }
+        } catch {}
       }
     };
     const onVisible = () => void tryResume();
@@ -185,7 +185,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   /* ---------- Overlay controls ---------- */
   const overlayOpen = activePanel !== "none" && activePanel !== "grid";
-
   useEffect(() => {
     if (overlayOpen) document.body.setAttribute("data-hub-open", "true");
     else document.body.removeAttribute("data-hub-open");
@@ -193,9 +192,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   }, [overlayOpen]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && overlayOpen) setActivePanel("none");
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && overlayOpen) setActivePanel("none"); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [overlayOpen]);
@@ -230,16 +227,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
     const fetchBalances = async () => {
       try {
-        // SOL (one-shot)
         const lamports = await connection.getBalance(publicKey, "confirmed");
         if (!disposed) setSol(lamports / LAMPORTS_PER_SOL);
       } catch (e) {
-        console.error("[balances] SOL fetch failed:", e);
         if (!disposed) setSol(null);
       }
 
       try {
-        // JAL SPL total across all accounts (use raw amount/decimals for accuracy)
         const resp = await connection.getParsedTokenAccountsByOwner(
           publicKey,
           { programId: TOKEN_PROGRAM_ID },
@@ -255,16 +249,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         }, 0);
         if (!disposed) setJal(total);
       } catch (e) {
-        console.error("[balances] JAL fetch failed:", e);
         if (!disposed) setJal(null);
       }
     };
 
-    // initial + poll
     void fetchBalances();
     const poll = setInterval(fetchBalances, 15000);
 
-    // live SOL updates via subscription
     const subPromise = connection.onAccountChange(
       publicKey,
       (ai) => { if (!disposed) setSol(ai.lamports / LAMPORTS_PER_SOL); },
@@ -274,7 +265,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => {
       disposed = true;
       clearInterval(poll);
-      Promise.resolve(subPromise).then((sub) => connection.removeAccountChangeListener(sub)).catch(() => {});
+      Promise.resolve(subPromise)
+        .then((sub) => connection.removeAccountChangeListener(sub))
+        .catch(() => {});
     };
   }, [publicKey, connected, connection]);
 
@@ -292,11 +285,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
         <div className="balance-row">
           <div className="balance-card">
-            <div className="balance-amount">{fmt(jal)} JAL</div>
+            <div className="balance-amount">{fmt(jal)}<small> JAL</small></div>
             <div className="balance-label">JAL • Total</div>
           </div>
           <div className="balance-card">
-            <div className="balance-amount">{fmt(sol)} SOL</div>
+            <div className="balance-amount">{fmt(sol)}<small> SOL</small></div>
             <div className="balance-label">SOL • Total</div>
           </div>
         </div>
@@ -398,6 +391,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
+            {/* SHOP */}
             {activePanel === "shop" && (
               <div className="card">
                 <h3>Shop</h3>
@@ -416,6 +410,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
+            {/* JAL (About & embedded Swap handled by <Jal />) */}
             {activePanel === "jal" && (
               <div className="in-hub">
                 <Suspense fallback={<div className="card">Loading JAL…</div>}>
@@ -424,6 +419,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
+            {/* VAULT */}
             {activePanel === "vault" && (
               connected ? (
                 <div className="card">
@@ -440,6 +436,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               )
             )}
 
+            {/* PAYMENTS / LOANS / SUPPORT */}
             {["payments", "loans", "support"].includes(activePanel) && (
               <div className="card">
                 <h3>{panelTitle}</h3>

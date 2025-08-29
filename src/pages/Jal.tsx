@@ -1,4 +1,3 @@
-// src/pages/Jal.tsx
 import { useEffect, useMemo, useState, useId } from "react";
 import { useSearchParams } from "react-router-dom";
 import { JAL_MINT } from "../config/tokens";
@@ -6,9 +5,7 @@ import RaydiumSwapEmbed from "../components/RaydiumSwapEmbed";
 
 type Props = { inHub?: boolean };
 
-// Raydium expects `sol` for native SOL (not the wSOL mint)
 const SOL_PARAM = "sol";
-const RAY_URL = `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(JAL_MINT)}&fixed=in`;
 
 export default function Jal({ inHub = false }: Props) {
   const [swapOpen, setSwapOpen] = useState(false);
@@ -38,10 +35,7 @@ export default function Jal({ inHub = false }: Props) {
 
   // Pretty-print mint
   const shortMint = useMemo(
-    () =>
-      JAL_MINT.length > 12
-        ? `${JAL_MINT.slice(0, 6)}...${JAL_MINT.slice(-6)}`
-        : JAL_MINT,
+    () => (JAL_MINT.length > 12 ? `${JAL_MINT.slice(0, 6)}...${JAL_MINT.slice(-6)}` : JAL_MINT),
     []
   );
 
@@ -51,9 +45,7 @@ export default function Jal({ inHub = false }: Props) {
       await navigator.clipboard.writeText(JAL_MINT);
       setCopied(true);
       setTimeout(() => setCopied(false), 900);
-    } catch {
-      /* no-op */
-    }
+    } catch {/* no-op */}
   };
 
   const Content = (
@@ -125,12 +117,17 @@ export default function Jal({ inHub = false }: Props) {
         >
           <div className="swap-embed-header">
             <h3 id={swapTitleId} style={{ margin: 0 }}>Swap SOL ⇄ JAL</h3>
-            <a className="jal-link" href={RAY_URL} target="_blank" rel="noreferrer">
+            <a
+              className="jal-link"
+              href={`https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(JAL_MINT)}&fixed=in`}
+              target="_blank"
+              rel="noreferrer"
+            >
               Open on Raydium ↗
             </a>
           </div>
 
-          {/* If Raydium disallows iframes via CSP/X-Frame-Options, keep this component mapping to a working embed. */}
+          {/* The embed wrapper auto-detects CSP blocks and shows a link fallback */}
           <RaydiumSwapEmbed inputMint={SOL_PARAM} outputMint={JAL_MINT} height={700} />
         </section>
       )}

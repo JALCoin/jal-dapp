@@ -1,20 +1,12 @@
-// src/App.tsx
 import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 
 import { clusterApiUrl, type Cluster } from "@solana/web3.js";
-import {
-  ConnectionProvider,
-  WalletProvider,
-  useWallet,
-} from "@solana/wallet-adapter-react";
-import {
-  WalletModalProvider,
-  WalletMultiButton,
-} from "@solana/wallet-adapter-react-ui";
+import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react";
+import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 
-// Adapters
+// Wallet adapters
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
 import { GlowWalletAdapter } from "@solana/wallet-adapter-glow";
@@ -39,9 +31,7 @@ function SolanaProviders({ children }: PropsWithChildren) {
     [cluster]
   );
 
-  const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as
-    | string
-    | undefined;
+  const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
 
   const wallets = useMemo(
     () => [
@@ -85,33 +75,19 @@ function DisconnectBtn() {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
   return (
-    <button
-      className="wallet-disconnect-btn"
-      onClick={() => disconnect().catch(() => {})}
-    >
+    <button className="wallet-disconnect-btn" onClick={() => disconnect().catch(() => {})}>
       Disconnect
     </button>
   );
 }
 
-function HeaderView({
-  onMenu,
-  isOpen,
-}: {
-  onMenu: () => void;
-  isOpen: boolean;
-}) {
+function HeaderView({ onMenu, isOpen }: { onMenu: () => void; isOpen: boolean }) {
   const label = isOpen ? "Close menu" : "Open menu";
   return (
     <header className="site-header">
       <div className="header-inner">
         <div className="social-links" aria-label="Social Links">
-          <a
-            href="https://x.com/JAL358"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="X"
-          >
+          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
             <img src="/icons/X.png" alt="" />
           </a>
         </div>
@@ -127,37 +103,21 @@ function HeaderView({
           aria-haspopup="true"
           aria-expanded={isOpen}
         >
-          <span></span>
-          <span></span>
-          <span></span>
+          <span></span><span></span><span></span>
         </button>
       </div>
     </header>
   );
 }
 
-function SidebarView({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
   return (
     <>
-      <button
-        className="sidebar-overlay"
-        aria-label="Close menu overlay"
-        onClick={onClose}
-      />
+      <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
         <nav>
-          <NavLink
-            to="/"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
+          <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             Home
           </NavLink>
         </nav>
@@ -204,16 +164,12 @@ function TabBar() {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // ESC closes menu
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Lock page scroll when the sidebar is open
   useEffect(() => {
     if (menuOpen) document.body.setAttribute("data-menu-open", "true");
     else document.body.removeAttribute("data-menu-open");
