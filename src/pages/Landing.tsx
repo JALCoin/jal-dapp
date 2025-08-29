@@ -224,39 +224,59 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [jal, setJal] = useState<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!publicKey || !connected) { setSol(null); setJal(null); return; }
+
+    let disposed = false;
 
     const fetchBalances = async () => {
-      if (!publicKey) { setSol(null); setJal(null); return; }
-
       try {
+        // SOL (one-shot)
         const lamports = await connection.getBalance(publicKey, "confirmed");
-        if (!cancelled) setSol(lamports / LAMPORTS_PER_SOL);
+        if (!disposed) setSol(lamports / LAMPORTS_PER_SOL);
       } catch (e) {
-        console.error("SOL balance fetch failed:", e);
-        if (!cancelled) setSol(null);
+        console.error("[balances] SOL fetch failed:", e);
+        if (!disposed) setSol(null);
       }
 
       try {
-        const resp = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID });
-        const totalJal = resp.value
-          .filter((acc) => acc.account.data.parsed.info.mint === JAL_MINT)
-          .reduce((sum, acc) => {
-            const amt = acc.account.data.parsed.info.tokenAmount;
-            const ui = Number(amt.uiAmountString ?? amt.uiAmount ?? 0);
-            return sum + (isFinite(ui) ? ui : 0);
-          }, 0);
-        if (!cancelled) setJal(totalJal);
+        // JAL SPL total across all accounts (use raw amount/decimals for accuracy)
+        const resp = await connection.getParsedTokenAccountsByOwner(
+          publicKey,
+          { programId: TOKEN_PROGRAM_ID },
+          "confirmed"
+        );
+        const total = resp.value.reduce((sum, { account }) => {
+          const info = account.data.parsed.info;
+          if (info.mint !== JAL_MINT) return sum;
+          const amountStr = String(info.tokenAmount?.amount ?? "0");
+          const dec = Number(info.tokenAmount?.decimals ?? 0);
+          const ui = Number(amountStr) / 10 ** dec;
+          return sum + (isFinite(ui) ? ui : 0);
+        }, 0);
+        if (!disposed) setJal(total);
       } catch (e) {
-        console.error("JAL balance fetch failed:", e);
-        if (!cancelled) setJal(null);
+        console.error("[balances] JAL fetch failed:", e);
+        if (!disposed) setJal(null);
       }
     };
 
-    if (connected) void fetchBalances();
-    const id = setInterval(fetchBalances, 15000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [connection, connected, publicKey]);
+    // initial + poll
+    void fetchBalances();
+    const poll = setInterval(fetchBalances, 15000);
+
+    // live SOL updates via subscription
+    const subPromise = connection.onAccountChange(
+      publicKey,
+      (ai) => { if (!disposed) setSol(ai.lamports / LAMPORTS_PER_SOL); },
+      "confirmed"
+    );
+
+    return () => {
+      disposed = true;
+      clearInterval(poll);
+      Promise.resolve(subPromise).then((sub) => connection.removeAccountChangeListener(sub)).catch(() => {});
+    };
+  }, [publicKey, connected, connection]);
 
   const fmt = (n: number | null, digits = 4) =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
