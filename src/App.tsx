@@ -78,7 +78,7 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
   );
 }
 
-/* Bottom tab bar (visual + deep-links to Landing panels) */
+/* Bottom tab bar (only STORE + SUPPORT) */
 function TabBar() {
   const location = useLocation();
   const base = location.pathname || "/";
@@ -99,24 +99,14 @@ function TabBar() {
 
   return (
     <nav className="tabbar" aria-label="App tabs">
-      <NavLink to={link("grid")} className={() => (isActive("grid") ? "active" : "")}>
-        <div className="tab-icon">➕</div> HUB
-      </NavLink>
-      <a href={link("payments")} className={isActive("payments") ? "active" : ""}>
-        <div className="tab-icon">🔁</div> PAYMENTS
-      </a>
       <NavLink to={link("shop")} className={() => (isActive("shop") ? "active" : "")}>
-        <div className="tab-icon">🏬</div> STORE
+        <div className="tab-icon">🏬</div>
+        STORE
       </NavLink>
-      <a href={link("loans")} className={isActive("loans") ? "active" : ""}>
-        <div className="tab-icon">🧮</div> LOANS
-      </a>
       <a href={link("support")} className={isActive("support") ? "active" : ""}>
-        <div className="tab-icon">👤</div> SUPPORT
+        <div className="tab-icon">👤</div>
+        SUPPORT
       </a>
-      <NavLink to={link("jal")} className={() => (isActive("jal") ? "active" : "")}>
-        <div className="tab-icon">➕</div> MONEY
-      </NavLink>
     </nav>
   );
 }
