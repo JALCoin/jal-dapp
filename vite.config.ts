@@ -2,34 +2,32 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import inject from '@rollup/plugin-inject';
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
-import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
+import nodePolyfills from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    nodePolyfills({
+      globals: { Buffer: true, process: true }, // add Buffer/process shims
+      protocolImports: true,
+    }),
+  ],
   resolve: {
     alias: {
       buffer: 'buffer',
       stream: 'stream-browserify',
-      process: 'process',                  // keep
-      util: 'util',                        // NEW: WC uses this
-      crypto: 'crypto-browserify',         // NEW: randombytes, etc.
-      path: 'path-browserify',             // NEW: some deps reference path
+      process: 'process',
+      util: 'util',
+      crypto: 'crypto-browserify',
+      path: 'path-browserify',
+      // vm: 'rollup-plugin-node-polyfills/polyfills/vm', // uncomment if needed
     },
   },
+  define: {
+    global: 'globalThis',
+  },
   optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: 'globalThis',              // needed by many wallet deps
-      },
-      plugins: [
-        NodeGlobalsPolyfillPlugin({
-          process: true,
-          buffer: true,
-        }),
-        NodeModulesPolyfillPlugin(),
-      ],
-    },
+    include: ['buffer', 'process'],
   },
   build: {
     rollupOptions: {
