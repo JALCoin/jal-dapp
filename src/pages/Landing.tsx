@@ -215,7 +215,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   }, [connected, connecting, wallet, select, connect]);
 
   /* ---------- Overlay controls ---------- */
-  const overlayOpen = activePanel !== "none";
+  const overlayOpen = activePanel !== "none" && activePanel !== "grid";
 
   // Lock background scroll while overlay is open
   useEffect(() => {
@@ -375,7 +375,17 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
-          {connected && (activePanel === "grid" || activePanel === "none") && (
+          {/* Back to Hub for all sub-pages */}
+          {(activePanel !== "grid" && activePanel !== "none") && (
+            <div className="hub-controls">
+              <button type="button" className="button ghost" onClick={() => setActivePanel("grid")}>
+                ← Back to Hub
+              </button>
+            </div>
+          )}
+
+          {/* Tile grid — now visible even if not connected */}
+          {(activePanel === "grid" || activePanel === "none") && (
             <div className="hub-stack hub-stack--responsive" role="list">
               {tiles.map((t) => (
                 <button
@@ -407,45 +417,78 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           )}
 
           <div className="hub-content">
-            {!connected && (
+            {/* Hub welcome on preview */}
+            {(activePanel === "grid" || activePanel === "none") && !connected && (
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
                 <p>Connect your wallet to unlock features. Use the tiles above to explore.</p>
               </div>
             )}
 
-            {connected && activePanel === "shop" && (
+            {/* SHOP */}
+            {activePanel === "shop" && (
               <div className="card">
                 <h3>Shop</h3>
                 <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
-                <button className="button ghost" onClick={() => setActivePanel("grid")}>← Back to Hub</button>
+                {!connected && (
+                  <>
+                    <p style={{ opacity: .85 }}>Preview mode — connect to checkout.</p>
+                    <ConnectButton className="button gold" />
+                  </>
+                )}
+                <div className="chip-row" style={{ marginTop: 10 }}>
+                  <button className="chip">Merch</button>
+                  <button className="chip">Digital</button>
+                  <button className="chip">Gift Cards</button>
+                </div>
               </div>
             )}
 
-            {connected && activePanel === "jal" && (
-              <>
+            {/* JAL (About & Swap) */}
+            {activePanel === "jal" && (
+              connected ? (
                 <div className="in-hub">
                   <Suspense fallback={<div className="card">Loading JAL…</div>}>
                     <Jal inHub />
                   </Suspense>
                 </div>
-                <button className="button ghost" onClick={() => setActivePanel("grid")}>← Back to Hub</button>
-              </>
+              ) : (
+                <div className="card">
+                  <h3>JAL</h3>
+                  <p>Learn about JAL and swap when your wallet is connected.</p>
+                  <ConnectButton className="button gold" />
+                </div>
+              )
             )}
 
-            {connected && activePanel === "vault" && (
-              <div className="card">
-                <h3>Vault</h3>
-                <p>View balances, recent activity, and manage your JAL.</p>
-                <button className="button ghost" onClick={() => setActivePanel("grid")}>← Back to Hub</button>
-              </div>
+            {/* VAULT */}
+            {activePanel === "vault" && (
+              connected ? (
+                <div className="card">
+                  <h3>Your Wallet</h3>
+                  <p>JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong></p>
+                  <p style={{ opacity: .85 }}>Recent activity and positions would appear here.</p>
+                </div>
+              ) : (
+                <div className="card">
+                  <h3>Vault</h3>
+                  <p>Connect to view balances and recent activity.</p>
+                  <ConnectButton className="button gold" />
+                </div>
+              )
             )}
 
-            {connected && (activePanel === "payments" || activePanel === "loans" || activePanel === "support") && (
+            {/* PAYMENTS / LOANS / SUPPORT */}
+            {["payments", "loans", "support"].includes(activePanel) && (
               <div className="card">
                 <h3>{panelTitle}</h3>
-                <p>Coming soon.</p>
-                <button className="button ghost" onClick={() => setActivePanel("grid")}>← Back to Hub</button>
+                <p>Coming soon. {activePanel !== "support" ? "Preview only." : "For help, join our Telegram or reach us on X."}</p>
+                {activePanel === "support" && (
+                  <div className="chip-row" style={{ marginTop: 10 }}>
+                    <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">Telegram</a>
+                    <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">X</a>
+                  </div>
+                )}
               </div>
             )}
           </div>
