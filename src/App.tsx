@@ -1,12 +1,15 @@
 // src/App.tsx
-import { useEffect, useMemo, useState, PropsWithChildren } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { PropsWithChildren } from "react"; // ✅ type-only import fixes TS1484
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 
-import { clusterApiUrl } from "@solana/web3.js";
-import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react";
+import { clusterApiUrl, type Cluster } from "@solana/web3.js";
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
-// Wallet adapters
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base"; // ✅ use enum, not string
+
+// Adapters
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
 import { GlowWalletAdapter } from "@solana/wallet-adapter-glow";
@@ -14,53 +17,55 @@ import { BackpackWalletAdapter } from "@solana/wallet-adapter-backpack";
 import { LedgerWalletAdapter } from "@solana/wallet-adapter-ledger";
 import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect";
 
-// Wallet modal base styles
 import "@solana/wallet-adapter-react-ui/styles.css";
 
+import { useWallet } from "@solana/wallet-adapter-react";
 import Landing from "./pages/Landing";
 
 /* ------------------------ Solana Providers ------------------------ */
 function SolanaProviders({ children }: PropsWithChildren) {
-  const network = "mainnet-beta";
+  // Adapter network enum (fixes TS2322)
+  const network: WalletAdapterNetwork = WalletAdapterNetwork.Mainnet;
+
+  // Cluster string for RPC URL (clusterApiUrl wants 'mainnet-beta' | 'devnet' | 'testnet')
+  const cluster: Cluster = "mainnet-beta";
 
   const endpoint = useMemo(
     () =>
-      import.meta.env.VITE_SOLANA_RPC ||
-      (window as any).__SOLANA_RPC_ENDPOINT__ ||
-      clusterApiUrl(network),
-    [network]
+      (window as any).__SOLANA_RPC_ENDPOINT__ ??
+      import.meta.env.VITE_SOLANA_RPC ??
+      clusterApiUrl(cluster),
+    [cluster]
   );
 
   const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
-  const SITE_URL = import.meta.env.VITE_SITE_URL || "https://www.jalsol.com";
-  const SITE_ICON = import.meta.env.VITE_SITE_ICON || `${SITE_URL}/icon.png`;
 
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
-      new SolflareWalletAdapter({ network }),
+      new SolflareWalletAdapter({ network }), // ✅ expects WalletAdapterNetwork
       new GlowWalletAdapter(),
       new BackpackWalletAdapter(),
       new LedgerWalletAdapter(),
       ...(WC_PROJECT_ID
         ? [
             new WalletConnectWalletAdapter({
-              network,
+              network, // ✅ enum
               options: {
                 projectId: WC_PROJECT_ID,
                 relayUrl: "wss://relay.walletconnect.com",
                 metadata: {
                   name: "JAL/SOL",
                   description: "JAL/SOL dApp",
-                  url: SITE_URL,
-                  icons: [SITE_ICON],
+                  url: "https://www.jalsol.com",
+                  icons: ["https://www.jalsol.com/icon.png"],
                 },
               },
             }),
           ]
         : []),
     ],
-    [network, WC_PROJECT_ID, SITE_URL, SITE_ICON]
+    [network, WC_PROJECT_ID]
   );
 
   return (
@@ -93,7 +98,6 @@ function HeaderView({
   return (
     <header className="site-header">
       <div className="header-inner">
-        {/* Left: socials */}
         <div className="social-links" aria-label="Social Links">
           <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
             <img src="/icons/X.png" alt="" />
@@ -106,12 +110,10 @@ function HeaderView({
           </a>
         </div>
 
-        {/* Center: logo (acts as Home button) */}
         <NavLink to="/" aria-label="Home">
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
         </NavLink>
 
-        {/* Right: hamburger */}
         <button
           className={`hamburger ${isOpen ? "is-open" : ""}`}
           onClick={onMenu}
