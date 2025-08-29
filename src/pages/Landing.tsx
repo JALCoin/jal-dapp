@@ -294,13 +294,22 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   }, [connected, publicKey, fetchBalances]);
 
   // Also refresh immediately when adapter emits "connect"
-  useEffect(() => {
-    const a = wallet?.adapter;
-    if (!a) return;
-    const onConnectBalances = () => void fetchBalances();
-    a.on("connect", onConnectBalances);
-    return () => a.off("connect", onConnectBalances);
-  }, [wallet, fetchBalances]);
+useEffect(() => {
+  const adapter = wallet?.adapter;
+  if (!adapter) return; // return void (undefined) if no adapter
+
+  const onConnectBalances = () => { void fetchBalances(); };
+  adapter.on("connect", onConnectBalances);
+
+  return () => {
+    // ensure cleanup returns void
+    try {
+      adapter.off("connect", onConnectBalances);
+    } catch {
+      /* no-op */
+    }
+  };
+}, [wallet, fetchBalances]);
 
   const fmt = (n: number | null, digits = 4) =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
