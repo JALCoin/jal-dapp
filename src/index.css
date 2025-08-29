@@ -507,3 +507,11 @@ body[data-hub-open="true"]{ overflow: hidden; }
 
 .swap-embed-hint{ margin-top:10px; opacity:.85; font-size:.9rem; }
 .swap-embed-hint a{ text-decoration: underline; }
+/* ---- Tweaks for balance tiles ---- */
+.balance-amount{ font-variant-numeric: tabular-nums; letter-spacing:.01em }
+.balance-card.loading .balance-amount{ opacity:.65 }
+.balance-card.error .balance-amount{ color:#f39; text-shadow:0 0 10px rgba(255,0,120,.25) }
+
+/* Make top summary tiles match screenshot spacing a bit tighter */
+.balance-row{ gap:16px }
+.balance-card{ padding:18px 20px }
