@@ -6,8 +6,12 @@ import JupiterSwapEmbed from "../components/JupiterSwapEmbed";
 
 type Props = { inHub?: boolean };
 
-// (optional) direct link that matches the embedded widget config
-const JUP_URL = `https://terminal.jup.ag/#/swap?inputMint=So11111111111111111111111111111111111111112&outputMint=${encodeURIComponent(
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+
+// Direct link that mirrors the embedded widget config (handy fallback/open-in-new-tab)
+const JUP_URL = `https://terminal.jup.ag/#/swap?inputMint=${encodeURIComponent(
+  SOL_MINT
+)}&outputMint=${encodeURIComponent(
   JAL_MINT
 )}&theme=dark&version=5&fixedInputMint=true&fixedOutputMint=true`;
 
@@ -53,7 +57,7 @@ export default function Jal({ inHub = false }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 900);
     } catch {
-      /* silent */
+      /* no-op */
     }
   };
 
@@ -140,8 +144,8 @@ export default function Jal({ inHub = false }: Props) {
             </a>
           </div>
 
-          {/* Embedded Jupiter Terminal (routes through Raydium when optimal) */}
-          <JupiterSwapEmbed height={700} />
+          {/* Embedded Jupiter Terminal (will choose Raydium route when optimal) */}
+          <JupiterSwapEmbed inputMint={SOL_MINT} outputMint={JAL_MINT} height={700} />
         </section>
       )}
     </>
