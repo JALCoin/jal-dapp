@@ -1,45 +1,42 @@
-import React from "react";
-import { JAL_MINT } from "../config/tokens";
-
-// SOL mint (native-wrapped)
-const SOL_MINT = "So11111111111111111111111111111111111111112";
+// src/components/JupiterSwapEmbed.tsx
+import { useEffect, useRef } from "react";
 
 type Props = {
-  inputMint?: string;
-  outputMint?: string;
-  className?: string;
-  height?: number | string;
+  inputMint?: string;                 // default: SOL
+  outputMint: string;                 // the token to receive (e.g., JAL)
+  onLoaded?: () => void;
 };
 
 export default function JupiterSwapEmbed({
-  inputMint = SOL_MINT,
-  outputMint = JAL_MINT,
-  className,
-  height = 700,
+  inputMint = "So11111111111111111111111111111111111111112",
+  outputMint,
+  onLoaded,
 }: Props) {
-  const src = `https://terminal.jup.ag/#/swap?inputMint=${encodeURIComponent(
-    inputMint
-  )}&outputMint=${encodeURIComponent(
-    outputMint
-  )}&theme=dark&version=5&fixedInputMint=true&fixedOutputMint=true`;
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  const url = new URL("https://jup.ag/swap");
+  url.searchParams.set("inputMint", inputMint);
+  url.searchParams.set("outputMint", outputMint);
+  url.searchParams.set("theme", "dark");
+  url.searchParams.set("preferLegacyRoute", "true");
+
+  useEffect(() => {
+    const el = iframeRef.current;
+    if (!el) return;
+    const handle = () => onLoaded?.();
+    el.addEventListener("load", handle);
+    return () => el.removeEventListener("load", handle);
+  }, [onLoaded]);
 
   return (
-    <div className={className ?? "swap-embed-wrap"}>
-      <iframe
-        title="Swap SOL → JAL"
-        src={src}
-        style={{
-          width: "100%",
-          height: typeof height === "number" ? `${height}px` : height,
-          border: 0,
-          borderRadius: 12,
-          overflow: "hidden",
-        }}
-        // minimal, permissive enough for the widget
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-        allow="clipboard-read; clipboard-write; web-share"
-        loading="lazy"
-      />
-    </div>
+    <iframe
+      ref={iframeRef}
+      title="Swap"
+      src={url.toString()}
+      className="modal-iframe"
+      loading="eager"
+      referrerPolicy="no-referrer"
+      allow="clipboard-read; clipboard-write; fullscreen"
+    />
   );
 }
