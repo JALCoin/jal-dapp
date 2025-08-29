@@ -10,8 +10,7 @@ import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-
 import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
-// NEW: swap button + JAL mint config
-import RaydiumSwapButton from "../components/RaydiumSwapButton";
+// Keep JAL mint for balance reads
 import { JAL_MINT } from "../config/tokens";
 
 const Jal = lazy(() => import("./Jal"));
@@ -21,7 +20,7 @@ type TileKey = Exclude<Panel, "none" | "grid">;
 
 type LandingProps = { initialPanel?: Panel };
 
-const PHANTOM_WALLET = "Phantom" as WalletName; // kept for possible future deep-link use
+const PHANTOM_WALLET = "Phantom" as WalletName;
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
@@ -41,7 +40,6 @@ function DisconnectButton({ className }: { className?: string }) {
   );
 }
 
-/** Use Wallet Adapter’s official multi-wallet button (proper wallet connect) */
 function ConnectButton({ className }: { className?: string }) {
   return <WalletMultiButton className={className ?? "landing-wallet"} />;
 }
@@ -56,7 +54,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [merging, setMerging] = useState(false);
   const timerRef = useRef<number | null>(null);
 
-  // Refs
   const hubBodyRef = useRef<HTMLDivElement | null>(null);
   const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
@@ -191,14 +188,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- Overlay controls ---------- */
   const overlayOpen = activePanel !== "none" && activePanel !== "grid";
 
-  // Lock background scroll while overlay is open
   useEffect(() => {
     if (overlayOpen) document.body.setAttribute("data-hub-open", "true");
     else document.body.removeAttribute("data-hub-open");
     return () => document.body.removeAttribute("data-hub-open");
   }, [overlayOpen]);
 
-  // ESC closes overlay
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && overlayOpen) setActivePanel("none");
@@ -277,11 +272,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   ============================================================ */
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
-      {/* ===== Banking-style landing (no JALSOL heading) ===== */}
+      {/* ===== Banking-style landing ===== */}
       <section className="bank-landing container" aria-label="Overview">
         <div className="bank-status">{connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}</div>
 
-        {/* Balances: JAL & SOL */}
         <div className="balance-row">
           <div className="balance-card">
             <div className="balance-amount">{fmt(jal)} JAL</div>
@@ -293,7 +287,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           </div>
         </div>
 
-        {/* 2×2 cards */}
         <div className="feature-grid">
           <button className="feature-card" onClick={() => openPanel("jal")} aria-label="Open JAL">
             <h4>JAL</h4><div className="title">About &amp; Swap</div><div className="icon">➕</div>
@@ -308,7 +301,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <h4>Hub</h4><div className="title">All Panels</div><div className="icon">🔗</div>
           </button>
 
-          {/* Wide featured → chips */}
           <div className="feature-card feature-wide" role="group" aria-label="Get Started">
             <div style={{ display: "grid", gap: 6 }}>
               <div style={{ opacity: 0.85 }}>Get Started</div>
@@ -327,7 +319,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         {!connected && <ConnectButton />}
       </section>
 
-      {/* ===== Backdrop when overlay is open ===== */}
       {overlayOpen && (
         <button
           className="hub-overlay"
@@ -336,7 +327,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         />
       )}
 
-      {/* ===== Embedded Hub (becomes overlay when a panel is open) ===== */}
       <section
         id="hub-panel"
         className={`hub-panel hub-panel--fit ${overlayOpen ? "hub-panel--overlay" : "hub-preview"}`}
@@ -347,11 +337,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       >
         <div className="hub-panel-top">
           <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>{panelTitle}</h2>
-          {connected ? (
-            <DisconnectButton className="wallet-disconnect-btn" />
-          ) : (
-            <ConnectButton className="wallet-disconnect-btn" />
-          )}
+          {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
@@ -421,45 +407,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {/* JAL (About & Swap) */}
+            {/* JAL (About & embedded Swap handled by <Jal />) */}
             {activePanel === "jal" && (
-              connected ? (
-                <div className="in-hub">
-                  {/* Raydium swap + quick links */}
-                  <div className="chip-row" style={{ marginBottom: 12 }}>
-                    <RaydiumSwapButton className="button gold" />
-                    <button
-                      className="chip"
-                      onClick={() => navigator.clipboard.writeText(JAL_MINT)}
-                      title="Copy JAL mint"
-                    >
-                      Copy Mint
-                    </button>
-                    <a
-                      className="chip"
-                      href={`https://solscan.io/token/${JAL_MINT}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="View on Solscan"
-                    >
-                      View on Explorer ↗
-                    </a>
-                  </div>
-
-                  <Suspense fallback={<div className="card">Loading JAL…</div>}>
-                    <Jal inHub />
-                  </Suspense>
-                </div>
-              ) : (
-                <div className="card">
-                  <h3>JAL</h3>
-                  <p>Learn about JAL and swap when your wallet is connected.</p>
-                  <div className="chip-row" style={{ marginTop: 10 }}>
-                    <RaydiumSwapButton className="button gold" />
-                    <ConnectButton className="button" />
-                  </div>
-                </div>
-              )
+              <div className="in-hub">
+                <Suspense fallback={<div className="card">Loading JAL…</div>}>
+                  <Jal inHub />
+                </Suspense>
+              </div>
             )}
 
             {/* VAULT */}

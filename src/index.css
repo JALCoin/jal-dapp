@@ -438,4 +438,6 @@ main[role="main"]{
 
 /* lock background scroll when hub is open */
 body[data-hub-open="true"]{ overflow: hidden; }
+/* in your index.css */
+.swap-embed-wrap { width: 100%; min-height: 700px; }
 

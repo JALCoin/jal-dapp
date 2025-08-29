@@ -1,14 +1,15 @@
 // src/pages/Jal.tsx
-import type React from "react"; // for React.MouseEvent typing
-import { useEffect, useMemo, useRef, useState, useId } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState, useId } from "react";
 import { useSearchParams } from "react-router-dom";
+import { JAL_MINT } from "../config/tokens";
+import JupiterSwapEmbed from "../components/JupiterSwapEmbed";
 
 type Props = { inHub?: boolean };
 
-const JAL_MINT = "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
-const RAYDIUM_URL =
-  "https://raydium.io/swap/?inputMint=sol&outputMint=9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
+// (optional) direct link that matches the embedded widget config
+const JUP_URL = `https://terminal.jup.ag/#/swap?inputMint=So11111111111111111111111111111111111111112&outputMint=${encodeURIComponent(
+  JAL_MINT
+)}&theme=dark&version=5&fixedInputMint=true&fixedOutputMint=true`;
 
 export default function Jal({ inHub = false }: Props) {
   const [swapOpen, setSwapOpen] = useState(false);
@@ -17,18 +18,17 @@ export default function Jal({ inHub = false }: Props) {
 
   // a11y IDs
   const jalTitleId = useId();
-  const swapDialogId = useId();
-  const swapTitleId = useId();
-  const swapDescId = useId();
   const copiedRegionId = useId();
+  const swapRegionId = useId();
+  const swapTitleId = useId();
 
-  // Deep-link: ?swap=1
+  // Deep-link: ?swap=1 opens the embedded swap
   useEffect(() => {
     if (params.get("swap") === "1") setSwapOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync URL param
+  // Keep URL param in sync
   useEffect(() => {
     const next = new URLSearchParams(params);
     if (swapOpen) next.set("swap", "1");
@@ -37,7 +37,7 @@ export default function Jal({ inHub = false }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [swapOpen]);
 
-  // Short mint
+  // Pretty mint
   const shortMint = useMemo(
     () =>
       JAL_MINT.length > 12
@@ -46,92 +46,15 @@ export default function Jal({ inHub = false }: Props) {
     []
   );
 
-  // Copy
+  // Copy helpers
   const copyMint = async () => {
     try {
       await navigator.clipboard.writeText(JAL_MINT);
       setCopied(true);
       setTimeout(() => setCopied(false), 900);
     } catch {
-      /* no-op */
+      /* silent */
     }
-  };
-
-  // ----- Modal focus management -----
-  const modalRef = useRef<HTMLDivElement | null>(null);
-  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
-  const lastFocusedRef = useRef<HTMLElement | null>(null);
-
-  const openSwap = () => {
-    lastFocusedRef.current = (document.activeElement as HTMLElement) ?? null;
-    setSwapOpen(true);
-  };
-  const closeSwap = () => {
-    setSwapOpen(false);
-    requestAnimationFrame(() => lastFocusedRef.current?.focus?.());
-  };
-
-  useEffect(() => {
-    if (!swapOpen) return;
-
-    closeBtnRef.current?.focus();
-
-    const getFocusables = (root: HTMLElement) =>
-      Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'a[href], button, textarea, input, select, iframe, [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter(
-        (el) =>
-          !el.hasAttribute("disabled") &&
-          el.getAttribute("aria-hidden") !== "true" &&
-          el.tabIndex !== -1
-      );
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        closeSwap();
-        return;
-      }
-      if (e.key !== "Tab") return;
-
-      const root = modalRef.current;
-      if (!root) return;
-
-      const focusables = getFocusables(root);
-      if (!focusables.length) return;
-
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          last.focus();
-          e.preventDefault();
-        }
-      } else {
-        if (document.activeElement === last) {
-          first.focus();
-          e.preventDefault();
-        }
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [swapOpen]);
-
-  // Backdrop click
-  const onOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) closeSwap();
   };
 
   // ---------- Shared content ----------
@@ -177,92 +100,59 @@ export default function Jal({ inHub = false }: Props) {
         {copied ? "Copied!" : ""}
       </div>
 
-      {/* CTA */}
-      <div className="jal-cta">
-        <button
-          type="button"
-          className="jal-btn jal-btn--primary"
-          onClick={openSwap}
-          aria-haspopup="dialog"
-          aria-controls={swapDialogId}
-        >
-          Open SOL ⇄ JAL Swap
-        </button>
+      {/* Swap section (embedded) */}
+      <div className="jal-cta" style={{ marginTop: 12 }}>
+        {!swapOpen ? (
+          <button
+            type="button"
+            className="jal-btn jal-btn--primary"
+            onClick={() => setSwapOpen(true)}
+            aria-expanded={swapOpen}
+            aria-controls={swapRegionId}
+          >
+            Open SOL ⇄ JAL Swap
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="jal-btn"
+            onClick={() => setSwapOpen(false)}
+            aria-expanded={swapOpen}
+            aria-controls={swapRegionId}
+          >
+            Close Swap
+          </button>
+        )}
       </div>
+
+      {swapOpen && (
+        <section
+          id={swapRegionId}
+          className="card swap-embed-card"
+          role="region"
+          aria-labelledby={swapTitleId}
+          style={{ marginTop: 12 }}
+        >
+          <div className="swap-embed-header">
+            <h3 id={swapTitleId} style={{ margin: 0 }}>Swap SOL ⇄ JAL</h3>
+            <a className="jal-link" href={JUP_URL} target="_blank" rel="noreferrer">
+              Open in new tab ↗
+            </a>
+          </div>
+
+          {/* Embedded Jupiter Terminal (routes through Raydium when optimal) */}
+          <JupiterSwapEmbed height={700} />
+        </section>
+      )}
     </>
   );
-
-  // ---------- Modal ----------
-  const Modal = swapOpen
-    ? createPortal(
-        <>
-          <div className="modal-overlay" onClick={onOverlayClick} />
-          <div
-            className="modal-host"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={swapTitleId}
-            aria-describedby={swapDescId}
-            id={swapDialogId}
-          >
-            <div ref={modalRef} className="modal" role="document">
-              {/* Header */}
-              <div className="modal-header">
-                <div className="modal-spacer" />
-                <div className="modal-title" id={swapTitleId}>
-                  <div className="modal-title-main">SOL ⇄ JAL Swap</div>
-                  <div className="modal-title-sub" id={swapDescId}>
-                    Powered by Raydium
-                  </div>
-                </div>
-                <button
-                  ref={closeBtnRef}
-                  type="button"
-                  className="modal-close"
-                  onClick={closeSwap}
-                  aria-label="Close swap dialog"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Swap iframe */}
-              <iframe
-                title="Raydium Swap"
-                src={RAYDIUM_URL}
-                className="modal-iframe"
-                loading="eager"
-                referrerPolicy="no-referrer"
-                allow="clipboard-read; clipboard-write; fullscreen"
-              />
-
-              {/* Footer link */}
-              <div className="modal-footer">
-                <a
-                  className="jal-link"
-                  href={RAYDIUM_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open on Raydium
-                </a>
-              </div>
-            </div>
-          </div>
-        </>,
-        document.body
-      )
-    : null;
 
   // ---------- Render ----------
   if (inHub) {
     return (
-      <>
-        <section className="hub-content in-hub" aria-labelledby={jalTitleId}>
-          {Content}
-        </section>
-        {Modal}
-      </>
+      <section className="hub-content in-hub" aria-labelledby={jalTitleId}>
+        {Content}
+      </section>
     );
   }
 
@@ -271,7 +161,6 @@ export default function Jal({ inHub = false }: Props) {
       <section className="jal-panel" aria-labelledby={jalTitleId}>
         {Content}
       </section>
-      {Modal}
     </main>
   );
 }
