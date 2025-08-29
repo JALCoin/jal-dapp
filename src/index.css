@@ -392,3 +392,50 @@ main[role="main"]{
 .tabbar a.active{ color:var(--gold); text-shadow:var(--glow-gold) }
 .tabbar .tab-icon{ width:22px; height:22px; opacity:.95 }
 
+/* --- Header logo acts as Home button --- */
+.logo.header-logo { cursor: pointer; }
+.logo.header-logo:hover { transform: translateY(-1px); filter: drop-shadow(0 0 12px rgba(255,255,255,.9)); transition: transform 140ms; }
+
+/* Hide center text nav (we’ll use the logo only) */
+.main-nav { display: none !important; }
+
+/* Banking chips in the featured row */
+.chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+.chip {
+  display:inline-flex; align-items:center; gap:8px; padding:.45rem .7rem;
+  border:1px solid var(--stroke); border-radius:999px;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  font-size:.9rem; opacity:.95;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.chip:hover { transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan); }
+
+/* Balance labels tighter */
+.balance-label { opacity:.85; margin-top:4px; }
+
+/* Optional: right-align the “wallet connected” status line in bank top row */
+.bank-status { text-align:right; opacity:.9; }
+/* --- Hub as overlay modal --- */
+.hub-overlay{
+  position: fixed; inset: 0; z-index: 48;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+  animation: overlayIn var(--t-slow) both;
+}
+
+.hub-panel--overlay{
+  position: fixed;
+  z-index: 49;
+  left: 50%; transform: translateX(-50%);
+  top: 88px;                 /* room for sticky header */
+  bottom: 74px;              /* room for bottom tab bar */
+  width: min(100% - 2rem, 1100px);
+}
+
+@media (max-width: 640px){
+  .hub-panel--overlay{ top: 72px; bottom: 72px; }
+}
+
+/* lock background scroll when hub is open */
+body[data-hub-open="true"]{ overflow: hidden; }
+

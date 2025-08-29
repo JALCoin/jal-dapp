@@ -214,6 +214,25 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [connected, connecting, wallet, select, connect]);
 
+  /* ---------- Overlay controls ---------- */
+  const overlayOpen = activePanel !== "none";
+
+  // Lock background scroll while overlay is open
+  useEffect(() => {
+    if (overlayOpen) document.body.setAttribute("data-hub-open", "true");
+    else document.body.removeAttribute("data-hub-open");
+    return () => document.body.removeAttribute("data-hub-open");
+  }, [overlayOpen]);
+
+  // ESC closes overlay
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && overlayOpen) setActivePanel("none");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [overlayOpen]);
+
   /* ---------- Open helpers ---------- */
   const openPanel = (id: Panel) => {
     setActivePanel(id);
@@ -313,7 +332,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <h4>Hub</h4><div className="title">All Panels</div><div className="icon">🔗</div>
           </button>
 
-        {/* Wide featured → chips */}
+          {/* Wide featured → chips */}
           <div className="feature-card feature-wide" role="group" aria-label="Get Started">
             <div style={{ display: "grid", gap: 6 }}>
               <div style={{ opacity: 0.85 }}>Get Started</div>
@@ -332,12 +351,21 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         {!connected && <ConnectButton />}
       </section>
 
-      {/* ===== Embedded Hub ===== */}
+      {/* ===== Backdrop when overlay is open ===== */}
+      {overlayOpen && (
+        <button
+          className="hub-overlay"
+          aria-label="Close panel"
+          onClick={() => setActivePanel("none")}
+        />
+      )}
+
+      {/* ===== Embedded Hub (becomes overlay when a panel is open) ===== */}
       <section
         id="hub-panel"
-        className={`hub-panel hub-panel--fit ${activePanel === "none" ? "hub-preview" : ""}`}
-        role={activePanel === "none" ? "region" : "dialog"}
-        aria-modal={activePanel === "none" ? undefined : true}
+        className={`hub-panel hub-panel--fit ${overlayOpen ? "hub-panel--overlay" : "hub-preview"}`}
+        role={overlayOpen ? "dialog" : "region"}
+        aria-modal={overlayOpen || undefined}
         aria-label="JAL/SOL Hub"
         ref={panelRef as any}
       >
