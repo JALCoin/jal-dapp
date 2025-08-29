@@ -1,7 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import type { WalletName } from "@solana/wallet-adapter-base";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -13,7 +12,6 @@ type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" |
 type TileKey = Exclude<Panel, "none" | "grid">;
 type LandingProps = { initialPanel?: Panel };
 
-const PHANTOM_WALLET = "Phantom" as WalletName;
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
@@ -31,7 +29,7 @@ function ConnectButton({ className }: { className?: string }) {
 }
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
-  const { publicKey, connected, connecting, wallet, select, connect } = useWallet();
+  const { publicKey, connected, wallet } = useWallet(); // trimmed: no unused vars
   const { connection } = useConnection();
   const { setVisible } = useWalletModal();
   const [params, setParams] = useSearchParams();
@@ -104,12 +102,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => { wallet.adapter.off("connect", onConnect); if (timerRef.current) clearTimeout(timerRef.current); timerRef.current = null; };
   }, [wallet, reducedMotion]);
 
-  const wasConnected = useRef(false);
-  useEffect(() => {
-    if (connected && publicKey && !wasConnected.current) setActivePanel((p) => (p === "none" ? "grid" : p));
-    wasConnected.current = connected;
-  }, [connected, publicKey]);
-
   /* ---------- wallet modal visibility flag ---------- */
   const setWalletFlag = useCallback((on: boolean) => {
     const root = document.body;
@@ -138,6 +130,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   /* ---------- open helpers ---------- */
   const requiresWallet: Panel[] = ["jal", "vault", "payments", "loans"];
+  const { setVisible } = useWalletModal();
   const openPanel = (id: Panel) => {
     setActivePanel(id);
     if (!connected && requiresWallet.includes(id)) setVisible(true);
@@ -152,7 +145,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     activePanel === "loans" ? "Loans" :
     activePanel === "support" ? "Support" : "Welcome";
 
-  /* ---------- LIVE BALANCES: JAL (SPL) + SOL ---------- */
+  /* ---------- LIVE BALANCES ---------- */
   const [sol, setSol] = useState<number | null>(null);
   const [jal, setJal] = useState<number | null>(null);
   const [balLoading, setBalLoading] = useState(false);
@@ -208,7 +201,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const fmt = (n: number | null, digits = 4) =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
 
-  /* =========================================================== */
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
       <section className="bank-landing container" aria-label="Overview">
