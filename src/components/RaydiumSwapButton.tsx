@@ -1,9 +1,9 @@
+// src/components/RaydiumSwapButton.tsx
 import { useMemo } from "react";
-import { JAL_MINT } from "@/config/tokens";
+// ❌ was: import { JAL_MINT } from '@/config/tokens';
+import { JAL_MINT } from "../config/tokens";  // <= relative path
 
-/** Raydium swap URL helper */
 function raydiumSwapUrl(outputMint: string) {
-  // Raydium expects `inputCurrency=sol` for SOL -> token
   return `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(
     outputMint
   )}&fixed=in`;
@@ -20,12 +20,8 @@ export default function RaydiumSwapButton({
 }) {
   const url = useMemo(() => raydiumSwapUrl(mint), [mint]);
 
-  // Using a plain anchor keeps browsers from blocking it.
-  // We also add a tiny JS fallback in case target=_blank is disabled.
-  const onClick: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
-    // if a popup blocker prevents tab creation, fall back to same-tab navigation
+  const onClick = () => {
     setTimeout(() => {
-      // if document still focused and no new tab opened, just navigate
       if (!document.hidden) window.location.href = url;
     }, 100);
   };
