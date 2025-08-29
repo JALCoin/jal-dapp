@@ -8,9 +8,7 @@ type Props = { inHub?: boolean };
 
 // Raydium expects `sol` for native SOL (not the wSOL mint)
 const SOL_PARAM = "sol";
-const RAY_URL = `https://raydium.io/swap/?inputMint=${SOL_PARAM}&outputMint=${encodeURIComponent(
-  JAL_MINT
-)}`;
+const RAY_URL = `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(JAL_MINT)}&fixed=in`;
 
 export default function Jal({ inHub = false }: Props) {
   const [swapOpen, setSwapOpen] = useState(false);

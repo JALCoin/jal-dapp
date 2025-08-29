@@ -1,13 +1,18 @@
 // src/App.tsx
-import { useEffect, useMemo, useState } from "react";
-import type { PropsWithChildren } from "react"; // ✅ type-only import fixes TS1484
+import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 
 import { clusterApiUrl, type Cluster } from "@solana/web3.js";
-import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
-import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base"; // ✅ use enum, not string
+import {
+  ConnectionProvider,
+  WalletProvider,
+  useWallet,
+} from "@solana/wallet-adapter-react";
+import {
+  WalletModalProvider,
+  WalletMultiButton,
+} from "@solana/wallet-adapter-react-ui";
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 
 // Adapters
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
@@ -19,15 +24,11 @@ import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect
 
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-import { useWallet } from "@solana/wallet-adapter-react";
 import Landing from "./pages/Landing";
 
 /* ------------------------ Solana Providers ------------------------ */
 function SolanaProviders({ children }: PropsWithChildren) {
-  // Adapter network enum (fixes TS2322)
   const network: WalletAdapterNetwork = WalletAdapterNetwork.Mainnet;
-
-  // Cluster string for RPC URL (clusterApiUrl wants 'mainnet-beta' | 'devnet' | 'testnet')
   const cluster: Cluster = "mainnet-beta";
 
   const endpoint = useMemo(
@@ -38,19 +39,21 @@ function SolanaProviders({ children }: PropsWithChildren) {
     [cluster]
   );
 
-  const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
+  const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as
+    | string
+    | undefined;
 
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
-      new SolflareWalletAdapter({ network }), // ✅ expects WalletAdapterNetwork
+      new SolflareWalletAdapter({ network }),
       new GlowWalletAdapter(),
       new BackpackWalletAdapter(),
       new LedgerWalletAdapter(),
       ...(WC_PROJECT_ID
         ? [
             new WalletConnectWalletAdapter({
-              network, // ✅ enum
+              network,
               options: {
                 projectId: WC_PROJECT_ID,
                 relayUrl: "wss://relay.walletconnect.com",
@@ -82,7 +85,10 @@ function DisconnectBtn() {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
   return (
-    <button className="wallet-disconnect-btn" onClick={() => disconnect()}>
+    <button
+      className="wallet-disconnect-btn"
+      onClick={() => disconnect().catch(() => {})}
+    >
       Disconnect
     </button>
   );
@@ -95,18 +101,18 @@ function HeaderView({
   onMenu: () => void;
   isOpen: boolean;
 }) {
+  const label = isOpen ? "Close menu" : "Open menu";
   return (
     <header className="site-header">
       <div className="header-inner">
         <div className="social-links" aria-label="Social Links">
-          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <a
+            href="https://x.com/JAL358"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="X"
+          >
             <img src="/icons/X.png" alt="" />
-          </a>
-          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
-            <img src="/icons/Telegram.png" alt="" />
-          </a>
-          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-            <img src="/icons/TikTok.png" alt="" />
           </a>
         </div>
 
@@ -117,25 +123,41 @@ function HeaderView({
         <button
           className={`hamburger ${isOpen ? "is-open" : ""}`}
           onClick={onMenu}
-          aria-label="Open menu"
+          aria-label={label}
           aria-haspopup="true"
           aria-expanded={isOpen}
         >
-          <span></span><span></span><span></span>
+          <span></span>
+          <span></span>
+          <span></span>
         </button>
       </div>
     </header>
   );
 }
 
-function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
+function SidebarView({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   if (!open) return null;
   return (
     <>
-      <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
+      <button
+        className="sidebar-overlay"
+        aria-label="Close menu overlay"
+        onClick={onClose}
+      />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
         <nav>
-          <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+          <NavLink
+            to="/"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
             Home
           </NavLink>
         </nav>
@@ -147,7 +169,7 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
   );
 }
 
-/* Bottom tab bar (only STORE + SUPPORT) */
+/* Bottom tab bar (STORE + SUPPORT) */
 function TabBar() {
   const location = useLocation();
   const base = location.pathname || "/";
@@ -163,16 +185,17 @@ function TabBar() {
     if (!panel) return !p || p === "none";
     return p === panel;
   };
+
   return (
     <nav className="tabbar" aria-label="App tabs">
       <NavLink to={link("shop")} className={() => (isActive("shop") ? "active" : "")}>
         <div className="tab-icon">🏬</div>
         STORE
       </NavLink>
-      <a href={link("support")} className={isActive("support") ? "active" : ""}>
+      <NavLink to={link("support")} className={() => (isActive("support") ? "active" : "")}>
         <div className="tab-icon">👤</div>
         SUPPORT
-      </a>
+      </NavLink>
     </nav>
   );
 }
@@ -181,16 +204,26 @@ function TabBar() {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // ESC closes menu
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Lock page scroll when the sidebar is open
+  useEffect(() => {
+    if (menuOpen) document.body.setAttribute("data-menu-open", "true");
+    else document.body.removeAttribute("data-menu-open");
+    return () => document.body.removeAttribute("data-menu-open");
+  }, [menuOpen]);
+
   return (
     <SolanaProviders>
       <BrowserRouter>
-        <HeaderView onMenu={() => setMenuOpen(true)} isOpen={menuOpen} />
+        <HeaderView onMenu={() => setMenuOpen((v) => !v)} isOpen={menuOpen} />
         <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
         <main role="main">
           <Routes>
