@@ -1,4 +1,13 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+// src/pages/Landing.tsx
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -15,11 +24,16 @@ type LandingProps = { initialPanel?: Panel };
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
+/* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
   return (
-    <button type="button" className={className ?? "wallet-disconnect-btn"} onClick={() => disconnect().catch(() => {})}>
+    <button
+      type="button"
+      className={className ?? "wallet-disconnect-btn"}
+      onClick={() => disconnect().catch(() => {})}
+    >
       Disconnect
     </button>
   );
@@ -28,8 +42,9 @@ function ConnectButton({ className }: { className?: string }) {
   return <WalletMultiButton className={className ?? "landing-wallet"} />;
 }
 
+/* ---------- Page ---------- */
 export default function Landing({ initialPanel = "none" }: LandingProps) {
-  const { publicKey, connected, wallet } = useWallet(); // trimmed: no unused vars
+  const { publicKey, connected, wallet } = useWallet();
   const { connection } = useConnection();
   const { setVisible } = useWalletModal();
   const [params, setParams] = useSearchParams();
@@ -42,12 +57,17 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
 
-  const reducedMotion = useMemo(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return false;
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  }, []);
+  const reducedMotion = useMemo(
+    () =>
+      typeof window !== "undefined" && window.matchMedia
+        ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        : false,
+    []
+  );
 
-  const tiles = useMemo<{ key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]>(
+  const tiles = useMemo<
+    { key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]
+  >(
     () => [
       { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
       { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
@@ -58,7 +78,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   /* ---------- preload gifs ---------- */
   useEffect(() => {
-    const imgs = tiles.map((t) => { const i = new Image(); i.decoding = "async"; i.loading = "eager"; i.src = t.gif; return i; });
+    const imgs = tiles.map((t) => {
+      const i = new Image();
+      i.decoding = "async";
+      i.loading = "eager";
+      i.src = t.gif;
+      return i;
+    });
     return () => imgs.forEach((i) => (i.src = ""));
   }, [tiles]);
 
@@ -67,11 +93,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
     const isPanel = (v: unknown): v is Panel =>
-      v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault" || v === "payments" || v === "loans" || v === "support";
+      v === "none" ||
+      v === "grid" ||
+      v === "shop" ||
+      v === "jal" ||
+      v === "vault" ||
+      v === "payments" ||
+      v === "loans" ||
+      v === "support";
+
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
       (fromSession && isPanel(fromSession) ? fromSession : null) ??
       initialPanel;
+
     setActivePanel(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -81,9 +116,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     sessionStorage.setItem("landing:lastPanel", activePanel);
     const urlPanel = params.get("panel");
     if (activePanel === "none") {
-      if (urlPanel) { params.delete("panel"); setParams(params, { replace: true }); }
+      if (urlPanel) {
+        params.delete("panel");
+        setParams(params, { replace: true });
+      }
     } else if (urlPanel !== activePanel) {
-      params.set("panel", activePanel); setParams(params, { replace: true });
+      params.set("panel", activePanel);
+      setParams(params, { replace: true });
     }
   }, [activePanel, params, setParams]);
 
@@ -96,23 +135,36 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       const delay = reducedMotion ? 0 : 350;
       timerRef.current = window.setTimeout(() => setMerging(false), delay);
       setActivePanel((p) => (p === "none" ? "grid" : p));
-      requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }));
+      requestAnimationFrame(() =>
+        panelRef.current?.scrollIntoView({
+          behavior: reducedMotion ? "auto" : "smooth",
+          block: "start",
+        })
+      );
     };
     wallet.adapter.on("connect", onConnect);
-    return () => { wallet.adapter.off("connect", onConnect); if (timerRef.current) clearTimeout(timerRef.current); timerRef.current = null; };
+    return () => {
+      wallet.adapter.off("connect", onConnect);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
   }, [wallet, reducedMotion]);
 
   /* ---------- wallet modal visibility flag ---------- */
   const setWalletFlag = useCallback((on: boolean) => {
     const root = document.body;
-    if (on) root.setAttribute("data-wallet-visible", "true"); else root.removeAttribute("data-wallet-visible");
+    if (on) root.setAttribute("data-wallet-visible", "true");
+    else root.removeAttribute("data-wallet-visible");
   }, []);
   useEffect(() => {
     const check = () => setWalletFlag(!!document.querySelector(WALLET_MODAL_SELECTORS));
     check();
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true });
-    return () => { obs.disconnect(); setWalletFlag(false); };
+    return () => {
+      obs.disconnect();
+      setWalletFlag(false);
+    };
   }, [setWalletFlag]);
 
   /* ---------- overlay controls ---------- */
@@ -123,20 +175,45 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => document.body.removeAttribute("data-hub-open");
   }, [overlayOpen]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && overlayOpen) setActivePanel("none"); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && overlayOpen) setActivePanel("none");
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [overlayOpen]);
 
-  /* ---------- open helpers ---------- */
+  /* ---------- Open helpers ---------- */
+  const requiresWallet: Panel[] = ["jal", "vault", "payments", "loans"];
+  const openPanel = useCallback(
+    (id: Panel) => {
+      setActivePanel(id);
+      if (!connected && requiresWallet.includes(id)) setVisible(true);
+      requestAnimationFrame(() =>
+        panelRef.current?.scrollIntoView({
+          behavior: reducedMotion ? "auto" : "smooth",
+          block: "start",
+        })
+      );
+    },
+    [connected, reducedMotion, setVisible]
+  );
+
   const panelTitle =
-    activePanel === "grid" ? "Hub" :
-    activePanel === "shop" ? "Shop" :
-    activePanel === "jal" ? "JAL" :
-    activePanel === "vault" ? "Vault" :
-    activePanel === "payments" ? "Payments" :
-    activePanel === "loans" ? "Loans" :
-    activePanel === "support" ? "Support" : "Welcome";
+    activePanel === "grid"
+      ? "Hub"
+      : activePanel === "shop"
+      ? "Shop"
+      : activePanel === "jal"
+      ? "JAL"
+      : activePanel === "vault"
+      ? "Vault"
+      : activePanel === "payments"
+      ? "Payments"
+      : activePanel === "loans"
+      ? "Loans"
+      : activePanel === "support"
+      ? "Support"
+      : "Welcome";
 
   /* ---------- LIVE BALANCES ---------- */
   const [sol, setSol] = useState<number | null>(null);
@@ -145,7 +222,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [balErr, setBalErr] = useState<string | null>(null);
 
   const fetchBalances = useCallback(async () => {
-    if (!publicKey || !connected) { setSol(null); setJal(null); return; }
+    if (!publicKey || !connected) {
+      setSol(null);
+      setJal(null);
+      return;
+    }
     setBalErr(null);
     setBalLoading(true);
     try {
@@ -157,7 +238,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       setBalErr("rpc");
     }
     try {
-      const resp = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID }, "confirmed");
+      const resp = await connection.getParsedTokenAccountsByOwner(
+        publicKey,
+        { programId: TOKEN_PROGRAM_ID },
+        "confirmed"
+      );
       const total = resp.value.reduce((sum, { account }) => {
         const info = account.data.parsed.info;
         if (info.mint !== JAL_MINT) return sum;
@@ -177,7 +262,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   }, [connection, connected, publicKey]);
 
   useEffect(() => {
-    if (!connected || !publicKey) { setSol(null); setJal(null); return; }
+    if (!connected || !publicKey) {
+      setSol(null);
+      setJal(null);
+      return;
+    }
     void fetchBalances();
     const poll = setInterval(fetchBalances, 15000);
     const subId = connection.onAccountChange(
@@ -194,13 +283,22 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const fmt = (n: number | null, digits = 4) =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
 
+  /* ===========================================================
+     Render
+  ============================================================ */
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+      {/* ===== Banking-style landing ===== */}
       <section className="bank-landing container" aria-label="Overview">
         <div className="bank-status">
           {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
           {connected && (
-            <button className="chip" style={{ marginLeft: 10 }} onClick={fetchBalances} aria-label="Refresh balances">
+            <button
+              className="chip"
+              style={{ marginLeft: 10 }}
+              onClick={fetchBalances}
+              aria-label="Refresh balances"
+            >
               ↻ Refresh
             </button>
           )}
@@ -219,16 +317,24 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
         <div className="feature-grid">
           <button className="feature-card" onClick={() => openPanel("jal")} aria-label="Open JAL">
-            <h4>JAL</h4><div className="title">About &amp; Swap</div><div className="icon">➕</div>
+            <h4>JAL</h4>
+            <div className="title">About &amp; Swap</div>
+            <div className="icon">➕</div>
           </button>
           <button className="feature-card" onClick={() => openPanel("shop")} aria-label="Open Store">
-            <h4>Store</h4><div className="title">Buy with JAL</div><div className="icon">🏬</div>
+            <h4>Store</h4>
+            <div className="title">Buy with JAL</div>
+            <div className="icon">🏬</div>
           </button>
           <button className="feature-card" onClick={() => openPanel("vault")} aria-label="Open Vault">
-            <h4>Vault</h4><div className="title">Assets &amp; Activity</div><div className="icon">💳</div>
+            <h4>Vault</h4>
+            <div className="title">Assets &amp; Activity</div>
+            <div className="icon">💳</div>
           </button>
           <button className="feature-card" onClick={() => openPanel("grid")} aria-label="Open Hub">
-            <h4>Hub</h4><div className="title">All Panels</div><div className="icon">🔗</div>
+            <h4>Hub</h4>
+            <div className="title">All Panels</div>
+            <div className="icon">🔗</div>
           </button>
 
           <div className="feature-card feature-wide" role="group" aria-label="Get Started">
@@ -242,7 +348,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <button className="chip" onClick={() => openPanel("grid")}>NFT Generator</button>
               </div>
             </div>
-            <div className="icon" aria-hidden>⚡</div>
+            <div className="icon" aria-hidden>
+              ⚡
+            </div>
           </div>
         </div>
 
@@ -262,24 +370,48 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         ref={panelRef as any}
       >
         <div className="hub-panel-top">
-          <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>{panelTitle}</h2>
-          {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
+          <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
+            {panelTitle}
+          </h2>
+          {connected ? (
+            <DisconnectButton className="wallet-disconnect-btn" />
+          ) : (
+            <ConnectButton className="wallet-disconnect-btn" />
+          )}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
-          {(activePanel !== "grid" && activePanel !== "none") && (
+          {activePanel !== "grid" && activePanel !== "none" && (
             <div className="hub-controls">
-              <button type="button" className="button ghost" onClick={() => setActivePanel("grid")}>← Back to Hub</button>
+              <button type="button" className="button ghost" onClick={() => setActivePanel("grid")}>
+                ← Back to Hub
+              </button>
             </div>
           )}
 
           {(activePanel === "grid" || activePanel === "none") && (
             <div className="hub-stack hub-stack--responsive" role="list">
               {tiles.map((t) => (
-                <button key={t.key} type="button" className="img-btn" onClick={() => openPanel(t.key)} role="listitem"
-                        aria-describedby={`tile-sub-${t.key}`} disabled={t.disabled}>
-                  <img src={t.gif} alt="" className="hub-gif" loading="lazy" width={960} height={540}
-                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                <button
+                  key={t.key}
+                  type="button"
+                  className="img-btn"
+                  onClick={() => openPanel(t.key)}
+                  role="listitem"
+                  aria-describedby={`tile-sub-${t.key}`}
+                  disabled={t.disabled}
+                >
+                  <img
+                    src={t.gif}
+                    alt=""
+                    className="hub-gif"
+                    loading="lazy"
+                    width={960}
+                    height={540}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
                   <div className="hub-btn">
                     {t.title}
                     {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
@@ -304,7 +436,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
                 {!connected && (
                   <>
-                    <p style={{ opacity: .85 }}>Preview mode — connect to checkout.</p>
+                    <p style={{ opacity: 0.85 }}>Preview mode — connect to checkout.</p>
                     <ConnectButton className="button gold" />
                   </>
                 )}
@@ -324,12 +456,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {activePanel === "vault" && (
-              connected ? (
+            {activePanel === "vault" &&
+              (connected ? (
                 <div className="card">
                   <h3>Your Wallet</h3>
-                  <p>JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong></p>
-                  <p style={{ opacity: .85 }}>Recent activity and positions would appear here.</p>
+                  <p>
+                    JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong>
+                  </p>
+                  <p style={{ opacity: 0.85 }}>Recent activity and positions would appear here.</p>
                 </div>
               ) : (
                 <div className="card">
@@ -337,17 +471,25 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   <p>Connect to view balances and recent activity.</p>
                   <ConnectButton className="button gold" />
                 </div>
-              )
-            )}
+              ))}
 
             {["payments", "loans", "support"].includes(activePanel) && (
               <div className="card">
                 <h3>{panelTitle}</h3>
-                <p>Coming soon. {activePanel !== "support" ? "Preview only." : "For help, join our Telegram or reach us on X."}</p>
+                <p>
+                  Coming soon.{" "}
+                  {activePanel !== "support"
+                    ? "Preview only."
+                    : "For help, join our Telegram or reach us on X."}
+                </p>
                 {activePanel === "support" && (
                   <div className="chip-row" style={{ marginTop: 10 }}>
-                    <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">Telegram</a>
-                    <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">X</a>
+                    <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">
+                      Telegram
+                    </a>
+                    <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">
+                      X
+                    </a>
                   </div>
                 )}
               </div>
