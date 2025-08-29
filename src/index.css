@@ -440,4 +440,82 @@ main[role="main"]{
 body[data-hub-open="true"]{ overflow: hidden; }
 /* in your index.css */
 .swap-embed-wrap { width: 100%; min-height: 700px; }
+/* ===============================
+   JAL panel + Swap embed
+=================================*/
+
+/* Titles + helper text */
+.jal-title{ margin:0; font-size:clamp(1.3rem,2.8vw,1.6rem); letter-spacing:.02em }
+.jal-subtitle{ margin:.25rem 0 0; opacity:.85 }
+
+/* Mint + actions row */
+.jal-actions{
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px;
+}
+.jal-chip{
+  display:inline-flex; align-items:center; padding:.45rem .7rem;
+  border:1px solid var(--stroke); border-radius:999px; background:rgba(0,0,0,.35);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.jal-btn{
+  display:inline-flex; align-items:center; gap:8px; padding:.55rem .85rem;
+  border:1px solid var(--stroke); border-radius:12px;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.jal-btn:hover{ transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
+.jal-btn--primary{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
+
+.jal-link{
+  display:inline-flex; align-items:center; gap:6px; padding:.45rem .6rem;
+  border:1px solid transparent; border-radius:999px; opacity:.95;
+}
+.jal-link:hover{ color:var(--gold); border-color:rgba(244,200,106,.45); text-shadow:var(--glow-gold) }
+
+.jal-cta{ margin-top:12px }
+
+/* Card wrapper that holds the embedded swap */
+.swap-embed-card{
+  /* inherits .card; just tighten spacing when used in hub */
+  padding: clamp(.75rem, 2vw, 1rem);
+}
+
+/* Header row inside the swap card */
+.swap-embed-header{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  margin-bottom:10px;
+}
+
+/* Embed viewport */
+.swap-embed-wrap{
+  position:relative;
+  width:100%;
+  height: clamp(520px, 70vh, 760px);
+  min-height: 520px;
+  border-radius: var(--r-lg);
+  overflow:hidden;
+  border:1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  box-shadow: 0 8px 30px rgba(0,0,0,.55);
+}
+
+/* The actual iframe */
+.swap-embed-iframe{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  border:0;
+  background:transparent;
+}
+
+/* Optional: simple fade-in when your component toggles .ready/.loading */
+.swap-embed-wrap .swap-embed-iframe{ opacity:1; transition:opacity var(--t-med) ease }
+.swap-embed-wrap.loading .swap-embed-iframe{ opacity:0 }
+
+/* Mobile tweaks */
+@media (max-width: 640px){
+  .swap-embed-wrap{
+    height: min(72vh, 620px);
+    min-height: 440px;
+  }
+}
 
