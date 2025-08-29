@@ -1,4 +1,3 @@
-// src/App.tsx
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -40,8 +39,10 @@ function HeaderView({
           </a>
         </div>
 
-        {/* Center: logo */}
-        <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
+        {/* Center: logo (acts as Home button) */}
+        <NavLink to="/" aria-label="Home">
+          <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
+        </NavLink>
 
         {/* Right: hamburger */}
         <button
@@ -53,13 +54,6 @@ function HeaderView({
         >
           <span></span><span></span><span></span>
         </button>
-
-        {/* Optional center nav (desktop only) */}
-        <nav className="main-nav" aria-label="Primary">
-          <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
-            Home
-          </NavLink>
-        </nav>
       </div>
     </header>
   );
@@ -97,7 +91,6 @@ function TabBar() {
     return q ? `${base}?${q}` : base;
   };
 
-  // Active state = matches current ?panel=...
   const isActive = (panel?: string) => {
     const p = new URLSearchParams(location.search).get("panel");
     if (!panel) return !p || p === "none";
@@ -107,28 +100,22 @@ function TabBar() {
   return (
     <nav className="tabbar" aria-label="App tabs">
       <NavLink to={link("grid")} className={() => (isActive("grid") ? "active" : "")}>
-        <div className="tab-icon">➕</div>
-        HUB
+        <div className="tab-icon">➕</div> HUB
       </NavLink>
       <a href={link("payments")} className={isActive("payments") ? "active" : ""}>
-        <div className="tab-icon">🔁</div>
-        PAYMENTS
+        <div className="tab-icon">🔁</div> PAYMENTS
       </a>
       <NavLink to={link("shop")} className={() => (isActive("shop") ? "active" : "")}>
-        <div className="tab-icon">🏬</div>
-        STORE
+        <div className="tab-icon">🏬</div> STORE
       </NavLink>
       <a href={link("loans")} className={isActive("loans") ? "active" : ""}>
-        <div className="tab-icon">🧮</div>
-        LOANS
+        <div className="tab-icon">🧮</div> LOANS
       </a>
       <a href={link("support")} className={isActive("support") ? "active" : ""}>
-        <div className="tab-icon">👤</div>
-        SUPPORT
+        <div className="tab-icon">👤</div> SUPPORT
       </a>
       <NavLink to={link("jal")} className={() => (isActive("jal") ? "active" : "")}>
-        <div className="tab-icon">➕</div>
-        MONEY
+        <div className="tab-icon">➕</div> MONEY
       </NavLink>
     </nav>
   );
@@ -138,11 +125,8 @@ function TabBar() {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Close sidebar on Escape
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -154,12 +138,10 @@ export default function App() {
       <main role="main">
         <Routes>
           <Route path="/" element={<Landing />} />
-          {/* Redirect unknown paths to home to avoid blank previews */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <TabBar />
-      {/* <footer className="site-footer">© {new Date().getFullYear()} JAL/SOL</footer> */}
     </BrowserRouter>
   );
 }
