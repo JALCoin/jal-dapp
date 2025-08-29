@@ -1,11 +1,12 @@
 // src/App.tsx
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useSearchParams, useLocation } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import Landing from "./pages/Landing";
 
+/* ------------------------ Small pieces ------------------------ */
 function DisconnectBtn() {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
@@ -83,6 +84,56 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
   );
 }
 
+/* Bottom tab bar (visual + deep-links to Landing panels) */
+function TabBar() {
+  const location = useLocation();
+  const base = location.pathname || "/";
+
+  const link = (panel?: string) => {
+    const p = new URLSearchParams(location.search);
+    if (!panel) p.delete("panel");
+    else p.set("panel", panel);
+    return `${base}?${p.toString()}`;
+  };
+
+  // Active state = matches current ?panel=...
+  const isActive = (panel?: string) => {
+    const p = new URLSearchParams(location.search).get("panel");
+    if (!panel) return !p || p === "none";
+    return p === panel;
+  };
+
+  return (
+    <nav className="tabbar" aria-label="App tabs">
+      <NavLink to={link("grid")} className={() => (isActive("grid") ? "active" : "")}>
+        <div className="tab-icon">➕</div>
+        HUB
+      </NavLink>
+      <a href={link("payments")} className={isActive("payments") ? "active" : ""}>
+        <div className="tab-icon">🔁</div>
+        PAYMENTS
+      </a>
+      <NavLink to={link("shop")} className={() => (isActive("shop") ? "active" : "")}>
+        <div className="tab-icon">🏬</div>
+        STORE
+      </NavLink>
+      <a href={link("loans")} className={isActive("loans") ? "active" : ""}>
+        <div className="tab-icon">🧮</div>
+        LOANS
+      </a>
+      <a href={link("support")} className={isActive("support") ? "active" : ""}>
+        <div className="tab-icon">👤</div>
+        SUPPORT
+      </a>
+      <NavLink to={link("jal")} className={() => (isActive("jal") ? "active" : "")}>
+        <div className="tab-icon">➕</div>
+        MONEY
+      </NavLink>
+    </nav>
+  );
+}
+
+/* ------------------------ App Root ------------------------ */
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -106,6 +157,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+      <TabBar />
       {/* <footer className="site-footer">© {new Date().getFullYear()} JAL/SOL</footer> */}
     </BrowserRouter>
   );

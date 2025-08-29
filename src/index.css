@@ -332,3 +332,63 @@ main[role="main"]{
   .hamburger span, .hamburger, .sidebar-nav, .sidebar-overlay,
   .button, .card, .img-btn { transition:none; animation:none }
 }
+/* ===============================
+   BANKING LANDING LAYOUT PRIMITIVES
+   (Additive: safe to append)
+=================================*/
+.bank-landing{ display:grid; gap:20px; padding:18px 14px 92px }
+@media (min-width:720px){ .bank-landing{ padding:26px 20px 110px; gap:24px }}
+
+/* Top summary: two balances */
+.balance-row{
+  display:grid; gap:14px;
+  grid-template-columns: 1fr 1fr;
+}
+.balance-card{
+  border:1px solid var(--stroke); border-radius:var(--r-lg);
+  padding:16px 18px;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  box-shadow:0 8px 26px rgba(0,0,0,.5);
+}
+.balance-amount{ font-size:clamp(1.4rem, 4.8vw, 2.1rem); font-weight:700; color:var(--gold); text-shadow:var(--glow-gold) }
+.balance-label{ opacity:.85; margin-top:6px }
+
+/* 2×2 feature grid */
+.feature-grid{
+  display:grid; gap:16px;
+  grid-template-columns: repeat(2, 1fr);
+}
+.feature-card{
+  position:relative; border:1px solid var(--stroke); border-radius:var(--r-lg);
+  min-height:150px; padding:16px; overflow:hidden;
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.feature-card:hover{ transform:translateY(-2px); border-color:var(--green); box-shadow:var(--glow-green) }
+.feature-card h4{ margin:0 0 6px; font-weight:600; opacity:.85 }
+.feature-card .title{ font-size:clamp(1.1rem, 3.8vw, 1.6rem); font-weight:700 }
+.feature-card .icon{ position:absolute; right:14px; bottom:14px; opacity:.9; filter:drop-shadow(0 0 8px rgba(255,255,255,.35)) }
+
+/* Wide featured banner */
+.feature-wide{
+  grid-column: 1 / -1;
+  min-height:160px;
+  display:grid; align-content:center;
+}
+
+/* Bottom tab bar */
+.tabbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:30;
+  height:68px; display:grid; grid-auto-flow:column; place-items:center;
+  background:linear-gradient(180deg, rgba(12,16,22,.82), rgba(12,16,22,.94));
+  border-top:1px solid var(--stroke-2);
+  backdrop-filter:blur(var(--blur));
+}
+.tabbar a{
+  display:grid; gap:6px; place-items:center; padding:6px 4px; font-size:.8rem; opacity:.9;
+  transition:transform var(--t-fast), color var(--t-fast);
+}
+.tabbar a:hover{ transform:translateY(-1px); color:var(--cyan); text-shadow:var(--glow-cyan) }
+.tabbar a.active{ color:var(--gold); text-shadow:var(--glow-gold) }
+.tabbar .tab-icon{ width:22px; height:22px; opacity:.95 }
+

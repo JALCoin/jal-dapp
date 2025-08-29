@@ -15,7 +15,7 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 
 const Jal = lazy(() => import("./Jal"));
 
-type Panel = "none" | "grid" | "shop" | "jal" | "vault";
+type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" | "support";
 type TileKey = Exclude<Panel, "none" | "grid">;
 
 type LandingProps = { initialPanel?: Panel };
@@ -94,7 +94,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   // Refs for focus/scroll management
   const hubBodyRef = useRef<HTMLDivElement | null>(null);
   const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
-  const toggleBtnRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
 
   const reducedMotion = useMemo(() => {
@@ -130,7 +129,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
     const isPanel = (v: unknown): v is Panel =>
-      v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault";
+      v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault" ||
+      v === "payments" || v === "loans" || v === "support";
 
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
@@ -207,9 +207,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     if (!connected || !publicKey) {
       setMerging(false);
-      if (activePanel !== "none") {
-        requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
-      }
       setActivePanel("none");
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -226,7 +223,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       } else if (activePanel === "grid") {
         setActivePanel("none");
       }
-      requestAnimationFrame(() => toggleBtnRef.current?.focus?.());
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -286,9 +282,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- Helpers ---------- */
   const openPanel = (id: Panel) => {
     setActivePanel(id);
-    requestAnimationFrame(() => hubTitleRef.current?.focus?.());
+    requestAnimationFrame(() =>
+      panelRef.current?.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "start",
+      })
+    );
   };
-  const backToGrid = () => openPanel("grid");
 
   const panelTitle =
     activePanel === "grid"
@@ -299,70 +299,108 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       ? "JAL"
       : activePanel === "vault"
       ? "Vault"
+      : activePanel === "payments"
+      ? "Payments"
+      : activePanel === "loans"
+      ? "Loans"
+      : activePanel === "support"
+      ? "Support"
       : "Welcome";
 
-  const isPreview = activePanel === "none";
+  /* ---------- Fake balances (visuals only) ---------- */
+  const [everyday, setEveryday] = useState<number>(781.0);
+  const [savings, setSavings] = useState<number>(853.0);
+  useEffect(() => {
+    // Tiny drift for life—can replace with real data later.
+    const t = setInterval(() => {
+      setEveryday((v) => Math.max(0, v + (Math.random() - 0.5) * 0.2));
+      setSavings((v) => Math.max(0, v + (Math.random() - 0.5) * 0.2));
+    }, 4000);
+    return () => clearInterval(t);
+  }, []);
 
+  const format = (n: number) =>
+    n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  /* ===========================================================
+     Render
+  ============================================================ */
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
-      {/* Social */}
-      <div className="landing-social" aria-hidden={merging}>
-        <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
-          <img src="/icons/X.png" alt="" width={20} height={20} />
-        </a>
-        <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
-          <img src="/icons/Telegram.png" alt="" width={20} height={20} />
-        </a>
-        <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-          <img src="/icons/TikTok.png" alt="" width={20} height={20} />
-        </a>
-      </div>
 
-      {/* (Optional) disconnect during merging pulse */}
-      {merging && (
-        <div className="landing-disconnect">
-          <DisconnectButton className="wallet-disconnect-btn" />
-        </div>
-      )}
-
-      {/* Hero — only on preview to avoid duplicate logo with header */}
-      {isPreview && (
-        <div className="landing-inner">
-          <div className={`landing-logo-wrapper ${connected ? "wallet-connected" : ""}`}>
-            <img src="/JALSOL1.gif" alt="JAL/SOL" className="landing-logo" />
+      {/* ===== Top banking-style landing ===== */}
+      <section className="bank-landing container" aria-label="Account overview">
+        {/* Small status row (socials moved to header; we mirror the banking “status”) */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", opacity: 0.9 }}>
+          <h1 style={{ margin: 0, fontSize: "1rem", letterSpacing: ".06em" }}>JALSOL</h1>
+          <div style={{ fontSize: ".95rem", opacity: 0.9 }}>
+            {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
           </div>
-
-          {!connected ? (
-            <ConnectButton className={`landing-wallet ${merging ? "fade-out" : ""}`} />
-          ) : (
-            <button
-              ref={toggleBtnRef}
-              className="landing-wallet"
-              onClick={() => {
-                const next = "grid";
-                setActivePanel(next);
-                requestAnimationFrame(() =>
-                  panelRef.current?.scrollIntoView({
-                    behavior: reducedMotion ? "auto" : "smooth",
-                    block: "start",
-                  })
-                );
-              }}
-              aria-expanded={!isPreview}
-              aria-controls="hub-panel"
-            >
-              Open Hub
-            </button>
-          )}
         </div>
-      )}
 
-      {/* Embedded Hub panel */}
+        {/* Two balances */}
+        <div className="balance-row">
+          <div className="balance-card">
+            <div className="balance-amount">${format(everyday)}</div>
+            <div className="balance-label">Everyday Funds</div>
+          </div>
+          <div className="balance-card">
+            <div className="balance-amount">${format(savings)}</div>
+            <div className="balance-label">Savings</div>
+          </div>
+        </div>
+
+        {/* 2x2 feature grid */}
+        <div className="feature-grid">
+          <button className="feature-card" onClick={() => openPanel("jal")} aria-label="Open JAL">
+            <h4>JAL</h4>
+            <div className="title">About & Swap</div>
+            <div className="icon">➕</div>
+          </button>
+
+          <button className="feature-card" onClick={() => openPanel("shop")} aria-label="Open Store">
+            <h4>Store</h4>
+            <div className="title">Buy with JAL</div>
+            <div className="icon">🏬</div>
+          </button>
+
+          <button className="feature-card" onClick={() => openPanel("vault")} aria-label="Open Vault">
+            <h4>Vault</h4>
+            <div className="title">Assets & Activity</div>
+            <div className="icon">💳</div>
+          </button>
+
+          <button className="feature-card" onClick={() => openPanel("grid")} aria-label="Open Hub">
+            <h4>Hub</h4>
+            <div className="title">All Panels</div>
+            <div className="icon">🔗</div>
+          </button>
+
+          {/* Wide featured banner */}
+          <div className="feature-card feature-wide">
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ opacity: 0.85 }}>Featured</div>
+              <div className="title">Stay Scam Aware</div>
+              <div style={{ opacity: 0.85 }}>Today • Eating &amp; Drinking Out</div>
+            </div>
+            <div className="icon" aria-hidden>⚠️</div>
+          </div>
+        </div>
+
+        {/* Connect (if needed) */}
+        {!connected && (
+          <div>
+            <ConnectButton />
+          </div>
+        )}
+      </section>
+
+      {/* ===== Embedded Hub panel (existing behavior retained) ===== */}
       <section
         id="hub-panel"
-        className={`hub-panel hub-panel--fit ${isPreview ? "hub-preview" : ""}`}
-        role={isPreview ? "region" : "dialog"}
-        aria-modal={isPreview ? undefined : true}
+        className={`hub-panel hub-panel--fit ${activePanel === "none" ? "hub-preview" : ""}`}
+        role={activePanel === "none" ? "region" : "dialog"}
+        aria-modal={activePanel === "none" ? undefined : true}
         aria-label="JAL/SOL Hub"
         ref={panelRef as any}
       >
@@ -382,7 +420,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   key={t.key}
                   type="button"
                   className="img-btn"
-                  onClick={() => openPanel(t.key)}
+                  onClick={() => setActivePanel(t.key)}
                   role="listitem"
                   aria-describedby={`tile-sub-${t.key}`}
                   disabled={t.disabled}
@@ -413,54 +451,46 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             {!connected && (
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
-                <p>
-                  Connect your wallet to unlock features. Then open the Hub to pick a tile — try{" "}
-                  <strong>JAL/SOL — SHOP</strong> to see in-panel shopping.
-                </p>
+                <p>Connect your wallet to unlock features. Use the tiles above to explore.</p>
               </div>
             )}
 
             {connected && activePanel === "shop" && (
               <>
-                <div className="hub-controls">
-                  <button type="button" className="button ghost" onClick={backToGrid}>
-                    ← Back to Hub
-                  </button>
-                </div>
                 <div className="card">
                   <h3>Shop</h3>
                   <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
+                  <button className="button ghost" onClick={() => setActivePanel("grid")}>← Back to Hub</button>
                 </div>
               </>
             )}
 
             {connected && activePanel === "jal" && (
               <>
-                <div className="hub-controls">
-                  <button type="button" className="button ghost" onClick={backToGrid}>
-                    ← Back to Hub
-                  </button>
-                </div>
                 <div className="in-hub">
                   <Suspense fallback={<div className="card">Loading JAL…</div>}>
                     <Jal inHub />
                   </Suspense>
                 </div>
+                <button className="button ghost" onClick={() => setActivePanel("grid")}>← Back to Hub</button>
               </>
             )}
 
             {connected && activePanel === "vault" && (
-              <>
-                <div className="hub-controls">
-                  <button type="button" className="button ghost" onClick={backToGrid}>
-                    ← Back to Hub
-                  </button>
-                </div>
-                <div className="card">
-                  <h3>Vault</h3>
-                  <p>View balances, recent activity, and manage your JAL.</p>
-                </div>
-              </>
+              <div className="card">
+                <h3>Vault</h3>
+                <p>View balances, recent activity, and manage your JAL.</p>
+                <button className="button ghost" onClick={() => setActivePanel("grid")}>← Back to Hub</button>
+              </div>
+            )}
+
+            {/* Placeholder panels for tabbar parity */}
+            {connected && (activePanel === "payments" || activePanel === "loans" || activePanel === "support") && (
+              <div className="card">
+                <h3>{panelTitle}</h3>
+                <p>Coming soon.</p>
+                <button className="button ghost" onClick={() => setActivePanel("grid")}>← Back to Hub</button>
+              </div>
             )}
           </div>
         </div>
