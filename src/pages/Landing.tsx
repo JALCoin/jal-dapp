@@ -1,3 +1,4 @@
+// src/pages/Landing.tsx
 import {
   lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
@@ -6,8 +7,12 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
-import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+
+// NEW: swap button + JAL mint config
+import RaydiumSwapButton from "../components/RaydiumSwapButton";
+import { JAL_MINT } from "../config/tokens";
 
 const Jal = lazy(() => import("./Jal"));
 
@@ -15,9 +20,6 @@ type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" |
 type TileKey = Exclude<Panel, "none" | "grid">;
 
 type LandingProps = { initialPanel?: Panel };
-
-/** Replace if your JAL mint changes */
-const JAL_MINT = new PublicKey("9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v");
 
 const PHANTOM_WALLET = "Phantom" as WalletName; // kept for possible future deep-link use
 const WALLET_MODAL_SELECTORS =
@@ -41,7 +43,6 @@ function DisconnectButton({ className }: { className?: string }) {
 
 /** Use Wallet Adapter’s official multi-wallet button (proper wallet connect) */
 function ConnectButton({ className }: { className?: string }) {
-  // Pass through a custom class for your theme polish; defaults to your .landing-wallet look
   return <WalletMultiButton className={className ?? "landing-wallet"} />;
 }
 
@@ -210,7 +211,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const requiresWallet: Panel[] = ["jal", "vault", "payments", "loans"];
   const openPanel = (id: Panel) => {
     setActivePanel(id);
-    // if the panel is gated and user is disconnected, open the wallet modal (proper connect)
     if (!connected && requiresWallet.includes(id)) setVisible(true);
     requestAnimationFrame(() =>
       panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })
@@ -251,7 +251,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       try {
         const resp = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID });
         const totalJal = resp.value
-          .filter((acc) => acc.account.data.parsed.info.mint === JAL_MINT.toBase58())
+          .filter((acc) => acc.account.data.parsed.info.mint === JAL_MINT)
           .reduce((sum, acc) => {
             const amt = acc.account.data.parsed.info.tokenAmount;
             const ui = Number(amt.uiAmountString ?? amt.uiAmount ?? 0);
@@ -350,13 +350,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           {connected ? (
             <DisconnectButton className="wallet-disconnect-btn" />
           ) : (
-            // Quick access connect inside the overlay header
             <ConnectButton className="wallet-disconnect-btn" />
           )}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
-          {/* Back to Hub for all sub-pages */}
           {(activePanel !== "grid" && activePanel !== "none") && (
             <div className="hub-controls">
               <button type="button" className="button ghost" onClick={() => setActivePanel("grid")}>
@@ -365,7 +363,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             </div>
           )}
 
-          {/* Tile grid — visible even if not connected */}
           {(activePanel === "grid" || activePanel === "none") && (
             <div className="hub-stack hub-stack--responsive" role="list">
               {tiles.map((t) => (
@@ -398,7 +395,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           )}
 
           <div className="hub-content">
-            {/* Hub welcome on preview */}
             {(activePanel === "grid" || activePanel === "none") && !connected && (
               <div className="card">
                 <h3>Welcome to JAL/SOL</h3>
@@ -429,6 +425,27 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             {activePanel === "jal" && (
               connected ? (
                 <div className="in-hub">
+                  {/* Raydium swap + quick links */}
+                  <div className="chip-row" style={{ marginBottom: 12 }}>
+                    <RaydiumSwapButton className="button gold" />
+                    <button
+                      className="chip"
+                      onClick={() => navigator.clipboard.writeText(JAL_MINT)}
+                      title="Copy JAL mint"
+                    >
+                      Copy Mint
+                    </button>
+                    <a
+                      className="chip"
+                      href={`https://solscan.io/token/${JAL_MINT}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View on Solscan"
+                    >
+                      View on Explorer ↗
+                    </a>
+                  </div>
+
                   <Suspense fallback={<div className="card">Loading JAL…</div>}>
                     <Jal inHub />
                   </Suspense>
@@ -437,7 +454,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <div className="card">
                   <h3>JAL</h3>
                   <p>Learn about JAL and swap when your wallet is connected.</p>
-                  <ConnectButton className="button gold" />
+                  <div className="chip-row" style={{ marginTop: 10 }}>
+                    <RaydiumSwapButton className="button gold" />
+                    <ConnectButton className="button" />
+                  </div>
                 </div>
               )
             )}
