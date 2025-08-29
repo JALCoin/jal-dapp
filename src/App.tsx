@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, PropsWithChildren } from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 
 import { clusterApiUrl } from "@solana/web3.js";
-import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react";
 import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 // Wallet adapters
@@ -14,32 +14,26 @@ import { BackpackWalletAdapter } from "@solana/wallet-adapter-backpack";
 import { LedgerWalletAdapter } from "@solana/wallet-adapter-ledger";
 import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect";
 
-// Wallet modal base styles (keep your custom CSS too)
+// Wallet modal base styles
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-import { useWallet } from "@solana/wallet-adapter-react";
 import Landing from "./pages/Landing";
 
 /* ------------------------ Solana Providers ------------------------ */
 function SolanaProviders({ children }: PropsWithChildren) {
   const network = "mainnet-beta";
 
-  // Prefer a global override if you set one (e.g., from window), else cluster default
   const endpoint = useMemo(
-    () => (window as any).__SOLANA_RPC_ENDPOINT__ ?? clusterApiUrl(network),
+    () =>
+      import.meta.env.VITE_SOLANA_RPC ||
+      (window as any).__SOLANA_RPC_ENDPOINT__ ||
+      clusterApiUrl(network),
     [network]
   );
 
-  // WalletConnect (Reown) project id from .env(.local)
   const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
-
-  // Dapp metadata shown in WC modal / wallets
-  const APP_META = {
-    name: "JAL/SOL",
-    description: "JAL/SOL dApp",
-    url: "https://jalsol.com",                   // ← set your live domain
-    icons: ["https://jalsol.com/icon.png"],      // ← ensure this resolves
-  };
+  const SITE_URL = import.meta.env.VITE_SITE_URL || "https://www.jalsol.com";
+  const SITE_ICON = import.meta.env.VITE_SITE_ICON || `${SITE_URL}/icon.png`;
 
   const wallets = useMemo(
     () => [
@@ -55,13 +49,18 @@ function SolanaProviders({ children }: PropsWithChildren) {
               options: {
                 projectId: WC_PROJECT_ID,
                 relayUrl: "wss://relay.walletconnect.com",
-                metadata: APP_META,
+                metadata: {
+                  name: "JAL/SOL",
+                  description: "JAL/SOL dApp",
+                  url: SITE_URL,
+                  icons: [SITE_ICON],
+                },
               },
             }),
           ]
         : []),
     ],
-    [network, WC_PROJECT_ID]
+    [network, WC_PROJECT_ID, SITE_URL, SITE_ICON]
   );
 
   return (
