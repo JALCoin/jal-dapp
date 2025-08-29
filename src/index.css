@@ -518,4 +518,8 @@ body[data-hub-open="true"]{ overflow: hidden; }
     min-height: 440px;
   }
 }
+.swap-embed-hint{
+  margin-top:10px; opacity:.85; font-size:.9rem;
+}
+.swap-embed-hint a{ text-decoration: underline; }
 
