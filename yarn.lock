@@ -2959,6 +2959,13 @@
     "@fractalwagmi/solana-wallet-adapter" "^0.1.1"
     "@solana/wallet-adapter-base" "^0.9.27"
 
+"@solana/wallet-adapter-glow@^0.1.18":
+  version "0.1.18"
+  resolved "https://registry.npmjs.org/@solana/wallet-adapter-glow/-/wallet-adapter-glow-0.1.18.tgz"
+  integrity sha512-5e4WKZ4cgN/dlhBJoHKn/+6z68mRl1A5yf3KBYl1+RgO7ixTN/JncY+ckpdsWUi08hL1Xv8swhyec30JACH/mw==
+  dependencies:
+    "@solana/wallet-adapter-base" "^0.9.23"
+
 "@solana/wallet-adapter-huobi@^0.1.19":
   version "0.1.19"
   resolved "https://registry.npmjs.org/@solana/wallet-adapter-huobi/-/wallet-adapter-huobi-0.1.19.tgz"

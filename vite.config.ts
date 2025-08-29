@@ -11,13 +11,16 @@ export default defineConfig({
     alias: {
       buffer: 'buffer',
       stream: 'stream-browserify',
-      process: 'process', // ✅ FIX: not 'process/browser'
+      process: 'process',                  // keep
+      util: 'util',                        // NEW: WC uses this
+      crypto: 'crypto-browserify',         // NEW: randombytes, etc.
+      path: 'path-browserify',             // NEW: some deps reference path
     },
   },
   optimizeDeps: {
     esbuildOptions: {
       define: {
-        global: 'globalThis',
+        global: 'globalThis',              // needed by many wallet deps
       },
       plugins: [
         NodeGlobalsPolyfillPlugin({
@@ -33,7 +36,7 @@ export default defineConfig({
       plugins: [
         inject({
           Buffer: ['buffer', 'Buffer'],
-          process: 'process', // ✅ FIX: not array form here
+          process: 'process',
         }),
       ],
     },
