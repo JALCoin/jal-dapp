@@ -3,21 +3,18 @@ import {
   lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
-import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-
-// Keep JAL mint for balance reads
 import { JAL_MINT } from "../config/tokens";
 
 const Jal = lazy(() => import("./Jal"));
 
 type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" | "support";
 type TileKey = Exclude<Panel, "none" | "grid">;
-
 type LandingProps = { initialPanel?: Panel };
 
 const PHANTOM_WALLET = "Phantom" as WalletName;
@@ -47,6 +44,7 @@ function ConnectButton({ className }: { className?: string }) {
 /* ---------- Page ---------- */
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, connecting, wallet, select, connect } = useWallet();
+  const { connection } = useConnection();
   const { setVisible } = useWalletModal();
   const [params, setParams] = useSearchParams();
 
@@ -227,16 +225,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   useEffect(() => {
     let cancelled = false;
+
     const fetchBalances = async () => {
       if (!publicKey) { setSol(null); setJal(null); return; }
 
-      const endpoint =
-        (globalThis as any).__SOLANA_RPC_ENDPOINT__ ||
-        "https://api.mainnet-beta.solana.com";
-      const connection = new Connection(endpoint, "confirmed");
-
       try {
-        const lamports = await connection.getBalance(publicKey, { commitment: "confirmed" });
+        const lamports = await connection.getBalance(publicKey, "confirmed");
         if (!cancelled) setSol(lamports / LAMPORTS_PER_SOL);
       } catch (e) {
         console.error("SOL balance fetch failed:", e);
@@ -259,10 +253,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       }
     };
 
-    void fetchBalances();
-    const id = setInterval(fetchBalances, 20000);
+    if (connected) void fetchBalances();
+    const id = setInterval(fetchBalances, 15000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [publicKey]);
+  }, [connection, connected, publicKey]);
 
   const fmt = (n: number | null, digits = 4) =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -320,11 +314,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       </section>
 
       {overlayOpen && (
-        <button
-          className="hub-overlay"
-          aria-label="Close panel"
-          onClick={() => setActivePanel("none")}
-        />
+        <button className="hub-overlay" aria-label="Close panel" onClick={() => setActivePanel("none")} />
       )}
 
       <section
@@ -388,7 +378,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {/* SHOP */}
             {activePanel === "shop" && (
               <div className="card">
                 <h3>Shop</h3>
@@ -407,7 +396,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {/* JAL (About & embedded Swap handled by <Jal />) */}
             {activePanel === "jal" && (
               <div className="in-hub">
                 <Suspense fallback={<div className="card">Loading JAL…</div>}>
@@ -416,7 +404,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {/* VAULT */}
             {activePanel === "vault" && (
               connected ? (
                 <div className="card">
@@ -433,7 +420,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               )
             )}
 
-            {/* PAYMENTS / LOANS / SUPPORT */}
             {["payments", "loans", "support"].includes(activePanel) && (
               <div className="card">
                 <h3>{panelTitle}</h3>
