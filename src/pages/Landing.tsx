@@ -129,13 +129,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   }, [overlayOpen]);
 
   /* ---------- open helpers ---------- */
-  const requiresWallet: Panel[] = ["jal", "vault", "payments", "loans"];
-  const { setVisible } = useWalletModal();
-  const openPanel = (id: Panel) => {
-    setActivePanel(id);
-    if (!connected && requiresWallet.includes(id)) setVisible(true);
-    requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }));
-  };
   const panelTitle =
     activePanel === "grid" ? "Hub" :
     activePanel === "shop" ? "Shop" :
