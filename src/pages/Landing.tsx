@@ -95,8 +95,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     []
   );
   const [shopFilter, setShopFilter] = useState<"All" | Product["tag"]>("All");
+  const [shopNotice, setShopNotice] = useState<string | null>(null);
+
   const visibleProducts = useMemo(
-    () => products.filter(p => shopFilter === "All" ? true : p.tag === shopFilter),
+    () => products.filter(p => (shopFilter === "All" ? true : p.tag === shopFilter)),
     [products, shopFilter]
   );
 
@@ -377,7 +379,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <div className="icon">🔗</div>
           </button>
 
-          <div className="feature-card feature-wide" role="group" aria-label="Get Started">
+        <div className="feature-card feature-wide" role="group" aria-label="Get Started">
             <div style={{ display: "grid", gap: 6 }}>
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
@@ -468,13 +470,19 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {/* ===== SHOP (new product cards) ===== */}
+            {/* ===== SHOP (product cards + coming-soon flow) ===== */}
             {activePanel === "shop" && (
               <div className="card">
                 <h3 style={{marginTop: 0}}>Shop</h3>
-                <p style={{ opacity: .9, marginTop: 4 }}>
-                  Payments are <strong>coming soon</strong>. Browse the catalog below—CTAs are disabled until checkout goes live.
+                <p className="muted" style={{ marginTop: 4 }}>
+                  Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
                 </p>
+
+                {shopNotice && (
+                  <div className="shop-notice soon" role="status" aria-live="polite" style={{ marginTop: 10 }}>
+                    {shopNotice}
+                  </div>
+                )}
 
                 {/* Category filter */}
                 <div className="chip-row" style={{ marginTop: 10 }}>
@@ -494,7 +502,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <div className="product-grid" role="list" style={{ marginTop: 14 }}>
                   {visibleProducts.map(p => (
                     <article key={p.id} className="product-card" role="listitem" aria-label={p.name}>
-                      <div className="product-media" aria-hidden>
+                      <div className={`product-media ${p.img ? "" : "noimg"}`} aria-hidden>
                         {p.img ? (
                           <img
                             src={p.img}
@@ -511,7 +519,15 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                           <span className="price-jal">{p.priceJal.toLocaleString()} JAL</span>
                           <span className="muted">• {p.tag}</span>
                         </div>
-                        <button className="button" disabled title="Checkout not available yet">
+                        <button
+                          className="button"
+                          aria-disabled="true"
+                          title="Checkout not available yet"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShopNotice("Checkout isn’t live yet — payments with JAL are coming soon.");
+                          }}
+                        >
                           Pay with JAL
                         </button>
                       </div>
