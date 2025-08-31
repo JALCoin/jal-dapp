@@ -10,30 +10,14 @@ import {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
-import {
-  useWalletModal,
-  WalletMultiButton,
-} from "@solana/wallet-adapter-react-ui";
-import {
-  Connection,
-  clusterApiUrl,
-  LAMPORTS_PER_SOL,
-  type Commitment,
-} from "@solana/web3.js";
+import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { JAL_MINT } from "../config/tokens";
 
 const Jal = lazy(() => import("./Jal"));
 
-type Panel =
-  | "none"
-  | "grid"
-  | "shop"
-  | "jal"
-  | "vault"
-  | "payments"
-  | "loans"
-  | "support";
+type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" | "support";
 type TileKey = Exclude<Panel, "none" | "grid">;
 type LandingProps = { initialPanel?: Panel };
 
@@ -58,7 +42,16 @@ function ConnectButton({ className }: { className?: string }) {
   return <WalletMultiButton className={className ?? "landing-wallet"} />;
 }
 
-/* ---------- Page ---------- */
+/* ---------- Product model (Shop) ---------- */
+type Product = {
+  id: string;
+  name: string;
+  tag: "Merch" | "Digital" | "Gift Cards";
+  priceJal: number;          // display only (payments not live)
+  img?: string;              // optional local asset
+  blurb?: string;
+};
+
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, wallet } = useWallet();
   const { setVisible } = useWalletModal();
@@ -80,15 +73,31 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     []
   );
 
-  const tiles = useMemo<
-    { key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]
-  >(
+  const tiles = useMemo<{ key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]>(
     () => [
       { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
       { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
       { key: "vault", title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
     ],
     []
+  );
+
+  /* ---------- SHOP: demo catalog + filtering ---------- */
+  const products = useMemo<Product[]>(
+    () => [
+      { id: "hoodie",  name: "JAL Hoodie",   tag: "Merch",      priceJal: 420, img: "/products/hoodie.png",  blurb: "Heavyweight, embroidered." },
+      { id: "cap",     name: "Logo Cap",     tag: "Merch",      priceJal: 180, img: "/products/cap.png",     blurb: "Adjustable snapback." },
+      { id: "sticker", name: "Sticker Pack", tag: "Merch",      priceJal: 60,  img: "/products/stickers.png", blurb: "Glossy vinyl set." },
+      { id: "gift25",  name: "Gift Card 25", tag: "Gift Cards", priceJal: 250, img: "/products/gift25.png",  blurb: "Send JAL love." },
+      { id: "gift50",  name: "Gift Card 50", tag: "Gift Cards", priceJal: 500, img: "/products/gift50.png" },
+      { id: "wallp",   name: "Phone Wallpaper", tag: "Digital", priceJal: 15,  img: "/products/wallpaper.png", blurb: "4K / OLED-friendly." },
+    ],
+    []
+  );
+  const [shopFilter, setShopFilter] = useState<"All" | Product["tag"]>("All");
+  const visibleProducts = useMemo(
+    () => products.filter(p => shopFilter === "All" ? true : p.tag === shopFilter),
+    [products, shopFilter]
   );
 
   /* ---------- preload gifs ---------- */
@@ -108,14 +117,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
     const isPanel = (v: unknown): v is Panel =>
-      v === "none" ||
-      v === "grid" ||
-      v === "shop" ||
-      v === "jal" ||
-      v === "vault" ||
-      v === "payments" ||
-      v === "loans" ||
-      v === "support";
+      v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault" || v === "payments" || v === "loans" || v === "support";
 
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
@@ -236,18 +238,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [balLoading, setBalLoading] = useState(false);
   const [balErr, setBalErr] = useState<string | null>(null);
 
-  // memoized endpoint + commitment
-  const endpoint = useMemo(
-    () =>
-      (window as any).__SOLANA_RPC_ENDPOINT__ ??
-      import.meta.env.VITE_SOLANA_RPC ??
-      clusterApiUrl("mainnet-beta"),
-    []
-  );
-  const commitment: Commitment = "processed";
+  const getEndpoint = () =>
+    (window as any).__SOLANA_RPC_ENDPOINT__ ??
+    import.meta.env.VITE_SOLANA_RPC ??
+    clusterApiUrl("mainnet-beta");
 
   const fetchBalances = useCallback(async () => {
-    if (!publicKey) {
+    if (!publicKey || !connected) {
       setSol(null);
       setJal(null);
       return;
@@ -255,10 +252,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     setBalErr(null);
     setBalLoading(true);
 
-    const freshConn = new Connection(endpoint, commitment);
+    const freshConn = new Connection(getEndpoint(), "confirmed");
 
     try {
-      const lamports = await freshConn.getBalance(publicKey, commitment);
+      const lamports = await freshConn.getBalance(publicKey, "confirmed");
       setSol(lamports / LAMPORTS_PER_SOL);
     } catch (e) {
       console.error("[balances] SOL fetch failed:", e);
@@ -270,7 +267,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       const resp = await freshConn.getParsedTokenAccountsByOwner(
         publicKey,
         { programId: TOKEN_PROGRAM_ID },
-        commitment
+        "confirmed"
       );
       const total = resp.value.reduce((sum, { account }) => {
         const info = account.data.parsed.info;
@@ -288,11 +285,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     } finally {
       setBalLoading(false);
     }
-  }, [publicKey, endpoint, commitment]);
+  }, [publicKey, connected]);
 
-  // Initial + polling + live SOL updates
   useEffect(() => {
-    if (!publicKey) {
+    if (!connected || !publicKey) {
       setSol(null);
       setJal(null);
       return;
@@ -301,33 +297,26 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
     const poll = setInterval(fetchBalances, 15000);
 
-    const wsConn = new Connection(endpoint, commitment);
+    const wsConn = new Connection(getEndpoint(), "confirmed");
     const sub = wsConn.onAccountChange(
       publicKey,
       (ai) => setSol(ai.lamports / LAMPORTS_PER_SOL),
-      commitment
+      "confirmed"
     );
 
     return () => {
       clearInterval(poll);
       wsConn.removeAccountChangeListener(sub).catch(() => {});
     };
-  }, [publicKey, fetchBalances, endpoint, commitment]);
+  }, [connected, publicKey, fetchBalances]);
 
-  // Refresh immediately when the adapter emits "connect"
   useEffect(() => {
     const adapter = wallet?.adapter;
     if (!adapter) return;
-    const onConnectBalances = () => {
-      void fetchBalances();
-    };
+    const onConnectBalances = () => { void fetchBalances(); };
     adapter.on("connect", onConnectBalances);
     return () => {
-      try {
-        adapter.off("connect", onConnectBalances);
-      } catch {
-        /* no-op */
-      }
+      try { adapter.off("connect", onConnectBalances); } catch {}
     };
   }, [wallet, fetchBalances]);
 
@@ -343,7 +332,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       <section className="bank-landing container" aria-label="Overview">
         <div className="bank-status">
           {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
-          {publicKey && (
+          {connected && (
             <button
               className="chip"
               style={{ marginLeft: 10 }}
@@ -393,23 +382,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
               <div className="chip-row">
-                <button className="chip" onClick={() => openPanel("shop")}>
-                  Merch
-                </button>
-                <button className="chip" onClick={() => openPanel("jal")}>
-                  Tokens
-                </button>
-                <button className="chip" onClick={() => openPanel("grid")}>
-                  Currency Generator
-                </button>
-                <button className="chip" onClick={() => openPanel("grid")}>
-                  NFT Generator
-                </button>
+                <button className="chip" onClick={() => openPanel("shop")}>Merch</button>
+                <button className="chip" onClick={() => openPanel("jal")}>Tokens</button>
+                <button className="chip" onClick={() => openPanel("grid")}>Currency Generator</button>
+                <button className="chip" onClick={() => openPanel("grid")}>NFT Generator</button>
               </div>
             </div>
-            <div className="icon" aria-hidden>
-              ⚡
-            </div>
+            <div className="icon" aria-hidden>⚡</div>
           </div>
         </div>
 
@@ -473,11 +452,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   />
                   <div className="hub-btn">
                     {t.title}
-                    {t.sub && (
-                      <span id={`tile-sub-${t.key}`} className="sub">
-                        {t.sub}
-                      </span>
-                    )}
+                    {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
                     {t.disabled && <span className="locked">Connect wallet to use</span>}
                   </div>
                 </button>
@@ -493,20 +468,55 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
+            {/* ===== SHOP (new product cards) ===== */}
             {activePanel === "shop" && (
               <div className="card">
-                <h3>Shop</h3>
-                <p>🛒 Browse items purchasable with JAL. (Hook your product list here.)</p>
-                {!connected && (
-                  <>
-                    <p style={{ opacity: 0.85 }}>Preview mode — connect to checkout.</p>
-                    <ConnectButton className="button gold" />
-                  </>
-                )}
+                <h3 style={{marginTop: 0}}>Shop</h3>
+                <p style={{ opacity: .9, marginTop: 4 }}>
+                  Payments are <strong>coming soon</strong>. Browse the catalog below—CTAs are disabled until checkout goes live.
+                </p>
+
+                {/* Category filter */}
                 <div className="chip-row" style={{ marginTop: 10 }}>
-                  <button className="chip">Merch</button>
-                  <button className="chip">Digital</button>
-                  <button className="chip">Gift Cards</button>
+                  {(["All", "Merch", "Digital", "Gift Cards"] as const).map(cat => (
+                    <button
+                      key={cat}
+                      className={`chip ${shopFilter === cat ? "active" : ""}`}
+                      onClick={() => setShopFilter(cat)}
+                      aria-pressed={shopFilter === cat}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Product grid */}
+                <div className="product-grid" role="list" style={{ marginTop: 14 }}>
+                  {visibleProducts.map(p => (
+                    <article key={p.id} className="product-card" role="listitem" aria-label={p.name}>
+                      <div className="product-media" aria-hidden>
+                        {p.img ? (
+                          <img
+                            src={p.img}
+                            alt=""
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          />
+                        ) : null}
+                        <span className="badge soon">Coming&nbsp;soon</span>
+                      </div>
+                      <div className="product-body">
+                        <h4 className="product-title">{p.name}</h4>
+                        {p.blurb && <div className="product-blurb">{p.blurb}</div>}
+                        <div className="product-price">
+                          <span className="price-jal">{p.priceJal.toLocaleString()} JAL</span>
+                          <span className="muted">• {p.tag}</span>
+                        </div>
+                        <button className="button" disabled title="Checkout not available yet">
+                          Pay with JAL
+                        </button>
+                      </div>
+                    </article>
+                  ))}
                 </div>
               </div>
             )}

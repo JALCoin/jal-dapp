@@ -515,3 +515,46 @@ body[data-hub-open="true"]{ overflow: hidden; }
 /* Make top summary tiles match screenshot spacing a bit tighter */
 .balance-row{ gap:16px }
 .balance-card{ padding:18px 20px }
+/* ===============================
+   Shop product grid
+=================================*/
+.product-grid{
+  display:grid;
+  gap:16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.product-card{
+  border:1px solid var(--stroke);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  box-shadow: 0 10px 26px rgba(0,0,0,.5);
+  overflow:hidden;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  display:flex; flex-direction:column;
+}
+.product-card:hover{ transform: translateY(-2px); border-color: var(--green); box-shadow: var(--glow-green) }
+
+.product-media{
+  position:relative; aspect-ratio: 4 / 3; background:#0b0f14;
+}
+.product-media img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.96;
+}
+.badge{
+  position:absolute; top:10px; left:10px;
+  padding:.28rem .55rem; font-size:.8rem; border-radius:999px;
+  border:1px solid var(--stroke);
+  background: rgba(0,0,0,.5); backdrop-filter: blur(6px);
+}
+.badge.soon{ color: var(--gold); border-color: rgba(244,200,106,.5); box-shadow: var(--glow-gold) }
+
+.product-body{ padding:12px; display:grid; gap:8px }
+.product-title{ margin:0 }
+.product-blurb{ opacity:.85; font-size:.92rem }
+.product-price{ display:flex; align-items:center; gap:10px; }
+.product-price .price-jal{ font-weight:700 }
+.product-price .muted{ opacity:.8 }
+
+/* Chip active state for shop filters */
+.chip.active{ border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
+
