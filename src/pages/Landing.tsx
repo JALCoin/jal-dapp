@@ -10,14 +10,30 @@ import {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import {
+  useWalletModal,
+  WalletMultiButton,
+} from "@solana/wallet-adapter-react-ui";
+import {
+  Connection,
+  clusterApiUrl,
+  LAMPORTS_PER_SOL,
+  type Commitment,
+} from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { JAL_MINT } from "../config/tokens";
 
 const Jal = lazy(() => import("./Jal"));
 
-type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" | "support";
+type Panel =
+  | "none"
+  | "grid"
+  | "shop"
+  | "jal"
+  | "vault"
+  | "payments"
+  | "loans"
+  | "support";
 type TileKey = Exclude<Panel, "none" | "grid">;
 type LandingProps = { initialPanel?: Panel };
 
@@ -220,13 +236,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [balLoading, setBalLoading] = useState(false);
   const [balErr, setBalErr] = useState<string | null>(null);
 
-  const getEndpoint = () =>
-    (window as any).__SOLANA_RPC_ENDPOINT__ ??
-    import.meta.env.VITE_SOLANA_RPC ??
-    clusterApiUrl("mainnet-beta");
+  // memoized endpoint + commitment
+  const endpoint = useMemo(
+    () =>
+      (window as any).__SOLANA_RPC_ENDPOINT__ ??
+      import.meta.env.VITE_SOLANA_RPC ??
+      clusterApiUrl("mainnet-beta"),
+    []
+  );
+  const commitment: Commitment = "processed";
 
   const fetchBalances = useCallback(async () => {
-    if (!publicKey || !connected) {
+    if (!publicKey) {
       setSol(null);
       setJal(null);
       return;
@@ -234,10 +255,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     setBalErr(null);
     setBalLoading(true);
 
-    const freshConn = new Connection(getEndpoint(), "confirmed");
+    const freshConn = new Connection(endpoint, commitment);
 
     try {
-      const lamports = await freshConn.getBalance(publicKey, "confirmed");
+      const lamports = await freshConn.getBalance(publicKey, commitment);
       setSol(lamports / LAMPORTS_PER_SOL);
     } catch (e) {
       console.error("[balances] SOL fetch failed:", e);
@@ -249,7 +270,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       const resp = await freshConn.getParsedTokenAccountsByOwner(
         publicKey,
         { programId: TOKEN_PROGRAM_ID },
-        "confirmed"
+        commitment
       );
       const total = resp.value.reduce((sum, { account }) => {
         const info = account.data.parsed.info;
@@ -267,11 +288,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     } finally {
       setBalLoading(false);
     }
-  }, [publicKey, connected]);
+  }, [publicKey, endpoint, commitment]);
 
-  // Initial + polling + live SOL updates (dedicated connection for the subscription)
+  // Initial + polling + live SOL updates
   useEffect(() => {
-    if (!connected || !publicKey) {
+    if (!publicKey) {
       setSol(null);
       setJal(null);
       return;
@@ -280,36 +301,35 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
     const poll = setInterval(fetchBalances, 15000);
 
-    const wsConn = new Connection(getEndpoint(), "confirmed");
+    const wsConn = new Connection(endpoint, commitment);
     const sub = wsConn.onAccountChange(
       publicKey,
       (ai) => setSol(ai.lamports / LAMPORTS_PER_SOL),
-      "confirmed"
+      commitment
     );
 
     return () => {
       clearInterval(poll);
       wsConn.removeAccountChangeListener(sub).catch(() => {});
     };
-  }, [connected, publicKey, fetchBalances]);
+  }, [publicKey, fetchBalances, endpoint, commitment]);
 
-  // Also refresh immediately when adapter emits "connect"
-useEffect(() => {
-  const adapter = wallet?.adapter;
-  if (!adapter) return; // return void (undefined) if no adapter
-
-  const onConnectBalances = () => { void fetchBalances(); };
-  adapter.on("connect", onConnectBalances);
-
-  return () => {
-    // ensure cleanup returns void
-    try {
-      adapter.off("connect", onConnectBalances);
-    } catch {
-      /* no-op */
-    }
-  };
-}, [wallet, fetchBalances]);
+  // Refresh immediately when the adapter emits "connect"
+  useEffect(() => {
+    const adapter = wallet?.adapter;
+    if (!adapter) return;
+    const onConnectBalances = () => {
+      void fetchBalances();
+    };
+    adapter.on("connect", onConnectBalances);
+    return () => {
+      try {
+        adapter.off("connect", onConnectBalances);
+      } catch {
+        /* no-op */
+      }
+    };
+  }, [wallet, fetchBalances]);
 
   const fmt = (n: number | null, digits = 4) =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -323,7 +343,7 @@ useEffect(() => {
       <section className="bank-landing container" aria-label="Overview">
         <div className="bank-status">
           {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
-          {connected && (
+          {publicKey && (
             <button
               className="chip"
               style={{ marginLeft: 10 }}
@@ -373,13 +393,23 @@ useEffect(() => {
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
               <div className="chip-row">
-                <button className="chip" onClick={() => openPanel("shop")}>Merch</button>
-                <button className="chip" onClick={() => openPanel("jal")}>Tokens</button>
-                <button className="chip" onClick={() => openPanel("grid")}>Currency Generator</button>
-                <button className="chip" onClick={() => openPanel("grid")}>NFT Generator</button>
+                <button className="chip" onClick={() => openPanel("shop")}>
+                  Merch
+                </button>
+                <button className="chip" onClick={() => openPanel("jal")}>
+                  Tokens
+                </button>
+                <button className="chip" onClick={() => openPanel("grid")}>
+                  Currency Generator
+                </button>
+                <button className="chip" onClick={() => openPanel("grid")}>
+                  NFT Generator
+                </button>
               </div>
             </div>
-            <div className="icon" aria-hidden>⚡</div>
+            <div className="icon" aria-hidden>
+              ⚡
+            </div>
           </div>
         </div>
 
@@ -443,7 +473,11 @@ useEffect(() => {
                   />
                   <div className="hub-btn">
                     {t.title}
-                    {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
+                    {t.sub && (
+                      <span id={`tile-sub-${t.key}`} className="sub">
+                        {t.sub}
+                      </span>
+                    )}
                     {t.disabled && <span className="locked">Connect wallet to use</span>}
                   </div>
                 </button>
