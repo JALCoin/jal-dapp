@@ -24,6 +24,9 @@ type LandingProps = { initialPanel?: Panel };
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
+// poster asset (used for hover art)
+const POSTER = "/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png";
+
 /* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
   const { connected, disconnect } = useWallet();
@@ -47,8 +50,8 @@ type Product = {
   id: string;
   name: string;
   tag: "Merch" | "Digital" | "Gift Cards";
-  priceJal: number;          // display only (payments not live)
-  img?: string;              // optional local asset
+  priceJal: number;     // display only (payments not live)
+  img?: string;
   blurb?: string;
 };
 
@@ -73,7 +76,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     []
   );
 
-  const tiles = useMemo<{ key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]>(
+  const tiles = useMemo<
+    { key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]
+  >(
     () => [
       { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
       { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
@@ -85,10 +90,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- SHOP: demo catalog + filtering ---------- */
   const products = useMemo<Product[]>(
     () => [
-      { id: "hoodie",  name: "JAL Hoodie",   tag: "Merch",      priceJal: 420, img: "/products/hoodie.png",  blurb: "Heavyweight, embroidered." },
-      { id: "cap",     name: "Logo Cap",     tag: "Merch",      priceJal: 180, img: "/products/cap.png",     blurb: "Adjustable snapback." },
+      { id: "hoodie",  name: "JAL Hoodie",   tag: "Merch",      priceJal: 420, img: "/products/hoodie.png",   blurb: "Heavyweight, embroidered." },
+      { id: "cap",     name: "Logo Cap",     tag: "Merch",      priceJal: 180, img: "/products/cap.png",      blurb: "Adjustable snapback." },
       { id: "sticker", name: "Sticker Pack", tag: "Merch",      priceJal: 60,  img: "/products/stickers.png", blurb: "Glossy vinyl set." },
-      { id: "gift25",  name: "Gift Card 25", tag: "Gift Cards", priceJal: 250, img: "/products/gift25.png",  blurb: "Send JAL love." },
+      { id: "gift25",  name: "Gift Card 25", tag: "Gift Cards", priceJal: 250, img: "/products/gift25.png",   blurb: "Send JAL love." },
       { id: "gift50",  name: "Gift Card 50", tag: "Gift Cards", priceJal: 500, img: "/products/gift50.png" },
       { id: "wallp",   name: "Phone Wallpaper", tag: "Digital", priceJal: 15,  img: "/products/wallpaper.png", blurb: "4K / OLED-friendly." },
     ],
@@ -102,15 +107,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     [products, shopFilter]
   );
 
-  /* ---------- preload gifs ---------- */
+  /* ---------- preload gifs + poster ---------- */
   useEffect(() => {
-    const imgs = tiles.map((t) => {
-      const i = new Image();
-      i.decoding = "async";
-      i.loading = "eager";
-      i.src = t.gif;
-      return i;
-    });
+    const imgs = [
+      ...tiles.map((t) => {
+        const i = new Image();
+        i.decoding = "async";
+        i.loading = "eager";
+        i.src = t.gif;
+        return i;
+      }),
+      (() => { const i = new Image(); i.src = POSTER; return i; })(),
+    ];
     return () => imgs.forEach((i) => (i.src = ""));
   }, [tiles]);
 
@@ -363,23 +371,37 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <div className="title">About &amp; Swap</div>
             <div className="icon">➕</div>
           </button>
-          <button className="feature-card" onClick={() => openPanel("shop")} aria-label="Open Store">
+
+          {/* Store card with poster hover */}
+          <button
+            className="feature-card has-art"
+            onClick={() => openPanel("shop")}
+            aria-label="Open Store"
+            style={{
+              // custom props for the .has-art CSS
+              ["--art-img" as any]: `url('${POSTER}')`,
+              ["--art-pos" as any]: "22% 66%", // crop near orange car/cash — tweak freely
+              ["--art-zoom" as any]: "260%",
+            }}
+          >
             <h4>Store</h4>
             <div className="title">Buy with JAL</div>
             <div className="icon">🏬</div>
           </button>
+
           <button className="feature-card" onClick={() => openPanel("vault")} aria-label="Open Vault">
             <h4>Vault</h4>
             <div className="title">Assets &amp; Activity</div>
             <div className="icon">💳</div>
           </button>
+
           <button className="feature-card" onClick={() => openPanel("grid")} aria-label="Open Hub">
             <h4>Hub</h4>
             <div className="title">All Panels</div>
             <div className="icon">🔗</div>
           </button>
 
-        <div className="feature-card feature-wide" role="group" aria-label="Get Started">
+          <div className="feature-card feature-wide" role="group" aria-label="Get Started">
             <div style={{ display: "grid", gap: 6 }}>
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
@@ -431,34 +453,46 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
           {(activePanel === "grid" || activePanel === "none") && (
             <div className="hub-stack hub-stack--responsive" role="list">
-              {tiles.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  className="img-btn"
-                  onClick={() => openPanel(t.key)}
-                  role="listitem"
-                  aria-describedby={`tile-sub-${t.key}`}
-                  disabled={t.disabled}
-                >
-                  <img
-                    src={t.gif}
-                    alt=""
-                    className="hub-gif"
-                    loading="lazy"
-                    width={960}
-                    height={540}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                  <div className="hub-btn">
-                    {t.title}
-                    {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
-                    {t.disabled && <span className="locked">Connect wallet to use</span>}
-                  </div>
-                </button>
-              ))}
+              {tiles.map((t) => {
+                const isShop = t.key === "shop";
+                const className = `img-btn${isShop ? " has-art" : ""}`;
+                const style: React.CSSProperties = isShop
+                  ? {
+                      ["--art-img" as any]: `url('${POSTER}')`,
+                      ["--art-pos" as any]: "84% 72%", // different crop for the hub tile
+                      ["--art-zoom" as any]: "240%",
+                    }
+                  : {};
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    className={className}
+                    style={style}
+                    onClick={() => openPanel(t.key)}
+                    role="listitem"
+                    aria-describedby={`tile-sub-${t.key}`}
+                    disabled={t.disabled}
+                  >
+                    <img
+                      src={t.gif}
+                      alt=""
+                      className="hub-gif"
+                      loading="lazy"
+                      width={960}
+                      height={540}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <div className="hub-btn">
+                      {t.title}
+                      {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
+                      {t.disabled && <span className="locked">Connect wallet to use</span>}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -473,7 +507,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             {/* ===== SHOP (product cards + coming-soon flow) ===== */}
             {activePanel === "shop" && (
               <div className="card">
-                <h3 style={{marginTop: 0}}>Shop</h3>
+                <h3 style={{ marginTop: 0 }}>Shop</h3>
                 <p className="muted" style={{ marginTop: 4 }}>
                   Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
                 </p>
@@ -486,7 +520,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
                 {/* Category filter */}
                 <div className="chip-row" style={{ marginTop: 10 }}>
-                  {(["All", "Merch", "Digital", "Gift Cards"] as const).map(cat => (
+                  {(["All", "Merch", "Digital", "Gift Cards"] as const).map((cat) => (
                     <button
                       key={cat}
                       className={`chip ${shopFilter === cat ? "active" : ""}`}
@@ -500,14 +534,16 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
                 {/* Product grid */}
                 <div className="product-grid" role="list" style={{ marginTop: 14 }}>
-                  {visibleProducts.map(p => (
+                  {visibleProducts.map((p) => (
                     <article key={p.id} className="product-card" role="listitem" aria-label={p.name}>
                       <div className={`product-media ${p.img ? "" : "noimg"}`} aria-hidden>
                         {p.img ? (
                           <img
                             src={p.img}
                             alt=""
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = "none";
+                            }}
                           />
                         ) : null}
                         <span className="badge soon">Coming&nbsp;soon</span>

@@ -611,3 +611,58 @@ body[data-hub-open="true"]{ overflow: hidden; }
 @media (min-width:1200px){
   .product-grid{ grid-template-columns: repeat(4, 1fr) }
 }
+/* ===============================
+   Poster / key-art hover reveal
+   Usage: add class "has-art" to .feature-card (or .img-btn)
+   and set CSS vars inline:
+   --art-img: url('/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png');
+   --art-pos: e.g. 85% 70%;   --art-zoom: e.g. 260%;
+=================================*/
+.feature-card.has-art,
+.img-btn.has-art{
+  --art-img: none;          /* url(...) */
+  --art-pos: 50% 50%;       /* background-position */
+  --art-zoom: 200%;         /* background-size (X only) */
+  --art-opacity: 0;         /* base opacity */
+}
+
+.feature-card.has-art::after,
+.img-btn.has-art::after{
+  content:"";
+  position:absolute; inset:0;
+  pointer-events:none;
+  /* poster crop */
+  background-image: var(--art-img);
+  background-repeat: no-repeat;
+  background-position: var(--art-pos);
+  background-size: var(--art-zoom) auto;
+  /* subtle blend so it feels part of the card */
+  mix-blend-mode: screen;
+  opacity: var(--art-opacity);
+  transform: scale(1.02);
+  transition:
+    opacity var(--t-med) ease,
+    transform var(--t-med) ease,
+    filter var(--t-med) ease;
+  /* slight vignette for polish */
+  box-shadow: inset 0 0 160px rgba(0,0,0,.45);
+}
+
+/* Hover/Focus reveal */
+.feature-card.has-art:hover::after,
+.feature-card.has-art:focus-visible::after,
+.img-btn.has-art:hover::after,
+.img-btn.has-art:focus-visible::after{
+  opacity:.9;
+  transform:none;
+  filter: saturate(1.08) contrast(1.03);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .feature-card.has-art::after,
+  .img-btn.has-art::after{
+    transition: none;
+  }
+}
+
