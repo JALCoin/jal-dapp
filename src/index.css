@@ -613,49 +613,78 @@ body[data-hub-open="true"]{ overflow: hidden; }
 }
 /* ===============================
    Poster / key-art hover reveal
-   Usage: add class "has-art" to .feature-card (or .img-btn)
-   and set CSS vars inline:
-   --art-img: url('/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png');
-   --art-pos: e.g. 85% 70%;   --art-zoom: e.g. 260%;
+   Usage: add class "has-art" to .feature-card or .img-btn
+   and set CSS vars inline on the element:
+     --art-img: url('/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png');
+     --art-pos: 75% 70%;   /* crop hotspot */
+     --art-zoom: 260%;     /* X-size for background */
 =================================*/
 .feature-card.has-art,
 .img-btn.has-art{
-  --art-img: none;          /* url(...) */
-  --art-pos: 50% 50%;       /* background-position */
-  --art-zoom: 200%;         /* background-size (X only) */
-  --art-opacity: 0;         /* base opacity */
+  position: relative;
+  isolation: isolate;             /* stable stacking */
+  /* defaults */
+  --art-img: none;
+  --art-pos: 50% 50%;
+  --art-zoom: 240%;
+  --art-opacity: 0;
+}
+
+/* Keep text/buttons above the art */
+.feature-card.has-art > *,
+.img-btn.has-art > *{
+  position: relative;
+  z-index: 1;
 }
 
 .feature-card.has-art::after,
 .img-btn.has-art::after{
   content:"";
   position:absolute; inset:0;
+  z-index:0;                      /* above GIF, below labels */
   pointer-events:none;
+
   /* poster crop */
   background-image: var(--art-img);
   background-repeat: no-repeat;
   background-position: var(--art-pos);
   background-size: var(--art-zoom) auto;
-  /* subtle blend so it feels part of the card */
-  mix-blend-mode: screen;
+
+  /* blend & vibe */
+  mix-blend-mode: screen;         /* feels integrated */
   opacity: var(--art-opacity);
   transform: scale(1.02);
   transition:
     opacity var(--t-med) ease,
     transform var(--t-med) ease,
     filter var(--t-med) ease;
-  /* slight vignette for polish */
+
+  /* gentle vignette for polish */
   box-shadow: inset 0 0 160px rgba(0,0,0,.45);
 }
 
-/* Hover/Focus reveal */
+/* Hover/Focus reveal (flip the variable on the host) */
+.feature-card.has-art:hover,
+.feature-card.has-art:focus-visible,
+.img-btn.has-art:hover,
+.img-btn.has-art:focus-visible{
+  --art-opacity: .9;
+}
 .feature-card.has-art:hover::after,
 .feature-card.has-art:focus-visible::after,
 .img-btn.has-art:hover::after,
 .img-btn.has-art:focus-visible::after{
-  opacity:.9;
   transform:none;
   filter: saturate(1.08) contrast(1.03);
+}
+
+/* Fallback when mix-blend-mode isn't available */
+@supports not (mix-blend-mode: screen){
+  .feature-card.has-art::after,
+  .img-btn.has-art::after{
+    mix-blend-mode: normal;
+    opacity: calc(var(--art-opacity) * .65);
+  }
 }
 
 /* Respect reduced motion */
@@ -665,4 +694,3 @@ body[data-hub-open="true"]{ overflow: hidden; }
     transition: none;
   }
 }
-

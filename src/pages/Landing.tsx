@@ -17,15 +17,29 @@ import { JAL_MINT } from "../config/tokens";
 
 const Jal = lazy(() => import("./Jal"));
 
-type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" | "support";
+type Panel =
+  | "none"
+  | "grid"
+  | "shop"
+  | "jal"
+  | "vault"
+  | "payments"
+  | "loans"
+  | "support";
 type TileKey = Exclude<Panel, "none" | "grid">;
 type LandingProps = { initialPanel?: Panel };
 
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
-// poster asset (used for hover art)
+// Poster art (used for hover reveals)
 const POSTER = "/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png";
+const art = (pos: string, zoom = "240%"): React.CSSProperties =>
+  ({
+    ["--art-img" as any]: `url('${POSTER}')`,
+    ["--art-pos" as any]: pos,
+    ["--art-zoom" as any]: zoom,
+  } as React.CSSProperties);
 
 /* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
@@ -50,7 +64,7 @@ type Product = {
   id: string;
   name: string;
   tag: "Merch" | "Digital" | "Gift Cards";
-  priceJal: number;     // display only (payments not live)
+  priceJal: number; // display only (payments not live)
   img?: string;
   blurb?: string;
 };
@@ -90,12 +104,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- SHOP: demo catalog + filtering ---------- */
   const products = useMemo<Product[]>(
     () => [
-      { id: "hoodie",  name: "JAL Hoodie",   tag: "Merch",      priceJal: 420, img: "/products/hoodie.png",   blurb: "Heavyweight, embroidered." },
-      { id: "cap",     name: "Logo Cap",     tag: "Merch",      priceJal: 180, img: "/products/cap.png",      blurb: "Adjustable snapback." },
-      { id: "sticker", name: "Sticker Pack", tag: "Merch",      priceJal: 60,  img: "/products/stickers.png", blurb: "Glossy vinyl set." },
-      { id: "gift25",  name: "Gift Card 25", tag: "Gift Cards", priceJal: 250, img: "/products/gift25.png",   blurb: "Send JAL love." },
-      { id: "gift50",  name: "Gift Card 50", tag: "Gift Cards", priceJal: 500, img: "/products/gift50.png" },
-      { id: "wallp",   name: "Phone Wallpaper", tag: "Digital", priceJal: 15,  img: "/products/wallpaper.png", blurb: "4K / OLED-friendly." },
+      { id: "hoodie", name: "JAL Hoodie", tag: "Merch", priceJal: 420, img: "/products/hoodie.png", blurb: "Heavyweight, embroidered." },
+      { id: "cap", name: "Logo Cap", tag: "Merch", priceJal: 180, img: "/products/cap.png", blurb: "Adjustable snapback." },
+      { id: "sticker", name: "Sticker Pack", tag: "Merch", priceJal: 60, img: "/products/stickers.png", blurb: "Glossy vinyl set." },
+      { id: "gift25", name: "Gift Card 25", tag: "Gift Cards", priceJal: 250, img: "/products/gift25.png", blurb: "Send JAL love." },
+      { id: "gift50", name: "Gift Card 50", tag: "Gift Cards", priceJal: 500, img: "/products/gift50.png" },
+      { id: "wallp", name: "Phone Wallpaper", tag: "Digital", priceJal: 15, img: "/products/wallpaper.png", blurb: "4K / OLED-friendly." },
     ],
     []
   );
@@ -103,7 +117,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [shopNotice, setShopNotice] = useState<string | null>(null);
 
   const visibleProducts = useMemo(
-    () => products.filter(p => (shopFilter === "All" ? true : p.tag === shopFilter)),
+    () => products.filter((p) => (shopFilter === "All" ? true : p.tag === shopFilter)),
     [products, shopFilter]
   );
 
@@ -117,7 +131,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         i.src = t.gif;
         return i;
       }),
-      (() => { const i = new Image(); i.src = POSTER; return i; })(),
+      (() => {
+        const i = new Image();
+        i.src = POSTER;
+        return i;
+      })(),
     ];
     return () => imgs.forEach((i) => (i.src = ""));
   }, [tiles]);
@@ -127,7 +145,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
     const isPanel = (v: unknown): v is Panel =>
-      v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault" || v === "payments" || v === "loans" || v === "support";
+      v === "none" ||
+      v === "grid" ||
+      v === "shop" ||
+      v === "jal" ||
+      v === "vault" ||
+      v === "payments" ||
+      v === "loans" ||
+      v === "support";
 
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
@@ -323,15 +348,31 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     const adapter = wallet?.adapter;
     if (!adapter) return;
-    const onConnectBalances = () => { void fetchBalances(); };
+    const onConnectBalances = () => {
+      void fetchBalances();
+    };
     adapter.on("connect", onConnectBalances);
     return () => {
-      try { adapter.off("connect", onConnectBalances); } catch {}
+      try {
+        adapter.off("connect", onConnectBalances);
+      } catch {
+        /* no-op */
+      }
     };
   }, [wallet, fetchBalances]);
 
   const fmt = (n: number | null, digits = 4) =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
+
+  // Hover art presets for hub tiles (and we’ll mirror in the top feature cards)
+  const ART_MAP: Partial<Record<TileKey, { pos: string; zoom?: string }>> = {
+    jal: { pos: "26% 38%", zoom: "240%" },
+    shop: { pos: "73% 38%", zoom: "240%" },
+    vault: { pos: "28% 78%", zoom: "240%" },
+    payments: { pos: "46% 64%", zoom: "240%" },
+    loans: { pos: "62% 42%", zoom: "240%" },
+    support: { pos: "82% 28%", zoom: "240%" },
+  };
 
   /* ===========================================================
      Render
@@ -343,12 +384,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         <div className="bank-status">
           {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
           {connected && (
-            <button
-              className="chip"
-              style={{ marginLeft: 10 }}
-              onClick={fetchBalances}
-              aria-label="Refresh balances"
-            >
+            <button className="chip" style={{ marginLeft: 10 }} onClick={fetchBalances} aria-label="Refresh balances">
               ↻ Refresh
             </button>
           )}
@@ -366,36 +402,46 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         <div className="feature-grid">
-          <button className="feature-card" onClick={() => openPanel("jal")} aria-label="Open JAL">
+          {/* Apply poster hover art to ALL feature cards */}
+          <button
+            className="feature-card has-art"
+            style={art(ART_MAP.jal!.pos, ART_MAP.jal!.zoom)}
+            onClick={() => openPanel("jal")}
+            aria-label="Open JAL"
+          >
             <h4>JAL</h4>
             <div className="title">About &amp; Swap</div>
             <div className="icon">➕</div>
           </button>
 
-          {/* Store card with poster hover */}
           <button
             className="feature-card has-art"
+            style={art(ART_MAP.shop!.pos, ART_MAP.shop!.zoom)}
             onClick={() => openPanel("shop")}
             aria-label="Open Store"
-            style={{
-              // custom props for the .has-art CSS
-              ["--art-img" as any]: `url('${POSTER}')`,
-              ["--art-pos" as any]: "22% 66%", // crop near orange car/cash — tweak freely
-              ["--art-zoom" as any]: "260%",
-            }}
           >
             <h4>Store</h4>
             <div className="title">Buy with JAL</div>
             <div className="icon">🏬</div>
           </button>
 
-          <button className="feature-card" onClick={() => openPanel("vault")} aria-label="Open Vault">
+          <button
+            className="feature-card has-art"
+            style={art(ART_MAP.vault!.pos, ART_MAP.vault!.zoom)}
+            onClick={() => openPanel("vault")}
+            aria-label="Open Vault"
+          >
             <h4>Vault</h4>
             <div className="title">Assets &amp; Activity</div>
             <div className="icon">💳</div>
           </button>
 
-          <button className="feature-card" onClick={() => openPanel("grid")} aria-label="Open Hub">
+          <button
+            className="feature-card has-art"
+            style={art("75% 78%", "240%")} // Hub slice
+            onClick={() => openPanel("grid")}
+            aria-label="Open Hub"
+          >
             <h4>Hub</h4>
             <div className="title">All Panels</div>
             <div className="icon">🔗</div>
@@ -406,13 +452,23 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
               <div className="chip-row">
-                <button className="chip" onClick={() => openPanel("shop")}>Merch</button>
-                <button className="chip" onClick={() => openPanel("jal")}>Tokens</button>
-                <button className="chip" onClick={() => openPanel("grid")}>Currency Generator</button>
-                <button className="chip" onClick={() => openPanel("grid")}>NFT Generator</button>
+                <button className="chip" onClick={() => openPanel("shop")}>
+                  Merch
+                </button>
+                <button className="chip" onClick={() => openPanel("jal")}>
+                  Tokens
+                </button>
+                <button className="chip" onClick={() => openPanel("grid")}>
+                  Currency Generator
+                </button>
+                <button className="chip" onClick={() => openPanel("grid")}>
+                  NFT Generator
+                </button>
               </div>
             </div>
-            <div className="icon" aria-hidden>⚡</div>
+            <div className="icon" aria-hidden>
+              ⚡
+            </div>
           </div>
         </div>
 
@@ -435,11 +491,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
             {panelTitle}
           </h2>
-          {connected ? (
-            <DisconnectButton className="wallet-disconnect-btn" />
-          ) : (
-            <ConnectButton className="wallet-disconnect-btn" />
-          )}
+          {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
@@ -454,21 +506,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           {(activePanel === "grid" || activePanel === "none") && (
             <div className="hub-stack hub-stack--responsive" role="list">
               {tiles.map((t) => {
-                const isShop = t.key === "shop";
-                const className = `img-btn${isShop ? " has-art" : ""}`;
-                const style: React.CSSProperties = isShop
-                  ? {
-                      ["--art-img" as any]: `url('${POSTER}')`,
-                      ["--art-pos" as any]: "84% 72%", // different crop for the hub tile
-                      ["--art-zoom" as any]: "240%",
-                    }
-                  : {};
+                const artCfg = ART_MAP[t.key];
+                const hasArt = !!artCfg;
                 return (
                   <button
                     key={t.key}
                     type="button"
-                    className={className}
-                    style={style}
+                    className={`img-btn${hasArt ? " has-art" : ""}`}
+                    style={hasArt ? art(artCfg!.pos, artCfg!.zoom) : undefined}
                     onClick={() => openPanel(t.key)}
                     role="listitem"
                     aria-describedby={`tile-sub-${t.key}`}
@@ -487,7 +532,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     />
                     <div className="hub-btn">
                       {t.title}
-                      {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
+                      {t.sub && (
+                        <span id={`tile-sub-${t.key}`} className="sub">
+                          {t.sub}
+                        </span>
+                      )}
                       {t.disabled && <span className="locked">Connect wallet to use</span>}
                     </div>
                   </button>
@@ -603,9 +652,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <h3>{panelTitle}</h3>
                 <p>
                   Coming soon.{" "}
-                  {activePanel !== "support"
-                    ? "Preview only."
-                    : "For help, join our Telegram or reach us on X."}
+                  {activePanel !== "support" ? "Preview only." : "For help, join our Telegram or reach us on X."}
                 </p>
                 {activePanel === "support" && (
                   <div className="chip-row" style={{ marginTop: 10 }}>
