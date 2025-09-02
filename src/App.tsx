@@ -19,7 +19,7 @@ import {
   WalletModalProvider,
   WalletMultiButton,
 } from "@solana/wallet-adapter-react-ui";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { WalletAdapterNetwork, type WalletAdapter } from "@solana/wallet-adapter-base";
 
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
@@ -44,14 +44,14 @@ function SolanaProviders({ children }: PropsWithChildren) {
     return injected ?? env ?? clusterApiUrl(cluster);
   }, [cluster]);
 
-  const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as
-    | string
-    | undefined;
+  const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
 
   // Good metadata helps mobile WalletConnect UX (shown inside the wallet)
-  const appUrl = typeof window !== "undefined" ? window.location.origin : "https://www.jalsol.com";
-  const wallets = useMemo(() => {
-    const base = [
+  const appUrl =
+    typeof window !== "undefined" ? window.location.origin : "https://www.jalsol.com";
+
+  const wallets = useMemo<WalletAdapter[]>(() => {
+    const base: WalletAdapter[] = [
       new PhantomWalletAdapter(), // mobile deep-link + extension
       new SolflareWalletAdapter({ network }),
       new GlowWalletAdapter(),
@@ -90,9 +90,6 @@ function SolanaProviders({ children }: PropsWithChildren) {
 
 /* ------------------------------------------------------------------ */
 /* Mobile deep-link return guard                                       */
-/* - When a user approves in Phantom and returns to the browser,       */
-/*   autoConnect sometimes needs a nudge. We attempt a reconnect on    */
-/*   visibility/focus if the wallet is Phantom (or WC Phantom).        */
 /* ------------------------------------------------------------------ */
 function MobileDeepLinkReturnGuard() {
   const { wallet, connected, connecting, connect } = useWallet();
@@ -100,17 +97,14 @@ function MobileDeepLinkReturnGuard() {
   useEffect(() => {
     const tryReconnect = () => {
       if (document.visibilityState !== "visible") return;
-      // Don’t spam if already connected/connecting or no wallet chosen yet
       if (connected || connecting || !wallet) return;
 
       const name = wallet.adapter?.name?.toLowerCase() ?? "";
-      const looksLikePhantom =
-        name.includes("phantom") || name.includes("walletconnect");
+      const looksLikePhantom = name.includes("phantom") || name.includes("walletconnect");
       if (looksLikePhantom) {
-        // Small delay to let the tab fully resume
         setTimeout(() => {
           connect().catch(() => {
-            /* swallow — user may cancel */
+            /* user may cancel */
           });
         }, 100);
       }
@@ -227,7 +221,6 @@ function TabBar() {
     else p.set("panel", panel);
     const q = p.toString();
     return q ? `${base}?${q}` : base;
-    // NOTE: Landing will read ?panel=shop|support
   };
   const isActive = (panel?: string) => {
     const p = new URLSearchParams(location.search).get("panel");
