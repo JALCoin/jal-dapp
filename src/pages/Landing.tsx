@@ -82,6 +82,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
 
+  // focus trap refs
+  const firstFocusRef = useRef<HTMLButtonElement | null>(null);
+  const lastFocusRef = useRef<HTMLButtonElement | null>(null);
+
   const reducedMotion = useMemo(
     () =>
       typeof window !== "undefined" && window.matchMedia
@@ -141,19 +145,19 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   }, [tiles]);
 
   /* ---------- URL/session init ---------- */
+  const isPanel = (v: unknown): v is Panel =>
+    v === "none" ||
+    v === "grid" ||
+    v === "shop" ||
+    v === "jal" ||
+    v === "vault" ||
+    v === "payments" ||
+    v === "loans" ||
+    v === "support";
+
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
-    const isPanel = (v: unknown): v is Panel =>
-      v === "none" ||
-      v === "grid" ||
-      v === "shop" ||
-      v === "jal" ||
-      v === "vault" ||
-      v === "payments" ||
-      v === "loans" ||
-      v === "support";
-
     const start: Panel =
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
       (fromSession && isPanel(fromSession) ? fromSession : null) ??
@@ -163,6 +167,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Keep URL in sync with state
   useEffect(() => {
     if (!activePanel) return;
     sessionStorage.setItem("landing:lastPanel", activePanel);
@@ -177,6 +182,16 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       setParams(params, { replace: true });
     }
   }, [activePanel, params, setParams]);
+
+  // Keep state in sync when user uses back/forward
+  useEffect(() => {
+    const onPop = () => {
+      const urlPanel = params.get("panel") as Panel | null;
+      setActivePanel(urlPanel && isPanel(urlPanel) ? urlPanel : "none");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [params]);
 
   /* ---------- Wallet events / merge effect ---------- */
   useEffect(() => {
@@ -219,7 +234,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [setWalletFlag]);
 
-  /* ---------- overlay controls ---------- */
+  /* ---------- overlay controls (scroll lock + Escape) ---------- */
   const overlayOpen = activePanel !== "none" && activePanel !== "grid";
   useEffect(() => {
     if (overlayOpen) document.body.setAttribute("data-hub-open", "true");
@@ -232,6 +247,34 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [overlayOpen]);
+
+  // Overlay focus trap + focus management
+  useEffect(() => {
+    if (!overlayOpen) return;
+    // focus the panel title for screen readers/keyboard users
+    hubTitleRef.current?.focus?.();
+
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const first = firstFocusRef.current;
+      const last = lastFocusRef.current;
+      if (!first || !last) return;
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", trap);
+    return () => document.removeEventListener("keydown", trap);
   }, [overlayOpen]);
 
   /* ---------- Open helpers ---------- */
@@ -364,7 +407,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const fmt = (n: number | null, digits = 4) =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
 
-  // Hover art presets for hub tiles (and we’ll mirror in the top feature cards)
+  // Hover art presets for hub tiles
   const ART_MAP: Partial<Record<TileKey, { pos: string; zoom?: string }>> = {
     jal: { pos: "26% 38%", zoom: "240%" },
     shop: { pos: "73% 38%", zoom: "240%" },
@@ -377,10 +420,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ===========================================================
      Render
   ============================================================ */
+  const overlayActive = overlayOpen; // alias for readability
+
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
       {/* ===== Banking-style landing ===== */}
-      <section className="bank-landing container" aria-label="Overview">
+      <section className="bank-landing container" aria-label="Overview" aria-hidden={overlayActive || undefined}>
         <div className="bank-status">
           {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
           {connected && (
@@ -475,15 +520,21 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         {!connected && <ConnectButton />}
       </section>
 
-      {overlayOpen && (
-        <button className="hub-overlay" aria-label="Close panel" onClick={() => setActivePanel("none")} />
+      {/* Backdrop for overlay panels */}
+      {overlayActive && (
+        <button
+          className="hub-overlay"
+          aria-label="Close panel"
+          onClick={() => setActivePanel("none")}
+          ref={firstFocusRef}
+        />
       )}
 
       <section
         id="hub-panel"
-        className={`hub-panel hub-panel--fit ${overlayOpen ? "hub-panel--overlay" : "hub-preview"}`}
-        role={overlayOpen ? "dialog" : "region"}
-        aria-modal={overlayOpen || undefined}
+        className={`hub-panel hub-panel--fit ${overlayActive ? "hub-panel--overlay" : "hub-preview"}`}
+        role={overlayActive ? "dialog" : "region"}
+        aria-modal={overlayActive || undefined}
         aria-label="JAL/SOL Hub"
         ref={panelRef as any}
       >
@@ -491,7 +542,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
             {panelTitle}
           </h2>
-          {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
+          {connected ? (
+            <DisconnectButton className="wallet-disconnect-btn" />
+          ) : (
+            <ConnectButton className="wallet-disconnect-btn" />
+          )}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
@@ -504,7 +559,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           )}
 
           {(activePanel === "grid" || activePanel === "none") && (
-            <div className="hub-stack hub-stack--responsive" role="list">
+            <div className="hub-stack hub-stack--responsive" role="list" aria-hidden={overlayActive || undefined}>
               {tiles.map((t) => {
                 const artCfg = ART_MAP[t.key];
                 const hasArt = !!artCfg;
@@ -668,6 +723,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             )}
           </div>
         </div>
+
+        {/* hidden focus-sentinel when overlay is open */}
+        {overlayActive && (
+          <button
+            ref={lastFocusRef}
+            style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+            aria-hidden="true"
+            tabIndex={0}
+            onFocus={() => {
+              // cycle back to first element (backdrop)
+              firstFocusRef.current?.focus();
+            }}
+          />
+        )}
       </section>
     </main>
   );

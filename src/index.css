@@ -23,6 +23,8 @@
   --t-fast:140ms; --t-med:260ms; --t-slow:480ms;
 
   --max-w:1200px;
+  --header-h:88px;
+  --tabbar-h:68px;
 }
 
 /* ---------- Reset / Base ---------- */
@@ -46,14 +48,18 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
-.muted{ opacity:.75 } /* utility */
+.muted{ opacity:.75 }
 
-/* Lock page scroll when wallet modal is visible */
-body[data-wallet-visible="true"]{ overflow:hidden }
+/* Lock page scroll when wallet modal / menu / hub is visible */
+body[data-wallet-visible="true"],
+body[data-menu-open="true"],
+body[data-hub-open="true"]{ overflow:hidden }
 
 /* ---------- Main layout ---------- */
 main[role="main"]{
-  min-height:calc(100dvh - 96px);
+  min-height:calc(100dvh - var(--header-h));
+  /* keep content above the fixed tabbar (with iOS safe area) */
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   display:flex; flex-direction:column;
 }
 
@@ -65,6 +71,7 @@ main[role="main"]{
   background: linear-gradient(180deg, rgba(10,14,18,.72), rgba(10,14,18,.18));
   backdrop-filter: blur(var(--blur));
   border-bottom:1px solid var(--stroke);
+  height: var(--header-h);
 }
 .header-inner{
   width:min(var(--max-w), 100%);
@@ -90,21 +97,13 @@ main[role="main"]{
   height:clamp(68px,9.5vw,96px);
   filter: drop-shadow(0 0 10px rgba(255,255,255,.7));
   margin-inline:auto;
+  cursor:pointer;
+  transition: transform 140ms;
 }
+.logo.header-logo:hover { transform: translateY(-1px); filter: drop-shadow(0 0 12px rgba(255,255,255,.9)); }
 
-/* middle nav (desktop only) */
-.main-nav{
-  position:absolute; left:50%; transform:translateX(-50%);
-  display:flex; gap:12px; align-items:center;
-}
-.nav-link{
-  padding:.5rem .8rem; border-radius:999px; font-size:.95rem; letter-spacing:.04em;
-  border:1px solid transparent; opacity:.95;
-  transition: color var(--t-fast), border-color var(--t-fast), text-shadow var(--t-fast);
-}
-.nav-link:hover{ color:var(--gold); border-color:rgba(244,200,106,.35); text-shadow:var(--glow-gold) }
-.nav-link.active{ color:var(--gold); border-color:rgba(244,200,106,.5); text-shadow:var(--glow-gold) }
-@media (max-width:980px){ .main-nav{ display:none } }
+/* hide center text nav (we use logo) */
+.main-nav{ display:none!important }
 
 /* hamburger (right) */
 .hamburger{
@@ -231,6 +230,7 @@ main[role="main"]{
   position:relative;
   display:grid; gap:clamp(12px,2vw,18px);
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  z-index:1;
 }
 .hub-stack::before{
   content:""; position:absolute; inset:0; border-radius:var(--r-lg);
@@ -264,7 +264,6 @@ main[role="main"]{
 
 /* Ensure JAL panel overlays tiles cleanly */
 .in-hub{ position:relative; z-index:5; isolation:isolate }
-.hub-stack{ position:relative; z-index:1 }
 .in-hub > *{ position:relative; z-index:6 }
 
 /* Subtle halo when previewing only */
@@ -324,7 +323,7 @@ main[role="main"]{
   box-shadow: var(--glow-green)!important;
 }
 @media (max-width: 640px){
-  .wallet-adapter-modal-wrapper{ width:92vw!important }
+  .wallet-adapter-modal-wrapper{ width:92vw!important; max-height:90vh!important; overflow:auto!important }
   .landing-wallet{ padding:1rem 1.25rem; font-size:1rem }
   .img-btn{ min-height:160px }
 }
@@ -339,8 +338,8 @@ main[role="main"]{
    BANKING LANDING LAYOUT PRIMITIVES
    (Additive: safe to append)
 =================================*/
-.bank-landing{ display:grid; gap:20px; padding:18px 14px 92px }
-@media (min-width:720px){ .bank-landing{ padding:26px 20px 110px; gap:24px }}
+.bank-landing{ display:grid; gap:20px; padding:18px 14px calc(92px + env(safe-area-inset-bottom, 0px)) }
+@media (min-width:720px){ .bank-landing{ padding:26px 20px calc(110px + env(safe-area-inset-bottom, 0px)); gap:24px }}
 
 /* Top summary: two balances */
 .balance-row{
@@ -350,11 +349,11 @@ main[role="main"]{
 @media (max-width:720px){ .balance-row{ grid-template-columns: 1fr } }
 .balance-card{
   border:1px solid var(--stroke); border-radius:var(--r-lg);
-  padding:16px 18px;
+  padding:18px 20px;
   background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
   box-shadow:0 8px 26px rgba(0,0,0,.5);
 }
-.balance-amount{ font-size:clamp(1.4rem, 4.8vw, 2.1rem); font-weight:700; color:var(--gold); text-shadow:var(--glow-gold) }
+.balance-amount{ font-size:clamp(1.4rem, 4.8vw, 2.1rem); font-weight:700; color:var(--gold); text-shadow:var(--glow-gold); font-variant-numeric: tabular-nums; letter-spacing:.01em }
 .balance-amount small{ font-weight:600; opacity:.9; margin-left:.25ch }
 .balance-label{ opacity:.85; margin-top:6px }
 
@@ -385,10 +384,12 @@ main[role="main"]{
 /* Bottom tab bar */
 .tabbar{
   position:fixed; left:0; right:0; bottom:0; z-index:30;
-  height:68px; display:grid; grid-auto-flow:column; place-items:center;
+  height:var(--tabbar-h);
+  display:grid; grid-auto-flow:column; place-items:center;
   background:linear-gradient(180deg, rgba(12,16,22,.82), rgba(12,16,22,.94));
   border-top:1px solid var(--stroke-2);
   backdrop-filter:blur(var(--blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .tabbar a{
   display:grid; gap:6px; place-items:center; padding:6px 4px; font-size:.8rem; opacity:.9;
@@ -397,13 +398,6 @@ main[role="main"]{
 .tabbar a:hover{ transform:translateY(-1px); color:var(--cyan); text-shadow:var(--glow-cyan) }
 .tabbar a.active{ color:var(--gold); text-shadow:var(--glow-gold) }
 .tabbar .tab-icon{ width:22px; height:22px; opacity:.95 }
-
-/* --- Header logo acts as Home button --- */
-.logo.header-logo { cursor: pointer; }
-.logo.header-logo:hover { transform: translateY(-1px); filter: drop-shadow(0 0 12px rgba(255,255,255,.9)); transition: transform 140ms; }
-
-/* Hide center text nav (we’ll use the logo only) */
-.main-nav { display: none !important; }
 
 /* Banking chips in the featured row */
 .chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
@@ -415,6 +409,7 @@ main[role="main"]{
   transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
 .chip:hover { transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan); }
+.chip.active{ border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
 
 /* Status line */
 .bank-status { text-align:right; opacity:.9; }
@@ -430,15 +425,13 @@ main[role="main"]{
   position: fixed;
   z-index: 49;
   left: 50%; transform: translateX(-50%);
-  top: 88px;                 /* room for sticky header */
-  bottom: 74px;              /* room for bottom tab bar */
+  top: var(--header-h);          /* room for sticky header */
+  bottom: var(--tabbar-h);       /* room for bottom tab bar */
   width: min(100% - 2rem, 1100px);
 }
 @media (max-width: 640px){
   .hub-panel--overlay{ top: 72px; bottom: 72px; }
 }
-/* lock background scroll when hub is open */
-body[data-hub-open="true"]{ overflow: hidden; }
 
 /* ===============================
    JAL panel + Swap embed
@@ -511,13 +504,8 @@ body[data-hub-open="true"]{ overflow: hidden; }
 .swap-embed-hint a{ text-decoration: underline; }
 
 /* ---- Tweaks for balance tiles ---- */
-.balance-amount{ font-variant-numeric: tabular-nums; letter-spacing:.01em }
 .balance-card.loading .balance-amount{ opacity:.65 }
 .balance-card.error .balance-amount{ color:#f39; text-shadow:0 0 10px rgba(255,0,120,.25) }
-
-/* Make top summary tiles match screenshot spacing a bit tighter */
-.balance-row{ gap:16px }
-.balance-card{ padding:18px 20px }
 
 /* ===============================
    Shop product grid
@@ -572,9 +560,6 @@ body[data-hub-open="true"]{ overflow: hidden; }
 .product-price .price-jal{ font-weight:700 }
 .product-price .muted{ opacity:.8 }
 
-/* Chip active state for shop filters */
-.chip.active{ border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
-
 /* Shop controls (filters + search) */
 .shop-controls{
   display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:10px;
@@ -611,74 +596,46 @@ body[data-hub-open="true"]{ overflow: hidden; }
 @media (min-width:1200px){
   .product-grid{ grid-template-columns: repeat(4, 1fr) }
 }
+
 /* ===============================
    Poster / key-art hover reveal
-   Usage: add class "has-art" to .feature-card or .img-btn
-   and set CSS vars inline on the element:
-     --art-img: url('/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png');
-     --art-pos: 75% 70%;   /* crop hotspot */
-     --art-zoom: 260%;     /* X-size for background */
 =================================*/
 .feature-card.has-art,
 .img-btn.has-art{
   position: relative;
-  isolation: isolate;             /* stable stacking */
-  /* defaults */
+  isolation: isolate;
   --art-img: none;
   --art-pos: 50% 50%;
   --art-zoom: 240%;
   --art-opacity: 0;
 }
-
-/* Keep text/buttons above the art */
 .feature-card.has-art > *,
-.img-btn.has-art > *{
-  position: relative;
-  z-index: 1;
-}
-
+.img-btn.has-art > *{ position: relative; z-index: 1; }
 .feature-card.has-art::after,
 .img-btn.has-art::after{
   content:"";
   position:absolute; inset:0;
-  z-index:0;                      /* above GIF, below labels */
-  pointer-events:none;
-
-  /* poster crop */
+  z-index:0; pointer-events:none;
   background-image: var(--art-img);
   background-repeat: no-repeat;
   background-position: var(--art-pos);
   background-size: var(--art-zoom) auto;
-
-  /* blend & vibe */
-  mix-blend-mode: screen;         /* feels integrated */
+  mix-blend-mode: screen;
   opacity: var(--art-opacity);
   transform: scale(1.02);
-  transition:
-    opacity var(--t-med) ease,
-    transform var(--t-med) ease,
-    filter var(--t-med) ease;
-
-  /* gentle vignette for polish */
+  transition: opacity var(--t-med) ease, transform var(--t-med) ease, filter var(--t-med) ease;
   box-shadow: inset 0 0 160px rgba(0,0,0,.45);
 }
-
-/* Hover/Focus reveal (flip the variable on the host) */
 .feature-card.has-art:hover,
 .feature-card.has-art:focus-visible,
 .img-btn.has-art:hover,
-.img-btn.has-art:focus-visible{
-  --art-opacity: .9;
-}
+.img-btn.has-art:focus-visible{ --art-opacity: .9; }
 .feature-card.has-art:hover::after,
 .feature-card.has-art:focus-visible::after,
 .img-btn.has-art:hover::after,
 .img-btn.has-art:focus-visible::after{
-  transform:none;
-  filter: saturate(1.08) contrast(1.03);
+  transform:none; filter: saturate(1.08) contrast(1.03);
 }
-
-/* Fallback when mix-blend-mode isn't available */
 @supports not (mix-blend-mode: screen){
   .feature-card.has-art::after,
   .img-btn.has-art::after{
@@ -686,11 +643,7 @@ body[data-hub-open="true"]{ overflow: hidden; }
     opacity: calc(var(--art-opacity) * .65);
   }
 }
-
-/* Respect reduced motion */
 @media (prefers-reduced-motion: reduce){
   .feature-card.has-art::after,
-  .img-btn.has-art::after{
-    transition: none;
-  }
+  .img-btn.has-art::after{ transition: none; }
 }
