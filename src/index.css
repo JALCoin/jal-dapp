@@ -266,8 +266,11 @@ main[role="main"]{
 .in-hub{ position:relative; z-index:5; isolation:isolate }
 .in-hub > *{ position:relative; z-index:6 }
 
-/* Subtle halo when previewing only */
-.hub-preview{ box-shadow: 0 16px 48px rgba(0,0,0,.6), 0 0 12px rgba(244,200,106,.25) }
+/* Subtle halo when previewing only + keep clear of tab bar */
+.hub-preview{
+  box-shadow: 0 16px 48px rgba(0,0,0,.6), 0 0 12px rgba(244,200,106,.25);
+  margin-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 16px);
+}
 
 /* Components */
 .button{
@@ -508,6 +511,38 @@ main[role="main"]{
 .balance-card.error .balance-amount{ color:#f39; text-shadow:0 0 10px rgba(255,0,120,.25) }
 
 /* ===============================
+   Shop promo banner (Currency/NFT)
+=================================*/
+.shop-promo{
+  position:relative;
+  margin-top:12px;
+  border:1px solid var(--stroke);
+  border-radius:var(--r-lg);
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 0 1px rgba(244,200,106,.12) inset;
+  overflow:hidden;
+}
+.shop-promo.has-art::after{
+  opacity:.28;                /* subtle behind text */
+  filter:saturate(1.05) contrast(1.02);
+}
+.shop-promo-inner{
+  position:relative; z-index:1;
+  padding:clamp(14px, 3vw, 18px);
+  display:grid; gap:8px;
+}
+.promo-head{ display:flex; align-items:center; gap:10px; }
+.promo-badge{
+  padding:.28rem .55rem; font-size:.75rem; letter-spacing:.06em;
+  border-radius:999px; border:1px solid rgba(244,200,106,.5);
+  color:var(--gold); box-shadow:var(--glow-gold);
+  background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0));
+}
+.promo-title{ margin:0; font-weight:700; font-size:clamp(1.05rem, 2.2vw, 1.25rem); }
+.promo-sub{ margin:2px 0 0; opacity:.9; }
+.cta-group{ display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+
+/* ===============================
    Shop product grid
 =================================*/
 .product-grid{
@@ -601,7 +636,8 @@ main[role="main"]{
    Poster / key-art hover reveal
 =================================*/
 .feature-card.has-art,
-.img-btn.has-art{
+.img-btn.has-art,
+.shop-promo.has-art{
   position: relative;
   isolation: isolate;
   --art-img: none;
@@ -610,9 +646,12 @@ main[role="main"]{
   --art-opacity: 0;
 }
 .feature-card.has-art > *,
-.img-btn.has-art > *{ position: relative; z-index: 1; }
+.img-btn.has-art > *,
+.shop-promo.has-art > *{ position: relative; z-index: 1; }
+
 .feature-card.has-art::after,
-.img-btn.has-art::after{
+.img-btn.has-art::after,
+.shop-promo.has-art::after{
   content:"";
   position:absolute; inset:0;
   z-index:0; pointer-events:none;
@@ -629,21 +668,27 @@ main[role="main"]{
 .feature-card.has-art:hover,
 .feature-card.has-art:focus-visible,
 .img-btn.has-art:hover,
-.img-btn.has-art:focus-visible{ --art-opacity: .9; }
+.img-btn.has-art:focus-visible,
+.shop-promo.has-art:hover,
+.shop-promo.has-art:focus-visible{ --art-opacity: .9; }
 .feature-card.has-art:hover::after,
 .feature-card.has-art:focus-visible::after,
 .img-btn.has-art:hover::after,
-.img-btn.has-art:focus-visible::after{
+.img-btn.has-art:focus-visible::after,
+.shop-promo.has-art:hover::after,
+.shop-promo.has-art:focus-visible::after{
   transform:none; filter: saturate(1.08) contrast(1.03);
 }
 @supports not (mix-blend-mode: screen){
   .feature-card.has-art::after,
-  .img-btn.has-art::after{
+  .img-btn.has-art::after,
+  .shop-promo.has-art::after{
     mix-blend-mode: normal;
     opacity: calc(var(--art-opacity) * .65);
   }
 }
 @media (prefers-reduced-motion: reduce){
   .feature-card.has-art::after,
-  .img-btn.has-art::after{ transition: none; }
+  .img-btn.has-art::after,
+  .shop-promo.has-art::after{ transition: none; }
 }

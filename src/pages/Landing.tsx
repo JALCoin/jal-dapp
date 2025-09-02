@@ -32,7 +32,7 @@ type LandingProps = { initialPanel?: Panel };
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
-// Poster art (used for hover reveals)
+// Poster art (used for hover/promo reveals)
 const POSTER = "/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png";
 const art = (pos: string, zoom = "240%"): React.CSSProperties =>
   ({
@@ -492,7 +492,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <div className="icon">🔗</div>
           </button>
 
-          <div className="feature-card feature-wide" role="group" aria-label="Get Started">
+        <div className="feature-card feature-wide" role="group" aria-label="Get Started">
             <div style={{ display: "grid", gap: 6 }}>
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
@@ -608,13 +608,39 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {/* ===== SHOP (product cards + coming-soon flow) ===== */}
+            {/* ===== SHOP (product cards + promo + coming-soon flow) ===== */}
             {activePanel === "shop" && (
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>Shop</h3>
                 <p className="muted" style={{ marginTop: 4 }}>
                   Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
                 </p>
+
+                {/* Promo banner: Currency & NFT Generators */}
+                <section
+                  className="shop-promo has-art"
+                  style={art("60% 44%", "220%")}
+                  role="region"
+                  aria-label="Create with JAL/SOL"
+                >
+                  <div className="shop-promo-inner">
+                    <div className="promo-head">
+                      <span className="promo-badge">NEW</span>
+                      <h4 className="promo-title">Create with JAL/SOL</h4>
+                    </div>
+                    <p className="promo-sub">
+                      Spin up a SOL-based currency or launch an NFT collection in minutes.
+                    </p>
+                    <div className="cta-group">
+                      <button className="button gold" onClick={() => openPanel("grid")}>
+                        Currency Generator
+                      </button>
+                      <button className="button neon" onClick={() => openPanel("grid")}>
+                        NFT Generator
+                      </button>
+                    </div>
+                  </div>
+                </section>
 
                 {shopNotice && (
                   <div className="shop-notice soon" role="status" aria-live="polite" style={{ marginTop: 10 }}>
