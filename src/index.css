@@ -712,4 +712,48 @@ main[role="main"]{
   box-shadow:0 20px 80px rgba(0,0,0,.7);
   padding:18px;
 }
+/* ---------- Mobile fixes: Shop & overlay fit ---------- */
+@media (max-width: 680px) {
+  /* keep panel inside safe-areas */
+  .hub-panel--overlay {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
 
+  /* Compare shelf (Currency vs NFT) stacks vertically */
+  .shop-promo,
+  .shop-promo .shop-promo-inner,
+  .shop-promo .product-grid {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .shop-promo .product-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* stack */
+    gap: 12px;
+  }
+
+  /* Catalog also collapses to a single column */
+  .product-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Guard against any horizontal creep */
+  .card,
+  .product-card {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .product-media img,
+  .hub-gif {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Chips wrap neatly */
+  .chip-row { flex-wrap: wrap; gap: 8px; }
+}
