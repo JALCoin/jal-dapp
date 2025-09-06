@@ -118,12 +118,47 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- SHOP: demo catalog + filtering ---------- */
   const products = useMemo<Product[]>(
     () => [
-      { id: "hoodie", name: "JAL Hoodie", tag: "Merch", priceJal: 420, img: "/products/hoodie.png", blurb: "Heavyweight, embroidered." },
-      { id: "cap", name: "Logo Cap", tag: "Merch", priceJal: 180, img: "/products/cap.png", blurb: "Adjustable snapback." },
-      { id: "sticker", name: "Sticker Pack", tag: "Merch", priceJal: 60, img: "/products/stickers.png", blurb: "Glossy vinyl set." },
-      { id: "gift25", name: "Gift Card 25", tag: "Gift Cards", priceJal: 250, img: "/products/gift25.png", blurb: "Send JAL love." },
+      {
+        id: "hoodie",
+        name: "JAL Hoodie",
+        tag: "Merch",
+        priceJal: 420,
+        img: "/products/hoodie.png",
+        blurb: "Heavyweight, embroidered.",
+      },
+      {
+        id: "cap",
+        name: "Logo Cap",
+        tag: "Merch",
+        priceJal: 180,
+        img: "/products/cap.png",
+        blurb: "Adjustable snapback.",
+      },
+      {
+        id: "sticker",
+        name: "Sticker Pack",
+        tag: "Merch",
+        priceJal: 60,
+        img: "/products/stickers.png",
+        blurb: "Glossy vinyl set.",
+      },
+      {
+        id: "gift25",
+        name: "Gift Card 25",
+        tag: "Gift Cards",
+        priceJal: 250,
+        img: "/products/gift25.png",
+        blurb: "Send JAL love.",
+      },
       { id: "gift50", name: "Gift Card 50", tag: "Gift Cards", priceJal: 500, img: "/products/gift50.png" },
-      { id: "wallp", name: "Phone Wallpaper", tag: "Digital", priceJal: 15, img: "/products/wallpaper.png", blurb: "4K / OLED-friendly." },
+      {
+        id: "wallp",
+        name: "Phone Wallpaper",
+        tag: "Digital",
+        priceJal: 15,
+        img: "/products/wallpaper.png",
+        blurb: "4K / OLED-friendly.",
+      },
     ],
     []
   );
@@ -262,7 +297,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   // Overlay focus trap + focus management
   useEffect(() => {
     if (!overlayOpen) return;
-    // focus the panel title for screen readers/keyboard users
     hubTitleRef.current?.focus?.();
 
     const trap = (e: KeyboardEvent) => {
@@ -647,39 +681,84 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
                 </p>
 
-                {/* Promo banner: Currency & NFT Generators */}
+                {/* Generator shelf: side-by-side compare */}
                 <section
                   className="shop-promo has-art"
-                  style={art("60% 44%", "220%")}
+                  style={art("58% 42%", "220%")}
                   role="region"
                   aria-label="Create with JAL/SOL"
-                  aria-describedby="promo-sub"
                 >
                   <div className="shop-promo-inner">
                     <div className="promo-head">
                       <span className="promo-badge">NEW</span>
                       <h4 className="promo-title">Create with JAL/SOL</h4>
                     </div>
-                    <p id="promo-sub" className="promo-sub">
-                      Spin up a SOL-based currency or launch an NFT collection in minutes.
-                    </p>
-                    <div className="cta-group">
-                      <Link
-                        className="button gold"
-                        to="/crypto-generator/engine#step1"
-                        onMouseEnter={prefetchGenerator}
-                        onFocus={prefetchGenerator}
-                      >
-                        Currency Generator
-                      </Link>
-                      <Link
-                        className="button neon"
-                        to="/crypto-generator"
-                        onMouseEnter={prefetchGenerator}
-                        onFocus={prefetchGenerator}
-                      >
-                        NFT Generator
-                      </Link>
+                    <p className="promo-sub">Choose what you’re launching. We’ll guide you step-by-step.</p>
+
+                    <div className="product-grid" style={{ marginTop: 8 }}>
+                      {/* Currency (Fungible) */}
+                      <article className="product-card">
+                        <div className="product-body">
+                          <h4 className="product-title">Currency / Token (Fungible)</h4>
+                          <div className="product-blurb">
+                            <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
+                              <li>Interchangeable units (e.g., 1 JAL = 1 JAL)</li>
+                              <li>Great for points, memecoins, governance</li>
+                              <li>Supply + mint authority you control</li>
+                            </ul>
+                          </div>
+                          <div className="muted" style={{ marginTop: 8 }}>
+                            Creates: SPL mint + ATA + Metadata
+                          </div>
+                          <div style={{ marginTop: 10 }}>
+                            <Link
+                              className="button gold"
+                              to="/crypto-generator/engine#step1"
+                              onMouseEnter={prefetchGenerator}
+                              onFocus={prefetchGenerator}
+                            >
+                              Start Token
+                            </Link>
+                          </div>
+                          <div className="chip-row" style={{ marginTop: 10 }}>
+                            <span className="chip">Loyalty</span>
+                            <span className="chip">Governance</span>
+                            <span className="chip">Memecoin</span>
+                          </div>
+                        </div>
+                      </article>
+
+                      {/* NFT (Non-Fungible) */}
+                      <article className="product-card">
+                        <div className="product-body">
+                          <h4 className="product-title">NFT (Non-Fungible)</h4>
+                          <div className="product-blurb">
+                            <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
+                              <li>Unique items or passes (1/1 or small series)</li>
+                              <li>Artwork stored via Lighthouse/IPFS</li>
+                              <li>Collection metadata for discovery</li>
+                            </ul>
+                          </div>
+                          <div className="muted" style={{ marginTop: 8 }}>
+                            Creates: NFT mint(s) + Collection Metadata
+                          </div>
+                          <div style={{ marginTop: 10 }}>
+                            <Link
+                              className="button neon"
+                              to="/crypto-generator"
+                              onMouseEnter={prefetchGenerator}
+                              onFocus={prefetchGenerator}
+                            >
+                              Start NFT
+                            </Link>
+                          </div>
+                          <div className="chip-row" style={{ marginTop: 10 }}>
+                            <span className="chip">Art</span>
+                            <span className="chip">Membership</span>
+                            <span className="chip">Access Pass</span>
+                          </div>
+                        </div>
+                      </article>
                     </div>
                   </div>
                 </section>

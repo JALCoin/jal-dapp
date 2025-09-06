@@ -42,6 +42,18 @@ const CryptoGeneratorIntro = lazy(() => import("./pages/CryptoGeneratorIntro"));
 const CryptoGenerator = lazy(() => import("./pages/CryptoGenerator"));
 
 /* ------------------------------------------------------------------ */
+/* Route prefetch on intent                                            */
+/* ------------------------------------------------------------------ */
+let generatorsPrefetched = false;
+function prefetchGenerators() {
+  if (generatorsPrefetched) return;
+  generatorsPrefetched = true;
+  // Warm the chunk cache for snappy navigation
+  import("./pages/CryptoGeneratorIntro");
+  import("./pages/CryptoGenerator");
+}
+
+/* ------------------------------------------------------------------ */
 /* Providers                                                           */
 /* ------------------------------------------------------------------ */
 function SolanaProviders({ children }: PropsWithChildren) {
@@ -132,24 +144,11 @@ function MobileDeepLinkReturnGuard() {
   return null;
 }
 
-function DisconnectBtn() {
-  const { connected, disconnect } = useWallet();
-  if (!connected) return null;
-  return (
-    <button
-      className="wallet-disconnect-btn"
-      onClick={() => disconnect().catch(() => {})}
-    >
-      Disconnect
-    </button>
-  );
-}
-
 /** Scroll to top on route change for nicer navigation on mobile */
 function ScrollRestorer() {
   const { pathname, search } = useLocation();
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+    window.scrollTo({ top: 0, behavior: "auto" });
   }, [pathname, search]);
   return null;
 }
@@ -172,7 +171,7 @@ function HeaderView({ onMenu, isOpen }: { onMenu: () => void; isOpen: boolean })
           </a>
         </div>
 
-        <NavLink to="/" aria-label="Home">
+        <NavLink to="/" end aria-label="Home">
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
         </NavLink>
 
@@ -208,6 +207,8 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           <NavLink
             to="/crypto-generator"
             className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onMouseEnter={prefetchGenerators}
+            onFocus={prefetchGenerators}
             onClick={onClose}
           >
             Generator
@@ -218,6 +219,19 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
         <DisconnectBtn />
       </aside>
     </>
+  );
+}
+
+function DisconnectBtn() {
+  const { connected, disconnect } = useWallet();
+  if (!connected) return null;
+  return (
+    <button
+      className="wallet-disconnect-btn"
+      onClick={() => disconnect().catch(() => {})}
+    >
+      Disconnect
+    </button>
   );
 }
 
