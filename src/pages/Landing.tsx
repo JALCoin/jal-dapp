@@ -63,6 +63,174 @@ function ConnectButton({ className }: { className?: string }) {
   return <WalletMultiButton className={className ?? "landing-wallet"} />;
 }
 
+/* ---------- How-to: Create Liquidity with JAL (helpers) ---------- */
+function CopyBtn({ text }: { text: string }) {
+  const [ok, setOk] = useState(false);
+  return (
+    <button
+      className="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setOk(true);
+          setTimeout(() => setOk(false), 1200);
+        } catch {
+          /* noop */
+        }
+      }}
+      aria-live="polite"
+    >
+      {ok ? "Copied ✓" : "Copy Checklist"}
+    </button>
+  );
+}
+
+function LiquidityCalc() {
+  const [tokenAmount, setTokenAmount] = useState<number>(1);
+  const [priceInJal, setPriceInJal] = useState<number>(100); // 1 YOUR = 100 JAL
+  const jalNeeded =
+    isFinite(tokenAmount) && isFinite(priceInJal)
+      ? tokenAmount * priceInJal
+      : 0;
+
+  return (
+    <div className="card" style={{ marginTop: 10 }}>
+      <h4 style={{ marginTop: 0 }}>Quick calc</h4>
+      <p className="muted" style={{ marginTop: 4 }}>
+        AMMs require equal <em>value</em> on both sides. Estimate the JAL you’ll
+        pair with your token.
+      </p>
+
+      <div className="chip-row" style={{ marginTop: 8 }}>
+        <label className="chip" style={{ gap: 8 }}>
+          <span>Deposit</span>
+          <input
+            aria-label="Your token amount"
+            type="number"
+            step="any"
+            min="0"
+            value={Number.isFinite(tokenAmount) ? tokenAmount : ""}
+            onChange={(e) => setTokenAmount(Number(e.target.value))}
+            className="shop-search"
+            style={{ width: 120 }}
+          />
+          <span>YOUR</span>
+        </label>
+
+        <label className="chip" style={{ gap: 8 }}>
+          <span>Price</span>
+          <input
+            aria-label="Price in JAL"
+            type="number"
+            step="any"
+            min="0"
+            value={Number.isFinite(priceInJal) ? priceInJal : ""}
+            onChange={(e) => setPriceInJal(Number(e.target.value))}
+            className="shop-search"
+            style={{ width: 120 }}
+          />
+          <span>JAL / YOUR</span>
+        </label>
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        You’ll need approximately{" "}
+        <strong>
+          {jalNeeded.toLocaleString(undefined, { maximumFractionDigits: 6 })}{" "}
+          JAL
+        </strong>{" "}
+        to pair with{" "}
+        <strong>
+          {tokenAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}{" "}
+          YOUR
+        </strong>{" "}
+        at{" "}
+        <strong>
+          {priceInJal.toLocaleString(undefined, { maximumFractionDigits: 6 })}{" "}
+          JAL
+        </strong>{" "}
+        per YOUR.
+      </div>
+    </div>
+  );
+}
+
+function LiquidityHowToCard() {
+  const checklist = [
+    "Prepare: have YOUR token mint, some JAL, and SOL for fees.",
+    "Choose pair: YOUR/JAL (ecosystem) or YOUR/SOL (base).",
+    "Pick a DEX (Raydium AMM/CLMM, etc.) and connect wallet.",
+    "If no pool exists, create one; otherwise Add Liquidity.",
+    "Select YOUR + JAL; AMM: deposit equal value. CLMM: set price/range.",
+    "Confirm transactions; save and share the pool address.",
+    "Optional: publish pool links on site/socials & aggregators.",
+  ]
+    .map((s, i) => `${i + 1}. ${s}`)
+    .join("\n");
+
+  return (
+    <section
+      className="card cyan"
+      role="region"
+      aria-label="How to: Create Liquidity with JAL"
+      style={{ marginTop: 14 }}
+    >
+      <h3 style={{ marginTop: 0 }}>How to: Create Liquidity with JAL</h3>
+      <p className="muted" style={{ marginTop: 4 }}>
+        Pair your token with <strong>JAL</strong> (or SOL) to enable trading &
+        price discovery.
+      </p>
+
+      <ol style={{ marginTop: 8 }}>
+        <li>
+          <strong>Prepare assets.</strong> YOUR token, JAL, and some SOL for
+          fees.
+        </li>
+        <li>
+          <strong>Pick a pair.</strong> <em>YOUR/JAL</em> or <em>YOUR/SOL</em>.
+        </li>
+        <li>
+          <strong>Choose a DEX.</strong> Use a permissionless AMM/CLMM (e.g.,
+          Raydium).
+        </li>
+        <li>
+          <strong>Create/Add Liquidity.</strong> Select YOUR + JAL, deposit
+          equal value (AMM) or set price/range (CLMM).
+        </li>
+        <li>
+          <strong>Confirm transactions.</strong> Save the pool address and share
+          it.
+        </li>
+        <li>
+          <strong>Optional.</strong> Link the pool across your channels for
+          discovery.
+        </li>
+      </ol>
+
+      <LiquidityCalc />
+
+      <div className="chip-row" style={{ marginTop: 12 }}>
+        <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">
+          Open Raydium
+        </a>
+        <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">
+          Open Jupiter
+        </a>
+      </div>
+
+      <div className="cta-group" style={{ marginTop: 10 }}>
+        <CopyBtn text={checklist} />
+        <Link className="button gold" to="/crypto-generator/engine#step4">
+          Mint/Distribute Supply
+        </Link>
+        <Link className="button" to="/crypto-generator/engine#step5">
+          Finalize Metadata
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 /* ---------- Product model (Shop) ---------- */
 type Product = {
   id: string;
@@ -297,6 +465,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   // Overlay focus trap + focus management
   useEffect(() => {
     if (!overlayOpen) return;
+    // focus the panel title for screen readers/keyboard users
     hubTitleRef.current?.focus?.();
 
     const trap = (e: KeyboardEvent) => {
@@ -673,12 +842,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {/* ===== SHOP (product cards + promo + coming-soon flow) ===== */}
+            {/* ===== SHOP (generators + how-to + catalog) ===== */}
             {activePanel === "shop" && (
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>Shop</h3>
                 <p className="muted" style={{ marginTop: 4 }}>
-                  Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
+                  Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until
+                  checkout goes live.
                 </p>
 
                 {/* Generator shelf: side-by-side compare */}
@@ -762,6 +932,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     </div>
                   </div>
                 </section>
+
+                {/* NEW: How to create liquidity with JAL */}
+                <LiquidityHowToCard />
 
                 {shopNotice && (
                   <div className="shop-notice soon" role="status" aria-live="polite" style={{ marginTop: 10 }}>
