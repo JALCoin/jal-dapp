@@ -1,5 +1,12 @@
 // src/App.tsx
-import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  lazy,
+  Suspense,
+  type PropsWithChildren,
+} from "react";
 import {
   BrowserRouter,
   Routes,
@@ -29,10 +36,13 @@ import { LedgerWalletAdapter } from "@solana/wallet-adapter-ledger";
 import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
+
 import Landing from "./pages/Landing";
+const CryptoGeneratorIntro = lazy(() => import("./pages/CryptoGeneratorIntro"));
+const CryptoGenerator = lazy(() => import("./pages/CryptoGenerator"));
 
 /* ------------------------------------------------------------------ */
-/* Solana Providers                                                    */
+/* Providers                                                           */
 /* ------------------------------------------------------------------ */
 function SolanaProviders({ children }: PropsWithChildren) {
   const network: WalletAdapterNetwork = WalletAdapterNetwork.Mainnet;
@@ -46,19 +56,20 @@ function SolanaProviders({ children }: PropsWithChildren) {
 
   const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
 
-  // Good metadata helps mobile WalletConnect UX (shown inside the wallet)
-  const appUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://www.jalsol.com";
+  const appUrl = useMemo(
+    () =>
+      typeof window !== "undefined" ? window.location.origin : "https://www.jalsol.com",
+    []
+  );
 
   const wallets = useMemo<WalletAdapter[]>(() => {
     const base: WalletAdapter[] = [
-      new PhantomWalletAdapter(), // mobile deep-link + extension
+      new PhantomWalletAdapter(),
       new SolflareWalletAdapter({ network }),
       new GlowWalletAdapter(),
       new BackpackWalletAdapter(),
       new LedgerWalletAdapter(),
     ];
-
     if (WC_PROJECT_ID) {
       base.push(
         new WalletConnectWalletAdapter({
@@ -89,7 +100,7 @@ function SolanaProviders({ children }: PropsWithChildren) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Mobile deep-link return guard                                       */
+/* Small helpers                                                       */
 /* ------------------------------------------------------------------ */
 function MobileDeepLinkReturnGuard() {
   const { wallet, connected, connecting, connect } = useWallet();
@@ -121,9 +132,6 @@ function MobileDeepLinkReturnGuard() {
   return null;
 }
 
-/* ------------------------------------------------------------------ */
-/* Small pieces                                                        */
-/* ------------------------------------------------------------------ */
 function DisconnectBtn() {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
@@ -137,13 +145,19 @@ function DisconnectBtn() {
   );
 }
 
-function HeaderView({
-  onMenu,
-  isOpen,
-}: {
-  onMenu: () => void;
-  isOpen: boolean;
-}) {
+/** Scroll to top on route change for nicer navigation on mobile */
+function ScrollRestorer() {
+  const { pathname, search } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [pathname, search]);
+  return null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Layout                                                              */
+/* ------------------------------------------------------------------ */
+function HeaderView({ onMenu, isOpen }: { onMenu: () => void; isOpen: boolean }) {
   return (
     <header className="site-header">
       <div className="header-inner">
@@ -169,38 +183,34 @@ function HeaderView({
           aria-haspopup="true"
           aria-expanded={isOpen}
         >
-          <span></span>
-          <span></span>
-          <span></span>
+          <span></span><span></span><span></span>
         </button>
       </div>
     </header>
   );
 }
 
-function SidebarView({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
   return (
     <>
-      <button
-        className="sidebar-overlay"
-        aria-label="Close menu overlay"
-        onClick={onClose}
-      />
+      <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
         <nav>
           <NavLink
             to="/"
+            end
             className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
             onClick={onClose}
           >
             Home
+          </NavLink>
+          <NavLink
+            to="/crypto-generator"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
+            Generator
           </NavLink>
         </nav>
         <div style={{ marginTop: 8 }} />
@@ -233,10 +243,7 @@ function TabBar() {
       <NavLink to={link("shop")} className={() => (isActive("shop") ? "active" : "")}>
         <div className="tab-icon">🏬</div> STORE
       </NavLink>
-      <NavLink
-        to={link("support")}
-        className={() => (isActive("support") ? "active" : "")}
-      >
+      <NavLink to={link("support")} className={() => (isActive("support") ? "active" : "")}>
         <div className="tab-icon">👤</div> SUPPORT
       </NavLink>
     </nav>
@@ -258,7 +265,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // lock body when menu is open
+  // Lock body scroll when menu is open
   useEffect(() => {
     if (menuOpen) document.body.setAttribute("data-menu-open", "true");
     else document.body.removeAttribute("data-menu-open");
@@ -267,17 +274,20 @@ export default function App() {
 
   return (
     <SolanaProviders>
-      {/* Nudge reconnect after returning from Phantom on mobile */}
       <MobileDeepLinkReturnGuard />
-
       <BrowserRouter>
+        <ScrollRestorer />
         <HeaderView onMenu={() => setMenuOpen((v) => !v)} isOpen={menuOpen} />
         <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
         <main role="main">
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <Suspense fallback={<div className="card">Loading…</div>}>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
+              <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </main>
         <TabBar />
       </BrowserRouter>

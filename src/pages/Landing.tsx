@@ -1,4 +1,5 @@
 // src/pages/Landing.tsx
+import type React from "react";
 import {
   lazy,
   Suspense,
@@ -8,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js";
@@ -492,7 +493,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <div className="icon">🔗</div>
           </button>
 
-        <div className="feature-card feature-wide" role="group" aria-label="Get Started">
+          <div className="feature-card feature-wide" role="group" aria-label="Get Started">
             <div style={{ display: "grid", gap: 6 }}>
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
@@ -503,12 +504,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <button className="chip" onClick={() => openPanel("jal")}>
                   Tokens
                 </button>
-                <button className="chip" onClick={() => openPanel("grid")}>
+                <Link className="chip" to="/crypto-generator/engine#step1">
                   Currency Generator
-                </button>
-                <button className="chip" onClick={() => openPanel("grid")}>
+                </Link>
+                <Link className="chip" to="/crypto-generator">
                   NFT Generator
-                </button>
+                </Link>
               </div>
             </div>
             <div className="icon" aria-hidden>
@@ -632,12 +633,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                       Spin up a SOL-based currency or launch an NFT collection in minutes.
                     </p>
                     <div className="cta-group">
-                      <button className="button gold" onClick={() => openPanel("grid")}>
+                      <Link className="button gold" to="/crypto-generator/engine#step1">
                         Currency Generator
-                      </button>
-                      <button className="button neon" onClick={() => openPanel("grid")}>
+                      </Link>
+                      <Link className="button neon" to="/crypto-generator">
                         NFT Generator
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </section>
