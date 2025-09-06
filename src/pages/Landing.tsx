@@ -11,7 +11,10 @@ import {
 } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import {
+  useWalletModal,
+  WalletMultiButton,
+} from "@solana/wallet-adapter-react-ui";
 import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { JAL_MINT } from "../config/tokens";
@@ -94,6 +97,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         : false,
     []
   );
+
+  // Prefetch heavy generator routes on intent (hover/focus)
+  const prefetchGenerator = useCallback(() => {
+    import("./CryptoGeneratorIntro");
+    import("./CryptoGenerator");
+  }, []);
 
   const tiles = useMemo<
     { key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]
@@ -426,11 +435,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
       {/* ===== Banking-style landing ===== */}
-      <section className="bank-landing container" aria-label="Overview" aria-hidden={overlayActive || undefined}>
+      <section
+        className="bank-landing container"
+        aria-label="Overview"
+        aria-hidden={overlayActive || undefined}
+      >
         <div className="bank-status">
           {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
           {connected && (
-            <button className="chip" style={{ marginLeft: 10 }} onClick={fetchBalances} aria-label="Refresh balances">
+            <button
+              className="chip"
+              style={{ marginLeft: 10 }}
+              onClick={fetchBalances}
+              aria-label="Refresh balances"
+            >
               ↻ Refresh
             </button>
           )}
@@ -504,10 +522,22 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 <button className="chip" onClick={() => openPanel("jal")}>
                   Tokens
                 </button>
-                <Link className="chip" to="/crypto-generator/engine#step1">
+                <Link
+                  className="chip"
+                  to="/crypto-generator/engine#step1"
+                  onMouseEnter={prefetchGenerator}
+                  onFocus={prefetchGenerator}
+                  aria-label="Open Currency Generator"
+                >
                   Currency Generator
                 </Link>
-                <Link className="chip" to="/crypto-generator">
+                <Link
+                  className="chip"
+                  to="/crypto-generator"
+                  onMouseEnter={prefetchGenerator}
+                  onFocus={prefetchGenerator}
+                  aria-label="Open NFT Generator intro"
+                >
                   NFT Generator
                 </Link>
               </div>
@@ -623,20 +653,31 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   style={art("60% 44%", "220%")}
                   role="region"
                   aria-label="Create with JAL/SOL"
+                  aria-describedby="promo-sub"
                 >
                   <div className="shop-promo-inner">
                     <div className="promo-head">
                       <span className="promo-badge">NEW</span>
                       <h4 className="promo-title">Create with JAL/SOL</h4>
                     </div>
-                    <p className="promo-sub">
+                    <p id="promo-sub" className="promo-sub">
                       Spin up a SOL-based currency or launch an NFT collection in minutes.
                     </p>
                     <div className="cta-group">
-                      <Link className="button gold" to="/crypto-generator/engine#step1">
+                      <Link
+                        className="button gold"
+                        to="/crypto-generator/engine#step1"
+                        onMouseEnter={prefetchGenerator}
+                        onFocus={prefetchGenerator}
+                      >
                         Currency Generator
                       </Link>
-                      <Link className="button neon" to="/crypto-generator">
+                      <Link
+                        className="button neon"
+                        to="/crypto-generator"
+                        onMouseEnter={prefetchGenerator}
+                        onFocus={prefetchGenerator}
+                      >
                         NFT Generator
                       </Link>
                     </div>
