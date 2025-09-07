@@ -523,103 +523,128 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       ? "Support"
       : "Welcome";
 
-  /* ---------- LIVE BALANCES (SOL + JAL) ---------- */
-  const [sol, setSol] = useState<number | null>(null);
-  const [jal, setJal] = useState<number | null>(null);
-  const [balLoading, setBalLoading] = useState(false);
-  const [balErr, setBalErr] = useState<string | null>(null);
+/* ---------- LIVE BALANCES (SOL + JAL) ---------- */
+const [sol, setSol] = useState<number | null>(null);
+const [jal, setJal] = useState<number | null>(null);
+const [balLoading, setBalLoading] = useState(false);
+const [balErr, setBalErr] = useState<string | null>(null);
 
-  const getEndpoint = () =>
+const endpoint = useMemo<string>(() => {
+  const e =
     (window as any).__SOLANA_RPC_ENDPOINT__ ??
     import.meta.env.VITE_SOLANA_RPC ??
     clusterApiUrl("mainnet-beta");
+  return String(e);
+}, []);
 
-  const fetchBalances = useCallback(async () => {
-    if (!publicKey || !connected) {
-      setSol(null);
-      setJal(null);
-      return;
-    }
-    setBalErr(null);
-    setBalLoading(true);
+const supportsWS = useMemo(() => {
+  // Heuristic: allow WS for Helius or any explicit wss:// endpoint; disable for common HTTP proxies (Railway).
+  if (endpoint.startsWith("wss")) return true;
+  if (/helius/i.test(endpoint)) return true;
+  if (/railway\.app/i.test(endpoint)) return false;
+  if (/\/rpc($|\?)/i.test(endpoint)) return false; // typical HTTP-only proxy suffix
+  return true;
+}, [endpoint]);
 
-    const freshConn = new Connection(getEndpoint(), "confirmed");
+const conn = useMemo(() => new Connection(endpoint, "confirmed"), [endpoint]);
 
-    try {
-      const lamports = await freshConn.getBalance(publicKey, "confirmed");
-      setSol(lamports / LAMPORTS_PER_SOL);
-    } catch (e) {
-      console.error("[balances] SOL fetch failed:", e);
+const fetchBalances = useCallback(async () => {
+  if (!publicKey || !connected) {
+    setSol(null);
+    setJal(null);
+    return;
+  }
+  setBalErr(null);
+  setBalLoading(true);
+  let cancelled = false;
+
+  try {
+    const lamports = await conn.getBalance(publicKey, "confirmed");
+    if (!cancelled) setSol(lamports / LAMPORTS_PER_SOL);
+  } catch (e) {
+    console.error("[balances] SOL fetch failed:", e);
+    if (!cancelled) {
       setSol(null);
       setBalErr("rpc");
     }
+  }
 
-    try {
-      const resp = await freshConn.getParsedTokenAccountsByOwner(
-        publicKey,
-        { programId: TOKEN_PROGRAM_ID },
-        "confirmed"
-      );
-      const total = resp.value.reduce((sum, { account }) => {
-        const info = account.data.parsed.info;
-        if (info.mint !== JAL_MINT) return sum;
-        const raw = Number(info.tokenAmount?.amount ?? 0);
-        const dec = Number(info.tokenAmount?.decimals ?? 0);
-        const ui = raw / 10 ** dec;
-        return sum + (isFinite(ui) ? ui : 0);
-      }, 0);
-      setJal(total);
-    } catch (e) {
-      console.error("[balances] JAL fetch failed:", e);
-      setJal(null);
-      setBalErr((s) => s ?? "rpc");
-    } finally {
-      setBalLoading(false);
-    }
-  }, [publicKey, connected]);
-
-  useEffect(() => {
-    if (!connected || !publicKey) {
-      setSol(null);
-      setJal(null);
-      return;
-    }
-    void fetchBalances();
-
-    const poll = setInterval(fetchBalances, 15000);
-
-    const wsConn = new Connection(getEndpoint(), "confirmed");
-    const sub = wsConn.onAccountChange(
+  try {
+    const resp = await conn.getParsedTokenAccountsByOwner(
       publicKey,
-      (ai) => setSol(ai.lamports / LAMPORTS_PER_SOL),
+      { programId: TOKEN_PROGRAM_ID },
       "confirmed"
     );
+    const total = resp.value.reduce((sum, { account }) => {
+      const info = account.data.parsed.info;
+      if (info.mint !== JAL_MINT) return sum;
+      const raw = Number(info.tokenAmount?.amount ?? 0);
+      const dec = Number(info.tokenAmount?.decimals ?? 0);
+      const ui = raw / 10 ** dec;
+      return sum + (isFinite(ui) ? ui : 0);
+    }, 0);
+    if (!cancelled) setJal(total);
+  } catch (e) {
+    console.error("[balances] JAL fetch failed:", e);
+    if (!cancelled) {
+      setJal(null);
+      setBalErr((s) => s ?? "rpc");
+    }
+  } finally {
+    if (!cancelled) setBalLoading(false);
+  }
 
-    return () => {
-      clearInterval(poll);
-      wsConn.removeAccountChangeListener(sub).catch(() => {});
-    };
-  }, [connected, publicKey, fetchBalances]);
+  return () => { cancelled = true; };
+}, [conn, publicKey, connected]);
 
-  useEffect(() => {
-    const adapter = wallet?.adapter;
-    if (!adapter) return;
-    const onConnectBalances = () => {
-      void fetchBalances();
-    };
-    adapter.on("connect", onConnectBalances);
-    return () => {
-      try {
-        adapter.off("connect", onConnectBalances);
-      } catch {
-        /* no-op */
-      }
-    };
-  }, [wallet, fetchBalances]);
+useEffect(() => {
+  if (!connected || !publicKey) {
+    setSol(null);
+    setJal(null);
+    return;
+  }
+  void fetchBalances();
 
-  const fmt = (n: number | null, digits = 4) =>
-    n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
+  // Polling is the reliable baseline everywhere
+  const poll = setInterval(fetchBalances, 15000);
 
+  // Optional WS push updates when the endpoint supports it
+  let subId: number | null = null;
+  let ws: Connection | null = null;
+  (async () => {
+    if (!supportsWS) return;
+    ws = new Connection(endpoint, "confirmed");
+    try {
+      subId = await ws.onAccountChange(
+        publicKey,
+        (ai) => setSol(ai.lamports / LAMPORTS_PER_SOL),
+        "confirmed"
+      );
+    } catch (e) {
+      console.warn("[balances] WS subscribe failed; falling back to polling only", e);
+    }
+  })();
+
+  return () => {
+    clearInterval(poll);
+    if (ws && subId != null) {
+      ws.removeAccountChangeListener(subId).catch(() => {});
+    }
+  };
+}, [connected, publicKey, fetchBalances, endpoint, supportsWS]);
+
+useEffect(() => {
+  const adapter = wallet?.adapter;
+  if (!adapter) return;
+  const onConnectBalances = () => { void fetchBalances(); };
+  adapter.on("connect", onConnectBalances);
+  return () => {
+    try { adapter.off("connect", onConnectBalances); } catch {}
+  };
+}, [wallet, fetchBalances]);
+
+const fmt = (n: number | null, digits = 4) =>
+  n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
   // Hover art presets for hub tiles
   const ART_MAP: Partial<Record<TileKey, { pos: string; zoom?: string }>> = {
     jal: { pos: "26% 38%", zoom: "240%" },

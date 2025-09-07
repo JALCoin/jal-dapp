@@ -16,7 +16,7 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import { clusterApiUrl, type Cluster } from "@solana/web3.js";
+import { clusterApiUrl, type Cluster, Commitment } from "@solana/web3.js";
 import {
   ConnectionProvider,
   WalletProvider,
@@ -48,7 +48,6 @@ let generatorsPrefetched = false;
 function prefetchGenerators() {
   if (generatorsPrefetched) return;
   generatorsPrefetched = true;
-  // Warm the chunk cache for snappy navigation
   import("./pages/CryptoGeneratorIntro");
   import("./pages/CryptoGenerator");
 }
@@ -61,10 +60,18 @@ function SolanaProviders({ children }: PropsWithChildren) {
   const cluster: Cluster = "mainnet-beta";
 
   const endpoint = useMemo(() => {
-    const injected = (window as any).__SOLANA_RPC_ENDPOINT__;
+    const injected = (window as any).__SOLANA_RPC_ENDPOINT__ as string | undefined;
     const env = import.meta.env.VITE_SOLANA_RPC as string | undefined;
     return injected ?? env ?? clusterApiUrl(cluster);
   }, [cluster]);
+
+  const connectionConfig = useMemo(
+    () => ({
+      commitment: "confirmed" as Commitment,
+      confirmTransactionInitialTimeout: 45_000,
+    }),
+    []
+  );
 
   const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
 
@@ -103,7 +110,7 @@ function SolanaProviders({ children }: PropsWithChildren) {
   }, [network, WC_PROJECT_ID, appUrl]);
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider endpoint={endpoint} config={connectionConfig}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
@@ -123,13 +130,8 @@ function MobileDeepLinkReturnGuard() {
       if (connected || connecting || !wallet) return;
 
       const name = wallet.adapter?.name?.toLowerCase() ?? "";
-      const looksLikePhantom = name.includes("phantom") || name.includes("walletconnect");
-      if (looksLikePhantom) {
-        setTimeout(() => {
-          connect().catch(() => {
-            /* user may cancel */
-          });
-        }, 100);
+      if (name.includes("phantom") || name.includes("walletconnect")) {
+        setTimeout(() => void connect().catch(() => {}), 120);
       }
     };
 
@@ -141,6 +143,26 @@ function MobileDeepLinkReturnGuard() {
     };
   }, [wallet, connected, connecting, connect]);
 
+  return null;
+}
+
+/** Toggle body[data-wallet-visible] when the wallet modal mounts */
+function WalletModalVisibilityGuard() {
+  useEffect(() => {
+    const body = document.body;
+    const set = (v: boolean) =>
+      v ? body.setAttribute("data-wallet-visible", "true") : body.removeAttribute("data-wallet-visible");
+
+    const obs = new MutationObserver(() => {
+      const modal = document.querySelector(".wallet-adapter-modal");
+      set(Boolean(modal));
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      obs.disconnect();
+      body.removeAttribute("data-wallet-visible");
+    };
+  }, []);
   return null;
 }
 
@@ -289,6 +311,7 @@ export default function App() {
   return (
     <SolanaProviders>
       <MobileDeepLinkReturnGuard />
+      <WalletModalVisibilityGuard />
       <BrowserRouter>
         <ScrollRestorer />
         <HeaderView onMenu={() => setMenuOpen((v) => !v)} isOpen={menuOpen} />
