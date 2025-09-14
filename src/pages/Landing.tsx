@@ -65,7 +65,9 @@ function CopyBtn({ text }: { text: string }) {
           await navigator.clipboard.writeText(text);
           setOk(true);
           setTimeout(() => setOk(false), 1200);
-        } catch {/* noop */}
+        } catch {
+          /* noop */
+        }
       }}
       aria-live="polite"
     >
@@ -263,7 +265,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     if (saveData) {
       const i = new Image();
       i.src = POSTER;
-      return () => { i.src = ""; };
+      return () => {
+        i.src = "";
+      };
     }
     const imgs = [
       ...tiles.map((t) => {
@@ -284,7 +288,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   /* ---------- URL/session init + bidirectional sync ---------- */
   const isPanel = (v: unknown): v is Panel =>
-    v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault" || v === "payments" || v === "loans" || v === "support";
+    v === "none" ||
+    v === "grid" ||
+    v === "shop" ||
+    v === "jal" ||
+    v === "vault" ||
+    v === "payments" ||
+    v === "loans" ||
+    v === "support";
 
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
@@ -350,7 +361,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     check();
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true });
-    return () => { obs.disconnect(); setWalletFlag(false); };
+    return () => {
+      obs.disconnect();
+      setWalletFlag(false);
+    };
   }, [setWalletFlag]);
 
   /* ---------- overlay controls (scroll lock + Escape) ---------- */
@@ -380,9 +394,15 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       if (!first || !last) return;
       const active = document.activeElement as HTMLElement | null;
       if (e.shiftKey) {
-        if (active === first) { e.preventDefault(); last.focus(); }
+        if (active === first) {
+          e.preventDefault();
+          last.focus();
+        }
       } else {
-        if (active === last) { e.preventDefault(); first.focus(); }
+        if (active === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     document.addEventListener("keydown", trap);
@@ -418,13 +438,21 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   );
 
   const panelTitle =
-    activePanel === "grid" ? "Hub" :
-    activePanel === "shop" ? "Shop" :
-    activePanel === "jal" ? "JAL" :
-    activePanel === "vault" ? "Vault" :
-    activePanel === "payments" ? "Payments" :
-    activePanel === "loans" ? "Loans" :
-    activePanel === "support" ? "Support" : "Welcome";
+    activePanel === "grid"
+      ? "Hub"
+      : activePanel === "shop"
+      ? "Shop"
+      : activePanel === "jal"
+      ? "JAL"
+      : activePanel === "vault"
+      ? "Vault"
+      : activePanel === "payments"
+      ? "Payments"
+      : activePanel === "loans"
+      ? "Loans"
+      : activePanel === "support"
+      ? "Support"
+      : "Welcome";
 
   /* ---------- LIVE BALANCES (SOL + JAL) ---------- */
   const [sol, setSol] = useState<number | null>(null);
@@ -434,9 +462,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   const fetchBalances = useCallback(async () => {
     if (!publicKey || !connected) {
-      setSol(null); setJal(null); return;
+      setSol(null);
+      setJal(null);
+      return;
     }
-    setBalErr(null); setBalLoading(true);
+    setBalErr(null);
+    setBalLoading(true);
 
     const freshConn = makeConnection("confirmed");
 
@@ -445,7 +476,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       setSol(lamports / LAMPORTS_PER_SOL);
     } catch (e) {
       console.error("[balances] SOL fetch failed:", e);
-      setSol(null); setBalErr("rpc");
+      setSol(null);
+      setBalErr("rpc");
     }
 
     try {
@@ -465,14 +497,19 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       setJal(total);
     } catch (e) {
       console.error("[balances] JAL fetch failed:", e);
-      setJal(null); setBalErr((s) => s ?? "rpc");
+      setJal(null);
+      setBalErr((s) => s ?? "rpc");
     } finally {
       setBalLoading(false);
     }
   }, [publicKey, connected]);
 
   useEffect(() => {
-    if (!connected || !publicKey) { setSol(null); setJal(null); return; }
+    if (!connected || !publicKey) {
+      setSol(null);
+      setJal(null);
+      return;
+    }
     void fetchBalances();
 
     const poll = setInterval(fetchBalances, 15000);
@@ -493,10 +530,16 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     const adapter = wallet?.adapter;
     if (!adapter) return;
-    const onConnectBalances = () => { void fetchBalances(); };
+    const onConnectBalances = () => {
+      void fetchBalances();
+    };
     adapter.on("connect", onConnectBalances);
     return () => {
-      try { adapter.off("connect", onConnectBalances); } catch {/* no-op */}
+      try {
+        adapter.off("connect", onConnectBalances);
+      } catch {
+        /* no-op */
+      }
     };
   }, [wallet, fetchBalances]);
 
@@ -565,7 +608,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           >
             <h4>JAL</h4>
             <div className="title">About &amp; Swap</div>
-            <div className="icon" aria-hidden>➕</div>
+            <div className="icon" aria-hidden>
+              ➕
+            </div>
           </button>
 
           <button
@@ -578,7 +623,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           >
             <h4>Store</h4>
             <div className="title">Buy with JAL</div>
-            <div className="icon" aria-hidden>🏬</div>
+            <div className="icon" aria-hidden>
+              🏬
+            </div>
           </button>
 
           <button
@@ -591,7 +638,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           >
             <h4>Vault</h4>
             <div className="title">Assets &amp; Activity</div>
-            <div className="icon" aria-hidden>💳</div>
+            <div className="icon" aria-hidden>
+              💳
+            </div>
           </button>
 
           <button
@@ -604,7 +653,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           >
             <h4>Hub</h4>
             <div className="title">All Panels</div>
-            <div className="icon" aria-hidden>🔗</div>
+            <div className="icon" aria-hidden>
+              🔗
+            </div>
           </button>
 
           {/* Secondary actions — no overlap with tiles */}
@@ -651,7 +702,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 </a>
               </div>
             </div>
-            <div className="icon" aria-hidden>⚡</div>
+            <div className="icon" aria-hidden>
+              ⚡
+            </div>
           </div>
         </div>
 
@@ -681,7 +734,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
             {panelTitle}
           </h2>
-          {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
+          {connected ? (
+            <DisconnectButton className="wallet-disconnect-btn" />
+          ) : (
+            <ConnectButton className="wallet-disconnect-btn" />
+          )}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
@@ -724,7 +781,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     )}
                     <div className="hub-btn">
                       {t.title}
-                      {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
+                      {t.sub && (
+                        <span id={`tile-sub-${t.key}`} className="sub">
+                          {t.sub}
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
@@ -774,7 +835,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                               <li>Supply + mint authority you control</li>
                             </ul>
                           </div>
-                          <div className="muted" style={{ marginTop: 8 }}>Creates: SPL mint + ATA + Metadata</div>
+                          <div className="muted" style={{ marginTop: 8 }}>
+                            Creates: SPL mint + ATA + Metadata
+                          </div>
                           <div style={{ marginTop: 10 }}>
                             <Link
                               className="button gold"
@@ -804,7 +867,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                               <li>Collection metadata for discovery</li>
                             </ul>
                           </div>
-                          <div className="muted" style={{ marginTop: 8 }}>Creates: NFT mint(s) + Collection Metadata</div>
+                          <div className="muted" style={{ marginTop: 8 }}>
+                            Creates: NFT mint(s) + Collection Metadata
+                          </div>
                           <div style={{ marginTop: 10 }}>
                             <Link
                               className="button neon"
@@ -951,7 +1016,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
             aria-hidden="true"
             tabIndex={0}
-            onFocus={() => { firstFocusRef.current?.focus(); }}
+            onFocus={() => {
+              firstFocusRef.current?.focus();
+            }}
           />
         )}
       </section>
