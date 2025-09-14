@@ -57,10 +57,14 @@ body[data-hub-open="true"]{ overflow:hidden }
 
 /* ---------- Main layout ---------- */
 main[role="main"]{
-  min-height:calc(100dvh - var(--header-h));
-  /* keep content above the fixed tabbar (with iOS safe area) */
+  min-height: calc(100lvh - var(--header-h));
   padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   display:flex; flex-direction:column;
+}
+@supports not (height: 100lvh){
+  main[role="main"]{
+    min-height: calc(100dvh - var(--header-h));
+  }
 }
 
 /* ==================================
@@ -757,3 +761,17 @@ main[role="main"]{
   /* Chips wrap neatly */
   .chip-row { flex-wrap: wrap; gap: 8px; }
 }
+/* Trust strip (under header) */
+.trust-strip{
+  width:min(100% - 2rem, var(--max-w));
+  margin: 8px auto 0;
+  display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center;
+}
+.chip.sm{ padding:.32rem .6rem; font-size:.82rem; border-radius:999px }
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
+
+/* Status dot */
+.dot{ width:.55rem; height:.55rem; border-radius:50%; display:inline-block }
+.dot.ok{ background:#11f1a7; box-shadow: 0 0 10px rgba(17,241,167,.6) }
+.dot.warn{ background:#f4c86a; box-shadow: 0 0 10px rgba(244,200,106,.6) }
+.dot.down{ background:#ff4d8a; box-shadow: 0 0 10px rgba(255,77,138,.5) }

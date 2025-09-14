@@ -11,25 +11,14 @@ import {
 } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
-import {
-  useWalletModal,
-  WalletMultiButton,
-} from "@solana/wallet-adapter-react-ui";
+import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { JAL_MINT } from "../config/tokens";
 
 const Jal = lazy(() => import("./Jal"));
 
-type Panel =
-  | "none"
-  | "grid"
-  | "shop"
-  | "jal"
-  | "vault"
-  | "payments"
-  | "loans"
-  | "support";
+type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" | "support";
 type TileKey = Exclude<Panel, "none" | "grid">;
 type LandingProps = { initialPanel?: Panel };
 
@@ -74,9 +63,7 @@ function CopyBtn({ text }: { text: string }) {
           await navigator.clipboard.writeText(text);
           setOk(true);
           setTimeout(() => setOk(false), 1200);
-        } catch {
-          /* noop */
-        }
+        } catch {/* noop */}
       }}
       aria-live="polite"
     >
@@ -89,16 +76,13 @@ function LiquidityCalc() {
   const [tokenAmount, setTokenAmount] = useState<number>(1);
   const [priceInJal, setPriceInJal] = useState<number>(100); // 1 YOUR = 100 JAL
   const jalNeeded =
-    isFinite(tokenAmount) && isFinite(priceInJal)
-      ? tokenAmount * priceInJal
-      : 0;
+    isFinite(tokenAmount) && isFinite(priceInJal) ? tokenAmount * priceInJal : 0;
 
   return (
     <div className="card" style={{ marginTop: 10 }}>
       <h4 style={{ marginTop: 0 }}>Quick calc</h4>
       <p className="muted" style={{ marginTop: 4 }}>
-        AMMs require equal <em>value</em> on both sides. Estimate the JAL you’ll
-        pair with your token.
+        AMMs require equal <em>value</em> on both sides. Estimate the JAL you’ll pair with your token.
       </p>
 
       <div className="chip-row" style={{ marginTop: 8 }}>
@@ -135,20 +119,11 @@ function LiquidityCalc() {
 
       <div style={{ marginTop: 10 }}>
         You’ll need approximately{" "}
-        <strong>
-          {jalNeeded.toLocaleString(undefined, { maximumFractionDigits: 6 })}{" "}
-          JAL
-        </strong>{" "}
+        <strong>{jalNeeded.toLocaleString(undefined, { maximumFractionDigits: 6 })} JAL</strong>{" "}
         to pair with{" "}
-        <strong>
-          {tokenAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}{" "}
-          YOUR
-        </strong>{" "}
+        <strong>{tokenAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} YOUR</strong>{" "}
         at{" "}
-        <strong>
-          {priceInJal.toLocaleString(undefined, { maximumFractionDigits: 6 })}{" "}
-          JAL
-        </strong>{" "}
+        <strong>{priceInJal.toLocaleString(undefined, { maximumFractionDigits: 6 })} JAL</strong>{" "}
         per YOUR.
       </div>
     </div>
@@ -177,55 +152,29 @@ function LiquidityHowToCard() {
     >
       <h3 style={{ marginTop: 0 }}>How to: Create Liquidity with JAL</h3>
       <p className="muted" style={{ marginTop: 4 }}>
-        Pair your token with <strong>JAL</strong> (or SOL) to enable trading &
-        price discovery.
+        Pair your token with <strong>JAL</strong> (or SOL) to enable trading & price discovery.
       </p>
 
       <ol style={{ marginTop: 8 }}>
-        <li>
-          <strong>Prepare assets.</strong> YOUR token, JAL, and some SOL for
-          fees.
-        </li>
-        <li>
-          <strong>Pick a pair.</strong> <em>YOUR/JAL</em> or <em>YOUR/SOL</em>.
-        </li>
-        <li>
-          <strong>Choose a DEX.</strong> Use a permissionless AMM/CLMM (e.g.,
-          Raydium).
-        </li>
-        <li>
-          <strong>Create/Add Liquidity.</strong> Select YOUR + JAL, deposit
-          equal value (AMM) or set price/range (CLMM).
-        </li>
-        <li>
-          <strong>Confirm transactions.</strong> Save the pool address and share
-          it.
-        </li>
-        <li>
-          <strong>Optional.</strong> Link the pool across your channels for
-          discovery.
-        </li>
+        <li><strong>Prepare assets.</strong> YOUR token, JAL, and some SOL for fees.</li>
+        <li><strong>Pick a pair.</strong> <em>YOUR/JAL</em> or <em>YOUR/SOL</em>.</li>
+        <li><strong>Choose a DEX.</strong> Use a permissionless AMM/CLMM (e.g., Raydium).</li>
+        <li><strong>Create/Add Liquidity.</strong> Select YOUR + JAL, deposit equal value (AMM) or set price/range (CLMM).</li>
+        <li><strong>Confirm transactions.</strong> Save the pool address and share it.</li>
+        <li><strong>Optional.</strong> Link the pool across your channels for discovery.</li>
       </ol>
 
       <LiquidityCalc />
 
       <div className="chip-row" style={{ marginTop: 12 }}>
-        <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">
-          Open Raydium
-        </a>
-        <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">
-          Open Jupiter
-        </a>
+        <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">Open Raydium</a>
+        <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">Open Jupiter</a>
       </div>
 
       <div className="cta-group" style={{ marginTop: 10 }}>
         <CopyBtn text={checklist} />
-        <Link className="button gold" to="/crypto-generator/engine#step4">
-          Mint/Distribute Supply
-        </Link>
-        <Link className="button" to="/crypto-generator/engine#step5">
-          Finalize Metadata
-        </Link>
+        <Link className="button gold" to="/crypto-generator/engine#step4">Mint/Distribute Supply</Link>
+        <Link className="button" to="/crypto-generator/engine#step5">Finalize Metadata</Link>
       </div>
     </section>
   );
@@ -265,6 +214,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         : false,
     []
   );
+  const saveData =
+    typeof navigator !== "undefined" &&
+    // @ts-expect-error: connection is not fully typed across browsers
+    (navigator.connection?.saveData === true);
 
   // Prefetch heavy generator routes on intent (hover/focus)
   const prefetchGenerator = useCallback(() => {
@@ -286,47 +239,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- SHOP: demo catalog + filtering ---------- */
   const products = useMemo<Product[]>(
     () => [
-      {
-        id: "hoodie",
-        name: "JAL Hoodie",
-        tag: "Merch",
-        priceJal: 420,
-        img: "/products/hoodie.png",
-        blurb: "Heavyweight, embroidered.",
-      },
-      {
-        id: "cap",
-        name: "Logo Cap",
-        tag: "Merch",
-        priceJal: 180,
-        img: "/products/cap.png",
-        blurb: "Adjustable snapback.",
-      },
-      {
-        id: "sticker",
-        name: "Sticker Pack",
-        tag: "Merch",
-        priceJal: 60,
-        img: "/products/stickers.png",
-        blurb: "Glossy vinyl set.",
-      },
-      {
-        id: "gift25",
-        name: "Gift Card 25",
-        tag: "Gift Cards",
-        priceJal: 250,
-        img: "/products/gift25.png",
-        blurb: "Send JAL love.",
-      },
+      { id: "hoodie", name: "JAL Hoodie", tag: "Merch", priceJal: 420, img: "/products/hoodie.png", blurb: "Heavyweight, embroidered." },
+      { id: "cap", name: "Logo Cap", tag: "Merch", priceJal: 180, img: "/products/cap.png", blurb: "Adjustable snapback." },
+      { id: "sticker", name: "Sticker Pack", tag: "Merch", priceJal: 60, img: "/products/stickers.png", blurb: "Glossy vinyl set." },
+      { id: "gift25", name: "Gift Card 25", tag: "Gift Cards", priceJal: 250, img: "/products/gift25.png", blurb: "Send JAL love." },
       { id: "gift50", name: "Gift Card 50", tag: "Gift Cards", priceJal: 500, img: "/products/gift50.png" },
-      {
-        id: "wallp",
-        name: "Phone Wallpaper",
-        tag: "Digital",
-        priceJal: 15,
-        img: "/products/wallpaper.png",
-        blurb: "4K / OLED-friendly.",
-      },
+      { id: "wallp", name: "Phone Wallpaper", tag: "Digital", priceJal: 15, img: "/products/wallpaper.png", blurb: "4K / OLED-friendly." },
     ],
     []
   );
@@ -338,8 +256,16 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     [products, shopFilter]
   );
 
-  /* ---------- preload gifs + poster ---------- */
+  /* ---------- preload gifs + poster (respect Save-Data) ---------- */
   useEffect(() => {
+    if (saveData) {
+      // still eagerly cache the poster key-art
+      const i = new Image();
+      i.src = POSTER;
+      return () => {
+        i.src = "";
+      };
+    }
     const imgs = [
       ...tiles.map((t) => {
         const i = new Image();
@@ -355,9 +281,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       })(),
     ];
     return () => imgs.forEach((i) => (i.src = ""));
-  }, [tiles]);
+  }, [tiles, saveData]);
 
-  /* ---------- URL/session init ---------- */
+  /* ---------- URL/session init + bidirectional sync ---------- */
   const isPanel = (v: unknown): v is Panel =>
     v === "none" ||
     v === "grid" ||
@@ -368,6 +294,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     v === "loans" ||
     v === "support";
 
+  // initial
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
@@ -375,35 +302,31 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
       (fromSession && isPanel(fromSession) ? fromSession : null) ??
       initialPanel;
-
     setActivePanel(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep URL in sync with state
+  // reflect state -> URL (clone params to avoid mutating same object)
   useEffect(() => {
-    if (!activePanel) return;
     sessionStorage.setItem("landing:lastPanel", activePanel);
+    const next = new URLSearchParams(params);
     const urlPanel = params.get("panel");
     if (activePanel === "none") {
       if (urlPanel) {
-        params.delete("panel");
-        setParams(params, { replace: true });
+        next.delete("panel");
+        setParams(next, { replace: true });
       }
     } else if (urlPanel !== activePanel) {
-      params.set("panel", activePanel);
-      setParams(params, { replace: true });
+      next.set("panel", activePanel);
+      setParams(next, { replace: true });
     }
   }, [activePanel, params, setParams]);
 
-  // Keep state in sync when user uses back/forward
+  // reflect URL -> state (handles back/forward)
   useEffect(() => {
-    const onPop = () => {
-      const urlPanel = params.get("panel") as Panel | null;
-      setActivePanel(urlPanel && isPanel(urlPanel) ? urlPanel : "none");
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
+    const urlPanel = params.get("panel") as Panel | null;
+    const next: Panel = urlPanel && isPanel(urlPanel) ? urlPanel : "none";
+    setActivePanel((p) => (p === next ? p : next));
   }, [params]);
 
   /* ---------- Wallet events / merge effect ---------- */
@@ -465,7 +388,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   // Overlay focus trap + focus management
   useEffect(() => {
     if (!overlayOpen) return;
-    // focus the panel title for screen readers/keyboard users
     hubTitleRef.current?.focus?.();
 
     const trap = (e: KeyboardEvent) => {
@@ -489,6 +411,24 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     document.addEventListener("keydown", trap);
     return () => document.removeEventListener("keydown", trap);
   }, [overlayOpen]);
+
+  // Re-center the overlay on rotation/resize (mobile landscape support)
+  useEffect(() => {
+    const onResize = () => {
+      if (overlayOpen) {
+        panelRef.current?.scrollIntoView({
+          behavior: reducedMotion ? "auto" : "smooth",
+          block: "start",
+        });
+      }
+    };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize as any);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize as any);
+    };
+  }, [overlayOpen, reducedMotion]);
 
   /* ---------- Open helpers ---------- */
   const requiresWallet: Panel[] = ["jal", "vault", "payments", "loans"];
@@ -611,9 +551,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => {
       try {
         adapter.off("connect", onConnectBalances);
-      } catch {
-        /* no-op */
-      }
+      } catch {/* no-op */}
     };
   }, [wallet, fetchBalances]);
 
@@ -634,6 +572,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
      Render
   ============================================================ */
   const overlayActive = overlayOpen; // alias for readability
+  const shouldLoadGifs = !saveData && !reducedMotion;
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
@@ -675,6 +614,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             style={art(ART_MAP.jal!.pos, ART_MAP.jal!.zoom)}
             onClick={() => openPanel("jal")}
             aria-label="Open JAL"
+            aria-controls="hub-panel"
           >
             <h4>JAL</h4>
             <div className="title">About &amp; Swap</div>
@@ -686,6 +626,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             style={art(ART_MAP.shop!.pos, ART_MAP.shop!.zoom)}
             onClick={() => openPanel("shop")}
             aria-label="Open Store"
+            aria-controls="hub-panel"
           >
             <h4>Store</h4>
             <div className="title">Buy with JAL</div>
@@ -697,6 +638,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             style={art(ART_MAP.vault!.pos, ART_MAP.vault!.zoom)}
             onClick={() => openPanel("vault")}
             aria-label="Open Vault"
+            aria-controls="hub-panel"
           >
             <h4>Vault</h4>
             <div className="title">Assets &amp; Activity</div>
@@ -708,6 +650,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             style={art("75% 78%", "240%")} // Hub slice
             onClick={() => openPanel("grid")}
             aria-label="Open Hub"
+            aria-controls="hub-panel"
           >
             <h4>Hub</h4>
             <div className="title">All Panels</div>
@@ -719,12 +662,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
               <div className="chip-row">
-                <button className="chip" onClick={() => openPanel("shop")}>
-                  Merch
-                </button>
-                <button className="chip" onClick={() => openPanel("jal")}>
-                  Tokens
-                </button>
+                <button className="chip" onClick={() => openPanel("shop")}>Merch</button>
+                <button className="chip" onClick={() => openPanel("jal")}>Tokens</button>
                 <Link
                   className="chip"
                   to="/crypto-generator/engine#step1"
@@ -745,9 +684,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 </Link>
               </div>
             </div>
-            <div className="icon" aria-hidden>
-              ⚡
-            </div>
+            <div className="icon" aria-hidden>⚡</div>
           </div>
         </div>
 
@@ -776,11 +713,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
             {panelTitle}
           </h2>
-          {connected ? (
-            <DisconnectButton className="wallet-disconnect-btn" />
-          ) : (
-            <ConnectButton className="wallet-disconnect-btn" />
-          )}
+          {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
         </div>
 
         <div className="hub-panel-body" ref={hubBodyRef}>
@@ -806,10 +739,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     onClick={() => openPanel(t.key)}
                     role="listitem"
                     aria-describedby={`tile-sub-${t.key}`}
-                    disabled={t.disabled}
                   >
                     <img
-                      src={t.gif}
+                      src={shouldLoadGifs ? t.gif : ""}
                       alt=""
                       className="hub-gif"
                       loading="lazy"
@@ -821,12 +753,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     />
                     <div className="hub-btn">
                       {t.title}
-                      {t.sub && (
-                        <span id={`tile-sub-${t.key}`} className="sub">
-                          {t.sub}
-                        </span>
-                      )}
-                      {t.disabled && <span className="locked">Connect wallet to use</span>}
+                      {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
                     </div>
                   </button>
                 );
@@ -847,8 +774,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>Shop</h3>
                 <p className="muted" style={{ marginTop: 4 }}>
-                  Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until
-                  checkout goes live.
+                  Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
                 </p>
 
                 {/* Generator shelf: side-by-side compare */}
@@ -877,9 +803,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                               <li>Supply + mint authority you control</li>
                             </ul>
                           </div>
-                          <div className="muted" style={{ marginTop: 8 }}>
-                            Creates: SPL mint + ATA + Metadata
-                          </div>
+                          <div className="muted" style={{ marginTop: 8 }}>Creates: SPL mint + ATA + Metadata</div>
                           <div style={{ marginTop: 10 }}>
                             <Link
                               className="button gold"
@@ -909,9 +833,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                               <li>Collection metadata for discovery</li>
                             </ul>
                           </div>
-                          <div className="muted" style={{ marginTop: 8 }}>
-                            Creates: NFT mint(s) + Collection Metadata
-                          </div>
+                          <div className="muted" style={{ marginTop: 8 }}>Creates: NFT mint(s) + Collection Metadata</div>
                           <div style={{ marginTop: 10 }}>
                             <Link
                               className="button neon"

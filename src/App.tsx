@@ -21,6 +21,7 @@ import {
   ConnectionProvider,
   WalletProvider,
   useWallet,
+  useConnection,            // <-- NEW
 } from "@solana/wallet-adapter-react";
 import {
   WalletModalProvider,
@@ -38,6 +39,8 @@ import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 import Landing from "./pages/Landing";
+import { JAL_MINT } from "./config/tokens";   // <-- NEW
+
 const CryptoGeneratorIntro = lazy(() => import("./pages/CryptoGeneratorIntro"));
 const CryptoGenerator = lazy(() => import("./pages/CryptoGenerator"));
 
@@ -65,7 +68,6 @@ function SolanaProviders({ children }: PropsWithChildren) {
     return injected ?? env ?? clusterApiUrl(cluster);
   }, [cluster]);
 
-  // keep as plain values (no extra type imports needed)
   const connectionConfig = useMemo(
     () => ({
       commitment: "confirmed" as const,
@@ -176,6 +178,82 @@ function ScrollRestorer() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [pathname, search]);
   return null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Trust strip (under header)                                          */
+/* ------------------------------------------------------------------ */
+function RpcStatusChip() {
+  const { connection } = useConnection();
+  const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [state, setState] = useState<"checking" | "ok" | "warn" | "down">("checking");
+
+  useEffect(() => {
+    let mounted = true;
+
+    const withTimeout = <T,>(p: Promise<T>, ms: number) =>
+      new Promise<T>((resolve, reject) => {
+        const id = setTimeout(() => reject(new Error("timeout")), ms);
+        p.then((v) => { clearTimeout(id); resolve(v); })
+         .catch((e) => { clearTimeout(id); reject(e); });
+      });
+
+    const check = async () => {
+      const t0 = performance.now();
+      try {
+        await withTimeout(connection.getEpochInfo(), 3000);
+        const dt = performance.now() - t0;
+        if (!mounted) return;
+        setLatencyMs(Math.round(dt));
+        setState(dt < 1200 ? "ok" : "warn");
+      } catch {
+        if (!mounted) return;
+        setLatencyMs(null);
+        setState("down");
+      }
+    };
+
+    check();
+    const id = setInterval(check, 20000);
+    return () => { mounted = false; clearInterval(id); };
+  }, [connection]);
+
+  const label =
+    state === "checking" ? "Checking…" :
+    state === "ok"       ? `Healthy${latencyMs != null ? ` • ${latencyMs}ms` : ""}` :
+    state === "warn"     ? `Degraded${latencyMs != null ? ` • ${latencyMs}ms` : ""}` :
+                           "Down";
+
+  const dotClass = state === "ok" ? "ok" : state === "warn" ? "warn" : "down";
+
+  return (
+    <span className="chip sm">
+      <span className={`dot ${dotClass}`} style={{ marginRight: 8 }} />
+      Mainnet • RPC: {label}
+    </span>
+  );
+}
+
+function TrustStrip() {
+  const jal = JAL_MINT;
+  const explorerUrl = `https://explorer.solana.com/address/${jal}`;
+  const raydiumUrl  = `https://raydium.io/swap/?inputCurrency=SOL&outputCurrency=${jal}`;
+  const short = `${jal.slice(0,4)}…${jal.slice(-4)}`;
+
+  return (
+    <div className="trust-strip" aria-label="Trust & quick links">
+      <a className="chip sm mono" href={explorerUrl} target="_blank" rel="noreferrer" title="View JAL mint on Solana Explorer">
+        Mint: {short}
+      </a>
+      <a className="chip sm" href={explorerUrl} target="_blank" rel="noreferrer">
+        Explorer
+      </a>
+      <a className="chip sm" href={raydiumUrl} target="_blank" rel="noreferrer">
+        Swap on Raydium
+      </a>
+      <RpcStatusChip />
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -295,7 +373,6 @@ function TabBar() {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // ESC closes menu
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setMenuOpen(false);
@@ -304,7 +381,6 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Lock body scroll when menu is open
   useEffect(() => {
     if (menuOpen) document.body.setAttribute("data-menu-open", "true");
     else document.body.removeAttribute("data-menu-open");
@@ -318,6 +394,10 @@ export default function App() {
       <BrowserRouter>
         <ScrollRestorer />
         <HeaderView onMenu={() => setMenuOpen((v) => !v)} isOpen={menuOpen} />
+
+        {/* NEW: Trust & quick links row */}
+        <TrustStrip />
+
         <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
         <main role="main">
           <Suspense fallback={<div className="card">Loading…</div>}>
