@@ -38,9 +38,9 @@
   --safe-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
 
   /* Hit targets (desktop pills) */
-  --pill-py:.68rem;      /* vertical padding */
-  --pill-px:1.1rem;      /* horizontal padding */
-  --pill-min:44px;       /* minimum height */
+  --pill-py:.68rem;
+  --pill-px:1.1rem;
+  --pill-min:44px;
 }
 
 /* ---------- Reset / Base ---------- */
@@ -335,17 +335,37 @@ main[role="main"]{
 .feature-wide{ grid-column: 1 / -1; min-height:160px; display:grid; align-content:center }
 
 /* Bottom tab bar */
-.tabbar{ position:fixed; inset-inline:0; inset-block-end:0; z-index:30; block-size:var(--tabbar-h); display:grid; grid-auto-flow:column; place-items:center; background:linear-gradient(180deg, rgba(12,16,22,.82), rgba(12,16,22,.94)); border-top:1px solid var(--stroke-2); backdrop-filter:blur(var(--blur)); padding-bottom: env(safe-area-inset-bottom, 0px) }
+.tabbar{
+  position:fixed; inset-inline:0; inset-block-end:0; z-index:30;
+  block-size:var(--tabbar-h); display:grid; grid-auto-flow:column; place-items:center;
+  background:linear-gradient(180deg, rgba(12,16,22,.82), rgba(12,16,22,.94));
+  border-top:1px solid var(--stroke-2);
+  backdrop-filter:blur(var(--blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px)
+}
 .tabbar a{ display:grid; gap:6px; place-items:center; padding:6px 4px; font-size:.8rem; opacity:.9; transition:transform var(--t-fast), color var(--t-fast) }
 .tabbar a:hover{ transform:translateY(-1px); color:var(--cyan); text-shadow:var(--glow-cyan) }
 .tabbar a.active{ color:var(--gold); text-shadow:var(--glow-gold) }
 .tabbar .tab-icon{ inline-size:22px; block-size:22px; opacity:.95 }
 
-/* Banking chips in the featured row */
-.chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px }
-.chip { display:inline-flex; align-items:center; gap:8px; padding:.45rem .7rem; border:1px solid var(--stroke); border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)); font-size:.9rem; opacity:.95; transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast) }
-.chip:hover { transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
+/* Banking chips in the featured row — FULL CLICKABLE PILLS */
+.chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; position:relative; isolation:isolate; z-index:9 }
+.chip,
+.button,
+.jal-link,
+.trust-strip .chip,
+.trust-strip .button,
+.trust-strip .jal-link{
+  position:relative; z-index:10; pointer-events:auto;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height: var(--pill-min); padding: var(--pill-py) var(--pill-px);
+  border:1px solid var(--stroke); border-radius:999px;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  font-size:.9rem; opacity:.95; transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast)
+}
+.chip:hover, .button:hover { transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 .chip.active{ border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
+.chip, .button { -webkit-tap-highlight-color: transparent; }
 
 /* Status line */
 .bank-status { text-align:right; opacity:.9 }
@@ -354,7 +374,7 @@ main[role="main"]{
 .hub-overlay{ position: fixed; inset: 0; z-index: 98; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); animation: overlayIn var(--t-slow) both }
 .hub-panel--overlay{ position: fixed; z-index: 99; inset-inline-start:50%; transform: translateX(-50%); inset-block-start: calc(var(--safe-top) + 6px); inset-block-end: calc(var(--safe-bottom) + 6px); inline-size: min(100% - 1.5rem, 1100px) }
 
-/* Disable clicks on underlying chrome while hub open */
+/* Disable clicks on underlying chrome while hub open (except quick dock override below) */
 body[data-hub-open="true"] .tabbar,
 body[data-hub-open="true"] .site-header{ pointer-events:none }
 
@@ -395,7 +415,7 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
    Shop promo banner (Currency/NFT)
 =================================*/
 .shop-promo{ position:relative; margin-top:12px; border:1px solid var(--stroke); border-radius:var(--r-lg); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)); box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 0 1px rgba(244,200,106,.12) inset; overflow:hidden }
-.shop-promo.has-art::after{ opacity:.28; filter:saturate(1.05) contrast(1.02) }
+.shop-promo.has-art::after{ opacity:.28; filter:saturate(1.05) contrast(1.02); pointer-events:none } /* never block clicks */
 .shop-promo-inner{ position:relative; z-index:1; padding:clamp(14px, 3vw, 18px); display:grid; gap:8px }
 .promo-head{ display:flex; align-items:center; gap:10px }
 .promo-badge{ padding:.28rem .55rem; font-size:.75rem; letter-spacing:.06em; border-radius:999px; border:1px solid rgba(244,200,106,.5); color:var(--gold); box-shadow:var(--glow-gold); background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0)) }
@@ -457,7 +477,11 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 .feature-card.has-art::after,
 .img-btn.has-art::after,
 .shop-promo.has-art::after{
-  content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background-image: var(--art-img); background-repeat:no-repeat; background-position: var(--art-pos); background-size: var(--art-zoom) auto; mix-blend-mode: screen; opacity: var(--art-opacity); transform: scale(1.02); transition: opacity var(--t-med) ease, transform var(--t-med) ease, filter var(--t-med) ease; box-shadow: inset 0 0 160px rgba(0,0,0,.45)
+  content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background-image: var(--art-img); background-repeat:no-repeat; background-position: var(--art-pos); background-size: var(--art-zoom) auto;
+  mix-blend-mode: screen; opacity: var(--art-opacity); transform: scale(1.02);
+  transition: opacity var(--t-med) ease, transform var(--t-med) ease, filter var(--t-med) ease;
+  box-shadow: inset 0 0 160px rgba(0,0,0,.45)
 }
 .feature-card.has-art:hover,
 .feature-card.has-art:focus-visible,
@@ -497,54 +521,32 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
   .chip-row { flex-wrap:wrap; gap:8px }
 }
 
-/* Trust strip (under header) */
+/* ===============================
+   Trust strip (under header)
+=================================*/
 .trust-strip {
   width: min(100% - 2rem, var(--max-w));
   margin: 8px auto 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-  align-items: center;
+  display: flex; flex-wrap: wrap; gap: 12px;
+  justify-content: center; align-items: center;
+  position:relative; isolation:isolate; z-index:9;
 }
-
 .trust-strip a,
 .trust-strip button,
 .trust-strip .chip,
 .trust-strip .chip.sm,
 .trust-strip .jal-link,
 .trust-strip .button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-
-  /* Increase clickable size */
-  padding: .6rem 1.2rem;   /* ↑ more horizontal & vertical padding */
-  min-height: 42px;        /* ↑ taller hitbox */
-  min-width: 56px;         /* ensures wider touch area */
-  
-  line-height: 1.2;
-  border-radius: 999px;
-  font-size: .95rem;
+  display:inline-flex; align-items:center; gap:8px;
+  padding:.6rem 1.2rem; min-height:42px; min-width:56px;
+  line-height:1.2; border-radius:999px; font-size:.95rem;
+  position:relative; z-index:10; pointer-events:auto;
 }
-
-/* Hover feedback */
 .trust-strip a:hover,
 .trust-strip button:hover,
-.trust-strip .chip:hover {
-  transform: translateY(-1px);
-  border-color: var(--cyan);
-  box-shadow: var(--glow-cyan);
-}
-
-/* On desktop, give even more space */
+.trust-strip .chip:hover { transform: translateY(-1px); border-color: var(--cyan); box-shadow: var(--glow-cyan) }
 @media (pointer: fine) {
-  .trust-strip a,
-  .trust-strip button,
-  .trust-strip .chip {
-    padding: .7rem 1.35rem;
-    min-height: 44px;
-  }
+  .trust-strip a, .trust-strip button, .trust-strip .chip { padding:.7rem 1.35rem; min-height:44px }
 }
 
 /* ===============================
@@ -579,6 +581,25 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 }
 
 /* ===============================
+   Floating quick dock (bottom-right)
+=================================*/
+.quick-dock{
+  position:fixed;
+  right:14px;
+  bottom: calc(var(--tabbar-h) + max(14px, env(safe-area-inset-bottom)));
+  z-index:120; /* above header/tabbar/halos */
+  display:grid; gap:8px; padding:10px;
+  border:1px solid var(--stroke-2); border-radius:var(--r-lg);
+  background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9));
+  backdrop-filter: blur(var(--blur));
+  box-shadow: 0 18px 60px rgba(0,0,0,.65);
+}
+.quick-dock .chip, .quick-dock .button{ padding:.6rem .9rem; min-height:40px }
+body[data-hub-open="true"] .quick-dock{ pointer-events:auto } /* keep dock usable when hub open */
+
+/* ===============================
    Performance trims on very small devices
 =================================*/
-@media (max-width: 480px){ .card, .product-card, .hub-panel { box-shadow: 0 8px 18px rgba(0,0,0,.5) } }
+@media (max-width: 480px){
+  .card, .product-card, .hub-panel { box-shadow: 0 8px 18px rgba(0,0,0,.5) }
+}
