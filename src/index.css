@@ -536,31 +536,38 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto } /* keep usable */
   --section-gap:24px;
 }
 
-@media (min-width: 1024px){
+@media (min-width:1024px){
   :root{
     --gutter:20px;
     --gutter-lg:28px;
     --section-gap:32px;
   }
 
-  .container{ width: min(100% - 3rem, var(--max-w)) }
+  /* wider gutters on large screens */
+  .container{ width:min(100% - 3rem, var(--max-w)) }
 
+  /* landing area needs extra top air beneath sticky header */
   .bank-landing{
     gap: var(--section-gap);
-    padding: 32px 24px calc(110px + env(safe-area-inset-bottom, 0px));
+    padding: clamp(56px, 6vw, 96px) 24px calc(110px + env(safe-area-inset-bottom, 0px));
   }
+
+  /* denser but roomy grids */
   .balance-row{ gap: var(--gutter-lg) }
   .feature-grid{ gap: var(--gutter-lg) }
 
-  .hub-panel{ margin-top: var(--section-gap) }
+  /* hub panel + body breathing room */
+  .hub-panel{ margin-top: calc(var(--section-gap) + 6px) }
   .hub-panel-top{ padding: 16px 20px }
   .hub-panel-body{ padding: 22px }
 
-  .trust-strip{ margin-top: 14px; gap: 14px }
+  /* trust strip spacing under header */
+  .trust-strip{ margin-top: 20px; gap: 16px }
 
+  /* shop spacing */
   .shop-promo{ margin-top: var(--section-gap) }
   .product-grid{ gap: var(--gutter-lg) }
 }
 
-/* Optional: vertical spacing helper */
+/* optional: vertical stack helper for sections */
 .stack-lg > * + *{ margin-top: var(--section-gap) }
