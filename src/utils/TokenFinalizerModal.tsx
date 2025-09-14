@@ -1,14 +1,15 @@
-import type { FC } from 'react';
-import { useEffect, useState } from 'react';
-import { PublicKey, Connection } from '@solana/web3.js';
-import { finalizeTokenMetadata } from '../utils/finalizeTokenMetadata';
-import { verifyTokenMetadataAttached } from '../utils/verifyTokenMetadataAttached';
-import { createSignerFromWalletAdapter } from '@metaplex-foundation/umi-signer-wallet-adapters';
-import { useWallet } from '@solana/wallet-adapter-react';
+import type { FC } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { useWallet } from "@solana/wallet-adapter-react";
+import {
+  PROGRAM_ID as TMETA_PROGRAM_ID,
+  createCreateMetadataAccountV3Instruction,
+} from "@metaplex-foundation/mpl-token-metadata";
 
 interface Props {
   mint: string;
-  connection: Connection;
+  connection: Connection;                 // ← we will ONLY use this RPC (Helius)
   onClose: () => void;
   onSuccess?: (mint: string) => void;
   templateMetadata?: {
@@ -24,114 +25,184 @@ const TokenFinalizerModal: FC<Props> = ({
   connection,
   onClose,
   onSuccess,
-  templateMetadata
+  templateMetadata,
 }) => {
-  const { wallet } = useWallet();
-  const [imageUri, setImageUri] = useState(templateMetadata?.image ?? '');
-  const [name, setName] = useState(templateMetadata?.name ?? '');
-  const [symbol, setSymbol] = useState(templateMetadata?.symbol ?? '');
-  const [description, setDescription] = useState(templateMetadata?.description ?? '');
-  const [metadataUri, setMetadataUri] = useState('');
-  const [mimeType, setMimeType] = useState('');
-  const [imageSizeKB, setImageSizeKB] = useState(0);
-  const [attaching, setAttaching] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [txSignature, setTxSignature] = useState<string | null>(null);
+  const { publicKey, sendTransaction, wallet } = useWallet();
 
+  // form state
+  const [imageUri, setImageUri] = useState(templateMetadata?.image ?? "");
+  const [name, setName] = useState(templateMetadata?.name ?? "");
+  const [symbol, setSymbol] = useState(templateMetadata?.symbol ?? "");
+  const [description, setDescription] = useState(
+    templateMetadata?.description ?? ""
+  );
+  const [metadataUri, setMetadataUri] = useState("");
+  const [mimeType, setMimeType] = useState("");
+  const [imageSizeKB, setImageSizeKB] = useState(0);
+
+  // action state
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [txSig, setTxSig] = useState<string | null>(null);
   const IMAGE_SIZE_LIMIT_KB = 500;
 
-  useEffect(() => {
-    const checkImage = async () => {
-      if (!imageUri.startsWith('http')) return;
+  const mintPk = useMemo(() => new PublicKey(mint), [mint]);
 
+  const normalizeHttp = (uri: string) =>
+    uri.startsWith("ipfs://")
+      ? `https://ipfs.io/ipfs/${uri.replace("ipfs://", "")}`
+      : uri;
+
+  // lightweight check of the image (size & type)
+  useEffect(() => {
+    const run = async () => {
+      const src = normalizeHttp(imageUri || "");
+      if (!src.startsWith("http")) {
+        setMimeType("");
+        setImageSizeKB(0);
+        return;
+      }
       try {
-        const res = await fetch(imageUri);
+        const res = await fetch(src, { cache: "no-store" });
         const blob = await res.blob();
-        setMimeType(blob.type || 'image/png');
-        setImageSizeKB(+(blob.size / 1024).toFixed(2));
+        setMimeType(blob.type || "image/png");
+        setImageSizeKB(+((blob.size ?? 0) / 1024).toFixed(2));
       } catch {
-        setMimeType('');
+        setMimeType("");
         setImageSizeKB(0);
       }
     };
-
-    checkImage();
+    run();
   }, [imageUri]);
 
-  if (!wallet?.adapter || !mint) return null;
+  if (!wallet?.adapter || !publicKey) return null;
 
-  const handleDownloadMetadata = () => {
+  const downloadMetadataJson = () => {
+    if (!imageUri) return;
     if (imageSizeKB > IMAGE_SIZE_LIMIT_KB) {
-      alert('Image too large for token metadata (max 500KB).');
+      alert("Image too large for token metadata (max 500KB).");
       return;
     }
-
-    const metadata = {
+    const json = {
       name,
       symbol,
       description,
       image: imageUri,
       properties: {
-        files: [{ uri: imageUri, type: mimeType }],
-        category: 'image',
+        files: [{ uri: imageUri, type: mimeType || "image/png" }],
+        category: "image",
       },
     };
-
-    const blob = new Blob([JSON.stringify(metadata, null, 2)], {
-      type: 'application/json',
+    const blob = new Blob([JSON.stringify(json, null, 2)], {
+      type: "application/json",
     });
-
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'metadata.json';
+    a.download = "metadata.json";
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const handleAttachMetadata = async () => {
-    setAttaching(true);
-    setStatus('idle');
-
+  const attachMetadata = async () => {
     try {
-      const signer = createSignerFromWalletAdapter(wallet.adapter);
-      const signature = await finalizeTokenMetadata({
-        signer,
-        mintAddress: new PublicKey(mint),
-        metadataUri,
+      setBusy(true);
+      setStatus("idle");
+
+      // If metadata already exists, short-circuit
+      const [metadataPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("metadata"), TMETA_PROGRAM_ID.toBuffer(), mintPk.toBuffer()],
+        TMETA_PROGRAM_ID
+      );
+      const existing = await connection.getAccountInfo(metadataPda, "confirmed");
+      if (existing) {
+        setStatus("success");
+        onSuccess?.(mint);
+        return;
+      }
+
+      // Minimal Metaplex Metadata
+      const data = {
         name,
         symbol,
-      });
+        uri: metadataUri, // should point to your uploaded metadata.json
+        sellerFeeBasisPoints: 0,
+        creators: null,
+        collection: null,
+        uses: null,
+      };
 
-      setTxSignature(signature);
+      const ix = createCreateMetadataAccountV3Instruction(
+        {
+          metadata: metadataPda,
+          mint: mintPk,
+          mintAuthority: publicKey,
+          payer: publicKey,
+          updateAuthority: publicKey,
+        },
+        {
+          createMetadataAccountArgsV3: {
+            data,
+            isMutable: true,
+            collectionDetails: null,
+          },
+        }
+      );
 
-      const verified = await verifyTokenMetadataAttached(connection, new PublicKey(mint));
-      if (!verified?.isAttached) throw new Error('Metadata verification failed.');
+      const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash("finalized");
 
-      setStatus('success');
+      const tx = new Transaction({
+        feePayer: publicKey,
+        recentBlockhash: blockhash,
+      }).add(ix);
 
-      // ✅ Trigger success callback
-      if (onSuccess) {
-        onSuccess(mint);
-      }
+      const sig = await sendTransaction(tx, connection);
+      setTxSig(sig);
+
+      await connection.confirmTransaction(
+        { signature: sig, blockhash, lastValidBlockHeight },
+        "confirmed"
+      );
+
+      // Verify creation
+      const created = await connection.getAccountInfo(metadataPda, "confirmed");
+      if (!created) throw new Error("Metadata account not found after submit.");
+
+      setStatus("success");
+      onSuccess?.(mint);
     } catch (e) {
       console.error(e);
-      setStatus('error');
+      setStatus("error");
     } finally {
-      setAttaching(false);
+      setBusy(false);
     }
   };
+
+  const disableAttach =
+    busy ||
+    !name ||
+    !symbol ||
+    !metadataUri ||
+    (imageUri && imageSizeKB > IMAGE_SIZE_LIMIT_KB);
 
   return (
     <div className="modal-overlay">
       <div className="modal-box">
-        <button className="delete-btn" onClick={onClose}>×</button>
+        <button className="delete-btn" onClick={onClose}>
+          ×
+        </button>
         <h2 className="text-xl font-bold mb-3 text-center">Turn Into Currency</h2>
 
         <ol className="space-y-4 text-sm">
           <li>
-            1. Upload your <strong>token image</strong> to{' '}
-            <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer" className="underline">
+            1. Upload your <strong>token image</strong> to{" "}
+            <a
+              href="https://www.lighthouse.storage/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
               lighthouse.storage
             </a>
           </li>
@@ -142,21 +213,44 @@ const TokenFinalizerModal: FC<Props> = ({
               type="text"
               value={imageUri}
               onChange={(e) => setImageUri(e.target.value)}
-              placeholder="https://gateway.lighthouse.storage/ipfs/..."
+              placeholder="ipfs://... or https://gateway.lighthouse.storage/ipfs/..."
             />
             {imageSizeKB > 0 && (
-              <p className={`text-xs ${imageSizeKB > IMAGE_SIZE_LIMIT_KB ? 'text-red-500' : 'text-green-600'}`}>
-                File type: {mimeType} | Size: {imageSizeKB} KB
+              <p
+                className={`text-xs ${
+                  imageSizeKB > IMAGE_SIZE_LIMIT_KB
+                    ? "text-red-500"
+                    : "text-green-600"
+                }`}
+              >
+                File type: {mimeType || "unknown"} | Size: {imageSizeKB} KB
               </p>
             )}
           </li>
 
           <li>
             3. Fill in your token identity:
-            <input placeholder="Token Name" value={name} onChange={(e) => setName(e.target.value)} />
-            <input placeholder="Symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} />
-            <textarea placeholder="Description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-            <button className="button" onClick={handleDownloadMetadata} disabled={imageSizeKB > IMAGE_SIZE_LIMIT_KB}>
+            <input
+              placeholder="Token Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <input
+              placeholder="Symbol"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+            />
+            <textarea
+              placeholder="Description"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <button
+              className="button"
+              onClick={downloadMetadataJson}
+              disabled={!!imageUri && imageSizeKB > IMAGE_SIZE_LIMIT_KB}
+            >
               Download metadata.json
             </button>
           </li>
@@ -166,13 +260,17 @@ const TokenFinalizerModal: FC<Props> = ({
             <input
               value={metadataUri}
               onChange={(e) => setMetadataUri(e.target.value)}
-              placeholder="ipfs://..."
+              placeholder="ipfs://... (points to metadata.json)"
             />
           </li>
 
           <li>
-            <button className="button" onClick={handleAttachMetadata} disabled={attaching}>
-              {attaching ? 'Attaching...' : `Attach Metadata to ${mint.slice(0, 4)}...`}
+            <button
+              className="button"
+              onClick={attachMetadata}
+              disabled={disableAttach}
+            >
+              {busy ? "Attaching…" : `Attach Metadata to ${mint.slice(0, 4)}…`}
             </button>
             <p className="text-xs text-yellow-700 mt-1">
               ⚠️ Approve Phantom immediately after clicking. Delay = failure.
@@ -180,22 +278,39 @@ const TokenFinalizerModal: FC<Props> = ({
           </li>
         </ol>
 
-        {status === 'success' && txSignature && (
+        {status === "success" && txSig && (
           <div className="text-green-600 text-xs mt-4 space-y-1">
             <p>✅ Metadata successfully attached.</p>
-            <a href={`https://solscan.io/tx/${txSignature}`} target="_blank" rel="noopener noreferrer" className="underline">
+            <a
+              href={`https://solscan.io/tx/${txSig}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
               View Transaction ↗
             </a>
-            <a href={`https://solscan.io/address/${mint}`} target="_blank" rel="noopener noreferrer" className="underline">
+            <a
+              href={`https://solscan.io/address/${mint}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
               View Mint ↗
             </a>
-            <a href={`https://ipfs.io/ipfs/${metadataUri.replace('ipfs://', '')}`} target="_blank" rel="noopener noreferrer" className="underline break-all">
-              Metadata URI ↗
-            </a>
+            {metadataUri && (
+              <a
+                href={normalizeHttp(metadataUri)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline break-all"
+              >
+                Metadata URI ↗
+              </a>
+            )}
           </div>
         )}
 
-        {status === 'error' && (
+        {status === "error" && (
           <p className="text-red-500 text-xs mt-3">
             ❌ Metadata attachment failed. Double check IPFS URI and retry.
           </p>
