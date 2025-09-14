@@ -3,10 +3,10 @@ import type { FC } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
-
-import { finalizeTokenMetadata } from "../utils/finalizeTokenMetadata";
-import { verifyTokenMetadataAttached } from "../utils/verifyTokenMetadataAttached";
 import { createSignerFromWalletAdapter } from "@metaplex-foundation/umi-signer-wallet-adapters";
+
+import { finalizeTokenMetadata } from "./finalizeTokenMetadata";
+import { verifyTokenMetadataAttached } from "./verifyTokenMetadataAttached";
 
 interface Props {
   mint: string;
@@ -23,6 +23,13 @@ interface Props {
 
 const IMAGE_SIZE_LIMIT_KB = 500;
 
+type UiState = "idle" | "attaching" | "verifying" | "success" | "error" | "already";
+
+const toHttp = (uri: string) =>
+  uri?.startsWith("ipfs://")
+    ? `https://ipfs.io/ipfs/${uri.replace("ipfs://", "")}`
+    : uri;
+
 const TokenFinalizerModal: FC<Props> = ({
   mint,
   connection,
@@ -31,58 +38,78 @@ const TokenFinalizerModal: FC<Props> = ({
   templateMetadata,
 }) => {
   const { wallet } = useWallet();
+  const mintPk = useMemo(() => new PublicKey(mint), [mint]);
 
-  // ----- form state
+  // form
   const [imageUri, setImageUri] = useState(templateMetadata?.image ?? "");
   const [name, setName] = useState(templateMetadata?.name ?? "");
   const [symbol, setSymbol] = useState(templateMetadata?.symbol ?? "");
-  const [description, setDescription] = useState(
-    templateMetadata?.description ?? ""
-  );
+  const [description, setDescription] = useState(templateMetadata?.description ?? "");
   const [metadataUri, setMetadataUri] = useState("");
 
-  // ----- derived/probed info (for feedback)
+  // derived / feedback
   const [mimeType, setMimeType] = useState("");
   const [imageSizeKB, setImageSizeKB] = useState(0);
 
-  // ----- action/UX state
-  const [attaching, setAttaching] = useState(false);
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [txSignature, setTxSignature] = useState<string | null>(null);
+  // ui
+  const [state, setState] = useState<UiState>("idle");
+  const [txSig, setTxSig] = useState<string | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  const mintPk = useMemo(() => new PublicKey(mint), [mint]);
-
-  const toHttp = (uri: string) =>
-    uri?.startsWith("ipfs://")
-      ? `https://ipfs.io/ipfs/${uri.replace("ipfs://", "")}`
-      : uri;
-
-  // Probe the image (type + size) so users see if it’s too large
+  // On open: check if metadata already exists to avoid duplicate tx
   useEffect(() => {
-    const probe = async () => {
+    let dead = false;
+    (async () => {
+      try {
+        const v = await verifyTokenMetadataAttached(connection, mintPk);
+        if (dead) return;
+        if (v.isAttached) {
+          setState("already");
+        }
+      } catch {
+        // ignore — absence is normal before creation
+      }
+    })();
+    return () => {
+      dead = true;
+    };
+  }, [connection, mintPk]);
+
+  // Probe image to show type/size & warn if too large
+  useEffect(() => {
+    let dead = false;
+    (async () => {
       const src = toHttp(imageUri || "");
       if (!src || !/^https?:\/\//i.test(src)) {
-        setMimeType("");
-        setImageSizeKB(0);
+        if (!dead) {
+          setMimeType("");
+          setImageSizeKB(0);
+        }
         return;
       }
       try {
         const res = await fetch(src, { cache: "no-store" });
-        if (!res.ok) throw new Error("Image fetch failed");
+        if (!res.ok) throw new Error("fetch failed");
         const blob = await res.blob();
-        setMimeType(blob.type || "image/png");
-        setImageSizeKB(+((blob.size ?? 0) / 1024).toFixed(2));
+        if (!dead) {
+          setMimeType(blob.type || "image/png");
+          setImageSizeKB(+((blob.size ?? 0) / 1024).toFixed(2));
+        }
       } catch {
-        setMimeType("");
-        setImageSizeKB(0);
+        if (!dead) {
+          setMimeType("");
+          setImageSizeKB(0);
+        }
       }
+    })();
+    return () => {
+      dead = true;
     };
-    probe();
   }, [imageUri]);
 
   if (!wallet?.adapter) return null;
 
-  const handleDownloadMetadata = () => {
+  const downloadMetadataJson = () => {
     if (imageUri && imageSizeKB > IMAGE_SIZE_LIMIT_KB) {
       alert("Image too large for token metadata (max 500KB).");
       return;
@@ -97,10 +124,9 @@ const TokenFinalizerModal: FC<Props> = ({
         category: "image",
       },
     };
-    const blob = new Blob([JSON.stringify(json, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(json, null, 2)], { type: "application/json" })
+    );
     const a = document.createElement("a");
     a.href = url;
     a.download = "metadata.json";
@@ -108,14 +134,18 @@ const TokenFinalizerModal: FC<Props> = ({
     URL.revokeObjectURL(url);
   };
 
-  const handleAttachMetadata = async () => {
-    setAttaching(true);
-    setStatus("idle");
-    setTxSignature(null);
-
+  const handleAttach = async () => {
+    setErrMsg(null);
+    setTxSig(null);
+    setState("attaching");
     try {
-      const signer = createSignerFromWalletAdapter(wallet.adapter);
+      // extra client-side validation
+      const uriOk = /^ipfs:\/\//i.test(metadataUri) || /^https?:\/\//i.test(metadataUri);
+      if (!name.trim() || !symbol.trim() || !uriOk) {
+        throw new Error("Fill in Name, Symbol and a valid metadata URI (ipfs:// or https://).");
+      }
 
+      const signer = createSignerFromWalletAdapter(wallet.adapter);
       const sig = await finalizeTokenMetadata({
         signer,
         mintAddress: mintPk,
@@ -123,26 +153,24 @@ const TokenFinalizerModal: FC<Props> = ({
         name,
         symbol,
       });
-      setTxSignature(sig);
+      setTxSig(sig);
 
-      // quick on-chain verification (reads Metadata PDA)
-      const verified = await verifyTokenMetadataAttached(connection, mintPk);
-      if (!verified?.isAttached) {
-        throw new Error("Metadata verification failed.");
-      }
+      setState("verifying");
+      const v = await verifyTokenMetadataAttached(connection, mintPk);
+      if (!v.isAttached) throw new Error("Metadata verification failed.");
 
-      setStatus("success");
+      setState("success");
       onSuccess?.(mint);
-    } catch (e) {
-      console.error("[TokenFinalizer] attach failed:", e);
-      setStatus("error");
-    } finally {
-      setAttaching(false);
+    } catch (e: any) {
+      console.error("[TokenFinalizerModal] attach failed:", e);
+      setErrMsg(e?.message ?? "Attach failed.");
+      setState("error");
     }
   };
 
-  const disableAttach =
-    attaching ||
+  const disabled =
+    state === "attaching" ||
+    state === "verifying" ||
     !name.trim() ||
     !symbol.trim() ||
     !metadataUri.trim() ||
@@ -158,6 +186,12 @@ const TokenFinalizerModal: FC<Props> = ({
         <h2 id="finalize-title" className="text-xl font-bold mb-3 text-center">
           Turn Into Currency
         </h2>
+
+        {state === "already" && (
+          <div className="text-xs text-green-500 mb-3">
+            ✅ Metadata already exists for this mint. No action needed.
+          </div>
+        )}
 
         <ol className="space-y-4 text-sm">
           <li>
@@ -183,14 +217,8 @@ const TokenFinalizerModal: FC<Props> = ({
               aria-label="Image URI"
             />
             {imageSizeKB > 0 && (
-              <p
-                className={`text-xs ${
-                  imageSizeKB > IMAGE_SIZE_LIMIT_KB
-                    ? "text-red-500"
-                    : "text-green-600"
-                }`}
-              >
-                File type: {mimeType || "unknown"} | Size: {imageSizeKB} KB
+              <p className={`text-xs ${imageSizeKB > IMAGE_SIZE_LIMIT_KB ? "text-red-500" : "text-green-600"}`}>
+                File type: {mimeType || "unknown"} • Size: {imageSizeKB} KB
               </p>
             )}
           </li>
@@ -218,7 +246,7 @@ const TokenFinalizerModal: FC<Props> = ({
             />
             <button
               className="button"
-              onClick={handleDownloadMetadata}
+              onClick={downloadMetadataJson}
               disabled={Boolean(imageUri) && imageSizeKB > IMAGE_SIZE_LIMIT_KB}
             >
               Download metadata.json
@@ -233,29 +261,43 @@ const TokenFinalizerModal: FC<Props> = ({
               placeholder="ipfs://... (points to metadata.json)"
               aria-label="Metadata URI"
             />
+            {metadataUri && (
+              <a
+                className="underline text-xs ml-2"
+                href={toHttp(metadataUri)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open
+              </a>
+            )}
           </li>
 
           <li>
             <button
               className="button"
-              onClick={handleAttachMetadata}
-              disabled={disableAttach}
-              aria-busy={attaching || undefined}
+              onClick={handleAttach}
+              disabled={disabled || state === "already"}
+              aria-busy={state === "attaching" || state === "verifying" || undefined}
             >
-              {attaching ? "Attaching…" : `Attach Metadata to ${mint.slice(0, 4)}…`}
+              {state === "attaching"
+                ? "Sending..."
+                : state === "verifying"
+                ? "Verifying..."
+                : `Attach Metadata to ${mint.slice(0, 4)}…`}
             </button>
             <p className="text-xs text-yellow-700 mt-1" aria-live="polite">
-              ⚠️ Approve Phantom immediately after clicking. Delay = failure.
+              ⚠️ Approve your wallet immediately after clicking. Delay = failure.
             </p>
           </li>
         </ol>
 
         {/* success */}
-        {status === "success" && txSignature && (
+        {state === "success" && txSig && (
           <div className="text-green-600 text-xs mt-4 space-y-1" aria-live="polite">
             <p>✅ Metadata successfully attached.</p>
             <a
-              href={`https://solscan.io/tx/${txSignature}`}
+              href={`https://solscan.io/tx/${txSig}`}
               target="_blank"
               rel="noopener noreferrer"
               className="underline"
@@ -284,14 +326,14 @@ const TokenFinalizerModal: FC<Props> = ({
         )}
 
         {/* error */}
-        {status === "error" && (
+        {state === "error" && (
           <p className="text-red-500 text-xs mt-3" aria-live="assertive">
-            ❌ Metadata attachment failed. Double-check the IPFS URI and try again.
+            ❌ {errMsg ?? "Metadata attachment failed. Double-check the IPFS URI and try again."}
           </p>
         )}
 
         <p className="text-[var(--jal-muted)] text-xs mt-3">
-          Once attached, this metadata becomes permanent on-chain (use an update authority responsibly).
+          Once attached, metadata becomes permanent on-chain (use an update authority responsibly).
         </p>
       </div>
     </div>
