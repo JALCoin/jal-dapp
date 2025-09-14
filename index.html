@@ -1,13 +1,40 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>JAL / SOL</title>
+
+    <!-- Icons -->
+    <link rel="icon" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+
+    <!-- Theming -->
+    <meta name="theme-color" content="#0b0b0c" />
+
+    <!-- Basic SEO -->
+    <meta name="description" content="JAL/SOL — tokens, NFTs, and on-chain tools." />
+    <meta property="og:title" content="JAL / SOL" />
+    <meta property="og:description" content="Launch a currency or NFT, then swap and explore." />
+    <meta property="og:image" content="https://www.jalsol.com/icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.jalsol.com" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
+
   <body>
     <div id="root"></div>
+
+    <!-- TEMP: force Helius RPC in the browser, regardless of env.
+         Remove this once your production envs are set with VITE_SOLANA_RPC. -->
+    <script>
+      window.__SOLANA_RPC_ENDPOINT__ =
+        "https://mainnet.helius-rpc.com/?api-key=1e858a9c-91e5-4841-a076-161fe6f14f76";
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
