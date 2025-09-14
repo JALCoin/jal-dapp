@@ -15,7 +15,7 @@ type HeaderMint = {
   symbol?: string;
   image?: string;
   metadataUri?: string;
-  balance?: number; // user balance of this token (ui)
+  balance?: number;
 };
 
 const toHttp = (uri?: string) =>
@@ -29,7 +29,7 @@ export default function Vault() {
   // single RPC (respects env/Helius headers via makeConnection)
   const connection = useMemo(() => makeConnection("confirmed"), []);
 
-  // top tiles (live)
+  // live tiles
   const [sol, setSol] = useState<number | null>(null);
   const [tokenCount, setTokenCount] = useState<number | null>(null);
 
@@ -40,7 +40,7 @@ export default function Vault() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // fallback symbol used by the “Go to Vault / …” link (until metadata loads)
+  // fallback symbol for CTA link
   const savedSymbol = (localStorage.getItem("vaultSymbol") || "JAL").toUpperCase();
 
   // ---------- loaders ----------
@@ -49,11 +49,7 @@ export default function Vault() {
 
     const [lamports, parsed] = await Promise.all([
       connection.getBalance(publicKey),
-      connection.getParsedTokenAccountsByOwner(
-        publicKey,
-        { programId: TOKEN_PROGRAM_ID },
-        "confirmed"
-      ),
+      connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID }, "confirmed"),
     ]);
 
     setSol(lamports / LAMPORTS_PER_SOL);
@@ -73,25 +69,37 @@ export default function Vault() {
     }
     const mintPk = new PublicKey(mintStr);
 
-    // read Metaplex Metadata PDA to get URI / name / symbol
-    const meta = await verifyTokenMetadataAttached(connection, mintPk);
+    // try chain metadata first
+    let name: string | undefined;
+    let symbol: string | undefined;
+    let metadataUri: string | undefined;
     let image: string | undefined;
-    let name = meta.name;
-    let symbol = meta.symbol;
-    let metadataUri = meta.uri;
 
-    // fetch JSON if we have a URI to extract image and possibly override name/symbol
-    if (meta.uri) {
-      try {
-        const res = await fetch(toHttp(meta.uri), { cache: "no-store" });
-        const j = await res.json();
-        image = toHttp(j.image || j.logo || j.icon);
-        name = name || j.name;
-        symbol = symbol || j.symbol;
-      } catch {
-        // ignore JSON fetch failure; header still shows base info
+    try {
+      const meta = await verifyTokenMetadataAttached(connection, mintPk);
+      name = meta.name || name;
+      symbol = meta.symbol || symbol;
+      metadataUri = meta.uri || metadataUri;
+
+      // fetch JSON if we have a URI to extract image and possibly override name/symbol
+      if (meta.uri) {
+        try {
+          const res = await fetch(toHttp(meta.uri), { cache: "no-store" });
+          const j = await res.json();
+          image = toHttp(j.image || j.logo || j.icon) || image;
+          name = name || j.name;
+          symbol = symbol || j.symbol;
+        } catch {
+          /* ignore JSON fetch issues */
+        }
       }
+    } catch {
+      /* missing metadata is fine; fall back below */
     }
+
+    // fallbacks from localStorage (saved by TokenFinalizerModal)
+    image = image || toHttp(localStorage.getItem("mintImage") || undefined);
+    metadataUri = metadataUri || localStorage.getItem("metadataUri") || undefined;
 
     // user's balance of this mint (if present)
     let balance = 0;
@@ -102,15 +110,13 @@ export default function Vault() {
           { programId: TOKEN_PROGRAM_ID },
           "confirmed"
         );
-        const acct = resp.value.find(
-          (v) => v.account.data.parsed.info.mint === mintStr
-        );
+        const acct = resp.value.find((v) => v.account.data.parsed.info.mint === mintStr);
         if (acct) {
           const amt = acct.account.data.parsed.info.tokenAmount?.uiAmount;
           if (typeof amt === "number") balance = amt;
         }
       } catch {
-        // non-fatal
+        /* non-fatal */
       }
     }
 
@@ -149,7 +155,9 @@ export default function Vault() {
   // react to localStorage changes from other tabs
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "mint") loadHeaderFromLocalStorage();
+      if (e.key === "mint" || e.key === "metadataUri" || e.key === "mintImage" || e.key === "vaultSymbol") {
+        loadHeaderFromLocalStorage();
+      }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -197,7 +205,11 @@ export default function Vault() {
         <p className="vault-subtext">Loading your balances…</p>
       ) : (
         <>
-          {error && <p className="vault-subtext" style={{ color: "#ff9c9c" }}>{error}</p>}
+          {error && (
+            <p className="vault-subtext" style={{ color: "#ff9c9c" }}>
+              {error}
+            </p>
+          )}
 
           {/* Header card: newest currency */}
           {header && (
@@ -224,15 +236,10 @@ export default function Vault() {
                   </h3>
                   <div className="chip-row" style={{ marginTop: 8 }}>
                     <span className="chip">
-                      Mint:{" "}
-                      <span className="mono-sm">
-                        {header.mint.slice(0, 4)}…{header.mint.slice(-4)}
-                      </span>
+                      Mint: <span className="mono-sm">{header.mint.slice(0, 4)}…{header.mint.slice(-4)}</span>
                     </span>
                     {typeof header.balance === "number" && (
-                      <span className="chip">
-                        Your Balance: <strong>{header.balance}</strong>
-                      </span>
+                      <span className="chip">Your Balance: <strong>{header.balance}</strong></span>
                     )}
                     <a
                       className="chip"
@@ -243,12 +250,7 @@ export default function Vault() {
                       View on Solscan ↗
                     </a>
                     {header.metadataUri && (
-                      <a
-                        className="chip"
-                        href={toHttp(header.metadataUri)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <a className="chip" href={toHttp(header.metadataUri)} target="_blank" rel="noopener noreferrer">
                         Metadata ↗
                       </a>
                     )}
@@ -296,11 +298,7 @@ export default function Vault() {
           </p>
 
           {/* Positions list (live), highlights last-created mint if present */}
-          <PositionsList
-            owner={publicKey}
-            connection={connection}
-            highlightMint={header?.mint}
-          />
+          <PositionsList owner={publicKey} connection={connection} highlightMint={header?.mint} />
         </>
       )}
 

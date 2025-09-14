@@ -22,7 +22,6 @@ interface Props {
 }
 
 const IMAGE_SIZE_LIMIT_KB = 500;
-
 type UiState = "idle" | "attaching" | "verifying" | "success" | "error" | "already";
 
 const toHttp = (uri: string) =>
@@ -47,7 +46,7 @@ const TokenFinalizerModal: FC<Props> = ({
   const [description, setDescription] = useState(templateMetadata?.description ?? "");
   const [metadataUri, setMetadataUri] = useState("");
 
-  // derived / feedback
+  // feedback
   const [mimeType, setMimeType] = useState("");
   const [imageSizeKB, setImageSizeKB] = useState(0);
 
@@ -56,18 +55,16 @@ const TokenFinalizerModal: FC<Props> = ({
   const [txSig, setTxSig] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // On open: check if metadata already exists to avoid duplicate tx
+  // If metadata already exists, short-circuit
   useEffect(() => {
     let dead = false;
     (async () => {
       try {
         const v = await verifyTokenMetadataAttached(connection, mintPk);
         if (dead) return;
-        if (v.isAttached) {
-          setState("already");
-        }
+        if (v.isAttached) setState("already");
       } catch {
-        // ignore — absence is normal before creation
+        /* not an error if absent */
       }
     })();
     return () => {
@@ -75,7 +72,7 @@ const TokenFinalizerModal: FC<Props> = ({
     };
   }, [connection, mintPk]);
 
-  // Probe image to show type/size & warn if too large
+  // Probe image for type/size hint
   useEffect(() => {
     let dead = false;
     (async () => {
@@ -139,7 +136,6 @@ const TokenFinalizerModal: FC<Props> = ({
     setTxSig(null);
     setState("attaching");
     try {
-      // extra client-side validation
       const uriOk = /^ipfs:\/\//i.test(metadataUri) || /^https?:\/\//i.test(metadataUri);
       if (!name.trim() || !symbol.trim() || !uriOk) {
         throw new Error("Fill in Name, Symbol and a valid metadata URI (ipfs:// or https://).");
@@ -158,6 +154,16 @@ const TokenFinalizerModal: FC<Props> = ({
       setState("verifying");
       const v = await verifyTokenMetadataAttached(connection, mintPk);
       if (!v.isAttached) throw new Error("Metadata verification failed.");
+
+      // Persist for Vault page header + highlight
+      try {
+        localStorage.setItem("mint", mint);
+        localStorage.setItem("vaultSymbol", symbol.toUpperCase());
+        if (metadataUri) localStorage.setItem("metadataUri", metadataUri);
+        if (imageUri) localStorage.setItem("mintImage", imageUri);
+      } catch {
+        /* non-fatal */
+      }
 
       setState("success");
       onSuccess?.(mint);
@@ -178,7 +184,7 @@ const TokenFinalizerModal: FC<Props> = ({
 
   return (
     <div className="modal-overlay">
-      <div className="modal-box" role="dialog" aria-modal="true" aria-labelledby="finalize-title">
+      <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="finalize-title">
         <button className="delete-btn" onClick={onClose} aria-label="Close">
           ×
         </button>
@@ -292,7 +298,6 @@ const TokenFinalizerModal: FC<Props> = ({
           </li>
         </ol>
 
-        {/* success */}
         {state === "success" && txSig && (
           <div className="text-green-600 text-xs mt-4 space-y-1" aria-live="polite">
             <p>✅ Metadata successfully attached.</p>
@@ -325,7 +330,6 @@ const TokenFinalizerModal: FC<Props> = ({
           </div>
         )}
 
-        {/* error */}
         {state === "error" && (
           <p className="text-red-500 text-xs mt-3" aria-live="assertive">
             ❌ {errMsg ?? "Metadata attachment failed. Double-check the IPFS URI and try again."}
