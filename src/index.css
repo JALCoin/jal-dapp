@@ -544,3 +544,45 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
    Performance trims on very small devices
 =================================*/
 @media (max-width: 480px){ .card, .product-card, .hub-panel { box-shadow: 0 8px 18px rgba(0,0,0,.5) } }
+/* --- Trust strip: improve click/tap targets on desktop --- */
+.trust-strip{ gap:12px; }
+
+.trust-strip a,
+.trust-strip button,
+.trust-strip .chip,
+.trust-strip .chip.sm,
+.trust-strip .jal-link,
+.trust-strip .button{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:.5rem .9rem;     /* ↑ more horizontal & vertical padding */
+  min-height:38px;         /* ↑ minimum hit size */
+  line-height:1;           /* crisp pill */
+  border-radius:999px;
+  font-size:.92rem;        /* a touch larger for readability */
+}
+
+/* optional: slightly bolder border for visibility on dark bg */
+.trust-strip .chip,
+.trust-strip .jal-link,
+.trust-strip .button{
+  border-color: rgba(255,255,255,.22);
+}
+
+/* keep hover feedback strong */
+.trust-strip a:hover,
+.trust-strip button:hover,
+.trust-strip .chip:hover{
+  transform: translateY(-1px);
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+/* pointer devices (desktop): give even more room if you want */
+@media (pointer:fine){
+  .trust-strip a,
+  .trust-strip button,
+  .trust-strip .chip{ padding:.55rem 1rem; min-height:40px; }
+}
+
