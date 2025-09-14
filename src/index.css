@@ -497,43 +497,55 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
   .chip-row { flex-wrap:wrap; gap:8px }
 }
 
-/* Trust strip (under header) — bigger desktop hit targets */
-.trust-strip{
-  width:min(100% - 2rem, var(--max-w));
+/* Trust strip (under header) */
+.trust-strip {
+  width: min(100% - 2rem, var(--max-w));
   margin: 8px auto 0;
-  display:flex; flex-wrap:wrap; justify-content:center; align-items:center;
-  gap:12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
 }
+
+.trust-strip a,
+.trust-strip button,
 .trust-strip .chip,
 .trust-strip .chip.sm,
 .trust-strip .jal-link,
-.trust-strip .button,
-.trust-strip a,
-.trust-strip button{
-  display:inline-flex; align-items:center; gap:10px;
-  padding: var(--pill-py) var(--pill-px);
-  min-height: var(--pill-min);
-  line-height:1; border-radius:999px; font-size:.95rem;
-  border-color: rgba(255,255,255,.22);
-}
-.trust-strip .chip.sm{ padding: calc(var(--pill-py) - .12rem) calc(var(--pill-px) - .15rem) }
+.trust-strip .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 
+  /* Increase clickable size */
+  padding: .6rem 1.2rem;   /* ↑ more horizontal & vertical padding */
+  min-height: 42px;        /* ↑ taller hitbox */
+  min-width: 56px;         /* ensures wider touch area */
+  
+  line-height: 1.2;
+  border-radius: 999px;
+  font-size: .95rem;
+}
+
+/* Hover feedback */
 .trust-strip a:hover,
 .trust-strip button:hover,
-.trust-strip .chip:hover{
+.trust-strip .chip:hover {
   transform: translateY(-1px);
   border-color: var(--cyan);
   box-shadow: var(--glow-cyan);
 }
 
-.chip.sm{ padding:.32rem .6rem; font-size:.82rem; border-radius:999px }
-.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
-
-/* Status dot */
-.dot{ inline-size:.55rem; block-size:.55rem; border-radius:50%; display:inline-block }
-.dot.ok{ background:#11f1a7; box-shadow: 0 0 10px rgba(17,241,167,.6) }
-.dot.warn{ background:#f4c86a; box-shadow: 0 0 10px rgba(244,200,106,.6) }
-.dot.down{ background:#ff4d8a; box-shadow: 0 0 10px rgba(255,77,138,.5) }
+/* On desktop, give even more space */
+@media (pointer: fine) {
+  .trust-strip a,
+  .trust-strip button,
+  .trust-strip .chip {
+    padding: .7rem 1.35rem;
+    min-height: 44px;
+  }
+}
 
 /* ===============================
    Vault screen / hero + header
