@@ -1,10 +1,30 @@
-/* ===============================
+/* ==========================================================================
    JAL/SOL — Global CSS (index.css)
    Neon cyber / premium ATM
-   Structure, layering, mobile fit, performance
-=================================*/
+   ==========================================================================
+   TABLE OF CONTENTS
+   00. Tokens & Resets
+   01. Foundations (Layout, Containers, Utils)
+   02. Global Motion / Accessibility
+   03. Header (App.tsx HeaderView)
+   04. Sidebar (App.tsx SidebarView)
+   05. Landing + Hub (Landing.tsx)
+       5.1 Hub Panel
+       5.2 Hub Tiles
+       5.3 JAL Panel + Swap Embed
+   06. Components (Buttons, Chips, Cards, Links)
+       6.1 Interactive Pills (full hitbox)
+       6.2 Trust Strip
+   07. Shop (Promo, Grid, Cards, Controls)
+   08. Vault Screen
+   09. Overlays & Modals (Hub overlay, Modal card)
+   10. Quick Dock (floating)
+   11. Responsive & Performance Trims
+   ========================================================================== */
 
-/* ---------- Design tokens ---------- */
+
+/* === 00. TOKENS & RESETS ================================================ */
+
 :root{
   /* Colors */
   --bg:#07090c; --bg-2:#0b0f14; --surface:#0f141b;
@@ -37,13 +57,11 @@
   --safe-top: max(var(--header-h), env(safe-area-inset-top, 0px));
   --safe-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
 
-  /* Hit targets (desktop pills) */
-  --pill-py:.68rem;
-  --pill-px:1.1rem;
-  --pill-min:44px;
+  /* Hit targets */
+  --pill-py:.68rem; --pill-px:1.1rem; --pill-min:44px;
 }
 
-/* ---------- Reset / Base ---------- */
+/* Reset / Base */
 *,*::before,*::after{ box-sizing:border-box }
 html,body,#root{ min-height:100% }
 html,body{
@@ -64,15 +82,17 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
   position:absolute!important; width:1px;height:1px; padding:0;margin:-1px;
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
+
+
+/* === 01. FOUNDATIONS (Layout, Containers, Utils) ======================== */
+
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 .muted{ opacity:.75 }
 
-/* Lock page scroll when wallet modal / menu / hub is visible */
 body[data-wallet-visible="true"],
 body[data-menu-open="true"],
-body[data-hub-open="true"]{ overflow:hidden }
+body[data-hub-open="true"]{ overflow:hidden } /* lock when overlays visible */
 
-/* ---------- Main layout ---------- */
 main[role="main"]{
   min-height: calc(100lvh - var(--header-h));
   padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
@@ -82,9 +102,17 @@ main[role="main"]{
   main[role="main"]{ min-height: calc(100dvh - var(--header-h)) }
 }
 
-/* ==================================
-   HEADER (App.tsx HeaderView)
-================================== */
+
+/* === 02. GLOBAL MOTION / ACCESSIBILITY ================================= */
+
+@media (prefers-reduced-motion: reduce){
+  .hamburger span, .hamburger, .sidebar-nav, .sidebar-overlay,
+  .button, .card, .img-btn { transition:none; animation:none }
+}
+
+
+/* === 03. HEADER (App.tsx HeaderView) =================================== */
+
 .site-header{
   position:sticky; top:0; z-index:40;
   background: linear-gradient(180deg, rgba(10,14,18,.72), rgba(10,14,18,.18));
@@ -140,9 +168,9 @@ main[role="main"]{
 .hamburger.is-open span:nth-child(2){ opacity:0 }
 .hamburger.is-open span:nth-child(3){ transform:translateY(-8px) rotate(-45deg) }
 
-/* ==================================
-   SIDEBAR (App.tsx SidebarView)
-================================== */
+
+/* === 04. SIDEBAR (App.tsx SidebarView) ================================= */
+
 .sidebar-overlay{
   position:fixed; inset:0; z-index:45; background: rgba(0,0,0,.55);
   backdrop-filter: blur(2px); animation: overlayIn var(--t-slow) both;
@@ -178,9 +206,9 @@ main[role="main"]{
 }
 .wallet-disconnect-btn:hover{ transform: translateY(-1px); border-color: var(--green); box-shadow: var(--glow-green) }
 
-/* ==================================
-   LANDING + EMBEDDED HUB (Landing.tsx)
-================================== */
+
+/* === 05. LANDING + HUB (Landing.tsx) =================================== */
+
 .landing-gradient{
   min-height:100dvh;
   background:
@@ -207,18 +235,8 @@ main[role="main"]{
 .landing-logo{ block-size:clamp(110px,20vw,180px); filter: drop-shadow(0 0 10px rgba(255,255,255,.65)) }
 .landing-logo-wrapper.wallet-connected .landing-logo{ filter: drop-shadow(0 0 14px rgba(255,255,255,.82)) }
 
-/* connect / toggle button */
-.landing-wallet{
-  display:inline-flex; align-items:center; justify-content:center;
-  padding:.9rem 1.1rem; border-radius:16px;
-  border:1px solid var(--stroke);
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-}
-.landing-wallet:hover{ transform:translateY(-1px); border-color:var(--green); box-shadow:var(--glow-green) }
-.landing-wallet.fade-out{ opacity:.35; pointer-events:none }
 
-/* Hub panel */
+/* 5.1 Hub Panel */
 .hub-panel{
   width:min(100% - 2rem, 1100px);
   margin:16px auto 24px;
@@ -235,10 +253,9 @@ main[role="main"]{
   background: linear-gradient(180deg, rgba(12,16,22,.45), rgba(12,16,22,0));
 }
 .hub-title{ margin:0; font-size:clamp(1.1rem,2vw,1.35rem); text-shadow:0 0 12px rgba(255,255,255,.35) }
-
 .hub-panel-body{ overflow:auto; overscroll-behavior:contain; padding:18px; display:grid; gap:18px; grid-template-rows:auto 1fr }
 
-/* Hub tile grid */
+/* 5.2 Hub Tiles */
 .hub-stack{ position:relative; display:grid; gap:clamp(12px,2vw,18px); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); z-index:1 }
 .hub-stack::before{ content:""; position:absolute; inset:0; border-radius:var(--r-lg); box-shadow: inset 0 0 40px rgba(17,241,167,.08); pointer-events:none }
 .hub-stack--responsive{ align-items:start }
@@ -260,14 +277,33 @@ main[role="main"]{
 .hub-controls{ display:flex; justify-content:flex-start; margin-bottom:8px }
 .hub-controls .button, .hub-controls .wallet-disconnect-btn{ padding:.55rem .8rem; border-radius:12px }
 
-/* Ensure JAL panel overlays tiles cleanly */
 .in-hub{ position:relative; z-index:5; isolation:isolate }
 .in-hub > *{ position:relative; z-index:6 }
-
-/* Subtle halo when previewing only + keep clear of tab bar */
 .hub-preview{ box-shadow: 0 16px 48px rgba(0,0,0,.6), 0 0 12px rgba(244,200,106,.25); margin-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 16px) }
 
-/* Components */
+/* 5.3 JAL Panel + Swap Embed */
+.jal-title{ margin:0; font-size:clamp(1.3rem,2.8vw,1.6rem); letter-spacing:.02em }
+.jal-subtitle{ margin:.25rem 0 0; opacity:.85 }
+.jal-actions{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px }
+.jal-chip{ display:inline-flex; align-items:center; padding:.45rem .7rem; border:1px solid var(--stroke); border-radius:999px; background:rgba(0,0,0,.35); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
+.jal-btn{ display:inline-flex; align-items:center; gap:8px; padding:.55rem .85rem; border:1px solid var(--stroke); border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)); transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast) }
+.jal-btn:hover{ transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
+.jal-btn--primary{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
+
+.swap-embed-card{ padding: clamp(.75rem, 2vw, 1rem) }
+.swap-embed-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px }
+.swap-embed-wrap{ position:relative; inline-size:100%; block-size: clamp(520px, 70vh, 760px); min-block-size:520px; border-radius: var(--r-lg); overflow:hidden; border:1px solid var(--stroke); background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)); box-shadow: 0 8px 30px rgba(0,0,0,.55) }
+.swap-embed-iframe{ position:absolute; inset:0; inline-size:100%; block-size:100%; border:0; background:transparent }
+.swap-embed-wrap .swap-embed-iframe{ opacity:1; transition:opacity var(--t-med) ease }
+.swap-embed-wrap.loading .swap-embed-iframe{ opacity:0 }
+@media (max-width: 640px){ .swap-embed-wrap{ block-size: min(72vh, 620px); min-block-size: 440px } }
+.swap-embed-hint{ margin-top:10px; opacity:.85; font-size:.9rem }
+.swap-embed-hint a{ text-decoration: underline }
+
+
+/* === 06. COMPONENTS ===================================================== */
+
+/* Buttons / Cards / Links (base) */
 .button{
   display:inline-flex; align-items:center; justify-content:center;
   padding:.85rem 1.05rem; border-radius:var(--r-md);
@@ -281,141 +317,71 @@ main[role="main"]{
 .button.neon{ border-color:rgba(17,241,167,.5); box-shadow:var(--glow-green) }
 .button.gold{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
 
-/* Footer card/base */
-.card{ background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); border:1px solid var(--stroke); border-radius:var(--r-lg); padding: clamp(1rem, 2.5vw, 1.25rem); box-shadow: 0 10px 30px rgba(0,0,0,.55); transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast) }
+.card{
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  border:1px solid var(--stroke); border-radius:var(--r-lg);
+  padding: clamp(1rem, 2.5vw, 1.25rem);
+  box-shadow: 0 10px 30px rgba(0,0,0,.55);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast)
+}
 .card:hover{ border-color:var(--green); box-shadow:var(--glow-green); transform:translateY(-2px) }
 .card.gold:hover{ border-color:var(--gold); box-shadow:var(--glow-gold) }
 .card.cyan:hover{ border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 
-/* Footer */
-.site-footer{ margin-top:auto; text-align:center; padding: 2.5rem 1rem; color: var(--muted); border-top:1px solid var(--stroke); background: linear-gradient(180deg, rgba(12,16,22,.5), rgba(12,16,22,0)); text-shadow: var(--glow-white) }
-
-/* Wallet Adapter polish */
-.wallet-adapter-modal-wrapper{ border-radius: var(--r-lg)!important; border:1px solid var(--stroke-2)!important; background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9))!important; backdrop-filter: blur(var(--blur))!important; max-height: calc(100dvh - var(--safe-top) - 16px)!important; overflow:auto!important }
-.wallet-adapter-button{ border-radius: var(--r-md)!important; border:1px solid var(--stroke)!important; background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0))!important; transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast)!important }
-.wallet-adapter-button:hover{ transform: translateY(-1px)!important; border-color: var(--green)!important; box-shadow: var(--glow-green)!important }
-
-@media (max-width: 640px){
-  .wallet-adapter-modal-wrapper{ inline-size:92vw!important; max-height:90vh!important; overflow:auto!important }
-  .landing-wallet{ padding:1rem 1.25rem; font-size:1rem }
-  .img-btn{ min-height:160px }
-}
-
-/* Motion preferences */
-@media (prefers-reduced-motion: reduce){
-  .hamburger span, .hamburger, .sidebar-nav, .sidebar-overlay,
-  .button, .card, .img-btn { transition:none; animation:none }
-}
-
-/* ===============================
-   BANKING LANDING LAYOUT PRIMITIVES
-=================================*/
-.bank-landing{ display:grid; gap:20px; padding:18px 14px calc(92px + env(safe-area-inset-bottom, 0px)) }
-@media (min-width:720px){ .bank-landing{ padding:26px 20px calc(110px + env(safe-area-inset-bottom, 0px)); gap:24px }}
-
-/* Top summary: two balances */
-.balance-row{ display:grid; gap:14px; grid-template-columns: 1fr 1fr }
-@media (max-width:720px){ .balance-row{ grid-template-columns: 1fr } }
-.balance-card{ border:1px solid var(--stroke); border-radius:var(--r-lg); padding:18px 20px; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)); box-shadow:0 8px 26px rgba(0,0,0,.5) }
-.balance-amount{ font-size:clamp(1.4rem, 4.8vw, 2.1rem); font-weight:700; color:var(--gold); text-shadow:var(--glow-gold); font-variant-numeric: tabular-nums lining-nums; letter-spacing:.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.balance-amount small{ font-weight:600; opacity:.9; margin-inline-start:.25ch }
-.balance-label{ opacity:.85; margin-top:6px }
-@media (max-width:380px){ .balance-amount{ font-size:1.2rem } }
-
-/* 2×2 feature grid */
-.feature-grid{ display:grid; gap:16px; grid-template-columns: repeat(2, 1fr) }
-@media (max-width:720px){ .feature-grid{ grid-template-columns:1fr } }
-.feature-card{ position:relative; border:1px solid var(--stroke); border-radius:var(--r-lg); min-height:150px; padding:16px; overflow:hidden; background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast) }
-.feature-card:hover{ transform:translateY(-2px); border-color:var(--green); box-shadow:var(--glow-green) }
-.feature-card h4{ margin:0 0 6px; font-weight:600; opacity:.85 }
-.feature-card .title{ font-size:clamp(1.1rem, 3.8vw, 1.6rem); font-weight:700 }
-.feature-card .icon{ position:absolute; inset-inline-end:14px; inset-block-end:14px; opacity:.9; filter:drop-shadow(0 0 8px rgba(255,255,255,.35)) }
-
-/* Wide featured banner */
-.feature-wide{ grid-column: 1 / -1; min-height:160px; display:grid; align-content:center }
-
-/* Bottom tab bar */
-.tabbar{
-  position:fixed; inset-inline:0; inset-block-end:0; z-index:30;
-  block-size:var(--tabbar-h); display:grid; grid-auto-flow:column; place-items:center;
-  background:linear-gradient(180deg, rgba(12,16,22,.82), rgba(12,16,22,.94));
-  border-top:1px solid var(--stroke-2);
-  backdrop-filter:blur(var(--blur));
-  padding-bottom: env(safe-area-inset-bottom, 0px)
-}
-.tabbar a{ display:grid; gap:6px; place-items:center; padding:6px 4px; font-size:.8rem; opacity:.9; transition:transform var(--t-fast), color var(--t-fast) }
-.tabbar a:hover{ transform:translateY(-1px); color:var(--cyan); text-shadow:var(--glow-cyan) }
-.tabbar a.active{ color:var(--gold); text-shadow:var(--glow-gold) }
-.tabbar .tab-icon{ inline-size:22px; block-size:22px; opacity:.95 }
-
-/* Banking chips in the featured row — FULL CLICKABLE PILLS */
-.chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; position:relative; isolation:isolate; z-index:9 }
+/* 6.1 Interactive Pills — FULL hitbox everywhere */
+.chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; position:relative; isolation:isolate; z-index:2 }
 .chip,
 .button,
 .jal-link,
 .trust-strip .chip,
 .trust-strip .button,
 .trust-strip .jal-link{
-  position:relative; z-index:10; pointer-events:auto;
+  position:relative; z-index:3; pointer-events:auto;
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  min-height: var(--pill-min); padding: var(--pill-py) var(--pill-px);
+  min-height: var(--pill-min);
+  padding-block: var(--pill-py);
+  padding-inline: var(--pill-px);
   border:1px solid var(--stroke); border-radius:999px;
   background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  font-size:.9rem; opacity:.95; transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast)
+  font-size:.9rem; opacity:.95;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
 }
 .chip:hover, .button:hover { transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 .chip.active{ border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
-.chip, .button { -webkit-tap-highlight-color: transparent; }
 
-/* Status line */
-.bank-status { text-align:right; opacity:.9 }
+/* 6.2 Trust Strip (under header) */
+.trust-strip {
+  width: min(100% - 2rem, var(--max-w));
+  margin: 8px auto 0;
+  display:flex; flex-wrap:wrap; gap:12px;
+  justify-content:center; align-items:center;
+  position:relative; isolation:isolate; z-index:2;
+}
+.trust-strip a,
+.trust-strip button,
+.trust-strip .chip,
+.trust-strip .chip.sm,
+.trust-strip .jal-link,
+.trust-strip .button{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding-block: var(--pill-py);
+  padding-inline: var(--pill-px);
+  min-height: var(--pill-min);
+  line-height:1; border-radius:999px; font-size:.95rem;
+  position:relative; z-index:3; pointer-events:auto;
+}
 
-/* --- Hub as overlay modal --- */
-.hub-overlay{ position: fixed; inset: 0; z-index: 98; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); animation: overlayIn var(--t-slow) both }
-.hub-panel--overlay{ position: fixed; z-index: 99; inset-inline-start:50%; transform: translateX(-50%); inset-block-start: calc(var(--safe-top) + 6px); inset-block-end: calc(var(--safe-bottom) + 6px); inline-size: min(100% - 1.5rem, 1100px) }
 
-/* Disable clicks on underlying chrome while hub open (except quick dock override below) */
-body[data-hub-open="true"] .tabbar,
-body[data-hub-open="true"] .site-header{ pointer-events:none }
+/* === 07. SHOP (Promo, Grid, Cards, Controls) =========================== */
 
-/* ===============================
-   JAL panel + Swap embed
-=================================*/
-.jal-title{ margin:0; font-size:clamp(1.3rem,2.8vw,1.6rem); letter-spacing:.02em }
-.jal-subtitle{ margin:.25rem 0 0; opacity:.85 }
-
-.jal-actions{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px }
-.jal-chip{ display:inline-flex; align-items:center; padding:.45rem .7rem; border:1px solid var(--stroke); border-radius:999px; background:rgba(0,0,0,.35); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
-.jal-btn{ display:inline-flex; align-items:center; gap:8px; padding:.55rem .85rem; border:1px solid var(--stroke); border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)); transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast) }
-.jal-btn:hover{ transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
-.jal-btn--primary{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
-
-.jal-link{ display:inline-flex; align-items:center; gap:6px; padding:.45rem .6rem; border:1px solid transparent; border-radius:999px; opacity:.95 }
-.jal-link:hover{ color:var(--gold); border-color:rgba(244,200,106,.45); text-shadow:var(--glow-gold) }
-.jal-cta{ margin-top:12px }
-
-/* Card wrapper that holds the embedded swap */
-.swap-embed-card{ padding: clamp(.75rem, 2vw, 1rem) }
-.swap-embed-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px }
-
-/* Embed viewport */
-.swap-embed-wrap{ position:relative; inline-size:100%; block-size: clamp(520px, 70vh, 760px); min-block-size:520px; border-radius: var(--r-lg); overflow:hidden; border:1px solid var(--stroke); background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)); box-shadow: 0 8px 30px rgba(0,0,0,.55) }
-.swap-embed-iframe{ position:absolute; inset:0; inline-size:100%; block-size:100%; border:0; background:transparent }
-.swap-embed-wrap .swap-embed-iframe{ opacity:1; transition:opacity var(--t-med) ease }
-.swap-embed-wrap.loading .swap-embed-iframe{ opacity:0 }
-@media (max-width: 640px){ .swap-embed-wrap{ block-size: min(72vh, 620px); min-block-size: 440px } }
-.swap-embed-hint{ margin-top:10px; opacity:.85; font-size:.9rem }
-.swap-embed-hint a{ text-decoration: underline }
-
-/* ---- Tweaks for balance tiles ---- */
-.balance-card.loading .balance-amount{ opacity:.65 }
-.balance-card.error .balance-amount{ color:#f39; text-shadow:0 0 10px rgba(255,0,120,.25) }
-
-/* ===============================
-   Shop promo banner (Currency/NFT)
-=================================*/
-.shop-promo{ position:relative; margin-top:12px; border:1px solid var(--stroke); border-radius:var(--r-lg); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)); box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 0 1px rgba(244,200,106,.12) inset; overflow:hidden }
-.shop-promo.has-art::after{ opacity:.28; filter:saturate(1.05) contrast(1.02); pointer-events:none } /* never block clicks */
+.shop-promo{
+  position:relative; margin-top:12px; border:1px solid var(--stroke);
+  border-radius:var(--r-lg);
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 0 1px rgba(244,200,106,.12) inset; overflow:hidden
+}
+.shop-promo.has-art::after{ opacity:.28; filter:saturate(1.05) contrast(1.02); pointer-events:none }
 .shop-promo-inner{ position:relative; z-index:1; padding:clamp(14px, 3vw, 18px); display:grid; gap:8px }
 .promo-head{ display:flex; align-items:center; gap:10px }
 .promo-badge{ padding:.28rem .55rem; font-size:.75rem; letter-spacing:.06em; border-radius:999px; border:1px solid rgba(244,200,106,.5); color:var(--gold); box-shadow:var(--glow-gold); background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0)) }
@@ -423,15 +389,11 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 .promo-sub{ margin:2px 0 0; opacity:.9 }
 .cta-group{ display:flex; flex-wrap:wrap; gap:10px; margin-top:8px }
 
-/* ===============================
-   Shop product grid
-=================================*/
 .product-grid{ display:grid; gap:16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) }
 .product-card{ border:1px solid var(--stroke); border-radius: var(--r-lg); background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); box-shadow: 0 10px 26px rgba(0,0,0,.5); overflow:hidden; transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); display:flex; flex-direction:column; min-height:100% }
 .product-card:hover{ transform: translateY(-2px); border-color: var(--green); box-shadow: var(--glow-green) }
 .product-media{ position:relative; aspect-ratio: 4 / 3; background:#0b0f14 }
 .product-media img{ position:absolute; inset:0; inline-size:100%; block-size:100%; object-fit:cover; opacity:.96 }
-/* Shimmer placeholder when no image */
 .product-media.noimg{ background: linear-gradient(110deg, rgba(255,255,255,.06) 8%, rgba(255,255,255,.12) 18%, rgba(255,255,255,.06) 33%) 0 0 / 200% 100%, #0b0f14; animation: shopShimmer 2.2s linear infinite }
 @keyframes shopShimmer{ 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
@@ -445,113 +407,19 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 .product-price .price-jal{ font-weight:700 }
 .product-price .muted{ opacity:.8 }
 
-/* Shop controls (filters + search) */
 .shop-controls{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:10px }
 .shop-controls .chip-row{ flex:1 1 auto }
 .shop-search{ flex:0 0 220px; min-inline-size:180px; padding:.55rem .7rem; border:1px solid var(--stroke); border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)); color:var(--text) }
-
-/* Disabled CTA look (still lets us show notice on click) */
 .button[aria-disabled="true"]{ opacity:.65; cursor:not-allowed; box-shadow:none; border-color:var(--stroke) }
 .button[aria-disabled="true"]:hover{ transform:none }
-
-/* Inline shop notice */
 .shop-notice{ margin-top:10px; padding:.6rem .8rem; border:1px solid rgba(244,200,106,.5); border-radius:12px; box-shadow: var(--glow-gold); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)) }
 .shop-notice.soon{ color:var(--gold) }
-
-/* Empty state */
 .product-empty{ padding:12px 0 }
-
-/* Wider screens: slightly denser grid */
 @media (min-width:1200px){ .product-grid{ grid-template-columns: repeat(4, 1fr) } }
 
-/* ===============================
-   Poster / key-art hover reveal
-=================================*/
-.feature-card.has-art,
-.img-btn.has-art,
-.shop-promo.has-art{
-  position: relative; isolation: isolate; --art-img: none; --art-pos: 50% 50%; --art-zoom: 240%; --art-opacity: 0;
-}
-.feature-card.has-art > *, .img-btn.has-art > *, .shop-promo.has-art > *{ position: relative; z-index: 1 }
 
-.feature-card.has-art::after,
-.img-btn.has-art::after,
-.shop-promo.has-art::after{
-  content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
-  background-image: var(--art-img); background-repeat:no-repeat; background-position: var(--art-pos); background-size: var(--art-zoom) auto;
-  mix-blend-mode: screen; opacity: var(--art-opacity); transform: scale(1.02);
-  transition: opacity var(--t-med) ease, transform var(--t-med) ease, filter var(--t-med) ease;
-  box-shadow: inset 0 0 160px rgba(0,0,0,.45)
-}
-.feature-card.has-art:hover,
-.feature-card.has-art:focus-visible,
-.img-btn.has-art:hover,
-.img-btn.has-art:focus-visible,
-.shop-promo.has-art:hover,
-.shop-promo.has-art:focus-visible{ --art-opacity: .9 }
-.feature-card.has-art:hover::after,
-.feature-card.has-art:focus-visible::after,
-.img-btn.has-art:hover::after,
-.img-btn.has-art:focus-visible::after,
-.shop-promo.has-art:hover::after,
-.shop-promo.has-art:focus-visible::after{ transform:none; filter: saturate(1.08) contrast(1.03) }
-@supports not (mix-blend-mode: screen){ .feature-card.has-art::after, .img-btn.has-art::after, .shop-promo.has-art::after{ mix-blend-mode: normal; opacity: calc(var(--art-opacity) * .65) } }
-@media (prefers-reduced-motion: reduce){ .feature-card.has-art::after, .img-btn.has-art::after, .shop-promo.has-art::after{ transition:none } }
+/* === 08. VAULT SCREEN =================================================== */
 
-/* Generator helpers */
-.log-box{ margin-top:12px; padding:.75rem .9rem; border:1px solid var(--stroke); border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); font-size:.92rem; line-height:1.5; max-block-size:280px; overflow:auto }
-
-.modal-overlay{ position:fixed; inset:0; z-index:60; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); display:grid; place-items:center }
-.modal-card{ inline-size:min(92vw, 560px); border:1px solid var(--stroke-2); border-radius:20px; background:linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9)); box-shadow:0 20px 80px rgba(0,0,0,.7); padding:18px }
-
-/* ---------- Mobile fixes: Shop & overlay fit ---------- */
-@media (max-width: 680px){
-  .hub-panel--overlay { padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) }
-
-  .shop-promo,
-  .shop-promo .shop-promo-inner,
-  .shop-promo .product-grid { inline-size: 100%; max-inline-size: 100%; min-inline-size: 0 }
-  .shop-promo .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
-
-  .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
-
-  .card, .product-card { max-inline-size:100%; min-inline-size:0; overflow:hidden }
-  .product-media img, .hub-gif { max-inline-size:100%; block-size:auto }
-
-  .chip-row { flex-wrap:wrap; gap:8px }
-}
-
-/* ===============================
-   Trust strip (under header)
-=================================*/
-.trust-strip {
-  width: min(100% - 2rem, var(--max-w));
-  margin: 8px auto 0;
-  display: flex; flex-wrap: wrap; gap: 12px;
-  justify-content: center; align-items: center;
-  position:relative; isolation:isolate; z-index:9;
-}
-.trust-strip a,
-.trust-strip button,
-.trust-strip .chip,
-.trust-strip .chip.sm,
-.trust-strip .jal-link,
-.trust-strip .button {
-  display:inline-flex; align-items:center; gap:8px;
-  padding:.6rem 1.2rem; min-height:42px; min-width:56px;
-  line-height:1.2; border-radius:999px; font-size:.95rem;
-  position:relative; z-index:10; pointer-events:auto;
-}
-.trust-strip a:hover,
-.trust-strip button:hover,
-.trust-strip .chip:hover { transform: translateY(-1px); border-color: var(--cyan); box-shadow: var(--glow-cyan) }
-@media (pointer: fine) {
-  .trust-strip a, .trust-strip button, .trust-strip .chip { padding:.7rem 1.35rem; min-height:44px }
-}
-
-/* ===============================
-   Vault screen / hero + header
-=================================*/
 .machine-bg{ position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(900px 520px at 50% -180px, rgba(17,241,167,.08), rgba(0,0,0,0) 55%) , radial-gradient(680px 420px at 100% 20%, rgba(0,240,255,.08), rgba(0,0,0,0) 60%) , radial-gradient(720px 520px at 0% 30%, rgba(244,200,106,.08), rgba(0,0,0,0) 60%); filter: blur(6px) }
 
 .vault-screen{ position: relative; z-index: 1; display: grid; place-items: center; gap: 12px; padding: 16px }
@@ -568,38 +436,86 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 .vault-button:hover{ transform: translateY(-1px); border-color: var(--green); box-shadow: var(--glow-green) }
 .vault-cta-container{ margin-top: 10px }
 
-/* Header card chip density */
-.card .chip-row .chip { padding: .4rem .65rem }
-
-/* small utility for mono hash snippets */
+.card .chip-row .chip { padding: .4rem .65rem } /* density tweak */
 .mono-sm{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; opacity: .95 }
 
-/* responsive tweaks */
+
+/* === 09. OVERLAYS & MODALS ============================================= */
+
+.hub-overlay{ position: fixed; inset: 0; z-index: 98; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); animation: overlayIn var(--t-slow) both }
+.hub-panel--overlay{ position: fixed; z-index: 99; inset-inline-start:50%; transform: translateX(-50%); inset-block-start: calc(var(--safe-top) + 6px); inset-block-end: calc(var(--safe-bottom) + 6px); inline-size: min(100% - 1.5rem, 1100px) }
+
+/* Disable clicks on underlying chrome while hub open (quick dock overrides later) */
+body[data-hub-open="true"] .tabbar,
+body[data-hub-open="true"] .site-header{ pointer-events:none }
+
+.modal-overlay{ position:fixed; inset:0; z-index:60; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); display:grid; place-items:center }
+.modal-card{ inline-size:min(92vw, 560px); border:1px solid var(--stroke-2); border-radius:20px; background:linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9)); box-shadow:0 20px 80px rgba(0,0,0,.7); padding:18px }
+
+
+/* === 10. QUICK DOCK (Floating) ========================================= */
+
+.quick-dock{
+  position:fixed;
+  right:16px;
+  bottom: calc(var(--tabbar-h) + max(16px, env(safe-area-inset-bottom)));
+  z-index:1000; /* above overlays/header/tabbar */
+  display:grid; gap:10px; padding:12px;
+  border:1px solid var(--stroke-2); border-radius:var(--r-lg);
+  background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9));
+  backdrop-filter: blur(var(--blur));
+  box-shadow: 0 18px 60px rgba(0,0,0,.65), var(--glow-gold);
+}
+.quick-dock .chip, .quick-dock .button{ padding:.6rem .9rem; min-height:40px }
+body[data-hub-open="true"] .quick-dock{ pointer-events:auto } /* keep usable */
+
+
+/* === 11. RESPONSIVE & PERFORMANCE TRIMS ================================ */
+
+.tabbar{
+  position:fixed; inset-inline:0; inset-block-end:0; z-index:30;
+  block-size:var(--tabbar-h); display:grid; grid-auto-flow:column; place-items:center;
+  background:linear-gradient(180deg, rgba(12,16,22,.82), rgba(12,16,22,.94));
+  border-top:1px solid var(--stroke-2);
+  backdrop-filter:blur(var(--blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px)
+}
+.tabbar a{ display:grid; gap:6px; place-items:center; padding:6px 4px; font-size:.8rem; opacity:.9; transition:transform var(--t-fast), color var(--t-fast) }
+.tabbar a:hover{ transform:translateY(-1px); color:var(--cyan); text-shadow:var(--glow-cyan) }
+.tabbar a.active{ color:var(--gold); text-shadow:var(--glow-gold) }
+.tabbar .tab-icon{ inline-size:22px; block-size:22px; opacity:.95 }
+
+/* Small-device adjustments */
+@media (max-width: 680px){
+  .hub-panel--overlay { padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) }
+
+  .shop-promo,
+  .shop-promo .shop-promo-inner,
+  .shop-promo .product-grid { inline-size: 100%; max-inline-size: 100%; min-inline-size: 0 }
+  .shop-promo .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
+
+  .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
+
+  .card, .product-card { max-inline-size:100%; min-inline-size:0; overflow:hidden }
+  .product-media img, .hub-gif { max-inline-size:100%; block-size:auto }
+
+  .chip-row { flex-wrap:wrap; gap:8px }
+  .landing-wallet{ padding:1rem 1.25rem; font-size:1rem }
+  .img-btn{ min-height:160px }
+}
+
+/* Vault responsiveness */
 @media (max-width: 720px){
   .vault-screen{ gap: 10px; padding: 14px 12px }
   .vault-title{ font-size: clamp(1.6rem, 7vw, 2.2rem) }
 }
 
-/* ===============================
-   Floating quick dock (bottom-right)
-=================================*/
-.quick-dock{
-  position:fixed;
-  right:14px;
-  bottom: calc(var(--tabbar-h) + max(14px, env(safe-area-inset-bottom)));
-  z-index:120; /* above header/tabbar/halos */
-  display:grid; gap:8px; padding:10px;
-  border:1px solid var(--stroke-2); border-radius:var(--r-lg);
-  background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9));
-  backdrop-filter: blur(var(--blur));
-  box-shadow: 0 18px 60px rgba(0,0,0,.65);
-}
-.quick-dock .chip, .quick-dock .button{ padding:.6rem .9rem; min-height:40px }
-body[data-hub-open="true"] .quick-dock{ pointer-events:auto } /* keep dock usable when hub open */
-
-/* ===============================
-   Performance trims on very small devices
-=================================*/
+/* Performance trims on very small devices */
 @media (max-width: 480px){
   .card, .product-card, .hub-panel { box-shadow: 0 8px 18px rgba(0,0,0,.5) }
 }
+
+/* Decorative layers should never eat clicks */
+.feature-card.has-art::after,
+.img-btn.has-art::after,
+.shop-promo.has-art::after { pointer-events:none!important }
