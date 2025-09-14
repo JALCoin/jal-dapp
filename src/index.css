@@ -57,6 +57,11 @@
 
   /* Hit targets */
   --pill-py:.68rem; --pill-px:1.1rem; --pill-min:44px;
+
+  /* Desktop spacing defaults */
+  --gutter:16px;
+  --gutter-lg:24px;
+  --section-gap:24px;
 }
 
 /* Reset / Base */
@@ -101,20 +106,17 @@ main[role="main"]{
   main[role="main"]{ min-height: calc(100dvh - var(--header-h)) }
 }
 
-/* Generic “poster art” overlay helper (used by .has-art blocks) */
+/* Generic poster-art helper for .has-art blocks */
 .has-art{ position:relative; overflow:hidden; isolation:isolate }
 .has-art::after{
   content:""; position:absolute; inset:-1px; z-index:0; border-radius:inherit;
   background:
     radial-gradient(1200px 800px at var(--art-pos, 50% 50%), rgba(255,255,255,.06), rgba(255,255,255,0)),
-    var(--bg);
-  mask-image: linear-gradient(180deg, rgba(0,0,0,.4), rgba(0,0,0,0) 85%);
-  background-image:
-    radial-gradient(1200px 800px at var(--art-pos, 50% 50%), rgba(255,255,255,.06), rgba(255,255,255,0)),
     var(--art-img, none);
   background-size: auto, var(--art-zoom, 220%);
   background-repeat:no-repeat;
   background-position: 0 0, var(--art-pos, 50% 50%);
+  mask-image: linear-gradient(180deg, rgba(0,0,0,.4), rgba(0,0,0,0) 85%);
   opacity:.22; pointer-events:none;
 }
 
@@ -529,13 +531,8 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto } /* keep usable */
 .feature-card.has-art::after,
 .img-btn.has-art::after,
 .shop-promo.has-art::after { pointer-events:none!important }
-/* === Desktop spacing tuning (gutters, gaps, sections) ================== */
-:root{
-  --gutter:16px;
-  --gutter-lg:24px;
-  --section-gap:24px;
-}
 
+/* === Desktop spacing tuning (gutters, gaps, sections) ================== */
 @media (min-width:1024px){
   :root{
     --gutter:20px;
