@@ -35,6 +35,45 @@ const art = (pos: string, zoom = "240%"): React.CSSProperties =>
     ["--art-zoom" as any]: zoom,
   } as React.CSSProperties);
 
+/* ---------- TEMP: enlarge trust-strip pills from this page ---------- */
+const TRUST_STRIP_PATCH = `
+  .trust-strip { gap: 12px; }
+  .trust-strip a,
+  .trust-strip button,
+  .trust-strip .chip,
+  .trust-strip .chip.sm,
+  .trust-strip .jal-link,
+  .trust-strip .button{
+    padding: .68rem 1.15rem !important;
+    min-height: 44px !important;
+    min-width: 56px !important;
+    line-height: 1.2;
+    border-radius: 999px;
+    font-size: .95rem;
+  }
+  @media (pointer:fine){
+    .trust-strip a,
+    .trust-strip button,
+    .trust-strip .chip,
+    .trust-strip .jal-link,
+    .trust-strip .button{
+      padding: .75rem 1.3rem !important;
+      min-height: 46px !important;
+    }
+  }
+`;
+function useInjectTrustStripPatch() {
+  useEffect(() => {
+    const id = "trust-strip-desktop-padding";
+    if (document.getElementById(id)) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = TRUST_STRIP_PATCH;
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, []);
+}
+
 /* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
   const { connected, disconnect } = useWallet();
@@ -64,9 +103,7 @@ function CopyBtn({ text }: { text: string }) {
           await navigator.clipboard.writeText(text);
           setOk(true);
           setTimeout(() => setOk(false), 1200);
-        } catch {
-          /* noop */
-        }
+        } catch { /* noop */ }
       }}
       aria-live="polite"
     >
@@ -77,7 +114,7 @@ function CopyBtn({ text }: { text: string }) {
 
 function LiquidityCalc() {
   const [tokenAmount, setTokenAmount] = useState<number>(1);
-  const [priceInJal, setPriceInJal] = useState<number>(100); // 1 YOUR = 100 JAL
+  const [priceInJal, setPriceInJal] = useState<number>(100);
   const jalNeeded =
     isFinite(tokenAmount) && isFinite(priceInJal) ? tokenAmount * priceInJal : 0;
 
@@ -188,12 +225,14 @@ type Product = {
   id: string;
   name: string;
   tag: "Merch" | "Digital" | "Gift Cards";
-  priceJal: number; // display only (payments not live)
+  priceJal: number;
   img?: string;
   blurb?: string;
 };
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
+  useInjectTrustStripPatch(); // inject bigger hit targets for top pills
+
   const { publicKey, connected, wallet } = useWallet();
   const { setVisible } = useWalletModal();
   const [params, setParams] = useSearchParams();
@@ -219,7 +258,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   );
   const saveData =
     typeof navigator !== "undefined" &&
-    // @ts-expect-error: connection is not fully typed across browsers
+    // @ts-expect-error
     (navigator.connection?.saveData === true);
 
   // Prefetch heavy generator routes on intent (hover/focus)
@@ -262,12 +301,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- preload gifs + poster (respect Save-Data) ---------- */
   useEffect(() => {
     if (saveData) {
-      // still eagerly cache the poster key-art
       const i = new Image();
       i.src = POSTER;
-      return () => {
-        i.src = "";
-      };
+      return () => { i.src = ""; };
     }
     const imgs = [
       ...tiles.map((t) => {
@@ -288,16 +324,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   /* ---------- URL/session init + bidirectional sync ---------- */
   const isPanel = (v: unknown): v is Panel =>
-    v === "none" ||
-    v === "grid" ||
-    v === "shop" ||
-    v === "jal" ||
-    v === "vault" ||
-    v === "payments" ||
-    v === "loans" ||
-    v === "support";
+    v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault" || v === "payments" || v === "loans" || v === "support";
 
-  // initial
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
@@ -309,7 +337,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // reflect state -> URL (clone params to avoid mutating same object)
   useEffect(() => {
     sessionStorage.setItem("landing:lastPanel", activePanel);
     const next = new URLSearchParams(params);
@@ -325,7 +352,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, params, setParams]);
 
-  // reflect URL -> state (handles back/forward)
   useEffect(() => {
     const urlPanel = params.get("panel") as Panel | null;
     const next: Panel = urlPanel && isPanel(urlPanel) ? urlPanel : "none";
@@ -342,10 +368,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       timerRef.current = window.setTimeout(() => setMerging(false), delay);
       setActivePanel((p) => (p === "none" ? "grid" : p));
       requestAnimationFrame(() =>
-        panelRef.current?.scrollIntoView({
-          behavior: reducedMotion ? "auto" : "smooth",
-          block: "start",
-        })
+        panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })
       );
     };
     wallet.adapter.on("connect", onConnect);
@@ -367,10 +390,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     check();
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      obs.disconnect();
-      setWalletFlag(false);
-    };
+    return () => { obs.disconnect(); setWalletFlag(false); };
   }, [setWalletFlag]);
 
   /* ---------- overlay controls (scroll lock + Escape) ---------- */
@@ -400,29 +420,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       if (!first || !last) return;
       const active = document.activeElement as HTMLElement | null;
       if (e.shiftKey) {
-        if (active === first) {
-          e.preventDefault();
-          last.focus();
-        }
+        if (active === first) { e.preventDefault(); last.focus(); }
       } else {
-        if (active === last) {
-          e.preventDefault();
-          first.focus();
-        }
+        if (active === last) { e.preventDefault(); first.focus(); }
       }
     };
     document.addEventListener("keydown", trap);
     return () => document.removeEventListener("keydown", trap);
   }, [overlayOpen]);
 
-  // Re-center the overlay on rotation/resize (mobile landscape support)
+  // Re-center the overlay on rotation/resize
   useEffect(() => {
     const onResize = () => {
       if (overlayOpen) {
-        panelRef.current?.scrollIntoView({
-          behavior: reducedMotion ? "auto" : "smooth",
-          block: "start",
-        });
+        panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
       }
     };
     window.addEventListener("resize", onResize);
@@ -440,31 +451,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       setActivePanel(id);
       if (!connected && requiresWallet.includes(id)) setVisible(true);
       requestAnimationFrame(() =>
-        panelRef.current?.scrollIntoView({
-          behavior: reducedMotion ? "auto" : "smooth",
-          block: "start",
-        })
+        panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })
       );
     },
     [connected, reducedMotion, setVisible]
   );
 
   const panelTitle =
-    activePanel === "grid"
-      ? "Hub"
-      : activePanel === "shop"
-      ? "Shop"
-      : activePanel === "jal"
-      ? "JAL"
-      : activePanel === "vault"
-      ? "Vault"
-      : activePanel === "payments"
-      ? "Payments"
-      : activePanel === "loans"
-      ? "Loans"
-      : activePanel === "support"
-      ? "Support"
-      : "Welcome";
+    activePanel === "grid" ? "Hub" :
+    activePanel === "shop" ? "Shop" :
+    activePanel === "jal" ? "JAL" :
+    activePanel === "vault" ? "Vault" :
+    activePanel === "payments" ? "Payments" :
+    activePanel === "loans" ? "Loans" :
+    activePanel === "support" ? "Support" : "Welcome";
 
   /* ---------- LIVE BALANCES (SOL + JAL) ---------- */
   const [sol, setSol] = useState<number | null>(null);
@@ -474,12 +474,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   const fetchBalances = useCallback(async () => {
     if (!publicKey || !connected) {
-      setSol(null);
-      setJal(null);
-      return;
+      setSol(null); setJal(null); return;
     }
-    setBalErr(null);
-    setBalLoading(true);
+    setBalErr(null); setBalLoading(true);
 
     const freshConn = makeConnection("confirmed");
 
@@ -488,8 +485,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       setSol(lamports / LAMPORTS_PER_SOL);
     } catch (e) {
       console.error("[balances] SOL fetch failed:", e);
-      setSol(null);
-      setBalErr("rpc");
+      setSol(null); setBalErr("rpc");
     }
 
     try {
@@ -509,19 +505,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       setJal(total);
     } catch (e) {
       console.error("[balances] JAL fetch failed:", e);
-      setJal(null);
-      setBalErr((s) => s ?? "rpc");
+      setJal(null); setBalErr((s) => s ?? "rpc");
     } finally {
       setBalLoading(false);
     }
   }, [publicKey, connected]);
 
   useEffect(() => {
-    if (!connected || !publicKey) {
-      setSol(null);
-      setJal(null);
-      return;
-    }
+    if (!connected || !publicKey) { setSol(null); setJal(null); return; }
     void fetchBalances();
 
     const poll = setInterval(fetchBalances, 15000);
@@ -542,16 +533,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     const adapter = wallet?.adapter;
     if (!adapter) return;
-    const onConnectBalances = () => {
-      void fetchBalances();
-    };
+    const onConnectBalances = () => { void fetchBalances(); };
     adapter.on("connect", onConnectBalances);
     return () => {
-      try {
-        adapter.off("connect", onConnectBalances);
-      } catch {
-        /* no-op */
-      }
+      try { adapter.off("connect", onConnectBalances); } catch { /* no-op */ }
     };
   }, [wallet, fetchBalances]);
 
@@ -571,7 +556,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ===========================================================
      Render
   ============================================================ */
-  const overlayActive = overlayOpen; // alias for readability
+  const overlayActive = overlayOpen;
   const shouldLoadGifs = !saveData && !reducedMotion;
 
   return (
@@ -975,10 +960,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
             aria-hidden="true"
             tabIndex={0}
-            onFocus={() => {
-              // cycle back to first element (backdrop)
-              firstFocusRef.current?.focus();
-            }}
+            onFocus={() => { firstFocusRef.current?.focus(); }}
           />
         )}
       </section>
