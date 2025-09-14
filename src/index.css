@@ -1,7 +1,7 @@
 /* ===============================
    JAL/SOL — Global CSS (index.css)
-   Aesthetic: neon cyber / premium ATM
-   Rewritten: structure, layering, mobile fit, performance
+   Neon cyber / premium ATM
+   Structure, layering, mobile fit, performance
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -36,6 +36,11 @@
   /* Safe areas */
   --safe-top: max(var(--header-h), env(safe-area-inset-top, 0px));
   --safe-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+
+  /* Hit targets (desktop pills) */
+  --pill-py:.68rem;      /* vertical padding */
+  --pill-px:1.1rem;      /* horizontal padding */
+  --pill-min:44px;       /* minimum height */
 }
 
 /* ---------- Reset / Base ---------- */
@@ -304,7 +309,6 @@ main[role="main"]{
 
 /* ===============================
    BANKING LANDING LAYOUT PRIMITIVES
-   (Additive: safe to append)
 =================================*/
 .bank-landing{ display:grid; gap:20px; padding:18px 14px calc(92px + env(safe-area-inset-bottom, 0px)) }
 @media (min-width:720px){ .bank-landing{ padding:26px 20px calc(110px + env(safe-area-inset-bottom, 0px)); gap:24px }}
@@ -478,28 +482,50 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 
 /* ---------- Mobile fixes: Shop & overlay fit ---------- */
 @media (max-width: 680px){
-  /* keep panel inside safe-areas */
   .hub-panel--overlay { padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) }
 
-  /* Compare shelf (Currency vs NFT) stacks vertically */
   .shop-promo,
   .shop-promo .shop-promo-inner,
   .shop-promo .product-grid { inline-size: 100%; max-inline-size: 100%; min-inline-size: 0 }
   .shop-promo .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
 
-  /* Catalog also collapses to a single column */
   .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
 
-  /* Guard against any horizontal creep */
   .card, .product-card { max-inline-size:100%; min-inline-size:0; overflow:hidden }
   .product-media img, .hub-gif { max-inline-size:100%; block-size:auto }
 
-  /* Chips wrap neatly */
   .chip-row { flex-wrap:wrap; gap:8px }
 }
 
-/* Trust strip (under header) */
-.trust-strip{ width:min(100% - 2rem, var(--max-w)); margin: 8px auto 0; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center }
+/* Trust strip (under header) — bigger desktop hit targets */
+.trust-strip{
+  width:min(100% - 2rem, var(--max-w));
+  margin: 8px auto 0;
+  display:flex; flex-wrap:wrap; justify-content:center; align-items:center;
+  gap:12px;
+}
+.trust-strip .chip,
+.trust-strip .chip.sm,
+.trust-strip .jal-link,
+.trust-strip .button,
+.trust-strip a,
+.trust-strip button{
+  display:inline-flex; align-items:center; gap:10px;
+  padding: var(--pill-py) var(--pill-px);
+  min-height: var(--pill-min);
+  line-height:1; border-radius:999px; font-size:.95rem;
+  border-color: rgba(255,255,255,.22);
+}
+.trust-strip .chip.sm{ padding: calc(var(--pill-py) - .12rem) calc(var(--pill-px) - .15rem) }
+
+.trust-strip a:hover,
+.trust-strip button:hover,
+.trust-strip .chip:hover{
+  transform: translateY(-1px);
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+
 .chip.sm{ padding:.32rem .6rem; font-size:.82rem; border-radius:999px }
 .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
 
@@ -544,45 +570,3 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
    Performance trims on very small devices
 =================================*/
 @media (max-width: 480px){ .card, .product-card, .hub-panel { box-shadow: 0 8px 18px rgba(0,0,0,.5) } }
-/* --- Trust strip: improve click/tap targets on desktop --- */
-.trust-strip{ gap:12px; }
-
-.trust-strip a,
-.trust-strip button,
-.trust-strip .chip,
-.trust-strip .chip.sm,
-.trust-strip .jal-link,
-.trust-strip .button{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:.5rem .9rem;     /* ↑ more horizontal & vertical padding */
-  min-height:38px;         /* ↑ minimum hit size */
-  line-height:1;           /* crisp pill */
-  border-radius:999px;
-  font-size:.92rem;        /* a touch larger for readability */
-}
-
-/* optional: slightly bolder border for visibility on dark bg */
-.trust-strip .chip,
-.trust-strip .jal-link,
-.trust-strip .button{
-  border-color: rgba(255,255,255,.22);
-}
-
-/* keep hover feedback strong */
-.trust-strip a:hover,
-.trust-strip button:hover,
-.trust-strip .chip:hover{
-  transform: translateY(-1px);
-  border-color: var(--cyan);
-  box-shadow: var(--glow-cyan);
-}
-
-/* pointer devices (desktop): give even more room if you want */
-@media (pointer:fine){
-  .trust-strip a,
-  .trust-strip button,
-  .trust-strip .chip{ padding:.55rem 1rem; min-height:40px; }
-}
-
