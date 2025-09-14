@@ -529,3 +529,38 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto } /* keep usable */
 .feature-card.has-art::after,
 .img-btn.has-art::after,
 .shop-promo.has-art::after { pointer-events:none!important }
+/* === Desktop spacing tuning (gutters, gaps, sections) ================== */
+:root{
+  --gutter:16px;
+  --gutter-lg:24px;
+  --section-gap:24px;
+}
+
+@media (min-width: 1024px){
+  :root{
+    --gutter:20px;
+    --gutter-lg:28px;
+    --section-gap:32px;
+  }
+
+  .container{ width: min(100% - 3rem, var(--max-w)) }
+
+  .bank-landing{
+    gap: var(--section-gap);
+    padding: 32px 24px calc(110px + env(safe-area-inset-bottom, 0px));
+  }
+  .balance-row{ gap: var(--gutter-lg) }
+  .feature-grid{ gap: var(--gutter-lg) }
+
+  .hub-panel{ margin-top: var(--section-gap) }
+  .hub-panel-top{ padding: 16px 20px }
+  .hub-panel-body{ padding: 22px }
+
+  .trust-strip{ margin-top: 14px; gap: 14px }
+
+  .shop-promo{ margin-top: var(--section-gap) }
+  .product-grid{ gap: var(--gutter-lg) }
+}
+
+/* Optional: vertical spacing helper */
+.stack-lg > * + *{ margin-top: var(--section-gap) }
