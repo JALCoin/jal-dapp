@@ -1,37 +1,49 @@
+// src/utils/verifyTokenMetadataAttached.ts
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { publicKey } from '@metaplex-foundation/umi';
 import { fetchMetadataFromSeeds } from '@metaplex-foundation/mpl-token-metadata';
 import type { PublicKey as Web3PublicKey } from '@solana/web3.js';
+import { getRpcEndpoint } from '@/config/rpc';
 
-export async function verifyTokenMetadataAttached(
-  _: unknown,
-  mintAddress: Web3PublicKey
-): Promise<{
-  isAttached: boolean;
+export type VerifyResult = {
+  /** true = metadata exists; false = not found; null = indeterminate (RPC error, etc.) */
+  isAttached: boolean | null;
   name?: string;
   symbol?: string;
   uri?: string;
   rawData?: any;
-}> {
+  error?: string;
+};
+
+/**
+ * Lightweight on-chain check for token metadata.
+ * The first parameter is kept for backward compatibility and ignored.
+ */
+export async function verifyTokenMetadataAttached(
+  _ignored: unknown,
+  mintAddress: Web3PublicKey,
+  endpoint: string = getRpcEndpoint()
+): Promise<VerifyResult> {
   try {
-    const umi = createUmi('https://mainnet.helius-rpc.com/?api-key=5d3bb893-4b85-45b5-bcef-9dc42e5ac6b2');
+    const umi = createUmi(endpoint);
     const mint = publicKey(mintAddress.toBase58());
 
-    const metadata = await fetchMetadataFromSeeds(umi, { mint });
-
-    if (!metadata || !metadata.uri) {
+    const md = await fetchMetadataFromSeeds(umi, { mint }).catch(() => null);
+    if (!md || !md.uri) {
       return { isAttached: false };
     }
 
     return {
       isAttached: true,
-      name: metadata.name,
-      symbol: metadata.symbol,
-      uri: metadata.uri,
-      rawData: metadata,
+      name: md.name,
+      symbol: md.symbol,
+      uri: md.uri,
+      rawData: md,
     };
-  } catch (error) {
-    console.error('❌ Failed to verify token metadata:', error);
-    return { isAttached: false };
+  } catch (e: any) {
+    return {
+      isAttached: null,
+      error: e?.message ?? String(e),
+    };
   }
 }
