@@ -1,78 +1,192 @@
 // src/pages/Vault.tsx
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+
+import { makeConnection } from "../config/rpc";
+import { verifyTokenMetadataAttached } from "../utils/verifyTokenMetadataAttached";
+import PositionsList from "../components/PositionsList";
+
+type HeaderMint = {
+  mint: string;
+  name?: string;
+  symbol?: string;
+  image?: string;
+  metadataUri?: string;
+  balance?: number; // user balance of this token (ui)
+};
+
+const toHttp = (uri?: string) =>
+  uri?.startsWith("ipfs://")
+    ? `https://ipfs.io/ipfs/${uri.replace("ipfs://", "")}`
+    : uri ?? "";
 
 export default function Vault() {
   const { publicKey } = useWallet();
+
+  // single RPC (respects env/Helius headers via makeConnection)
+  const connection = useMemo(() => makeConnection("confirmed"), []);
+
+  // top tiles (live)
   const [sol, setSol] = useState<number | null>(null);
   const [tokenCount, setTokenCount] = useState<number | null>(null);
+
+  // header: last created currency
+  const [header, setHeader] = useState<HeaderMint | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // fallback symbol used by the “Go to Vault / …” link (until metadata loads)
   const savedSymbol = (localStorage.getItem("vaultSymbol") || "JAL").toUpperCase();
 
-  const connection = useMemo(
-    () => new Connection("https://api.mainnet-beta.solana.com", "confirmed"),
-    []
-  );
-
-  const load = useCallback(async () => {
+  // ---------- loaders ----------
+  const loadWalletTiles = useCallback(async () => {
     if (!publicKey) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [lamports, parsedAccounts] = await Promise.all([
-        connection.getBalance(publicKey as PublicKey),
-        connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID }),
-      ]);
 
-      setSol(lamports / LAMPORTS_PER_SOL);
+    const [lamports, parsed] = await Promise.all([
+      connection.getBalance(publicKey),
+      connection.getParsedTokenAccountsByOwner(
+        publicKey,
+        { programId: TOKEN_PROGRAM_ID },
+        "confirmed"
+      ),
+    ]);
 
-      const owned = parsedAccounts.value.filter(({ account }) => {
-        const ui = account.data.parsed.info.tokenAmount.uiAmount;
-        return ui && ui > 0;
-      });
-      setTokenCount(owned.length);
-    } catch (e: any) {
-      console.error("Vault load error:", e);
-      setError("Couldn’t fetch balances. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    setSol(lamports / LAMPORTS_PER_SOL);
+
+    const owned = parsed.value.filter(({ account }) => {
+      const ui = account.data.parsed.info.tokenAmount?.uiAmount;
+      return typeof ui === "number" && ui > 0;
+    });
+    setTokenCount(owned.length);
   }, [connection, publicKey]);
 
-  useEffect(() => {
-    if (publicKey) load();
-    else {
-      setSol(null);
-      setTokenCount(null);
-      setLoading(false);
+  const loadHeaderFromLocalStorage = useCallback(async () => {
+    const mintStr = localStorage.getItem("mint"); // set by generator when done
+    if (!mintStr) {
+      setHeader(null);
+      return;
     }
-  }, [publicKey, load]);
+    const mintPk = new PublicKey(mintStr);
+
+    // read Metaplex Metadata PDA to get URI / name / symbol
+    const meta = await verifyTokenMetadataAttached(connection, mintPk);
+    let image: string | undefined;
+    let name = meta.name;
+    let symbol = meta.symbol;
+    let metadataUri = meta.uri;
+
+    // fetch JSON if we have a URI to extract image and possibly override name/symbol
+    if (meta.uri) {
+      try {
+        const res = await fetch(toHttp(meta.uri), { cache: "no-store" });
+        const j = await res.json();
+        image = toHttp(j.image || j.logo || j.icon);
+        name = name || j.name;
+        symbol = symbol || j.symbol;
+      } catch {
+        // ignore JSON fetch failure; header still shows base info
+      }
+    }
+
+    // user's balance of this mint (if present)
+    let balance = 0;
+    if (publicKey) {
+      try {
+        const resp = await connection.getParsedTokenAccountsByOwner(
+          publicKey,
+          { programId: TOKEN_PROGRAM_ID },
+          "confirmed"
+        );
+        const acct = resp.value.find(
+          (v) => v.account.data.parsed.info.mint === mintStr
+        );
+        if (acct) {
+          const amt = acct.account.data.parsed.info.tokenAmount?.uiAmount;
+          if (typeof amt === "number") balance = amt;
+        }
+      } catch {
+        // non-fatal
+      }
+    }
+
+    setHeader({
+      mint: mintStr,
+      name: name || "Your Currency",
+      symbol: (symbol || savedSymbol || "JAL").toUpperCase(),
+      image,
+      metadataUri,
+      balance,
+    });
+  }, [connection, publicKey, savedSymbol]);
+
+  // initial + wallet-change loads
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        if (publicKey) {
+          await Promise.all([loadWalletTiles(), loadHeaderFromLocalStorage()]);
+        } else {
+          setSol(null);
+          setTokenCount(null);
+          setHeader(null);
+        }
+      } catch (e) {
+        console.error("Vault load error:", e);
+        setError("Couldn’t fetch balances. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [publicKey, loadWalletTiles, loadHeaderFromLocalStorage]);
+
+  // react to localStorage changes from other tabs
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "mint") loadHeaderFromLocalStorage();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [loadHeaderFromLocalStorage]);
 
   const refresh = async () => {
     if (!publicKey) return;
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
+    try {
+      await Promise.all([loadWalletTiles(), loadHeaderFromLocalStorage()]);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
+  // ---------- UI ----------
   return (
-    <main className="vault-screen vault-unlock">
+    <main className="vault-screen vault-unlock" role="main">
       {/* animated background */}
       <div className="machine-bg" aria-hidden />
 
       <h1 className="vault-title">VAULT</h1>
 
       <div className={`logo-circle ${publicKey ? "wallet-connected" : ""}`}>
-        <div className="vault-logo-inner" style={{ textAlign: "center" }}>
-          Logo: Updated after
-          <br />
-          currency creation.
-        </div>
+        {header?.image ? (
+          <img
+            alt={header.name || "Currency"}
+            src={header.image}
+            style={{ width: "70%", height: "70%", borderRadius: "50%", objectFit: "cover" }}
+          />
+        ) : (
+          <div className="vault-logo-inner" style={{ textAlign: "center" }}>
+            Logo: Updated after
+            <br />
+            currency creation.
+          </div>
+        )}
       </div>
 
       <h2 className="vault-slogan">Plenty is built. I’m created.</h2>
@@ -85,25 +199,115 @@ export default function Vault() {
         <>
           {error && <p className="vault-subtext" style={{ color: "#ff9c9c" }}>{error}</p>}
 
-          <p className="vault-subtext" style={{ marginBottom: "1rem" }}>
-            Address:
-            <br />
-            <span style={{ fontSize: "0.8rem" }}>{publicKey.toBase58()}</span>
-          </p>
+          {/* Header card: newest currency */}
+          {header && (
+            <div className="card" style={{ width: "min(100% - 2rem, 860px)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, alignItems: "center" }}>
+                <div
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 12,
+                    border: "1px solid var(--stroke)",
+                    overflow: "hidden",
+                    background: "rgba(255,255,255,.04)",
+                  }}
+                >
+                  {header.image ? (
+                    <img src={header.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : null}
+                </div>
 
-          <div style={{ display: "grid", gap: "0.5rem", marginBottom: "1.25rem", textAlign: "center" }}>
-            <div className="vault-subtext">◎ SOL Balance: <strong>{sol?.toFixed(4) ?? "—"}</strong></div>
-            <div className="vault-subtext">🪙 Tokens in Vault: <strong>{tokenCount ?? 0}</strong></div>
+                <div>
+                  <h3 style={{ margin: 0, fontWeight: 700 }}>
+                    {header.name} <span className="muted">({header.symbol})</span>
+                  </h3>
+                  <div className="chip-row" style={{ marginTop: 8 }}>
+                    <span className="chip">
+                      Mint:{" "}
+                      <span className="mono-sm">
+                        {header.mint.slice(0, 4)}…{header.mint.slice(-4)}
+                      </span>
+                    </span>
+                    {typeof header.balance === "number" && (
+                      <span className="chip">
+                        Your Balance: <strong>{header.balance}</strong>
+                      </span>
+                    )}
+                    <a
+                      className="chip"
+                      href={`https://solscan.io/token/${header.mint}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View on Solscan ↗
+                    </a>
+                    {header.metadataUri && (
+                      <a
+                        className="chip"
+                        href={toHttp(header.metadataUri)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Metadata ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Wallet summary tiles */}
+          <div
+            style={{
+              display: "grid",
+              gap: "0.5rem",
+              margin: "1rem 0",
+              textAlign: "center",
+              width: "min(100% - 2rem, 860px)",
+            }}
+          >
+            <div className="balance-row">
+              <div className="balance-card">
+                <div className="balance-amount">
+                  {sol?.toFixed(4) ?? "—"} <small>◎ SOL</small>
+                </div>
+                <div className="balance-label">Wallet balance</div>
+              </div>
+              <div className="balance-card">
+                <div className="balance-amount">
+                  {tokenCount ?? 0} <small>tokens</small>
+                </div>
+                <div className="balance-label">SPL positions held</div>
+              </div>
+            </div>
+
             <button className="vault-button" onClick={refresh} disabled={refreshing}>
               {refreshing ? "Refreshing…" : "Refresh"}
             </button>
           </div>
+
+          {/* Address */}
+          <p className="vault-subtext" style={{ marginBottom: "1rem", textAlign: "center" }}>
+            Address:
+            <br />
+            <span className="mono-sm">{publicKey.toBase58()}</span>
+          </p>
+
+          {/* Positions list (live), highlights last-created mint if present */}
+          <PositionsList
+            owner={publicKey}
+            connection={connection}
+            highlightMint={header?.mint}
+          />
         </>
       )}
 
+      {/* CTAs */}
       <div className="vault-cta-container" style={{ display: "grid", gap: "0.75rem" }}>
-        <Link to={`/vault/${savedSymbol}`} className="vault-button">
-          {`Go to Vault / ${savedSymbol}`}
+        <Link to={`/vault/${header?.symbol || savedSymbol}`} className="vault-button">
+          {`Go to Vault / ${(header?.symbol || savedSymbol).toUpperCase()}`}
         </Link>
         <Link to="/crypto-generator" className="vault-button">
           CREATE YOUR CURRENCY

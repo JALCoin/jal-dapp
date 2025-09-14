@@ -775,3 +775,105 @@ main[role="main"]{
 .dot.ok{ background:#11f1a7; box-shadow: 0 0 10px rgba(17,241,167,.6) }
 .dot.warn{ background:#f4c86a; box-shadow: 0 0 10px rgba(244,200,106,.6) }
 .dot.down{ background:#ff4d8a; box-shadow: 0 0 10px rgba(255,77,138,.5) }
+/* ===============================
+   Vault screen / hero + header
+=================================*/
+
+/* subtle animated haze behind Vault */
+.machine-bg{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 50% -180px, rgba(17,241,167,.08), rgba(0,0,0,0) 55%) ,
+    radial-gradient(680px 420px at 100% 20%, rgba(0,240,255,.08), rgba(0,0,0,0) 60%) ,
+    radial-gradient(720px 520px at 0% 30%, rgba(244,200,106,.08), rgba(0,0,0,0) 60%);
+  filter: blur(6px);
+}
+
+/* page container */
+.vault-screen{
+  position: relative;
+  z-index: 1;              /* above .machine-bg */
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+/* big wordmark */
+.vault-title{
+  margin: 10px 0 2px;
+  font-size: clamp(2rem, 6vw, 3rem);
+  letter-spacing: .04em;
+  text-shadow: var(--glow-white);
+}
+
+/* round logo well (switches neon when wallet is connected) */
+.logo-circle{
+  width: clamp(140px, 28vw, 220px);
+  height: clamp(140px, 28vw, 220px);
+  border-radius: 50%;
+  border: 1px solid var(--stroke-2);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  box-shadow: 0 12px 40px rgba(0,0,0,.55);
+  display: grid;
+  place-items: center;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+}
+.logo-circle.wallet-connected{
+  border-color: rgba(17,241,167,.5);
+  box-shadow: var(--glow-green), 0 12px 40px rgba(0,0,0,.55);
+  transform: translateY(-1px);
+}
+.vault-logo-inner{
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--text);
+  text-shadow: var(--glow-white);
+}
+
+/* tag line */
+.vault-slogan{
+  margin: 6px 0 2px;
+  font-size: clamp(1rem, 3.2vw, 1.25rem);
+  opacity: .9;
+}
+
+/* helper text */
+.vault-subtext{ opacity: .9; }
+
+/* CTA buttons on Vault */
+.vault-button{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .85rem 1.05rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  text-align: center;
+}
+.vault-button:hover{ transform: translateY(-1px); border-color: var(--green); box-shadow: var(--glow-green) }
+.vault-cta-container{ margin-top: 10px; }
+
+/* header card used to highlight the latest currency */
+.card .chip-row .chip { /* keep chips compact inside header card */
+  padding: .4rem .65rem;
+}
+
+/* small utility for mono hash snippets (mint/addresses) */
+.mono-sm{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .9em;
+  opacity: .95;
+}
+
+/* responsive tweaks */
+@media (max-width: 720px){
+  .vault-screen{ gap: 10px; padding: 14px 12px; }
+  .vault-title{ font-size: clamp(1.6rem, 7vw, 2.2rem); }
+}
+
