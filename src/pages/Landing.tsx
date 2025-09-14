@@ -26,7 +26,7 @@ type LandingProps = { initialPanel?: Panel };
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
-// Poster art (used for hover/promo reveals)
+// Poster art for hover reveals
 const POSTER = "/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png";
 const art = (pos: string, zoom = "240%"): React.CSSProperties =>
   ({
@@ -34,45 +34,6 @@ const art = (pos: string, zoom = "240%"): React.CSSProperties =>
     ["--art-pos" as any]: pos,
     ["--art-zoom" as any]: zoom,
   } as React.CSSProperties);
-
-/* ---------- TEMP: enlarge trust-strip pills from this page ---------- */
-const TRUST_STRIP_PATCH = `
-  .trust-strip { gap: 12px; }
-  .trust-strip a,
-  .trust-strip button,
-  .trust-strip .chip,
-  .trust-strip .chip.sm,
-  .trust-strip .jal-link,
-  .trust-strip .button{
-    padding: .68rem 1.15rem !important;
-    min-height: 44px !important;
-    min-width: 56px !important;
-    line-height: 1.2;
-    border-radius: 999px;
-    font-size: .95rem;
-  }
-  @media (pointer:fine){
-    .trust-strip a,
-    .trust-strip button,
-    .trust-strip .chip,
-    .trust-strip .jal-link,
-    .trust-strip .button{
-      padding: .75rem 1.3rem !important;
-      min-height: 46px !important;
-    }
-  }
-`;
-function useInjectTrustStripPatch() {
-  useEffect(() => {
-    const id = "trust-strip-desktop-padding";
-    if (document.getElementById(id)) return;
-    const style = document.createElement("style");
-    style.id = id;
-    style.textContent = TRUST_STRIP_PATCH;
-    document.head.appendChild(style);
-    return () => { style.remove(); };
-  }, []);
-}
 
 /* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
@@ -97,6 +58,7 @@ function CopyBtn({ text }: { text: string }) {
   const [ok, setOk] = useState(false);
   return (
     <button
+      type="button"
       className="button"
       onClick={async () => {
         try {
@@ -231,8 +193,6 @@ type Product = {
 };
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
-  useInjectTrustStripPatch(); // inject bigger hit targets for top pills
-
   const { publicKey, connected, wallet } = useWallet();
   const { setVisible } = useWalletModal();
   const [params, setParams] = useSearchParams();
@@ -429,7 +389,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => document.removeEventListener("keydown", trap);
   }, [overlayOpen]);
 
-  // Re-center the overlay on rotation/resize
+  // Re-center overlay on resize/orientation change
   useEffect(() => {
     const onResize = () => {
       if (overlayOpen) {
@@ -556,7 +516,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ===========================================================
      Render
   ============================================================ */
-  const overlayActive = overlayOpen;
+  const overlayActive = activePanel !== "none" && activePanel !== "grid";
   const shouldLoadGifs = !saveData && !reducedMotion;
 
   return (
@@ -572,6 +532,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           {connected && (
             <button
               className="chip"
+              type="button"
               style={{ marginLeft: 10 }}
               onClick={fetchBalances}
               aria-label="Refresh balances"
@@ -595,6 +556,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         <div className="feature-grid">
           {/* Apply poster hover art to ALL feature cards */}
           <button
+            type="button"
             className="feature-card has-art"
             style={art(ART_MAP.jal!.pos, ART_MAP.jal!.zoom)}
             onClick={() => openPanel("jal")}
@@ -603,10 +565,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           >
             <h4>JAL</h4>
             <div className="title">About &amp; Swap</div>
-            <div className="icon">➕</div>
+            <div className="icon" aria-hidden>➕</div>
           </button>
 
           <button
+            type="button"
             className="feature-card has-art"
             style={art(ART_MAP.shop!.pos, ART_MAP.shop!.zoom)}
             onClick={() => openPanel("shop")}
@@ -615,10 +578,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           >
             <h4>Store</h4>
             <div className="title">Buy with JAL</div>
-            <div className="icon">🏬</div>
+            <div className="icon" aria-hidden>🏬</div>
           </button>
 
           <button
+            type="button"
             className="feature-card has-art"
             style={art(ART_MAP.vault!.pos, ART_MAP.vault!.zoom)}
             onClick={() => openPanel("vault")}
@@ -627,10 +591,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           >
             <h4>Vault</h4>
             <div className="title">Assets &amp; Activity</div>
-            <div className="icon">💳</div>
+            <div className="icon" aria-hidden>💳</div>
           </button>
 
           <button
+            type="button"
             className="feature-card has-art"
             style={art("75% 78%", "240%")} // Hub slice
             onClick={() => openPanel("grid")}
@@ -639,7 +604,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           >
             <h4>Hub</h4>
             <div className="title">All Panels</div>
-            <div className="icon">🔗</div>
+            <div className="icon" aria-hidden>🔗</div>
           </button>
 
           <div className="feature-card feature-wide" role="group" aria-label="Get Started">
@@ -647,8 +612,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
               <div className="chip-row">
-                <button className="chip" onClick={() => openPanel("shop")}>Merch</button>
-                <button className="chip" onClick={() => openPanel("jal")}>Tokens</button>
+                <button type="button" className="chip" onClick={() => openPanel("shop")}>Merch</button>
+                <button type="button" className="chip" onClick={() => openPanel("jal")}>Tokens</button>
                 <Link
                   className="chip"
                   to="/crypto-generator/engine#step1"
@@ -679,6 +644,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       {/* Backdrop for overlay panels */}
       {overlayActive && (
         <button
+          type="button"
           className="hub-overlay"
           aria-label="Close panel"
           onClick={() => setActivePanel("none")}
@@ -733,6 +699,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                         loading="lazy"
                         width={960}
                         height={540}
+                        decoding="async"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).style.display = "none";
                         }}
@@ -764,7 +731,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
                 </p>
 
-                {/* Generator shelf: side-by-side compare */}
+                {/* Generator shelf */}
                 <section
                   className="shop-promo has-art"
                   style={art("58% 42%", "220%")}
@@ -856,6 +823,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   {(["All", "Merch", "Digital", "Gift Cards"] as const).map((cat) => (
                     <button
                       key={cat}
+                      type="button"
                       className={`chip ${shopFilter === cat ? "active" : ""}`}
                       onClick={() => setShopFilter(cat)}
                       aria-pressed={shopFilter === cat}
@@ -874,6 +842,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                           <img
                             src={p.img}
                             alt=""
+                            width={800}
+                            height={600}
+                            loading="lazy"
+                            decoding="async"
                             onError={(e) => {
                               (e.currentTarget as HTMLImageElement).style.display = "none";
                             }}
@@ -889,6 +861,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                           <span className="muted">• {p.tag}</span>
                         </div>
                         <button
+                          type="button"
                           className="button"
                           aria-disabled="true"
                           title="Checkout not available yet"
@@ -956,6 +929,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         {/* hidden focus-sentinel when overlay is open */}
         {overlayActive && (
           <button
+            type="button"
             ref={lastFocusRef}
             style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
             aria-hidden="true"

@@ -6,14 +6,14 @@
    00. Tokens & Resets
    01. Foundations (Layout, Containers, Utils)
    02. Global Motion / Accessibility
-   03. Header (App.tsx HeaderView)
+   03. Header  (App.tsx HeaderView)
    04. Sidebar (App.tsx SidebarView)
    05. Landing + Hub (Landing.tsx)
        5.1 Hub Panel
        5.2 Hub Tiles
        5.3 JAL Panel + Swap Embed
    06. Components (Buttons, Chips, Cards, Links)
-       6.1 Interactive Pills (full hitbox)
+       6.1 Pills (full hitbox)
        6.2 Trust Strip
    07. Shop (Promo, Grid, Cards, Controls)
    08. Vault Screen
@@ -41,11 +41,9 @@
   --glow-gold:  0 0 14px rgba(244,200,106,.55), 0 0 26px rgba(244,200,106,.35);
   --glow-white: 0 0 12px rgba(255,255,255,.45), 0 0 24px rgba(255,255,255,.25);
 
-  /* Radii & blur */
+  /* Radii / blur / timing */
   --r-sm:10px; --r-md:16px; --r-lg:20px;
   --blur:10px;
-
-  /* Timings */
   --t-fast:140ms; --t-med:260ms; --t-slow:480ms;
 
   /* Layout */
@@ -89,9 +87,10 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 .muted{ opacity:.75 }
 
+/* Lock scroll when overlays or menus are open */
 body[data-wallet-visible="true"],
 body[data-menu-open="true"],
-body[data-hub-open="true"]{ overflow:hidden } /* lock when overlays visible */
+body[data-hub-open="true"]{ overflow:hidden }
 
 main[role="main"]{
   min-height: calc(100lvh - var(--header-h));
@@ -100,6 +99,23 @@ main[role="main"]{
 }
 @supports not (height: 100lvh){
   main[role="main"]{ min-height: calc(100dvh - var(--header-h)) }
+}
+
+/* Generic “poster art” overlay helper (used by .has-art blocks) */
+.has-art{ position:relative; overflow:hidden; isolation:isolate }
+.has-art::after{
+  content:""; position:absolute; inset:-1px; z-index:0; border-radius:inherit;
+  background:
+    radial-gradient(1200px 800px at var(--art-pos, 50% 50%), rgba(255,255,255,.06), rgba(255,255,255,0)),
+    var(--bg);
+  mask-image: linear-gradient(180deg, rgba(0,0,0,.4), rgba(0,0,0,0) 85%);
+  background-image:
+    radial-gradient(1200px 800px at var(--art-pos, 50% 50%), rgba(255,255,255,.06), rgba(255,255,255,0)),
+    var(--art-img, none);
+  background-size: auto, var(--art-zoom, 220%);
+  background-repeat:no-repeat;
+  background-position: 0 0, var(--art-pos, 50% 50%);
+  opacity:.22; pointer-events:none;
 }
 
 
@@ -143,8 +159,7 @@ main[role="main"]{
 .logo.header-logo{
   block-size:clamp(68px,9.5vw,96px);
   filter: drop-shadow(0 0 10px rgba(255,255,255,.7));
-  margin-inline:auto;
-  cursor:pointer;
+  margin-inline:auto; cursor:pointer;
   transition: transform var(--t-fast), filter var(--t-fast);
 }
 .logo.header-logo:hover { transform: translateY(-1px); filter: drop-shadow(0 0 12px rgba(255,255,255,.9)); }
@@ -328,14 +343,10 @@ main[role="main"]{
 .card.gold:hover{ border-color:var(--gold); box-shadow:var(--glow-gold) }
 .card.cyan:hover{ border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 
-/* 6.1 Interactive Pills — FULL hitbox everywhere */
-.chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; position:relative; isolation:isolate; z-index:2 }
-.chip,
-.button,
-.jal-link,
-.trust-strip .chip,
-.trust-strip .button,
-.trust-strip .jal-link{
+/* 6.1 Pills — FULL hitbox everywhere */
+.chip-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; position:relative; isolation:isolate; z-index:2 }
+.chip, .button, .jal-link,
+.trust-strip .chip, .trust-strip .button, .trust-strip .jal-link{
   position:relative; z-index:3; pointer-events:auto;
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
   min-height: var(--pill-min);
@@ -351,39 +362,26 @@ main[role="main"]{
 .chip.active{ border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
 
 /* 6.2 Trust Strip (under header) */
-/* 6.2 Trust Strip (under header) */
-.trust-strip {
+.trust-strip{
   width: min(100% - 2rem, var(--max-w));
   margin: 12px auto 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  isolation: isolate;
-  z-index: 2;
+  display:flex; flex-wrap:wrap; gap:14px;
+  justify-content:center; align-items:center;
+  position:relative; isolation:isolate; z-index:2;
 }
-
 .trust-strip a,
 .trust-strip button,
 .trust-strip .chip,
 .trust-strip .jal-link,
-.trust-strip .button {
-  display: inline-flex !important;  /* force pill layout */
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0.75rem 1.4rem !important; /* bigger click target */
-  min-height: 44px !important;
-  min-width: 64px;
-  border-radius: 999px;
-  line-height: 1.2;
-  font-size: 0.95rem;
-  position: relative;
-  z-index: 3;
-  pointer-events: auto;
+.trust-strip .button{
+  display:inline-flex!important;
+  align-items:center; justify-content:center; gap:8px;
+  padding:.75rem 1.4rem!important;
+  min-height:44px!important; min-width:64px;
+  border-radius:999px; line-height:1.2; font-size:.95rem;
+  position:relative; z-index:3; pointer-events:auto;
 }
+
 
 /* === 07. SHOP (Promo, Grid, Cards, Controls) =========================== */
 
@@ -393,7 +391,7 @@ main[role="main"]{
   background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
   box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 0 1px rgba(244,200,106,.12) inset; overflow:hidden
 }
-.shop-promo.has-art::after{ opacity:.28; filter:saturate(1.05) contrast(1.02); pointer-events:none }
+.shop-promo.has-art::after{ opacity:.28; filter:saturate(1.05) contrast(1.02) }
 .shop-promo-inner{ position:relative; z-index:1; padding:clamp(14px, 3vw, 18px); display:grid; gap:8px }
 .promo-head{ display:flex; align-items:center; gap:10px }
 .promo-badge{ padding:.28rem .55rem; font-size:.75rem; letter-spacing:.06em; border-radius:999px; border:1px solid rgba(244,200,106,.5); color:var(--gold); box-shadow:var(--glow-gold); background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0)) }
