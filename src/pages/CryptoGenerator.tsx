@@ -77,7 +77,11 @@ const CryptoGenerator: FC = () => {
   useEffect(() => {
     const target = `#step${(step as number) + 1}`;
     if (location.hash !== target) {
-      window.history.replaceState(null, "", `${location.pathname}${location.search}${target}`);
+      window.history.replaceState(
+        null,
+        "",
+        `${location.pathname}${location.search}${target}`
+      );
     }
   }, [step, location.pathname, location.search, location.hash]);
 
@@ -104,9 +108,10 @@ const CryptoGenerator: FC = () => {
           });
 
           const tx = new Transaction().add(ix);
-
-          // IMPORTANT: let the wallet set blockhash/feePayer, then sign with our new mint keypair.
-          const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
+          // Wallet sets feePayer & blockhash; we partially sign with the mint key
+          const sig = await sendTransaction(tx, connection, {
+            signers: [mintAccount],
+          });
 
           log(`Mint created: ${mintAccount.publicKey.toBase58()}`);
           log(explorerTx(sig));
@@ -116,7 +121,12 @@ const CryptoGenerator: FC = () => {
         /* 2) Initialize mint */
         case 1: {
           if (!mint) throw new Error("Mint not set");
-          const ix = createInitializeMintInstruction(mint, DECIMALS, publicKey, null);
+          const ix = createInitializeMintInstruction(
+            mint,
+            DECIMALS,
+            publicKey,
+            null
+          );
           const tx = new Transaction().add(ix);
           const sig = await sendTransaction(tx, connection);
           log(`Mint initialized (decimals=${DECIMALS})`);
@@ -136,7 +146,12 @@ const CryptoGenerator: FC = () => {
             break;
           }
 
-          const ix = createAssociatedTokenAccountInstruction(publicKey, ataAddr, publicKey, mint);
+          const ix = createAssociatedTokenAccountInstruction(
+            publicKey,
+            ataAddr,
+            publicKey,
+            mint
+          );
           const tx = new Transaction().add(ix);
           const sig = await sendTransaction(tx, connection);
           log(`Token account created: ${ataAddr.toBase58()}`);
@@ -153,7 +168,9 @@ const CryptoGenerator: FC = () => {
           const ix = createMintToInstruction(mint, dest, publicKey, SUPPLY_BASE);
           const tx = new Transaction().add(ix);
           const sig = await sendTransaction(tx, connection);
-          log(`Supply minted: ${SUPPLY_UI.toLocaleString()} (decimals=${DECIMALS})`);
+          log(
+            `Supply minted: ${SUPPLY_UI.toLocaleString()} (decimals=${DECIMALS})`
+          );
           log(explorerTx(sig));
           break;
         }
@@ -202,7 +219,7 @@ const CryptoGenerator: FC = () => {
     setStep(nextStep);
   };
 
-  const isDone = step === (STEPS.length - 1);
+  const isDone = step === STEPS.length - 1;
 
   return (
     <main className="min-h-screen flex items-start justify-center py-20 px-4">
