@@ -1,15 +1,16 @@
 import type { FC } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
-import {
-  PROGRAM_ID as TMETA_PROGRAM_ID,
-  createCreateMetadataAccountV3Instruction,
-} from "@metaplex-foundation/mpl-token-metadata";
+
+// your existing helpers (already in repo)
+import { finalizeTokenMetadata } from "../utils/finalizeTokenMetadata";
+import { verifyTokenMetadataAttached } from "../utils/verifyTokenMetadataAttached";
+import { createSignerFromWalletAdapter } from "@metaplex-foundation/umi-signer-wallet-adapters";
 
 interface Props {
   mint: string;
-  connection: Connection;                 // ← we will ONLY use this RPC (Helius)
+  connection: Connection;
   onClose: () => void;
   onSuccess?: (mint: string) => void;
   templateMetadata?: {
@@ -20,6 +21,8 @@ interface Props {
   };
 }
 
+const IMAGE_SIZE_LIMIT_KB = 500;
+
 const TokenFinalizerModal: FC<Props> = ({
   mint,
   connection,
@@ -27,7 +30,7 @@ const TokenFinalizerModal: FC<Props> = ({
   onSuccess,
   templateMetadata,
 }) => {
-  const { publicKey, sendTransaction, wallet } = useWallet();
+  const { wallet } = useWallet();
 
   // form state
   const [imageUri, setImageUri] = useState(templateMetadata?.image ?? "");
@@ -37,27 +40,28 @@ const TokenFinalizerModal: FC<Props> = ({
     templateMetadata?.description ?? ""
   );
   const [metadataUri, setMetadataUri] = useState("");
+
+  // info about the image (for user feedback)
   const [mimeType, setMimeType] = useState("");
   const [imageSizeKB, setImageSizeKB] = useState(0);
 
   // action state
-  const [busy, setBusy] = useState(false);
+  const [attaching, setAttaching] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [txSig, setTxSig] = useState<string | null>(null);
-  const IMAGE_SIZE_LIMIT_KB = 500;
+  const [txSignature, setTxSignature] = useState<string | null>(null);
 
   const mintPk = useMemo(() => new PublicKey(mint), [mint]);
 
-  const normalizeHttp = (uri: string) =>
-    uri.startsWith("ipfs://")
+  const toHttp = (uri: string) =>
+    uri?.startsWith("ipfs://")
       ? `https://ipfs.io/ipfs/${uri.replace("ipfs://", "")}`
       : uri;
 
-  // lightweight check of the image (size & type)
+  // probe image (type + size) so user knows if it’s too large
   useEffect(() => {
     const run = async () => {
-      const src = normalizeHttp(imageUri || "");
-      if (!src.startsWith("http")) {
+      const src = toHttp(imageUri || "");
+      if (!src || !src.startsWith("http")) {
         setMimeType("");
         setImageSizeKB(0);
         return;
@@ -75,11 +79,10 @@ const TokenFinalizerModal: FC<Props> = ({
     run();
   }, [imageUri]);
 
-  if (!wallet?.adapter || !publicKey) return null;
+  if (!wallet?.adapter) return null;
 
-  const downloadMetadataJson = () => {
-    if (!imageUri) return;
-    if (imageSizeKB > IMAGE_SIZE_LIMIT_KB) {
+  const handleDownloadMetadata = () => {
+    if (imageUri && imageSizeKB > IMAGE_SIZE_LIMIT_KB) {
       alert("Image too large for token metadata (max 500KB).");
       return;
     }
@@ -104,70 +107,24 @@ const TokenFinalizerModal: FC<Props> = ({
     URL.revokeObjectURL(url);
   };
 
-  const attachMetadata = async () => {
+  const handleAttachMetadata = async () => {
+    setAttaching(true);
+    setStatus("idle");
     try {
-      setBusy(true);
-      setStatus("idle");
+      const signer = createSignerFromWalletAdapter(wallet.adapter);
 
-      // If metadata already exists, short-circuit
-      const [metadataPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("metadata"), TMETA_PROGRAM_ID.toBuffer(), mintPk.toBuffer()],
-        TMETA_PROGRAM_ID
-      );
-      const existing = await connection.getAccountInfo(metadataPda, "confirmed");
-      if (existing) {
-        setStatus("success");
-        onSuccess?.(mint);
-        return;
-      }
-
-      // Minimal Metaplex Metadata
-      const data = {
+      const sig = await finalizeTokenMetadata({
+        signer,
+        mintAddress: mintPk,
+        metadataUri,
         name,
         symbol,
-        uri: metadataUri, // should point to your uploaded metadata.json
-        sellerFeeBasisPoints: 0,
-        creators: null,
-        collection: null,
-        uses: null,
-      };
+      });
+      setTxSignature(sig);
 
-      const ix = createCreateMetadataAccountV3Instruction(
-        {
-          metadata: metadataPda,
-          mint: mintPk,
-          mintAuthority: publicKey,
-          payer: publicKey,
-          updateAuthority: publicKey,
-        },
-        {
-          createMetadataAccountArgsV3: {
-            data,
-            isMutable: true,
-            collectionDetails: null,
-          },
-        }
-      );
-
-      const { blockhash, lastValidBlockHeight } =
-        await connection.getLatestBlockhash("finalized");
-
-      const tx = new Transaction({
-        feePayer: publicKey,
-        recentBlockhash: blockhash,
-      }).add(ix);
-
-      const sig = await sendTransaction(tx, connection);
-      setTxSig(sig);
-
-      await connection.confirmTransaction(
-        { signature: sig, blockhash, lastValidBlockHeight },
-        "confirmed"
-      );
-
-      // Verify creation
-      const created = await connection.getAccountInfo(metadataPda, "confirmed");
-      if (!created) throw new Error("Metadata account not found after submit.");
+      // quick on-chain verification
+      const verified = await verifyTokenMetadataAttached(connection, mintPk);
+      if (!verified?.isAttached) throw new Error("Metadata verification failed.");
 
       setStatus("success");
       onSuccess?.(mint);
@@ -175,16 +132,16 @@ const TokenFinalizerModal: FC<Props> = ({
       console.error(e);
       setStatus("error");
     } finally {
-      setBusy(false);
+      setAttaching(false);
     }
   };
 
   const disableAttach =
-    busy ||
+    attaching ||
     !name ||
     !symbol ||
     !metadataUri ||
-    (imageUri && imageSizeKB > IMAGE_SIZE_LIMIT_KB);
+    (Boolean(imageUri) && imageSizeKB > IMAGE_SIZE_LIMIT_KB);
 
   return (
     <div className="modal-overlay">
@@ -248,8 +205,8 @@ const TokenFinalizerModal: FC<Props> = ({
             />
             <button
               className="button"
-              onClick={downloadMetadataJson}
-              disabled={!!imageUri && imageSizeKB > IMAGE_SIZE_LIMIT_KB}
+              onClick={handleDownloadMetadata}
+              disabled={Boolean(imageUri) && imageSizeKB > IMAGE_SIZE_LIMIT_KB}
             >
               Download metadata.json
             </button>
@@ -267,10 +224,10 @@ const TokenFinalizerModal: FC<Props> = ({
           <li>
             <button
               className="button"
-              onClick={attachMetadata}
+              onClick={handleAttachMetadata}
               disabled={disableAttach}
             >
-              {busy ? "Attaching…" : `Attach Metadata to ${mint.slice(0, 4)}…`}
+              {attaching ? "Attaching…" : `Attach Metadata to ${mint.slice(0, 4)}…`}
             </button>
             <p className="text-xs text-yellow-700 mt-1">
               ⚠️ Approve Phantom immediately after clicking. Delay = failure.
@@ -278,11 +235,11 @@ const TokenFinalizerModal: FC<Props> = ({
           </li>
         </ol>
 
-        {status === "success" && txSig && (
+        {status === "success" && txSignature && (
           <div className="text-green-600 text-xs mt-4 space-y-1">
             <p>✅ Metadata successfully attached.</p>
             <a
-              href={`https://solscan.io/tx/${txSig}`}
+              href={`https://solscan.io/tx/${txSignature}`}
               target="_blank"
               rel="noopener noreferrer"
               className="underline"
@@ -299,7 +256,7 @@ const TokenFinalizerModal: FC<Props> = ({
             </a>
             {metadataUri && (
               <a
-                href={normalizeHttp(metadataUri)}
+                href={toHttp(metadataUri)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline break-all"
