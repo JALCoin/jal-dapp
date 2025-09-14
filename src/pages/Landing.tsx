@@ -65,7 +65,7 @@ function CopyBtn({ text }: { text: string }) {
           await navigator.clipboard.writeText(text);
           setOk(true);
           setTimeout(() => setOk(false), 1200);
-        } catch { /* noop */ }
+        } catch {/* noop */}
       }}
       aria-live="polite"
     >
@@ -496,7 +496,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     const onConnectBalances = () => { void fetchBalances(); };
     adapter.on("connect", onConnectBalances);
     return () => {
-      try { adapter.off("connect", onConnectBalances); } catch { /* no-op */ }
+      try { adapter.off("connect", onConnectBalances); } catch {/* no-op */}
     };
   }, [wallet, fetchBalances]);
 
@@ -554,7 +554,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
 
         <div className="feature-grid">
-          {/* Apply poster hover art to ALL feature cards */}
+          {/* Primary nav = Hub tiles */}
           <button
             type="button"
             className="feature-card has-art"
@@ -597,7 +597,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <button
             type="button"
             className="feature-card has-art"
-            style={art("75% 78%", "240%")} // Hub slice
+            style={art("75% 78%", "240%")}
             onClick={() => openPanel("grid")}
             aria-label="Open Hub"
             aria-controls="hub-panel"
@@ -607,13 +607,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <div className="icon" aria-hidden>🔗</div>
           </button>
 
+          {/* Secondary actions — no overlap with tiles */}
           <div className="feature-card feature-wide" role="group" aria-label="Get Started">
             <div style={{ display: "grid", gap: 6 }}>
               <div style={{ opacity: 0.85 }}>Get Started</div>
               <div className="title">What do you want to do?</div>
               <div className="chip-row">
-                <button type="button" className="chip" onClick={() => openPanel("shop")}>Merch</button>
-                <button type="button" className="chip" onClick={() => openPanel("jal")}>Tokens</button>
                 <Link
                   className="chip"
                   to="/crypto-generator/engine#step1"
@@ -621,7 +620,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   onFocus={prefetchGenerator}
                   aria-label="Open Currency Generator"
                 >
-                  Currency Generator
+                  Create Token
                 </Link>
                 <Link
                   className="chip"
@@ -630,8 +629,26 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   onFocus={prefetchGenerator}
                   aria-label="Open NFT Generator intro"
                 >
-                  NFT Generator
+                  Create NFT
                 </Link>
+                <a
+                  className="chip"
+                  href="https://raydium.io"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open Raydium"
+                >
+                  Add Liquidity
+                </a>
+                <a
+                  className="chip"
+                  href="https://jup.ag"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open Jupiter"
+                >
+                  Swap Aggregator
+                </a>
               </div>
             </div>
             <div className="icon" aria-hidden>⚡</div>
