@@ -3,12 +3,10 @@ import type { FC } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
-  Connection,
   Keypair,
   PublicKey,
   SystemProgram,
   Transaction,
-  clusterApiUrl,
 } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
@@ -22,8 +20,10 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import TokenFinalizerModal from "../utils/TokenFinalizerModal";
+import { makeConnection } from "../config/rpc";
 
 /* ---------------------------------- */
+/* Wizard steps                                                        */
 const STEPS = [
   "Generate Token Mint",
   "Initialize Mint",
@@ -34,21 +34,17 @@ const STEPS = [
 ] as const;
 type StepIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
+/* Defaults — you can expose these as inputs later */
 const DECIMALS = 9;
 const SUPPLY_UI = 1_000_000_000; // 1B tokens (example)
 const SUPPLY_BASE = BigInt(SUPPLY_UI) * 10n ** BigInt(DECIMALS);
-
-const RPC_ENDPOINT =
-  (typeof window !== "undefined" && (window as any).__SOLANA_RPC_ENDPOINT__) ||
-  import.meta.env.VITE_SOLANA_RPC ||
-  clusterApiUrl("mainnet-beta");
 /* ---------------------------------- */
 
 const CryptoGenerator: FC = () => {
   const { publicKey, sendTransaction, connected } = useWallet();
 
-  // single shared connection (confirmed commitment)
-  const connection = useMemo(() => new Connection(RPC_ENDPOINT, "confirmed"), []);
+  // Single shared connection that respects env/injected RPC + headers (Helius, etc.)
+  const connection = useMemo(() => makeConnection("confirmed"), []);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,6 +59,9 @@ const CryptoGenerator: FC = () => {
 
   const log = (msg: string) => setLogs((prev) => [...prev, msg]);
   const nextStep = (s: StepIndex) => (Math.min(s + 1, 5) as StepIndex);
+
+  const explorerTx = (sig: string) => `https://solscan.io/tx/${sig}`;
+  const explorerToken = (m: string) => `https://solscan.io/token/${m}`;
 
   /* ---------- URL hash -> step (deep-link) ---------- */
   useEffect(() => {
@@ -90,7 +89,7 @@ const CryptoGenerator: FC = () => {
 
     try {
       switch (step) {
-        // 1) Create a new mint account
+        /* 1) Create a new mint account */
         case 0: {
           const lamports = await getMinimumBalanceForRentExemptMint(connection);
           const mintAccount = Keypair.generate();
@@ -105,26 +104,27 @@ const CryptoGenerator: FC = () => {
           });
 
           const tx = new Transaction().add(ix);
-          tx.partialSign(mintAccount); // user wallet will add feePayer & blockhash
 
+          // IMPORTANT: let the wallet set blockhash/feePayer, then sign with our new mint keypair.
           const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
+
           log(`Mint created: ${mintAccount.publicKey.toBase58()}`);
-          log(`https://solscan.io/tx/${sig}`);
+          log(explorerTx(sig));
           break;
         }
 
-        // 2) Initialize mint
+        /* 2) Initialize mint */
         case 1: {
           if (!mint) throw new Error("Mint not set");
           const ix = createInitializeMintInstruction(mint, DECIMALS, publicKey, null);
           const tx = new Transaction().add(ix);
           const sig = await sendTransaction(tx, connection);
-          log("Mint initialized");
-          log(`https://solscan.io/tx/${sig}`);
+          log(`Mint initialized (decimals=${DECIMALS})`);
+          log(explorerTx(sig));
           break;
         }
 
-        // 3) Create ATA for the user
+        /* 3) Create ATA for the user (if needed) */
         case 2: {
           if (!mint) throw new Error("Mint not set");
           const ataAddr = await getAssociatedTokenAddress(mint, publicKey);
@@ -140,28 +140,31 @@ const CryptoGenerator: FC = () => {
           const tx = new Transaction().add(ix);
           const sig = await sendTransaction(tx, connection);
           log(`Token account created: ${ataAddr.toBase58()}`);
-          log(`https://solscan.io/tx/${sig}`);
+          log(explorerTx(sig));
           break;
         }
 
-        // 4) Mint initial supply
+        /* 4) Mint initial supply to ATA */
         case 3: {
-          if (!mint || !ata) throw new Error("Mint or ATA not set");
-          const ix = createMintToInstruction(mint, ata, publicKey, SUPPLY_BASE);
+          if (!mint) throw new Error("Mint not set");
+          const dest = ata ?? (await getAssociatedTokenAddress(mint, publicKey));
+          setAta(dest);
+
+          const ix = createMintToInstruction(mint, dest, publicKey, SUPPLY_BASE);
           const tx = new Transaction().add(ix);
           const sig = await sendTransaction(tx, connection);
           log(`Supply minted: ${SUPPLY_UI.toLocaleString()} (decimals=${DECIMALS})`);
-          log(`https://solscan.io/tx/${sig}`);
+          log(explorerTx(sig));
           break;
         }
 
-        // 5) Metadata modal
+        /* 5) Open metadata finalizer modal */
         case 4: {
           setShowFinalizer(true);
-          return; // advance onSuccess
+          return; // advance occurs in onSuccess
         }
 
-        // 6) Persist and done
+        /* 6) Persist and finish */
         case 5: {
           if (mint && ata) {
             localStorage.setItem("mint", mint.toBase58());
@@ -245,7 +248,7 @@ const CryptoGenerator: FC = () => {
             {!!mint && (
               <p>
                 <a
-                  href={`https://solscan.io/token/${mint.toBase58()}`}
+                  href={explorerToken(mint.toBase58())}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline"

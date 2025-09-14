@@ -12,9 +12,10 @@ import {
 import { useSearchParams, Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { JAL_MINT } from "../config/tokens";
+import { makeConnection } from "../config/rpc";
 
 const Jal = lazy(() => import("./Jal"));
 
@@ -63,7 +64,9 @@ function CopyBtn({ text }: { text: string }) {
           await navigator.clipboard.writeText(text);
           setOk(true);
           setTimeout(() => setOk(false), 1200);
-        } catch {/* noop */}
+        } catch {
+          /* noop */
+        }
       }}
       aria-live="polite"
     >
@@ -469,11 +472,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [balLoading, setBalLoading] = useState(false);
   const [balErr, setBalErr] = useState<string | null>(null);
 
-  const getEndpoint = () =>
-    (window as any).__SOLANA_RPC_ENDPOINT__ ??
-    import.meta.env.VITE_SOLANA_RPC ??
-    clusterApiUrl("mainnet-beta");
-
   const fetchBalances = useCallback(async () => {
     if (!publicKey || !connected) {
       setSol(null);
@@ -483,7 +481,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     setBalErr(null);
     setBalLoading(true);
 
-    const freshConn = new Connection(getEndpoint(), "confirmed");
+    const freshConn = makeConnection("confirmed");
 
     try {
       const lamports = await freshConn.getBalance(publicKey, "confirmed");
@@ -528,7 +526,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
     const poll = setInterval(fetchBalances, 15000);
 
-    const wsConn = new Connection(getEndpoint(), "confirmed");
+    const wsConn = makeConnection("confirmed");
     const sub = wsConn.onAccountChange(
       publicKey,
       (ai) => setSol(ai.lamports / LAMPORTS_PER_SOL),
@@ -551,7 +549,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => {
       try {
         adapter.off("connect", onConnectBalances);
-      } catch {/* no-op */}
+      } catch {
+        /* no-op */
+      }
     };
   }, [wallet, fetchBalances]);
 
@@ -740,17 +740,19 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     role="listitem"
                     aria-describedby={`tile-sub-${t.key}`}
                   >
-                    <img
-                      src={shouldLoadGifs ? t.gif : ""}
-                      alt=""
-                      className="hub-gif"
-                      loading="lazy"
-                      width={960}
-                      height={540}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = "none";
-                      }}
-                    />
+                    {shouldLoadGifs && (
+                      <img
+                        src={t.gif}
+                        alt=""
+                        className="hub-gif"
+                        loading="lazy"
+                        width={960}
+                        height={540}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    )}
                     <div className="hub-btn">
                       {t.title}
                       {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
