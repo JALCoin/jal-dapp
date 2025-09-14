@@ -1,4 +1,3 @@
-// src/utils/TokenFinalizerModal.tsx
 import type { FC } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Connection, PublicKey } from "@solana/web3.js";
@@ -21,13 +20,31 @@ interface Props {
   };
 }
 
-const IMAGE_SIZE_LIMIT_KB = 500;
-type UiState = "idle" | "attaching" | "verifying" | "success" | "error" | "already";
+type UiState = "idle" | "attaching" | "verifying" | "success" | "warning" | "error" | "already";
 
-const toHttp = (uri: string) =>
+const IMAGE_SIZE_LIMIT_KB = 500;
+
+const toHttp = (uri?: string) =>
   uri?.startsWith("ipfs://")
     ? `https://ipfs.io/ipfs/${uri.replace("ipfs://", "")}`
-    : uri;
+    : uri ?? "";
+
+// simple backoff poll for Metadata PDA surfacing across RPCs
+async function pollMetadataAttached(
+  connection: Connection,
+  mint: PublicKey,
+  tries = 8,
+  baseDelayMs = 400
+): Promise<boolean> {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const v = await verifyTokenMetadataAttached(connection, mint);
+      if (v.isAttached) return true;
+    } catch {/* ignore and retry */}
+    await new Promise(r => setTimeout(r, baseDelayMs * Math.pow(1.4, i)));
+  }
+  return false;
+}
 
 const TokenFinalizerModal: FC<Props> = ({
   mint,
@@ -46,7 +63,7 @@ const TokenFinalizerModal: FC<Props> = ({
   const [description, setDescription] = useState(templateMetadata?.description ?? "");
   const [metadataUri, setMetadataUri] = useState("");
 
-  // feedback
+  // derived / feedback
   const [mimeType, setMimeType] = useState("");
   const [imageSizeKB, setImageSizeKB] = useState(0);
 
@@ -55,33 +72,25 @@ const TokenFinalizerModal: FC<Props> = ({
   const [txSig, setTxSig] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // If metadata already exists, short-circuit
+  // On open: avoid duplicate tx if already finalized
   useEffect(() => {
     let dead = false;
     (async () => {
       try {
         const v = await verifyTokenMetadataAttached(connection, mintPk);
-        if (dead) return;
-        if (v.isAttached) setState("already");
-      } catch {
-        /* not an error if absent */
-      }
+        if (!dead && v.isAttached) setState("already");
+      } catch { /* absence is fine */ }
     })();
-    return () => {
-      dead = true;
-    };
+    return () => { dead = true; };
   }, [connection, mintPk]);
 
-  // Probe image for type/size hint
+  // Probe image to show type/size & warn if too large
   useEffect(() => {
     let dead = false;
     (async () => {
       const src = toHttp(imageUri || "");
       if (!src || !/^https?:\/\//i.test(src)) {
-        if (!dead) {
-          setMimeType("");
-          setImageSizeKB(0);
-        }
+        if (!dead) { setMimeType(""); setImageSizeKB(0); }
         return;
       }
       try {
@@ -93,15 +102,10 @@ const TokenFinalizerModal: FC<Props> = ({
           setImageSizeKB(+((blob.size ?? 0) / 1024).toFixed(2));
         }
       } catch {
-        if (!dead) {
-          setMimeType("");
-          setImageSizeKB(0);
-        }
+        if (!dead) { setMimeType(""); setImageSizeKB(0); }
       }
     })();
-    return () => {
-      dead = true;
-    };
+    return () => { dead = true; };
   }, [imageUri]);
 
   if (!wallet?.adapter) return null;
@@ -152,21 +156,19 @@ const TokenFinalizerModal: FC<Props> = ({
       setTxSig(sig);
 
       setState("verifying");
-      const v = await verifyTokenMetadataAttached(connection, mintPk);
-      if (!v.isAttached) throw new Error("Metadata verification failed.");
+      const surfaced = await pollMetadataAttached(connection, mintPk);
 
-      // Persist for Vault page header + highlight
-      try {
-        localStorage.setItem("mint", mint);
-        localStorage.setItem("vaultSymbol", symbol.toUpperCase());
-        if (metadataUri) localStorage.setItem("metadataUri", metadataUri);
-        if (imageUri) localStorage.setItem("mintImage", imageUri);
-      } catch {
-        /* non-fatal */
+      // Persist for Vault header & link
+      localStorage.setItem("mint", mint);
+      localStorage.setItem("vaultSymbol", symbol.toUpperCase());
+
+      if (surfaced) {
+        setState("success");
+        onSuccess?.(mint);
+      } else {
+        // Tx is sent; PDA may lag on current RPC. Provide soft-success with warning.
+        setState("warning");
       }
-
-      setState("success");
-      onSuccess?.(mint);
     } catch (e: any) {
       console.error("[TokenFinalizerModal] attach failed:", e);
       setErrMsg(e?.message ?? "Attach failed.");
@@ -185,16 +187,12 @@ const TokenFinalizerModal: FC<Props> = ({
   return (
     <div className="modal-overlay">
       <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="finalize-title">
-        <button className="delete-btn" onClick={onClose} aria-label="Close">
-          ×
-        </button>
+        <button className="delete-btn" onClick={onClose} aria-label="Close">×</button>
 
-        <h2 id="finalize-title" className="text-xl font-bold mb-3 text-center">
-          Turn Into Currency
-        </h2>
+        <h2 id="finalize-title" className="text-xl font-bold mb-3 text-center">Turn Into Currency</h2>
 
         {state === "already" && (
-          <div className="text-xs text-green-500 mb-3">
+          <div className="text-xs" style={{ color: "#11f1a7", marginBottom: 12 }}>
             ✅ Metadata already exists for this mint. No action needed.
           </div>
         )}
@@ -202,15 +200,9 @@ const TokenFinalizerModal: FC<Props> = ({
         <ol className="space-y-4 text-sm">
           <li>
             1. Upload your <strong>token image</strong> to{" "}
-            <a
-              href="https://www.lighthouse.storage/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
+            <a href="https://www.lighthouse.storage/" target="_blank" rel="noopener noreferrer" className="underline">
               lighthouse.storage
-            </a>
-            .
+            </a>.
           </li>
 
           <li>
@@ -223,7 +215,7 @@ const TokenFinalizerModal: FC<Props> = ({
               aria-label="Image URI"
             />
             {imageSizeKB > 0 && (
-              <p className={`text-xs ${imageSizeKB > IMAGE_SIZE_LIMIT_KB ? "text-red-500" : "text-green-600"}`}>
+              <p className="text-xs" style={{ color: imageSizeKB > IMAGE_SIZE_LIMIT_KB ? "#ff4d8a" : "#11f1a7" }}>
                 File type: {mimeType || "unknown"} • Size: {imageSizeKB} KB
               </p>
             )}
@@ -268,12 +260,7 @@ const TokenFinalizerModal: FC<Props> = ({
               aria-label="Metadata URI"
             />
             {metadataUri && (
-              <a
-                className="underline text-xs ml-2"
-                href={toHttp(metadataUri)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a className="underline text-xs ml-2" href={toHttp(metadataUri)} target="_blank" rel="noopener noreferrer">
                 Open
               </a>
             )}
@@ -286,57 +273,42 @@ const TokenFinalizerModal: FC<Props> = ({
               disabled={disabled || state === "already"}
               aria-busy={state === "attaching" || state === "verifying" || undefined}
             >
-              {state === "attaching"
-                ? "Sending..."
-                : state === "verifying"
-                ? "Verifying..."
+              {state === "attaching" ? "Sending..."
+                : state === "verifying" ? "Verifying..."
                 : `Attach Metadata to ${mint.slice(0, 4)}…`}
             </button>
-            <p className="text-xs text-yellow-700 mt-1" aria-live="polite">
+            <p className="text-xs" style={{ color: "#f4c86a", marginTop: 6 }} aria-live="polite">
               ⚠️ Approve your wallet immediately after clicking. Delay = failure.
             </p>
           </li>
         </ol>
 
-        {state === "success" && txSig && (
-          <div className="text-green-600 text-xs mt-4 space-y-1" aria-live="polite">
-            <p>✅ Metadata successfully attached.</p>
-            <a
-              href={`https://solscan.io/tx/${txSig}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
+        {/* success */}
+        {(state === "success" || state === "warning") && txSig && (
+          <div className="text-xs mt-4 space-y-1" style={{ color: state === "success" ? "#11f1a7" : "#f4c86a" }} aria-live="polite">
+            <p>{state === "success" ? "✅ Metadata successfully attached." : "⚠️ Transaction confirmed, but the metadata PDA hasn’t surfaced on this RPC yet. This is normal — it usually appears shortly. You can Refresh or check Solscan."}</p>
+            <a href={`https://solscan.io/tx/${txSig}`} target="_blank" rel="noopener noreferrer" className="underline">
               View Transaction ↗
             </a>
-            <a
-              href={`https://solscan.io/address/${mint}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
+            <a href={`https://solscan.io/address/${mint}`} target="_blank" rel="noopener noreferrer" className="underline">
               View Mint ↗
             </a>
             {metadataUri && (
-              <a
-                href={toHttp(metadataUri)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline break-all"
-              >
+              <a href={toHttp(metadataUri)} target="_blank" rel="noopener noreferrer" className="underline break-all">
                 Metadata URI ↗
               </a>
             )}
           </div>
         )}
 
+        {/* error */}
         {state === "error" && (
-          <p className="text-red-500 text-xs mt-3" aria-live="assertive">
+          <p className="text-xs mt-3" style={{ color: "#ff4d8a" }} aria-live="assertive">
             ❌ {errMsg ?? "Metadata attachment failed. Double-check the IPFS URI and try again."}
           </p>
         )}
 
-        <p className="text-[var(--jal-muted)] text-xs mt-3">
+        <p className="text-xs mt-3" style={{ opacity: .9 }}>
           Once attached, metadata becomes permanent on-chain (use an update authority responsibly).
         </p>
       </div>
