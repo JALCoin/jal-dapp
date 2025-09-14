@@ -351,27 +351,39 @@ main[role="main"]{
 .chip.active{ border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
 
 /* 6.2 Trust Strip (under header) */
+/* 6.2 Trust Strip (under header) */
 .trust-strip {
   width: min(100% - 2rem, var(--max-w));
-  margin: 8px auto 0;
-  display:flex; flex-wrap:wrap; gap:12px;
-  justify-content:center; align-items:center;
-  position:relative; isolation:isolate; z-index:2;
+  margin: 12px auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  isolation: isolate;
+  z-index: 2;
 }
+
 .trust-strip a,
 .trust-strip button,
 .trust-strip .chip,
-.trust-strip .chip.sm,
 .trust-strip .jal-link,
-.trust-strip .button{
-  display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  padding-block: var(--pill-py);
-  padding-inline: var(--pill-px);
-  min-height: var(--pill-min);
-  line-height:1; border-radius:999px; font-size:.95rem;
-  position:relative; z-index:3; pointer-events:auto;
+.trust-strip .button {
+  display: inline-flex !important;  /* force pill layout */
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.75rem 1.4rem !important; /* bigger click target */
+  min-height: 44px !important;
+  min-width: 64px;
+  border-radius: 999px;
+  line-height: 1.2;
+  font-size: 0.95rem;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
 }
-
 
 /* === 07. SHOP (Promo, Grid, Cards, Controls) =========================== */
 
