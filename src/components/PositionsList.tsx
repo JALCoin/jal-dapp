@@ -1,5 +1,5 @@
-// src/components/PositionsList.tsx
-import { FC, useEffect, useMemo, useState } from "react";
+import type { FC } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { verifyTokenMetadataAttached } from "@/utils/verifyTokenMetadataAttached";
@@ -7,7 +7,7 @@ import { verifyTokenMetadataAttached } from "@/utils/verifyTokenMetadataAttached
 type Props = {
   owner: PublicKey;
   connection: Connection;
-  highlightMint?: string; // optional: mint to visually highlight
+  highlightMint?: string;
 };
 
 type Position = {
@@ -60,11 +60,7 @@ const PositionsList: FC<Props> = ({ owner, connection, highlightMint }) => {
           "confirmed"
         );
 
-        // Aggregate balances by mint (sum across any token accounts)
-        const map = new Map<
-          string,
-          { ui: number; decimals: number; rawStr: string }
-        >();
+        const map = new Map<string, { ui: number; decimals: number }>();
 
         for (const { account } of parsed.value) {
           const info = account.data.parsed.info;
@@ -72,19 +68,16 @@ const PositionsList: FC<Props> = ({ owner, connection, highlightMint }) => {
           const ta = info.tokenAmount;
           const decimals = Number(ta.decimals ?? 0);
           const ui = Number(ta.uiAmount ?? 0);
-          const rawStr = String(ta.uiAmountString ?? ui.toString());
           if (ui <= 0) continue;
 
           const existing = map.get(mint);
           if (existing) {
             existing.ui += ui;
-            existing.rawStr = (Number(existing.rawStr) + ui).toString();
           } else {
-            map.set(mint, { ui, decimals, rawStr });
+            map.set(mint, { ui, decimals });
           }
         }
 
-        // Enrich with metadata (name/symbol/image)
         const mints = [...map.keys()];
         const enriched: Position[] = await Promise.all(
           mints.map(async (mint) => {
@@ -110,20 +103,14 @@ const PositionsList: FC<Props> = ({ owner, connection, highlightMint }) => {
                     });
                     const j = await res.json();
                     image = toHttp(j.image || j.logo || j.icon);
-                    // Use JSON values if chain values missing
                     name = name || j.name;
                     symbol = symbol || j.symbol;
-                  } catch {
-                    // ignore fetch/parse issues
-                  }
+                  } catch {}
                 }
               }
-            } catch {
-              // ignore metadata failures; still show the balance
-            }
+            } catch {}
 
-            const { ui, decimals, rawStr } = map.get(mint)!;
-            // Render-friendly string (limit trailing noise)
+            const { ui, decimals } = map.get(mint)!;
             const amountStr =
               ui >= 1
                 ? ui.toLocaleString(undefined, { maximumFractionDigits: 6 })
@@ -142,7 +129,6 @@ const PositionsList: FC<Props> = ({ owner, connection, highlightMint }) => {
           })
         );
 
-        // Sort by balance desc, then name/symbol
         enriched.sort((a, b) => {
           if (b.amountUi !== a.amountUi) return b.amountUi - a.amountUi;
           const an = a.symbol || a.name || a.mint;
@@ -214,7 +200,10 @@ const PositionsList: FC<Props> = ({ owner, connection, highlightMint }) => {
                       <span className="badge soon">No Art</span>
                     )}
                     {isHighlight && (
-                      <span className="badge" style={{ right: 10, left: "auto" }}>
+                      <span
+                        className="badge"
+                        style={{ right: 10, left: "auto" }}
+                      >
                         New
                       </span>
                     )}
