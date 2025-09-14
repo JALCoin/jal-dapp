@@ -8,7 +8,7 @@ import {
 import { publicKey, none, signerIdentity } from '@metaplex-foundation/umi';
 import type { Signer } from '@metaplex-foundation/umi';
 import type { PublicKey as Web3PublicKey } from '@solana/web3.js';
-import { getRpcEndpoint } from '@/config/rpc';
+import { getRpcEndpoint } from '../config/rpc';
 
 type Params = {
   signer: Signer;

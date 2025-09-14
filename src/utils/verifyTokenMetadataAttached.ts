@@ -3,7 +3,7 @@ import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { publicKey } from '@metaplex-foundation/umi';
 import { fetchMetadataFromSeeds } from '@metaplex-foundation/mpl-token-metadata';
 import type { PublicKey as Web3PublicKey } from '@solana/web3.js';
-import { getRpcEndpoint } from '@/config/rpc';
+import { getRpcEndpoint } from '../config/rpc';
 
 export type VerifyResult = {
   /** true = metadata exists; false = not found; null = indeterminate (RPC error, etc.) */
