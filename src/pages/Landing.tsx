@@ -15,14 +15,14 @@ import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
-  // If your @solana/spl-token version exports TOKEN_2022_PROGRAM_ID, this alias will capture it:
   TOKEN_2022_PROGRAM_ID as TOKEN_2022_ID_MAYBE,
 } from "@solana/spl-token";
-// If your @solana/spl-token does NOT export TOKEN_2022_PROGRAM_ID, you can instead:
+// If your @solana/spl-token does NOT export TOKEN_2022_PROGRAM_ID:
 // import { TOKEN_2022_PROGRAM_ID as TOKEN_2022_ID_MAYBE } from "@solana/spl-token-2022";
 
 import { JAL_MINT } from "../config/tokens";
 import { makeConnection } from "../config/rpc";
+import RaydiumSwapEmbed from "../components/RaydiumSwapEmbed";
 
 const Jal = lazy(() => import("./Jal"));
 
@@ -45,7 +45,8 @@ const art = (pos: string, zoom = "240%"): React.CSSProperties =>
 
 /** Robust Token-2022 program ID (works whether your deps export it or not) */
 const TOKEN_2022_PROGRAM_ID: PublicKey =
-  TOKEN_2022_ID_MAYBE ?? new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+  (TOKEN_2022_ID_MAYBE as unknown as PublicKey) ??
+  new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
 
 /* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
@@ -77,9 +78,7 @@ function CopyBtn({ text }: { text: string }) {
           await navigator.clipboard.writeText(text);
           setOk(true);
           setTimeout(() => setOk(false), 1200);
-        } catch {
-          /* noop */
-        }
+        } catch {/* noop */}
       }}
       aria-live="polite"
     >
@@ -285,9 +284,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     if (saveData) {
       const i = new Image();
       i.src = POSTER;
-      return () => {
-        i.src = "";
-      };
+      return () => { i.src = ""; };
     }
     const imgs = [
       ...tiles.map((t) => {
@@ -407,15 +404,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       if (!first || !last) return;
       const active = document.activeElement as HTMLElement | null;
       if (e.shiftKey) {
-        if (active === first) {
-          e.preventDefault();
-          last.focus();
-        }
+        if (active === first) { e.preventDefault(); last.focus(); }
       } else {
-        if (active === last) {
-          e.preventDefault();
-          first.focus();
-        }
+        if (active === last) { e.preventDefault(); first.focus(); }
       }
     };
     document.addEventListener("keydown", trap);
@@ -580,16 +571,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   useEffect(() => {
     const adapter = wallet?.adapter;
     if (!adapter) return;
-    const onConnectBalances = () => {
-      void fetchPortfolio();
-    };
+    const onConnectBalances = () => { void fetchPortfolio(); };
     adapter.on("connect", onConnectBalances);
     return () => {
-      try {
-        adapter.off("connect", onConnectBalances);
-      } catch {
-        /* no-op */
-      }
+      try { adapter.off("connect", onConnectBalances); } catch { /* no-op */ }
     };
   }, [wallet, fetchPortfolio]);
 
@@ -604,6 +589,28 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+      {/* === JAL/SOL chart embed (above the Hub) === */}
+      <div className="container" style={{ marginTop: 12, marginBottom: 12 }}>
+        <section className="card swap-embed-card" role="region" aria-label="JAL / SOL Chart">
+          <div className="swap-embed-header">
+            <h3 style={{ margin: 0 }}>JAL / SOL</h3>
+            <a
+              className="jal-link"
+              href={`https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(
+                JAL_MINT
+              )}&fixed=in`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open on Raydium ↗
+            </a>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <RaydiumSwapEmbed inputMint="sol" outputMint={JAL_MINT} height={520} />
+          </div>
+        </section>
+      </div>
+
       {/* Backdrop for overlay panels */}
       {overlayActive && (
         <button
@@ -629,11 +636,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
               {panelTitle}
             </h2>
-            {connected ? (
-              <DisconnectButton className="wallet-disconnect-btn" />
-            ) : (
-              <ConnectButton className="wallet-disconnect-btn" />
-            )}
+            {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
           </div>
 
           <div className="hub-panel-body" ref={hubBodyRef}>
@@ -676,9 +679,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   >
                     <h4>JAL</h4>
                     <div className="title">About &amp; Swap</div>
-                    <div className="icon" aria-hidden>
-                      ➕
-                    </div>
+                    <div className="icon" aria-hidden>➕</div>
                   </button>
 
                   <button
@@ -690,9 +691,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   >
                     <h4>Store</h4>
                     <div className="title">Buy with JAL</div>
-                    <div className="icon" aria-hidden>
-                      🏬
-                    </div>
+                    <div className="icon" aria-hidden>🏬</div>
                   </button>
 
                   <button
@@ -704,9 +703,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   >
                     <h4>Vault</h4>
                     <div className="title">Assets &amp; Activity</div>
-                    <div className="icon" aria-hidden>
-                      💳
-                    </div>
+                    <div className="icon" aria-hidden>💳</div>
                   </button>
 
                   <div className="feature-card feature-wide" role="group" aria-label="Get Started">
@@ -714,28 +711,17 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                       <div style={{ opacity: 0.85 }}>Get Started</div>
                       <div className="title">What do you want to do?</div>
                       <div className="chip-row">
-                        <Link
-                          className="chip"
-                          to="/crypto-generator/engine#step1"
-                          onMouseEnter={prefetchGenerator}
-                          onFocus={prefetchGenerator}
-                        >
+                        <Link className="chip" to="/crypto-generator/engine#step1" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
                           Create Token
                         </Link>
                         <Link className="chip" to="/crypto-generator" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
                           Create NFT
                         </Link>
-                        <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">
-                          Add Liquidity
-                        </a>
-                        <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">
-                          Swap Aggregator
-                        </a>
+                        <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">Add Liquidity</a>
+                        <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">Swap Aggregator</a>
                       </div>
                     </div>
-                    <div className="icon" aria-hidden>
-                      ⚡
-                    </div>
+                    <div className="icon" aria-hidden>⚡</div>
                   </div>
                 </div>
               </div>
@@ -775,18 +761,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                           width={960}
                           height={540}
                           decoding="async"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = "none";
-                          }}
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                         />
                       )}
                       <div className="hub-btn">
                         {t.title}
-                        {t.sub && (
-                          <span id={`tile-sub-${t.key}`} className="sub">
-                            {t.sub}
-                          </span>
-                        )}
+                        {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
                       </div>
                     </button>
                   );
@@ -826,13 +806,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                                 <li>Supply + mint authority you control</li>
                               </ul>
                             </div>
-                            <div className="muted" style={{ marginTop: 8 }}>
-                              Creates: SPL mint + ATA + Metadata
-                            </div>
+                            <div className="muted" style={{ marginTop: 8 }}>Creates: SPL mint + ATA + Metadata</div>
                             <div style={{ marginTop: 10 }}>
-                              <Link className="button gold" to="/crypto-generator/engine#step1">
-                                Start Token
-                              </Link>
+                              <Link className="button gold" to="/crypto-generator/engine#step1">Start Token</Link>
                             </div>
                             <div className="chip-row" style={{ marginTop: 10 }}>
                               <span className="chip">Loyalty</span>
@@ -852,13 +828,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                                 <li>Collection metadata for discovery</li>
                               </ul>
                             </div>
-                            <div className="muted" style={{ marginTop: 8 }}>
-                              Creates: NFT mint(s) + Collection Metadata
-                            </div>
+                            <div className="muted" style={{ marginTop: 8 }}>Creates: NFT mint(s) + Collection Metadata</div>
                             <div style={{ marginTop: 10 }}>
-                              <Link className="button neon" to="/crypto-generator">
-                                Start NFT
-                              </Link>
+                              <Link className="button neon" to="/crypto-generator">Start NFT</Link>
                             </div>
                             <div className="chip-row" style={{ marginTop: 10 }}>
                               <span className="chip">Art</span>
@@ -905,9 +877,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                               height={600}
                               loading="lazy"
                               decoding="async"
-                              onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).style.display = "none";
-                              }}
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                             />
                           ) : null}
                           <span className="badge soon">Coming&nbsp;soon</span>
@@ -950,9 +920,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 (connected ? (
                   <div className="card">
                     <h3>Your Wallet</h3>
-                    <p>
-                      JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong>
-                    </p>
+                    <p>JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong></p>
 
                     {portfolio.length ? (
                       <div style={{ marginTop: 10 }}>
@@ -960,9 +928,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                           {portfolio.map((t) => (
                             <article key={t.mint} className="product-card">
                               <div className="product-body">
-                                <h4 className="product-title">
-                                  {`${t.mint.slice(0, 4)}…${t.mint.slice(-4)}`}
-                                </h4>
+                                <h4 className="product-title">{`${t.mint.slice(0,4)}…${t.mint.slice(-4)}`}</h4>
                                 <div className="product-blurb mono-sm">Mint: {t.mint}</div>
                                 <div className="product-price">
                                   <span className="price-jal">
@@ -970,9 +936,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                                   </span>
                                   <span className="muted">• {t.decimals} dec</span>
                                 </div>
-                                <div className="muted" style={{ fontSize: ".85rem" }}>
-                                  {t.program}
-                                </div>
+                                <div className="muted" style={{ fontSize: ".85rem" }}>{t.program}</div>
                               </div>
                             </article>
                           ))}
@@ -999,12 +963,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   </p>
                   {activePanel === "support" && (
                     <div className="chip-row" style={{ marginTop: 10 }}>
-                      <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">
-                        Telegram
-                      </a>
-                      <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">
-                        X
-                      </a>
+                      <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">Telegram</a>
+                      <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">X</a>
                     </div>
                   )}
                 </div>
@@ -1020,9 +980,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
               aria-hidden="true"
               tabIndex={0}
-              onFocus={() => {
-                firstFocusRef.current?.focus();
-              }}
+              onFocus={() => { firstFocusRef.current?.focus(); }}
             />
           )}
         </section>
