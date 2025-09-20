@@ -22,7 +22,6 @@ import {
 
 import { JAL_MINT } from "../config/tokens";
 import { makeConnection } from "../config/rpc";
-import RaydiumSwapEmbed from "../components/RaydiumSwapEmbed";
 
 const Jal = lazy(() => import("./Jal"));
 
@@ -47,6 +46,12 @@ const art = (pos: string, zoom = "240%"): React.CSSProperties =>
 const TOKEN_2022_PROGRAM_ID: PublicKey =
   (TOKEN_2022_ID_MAYBE as unknown as PublicKey) ??
   new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+
+/** Fullscreen Raydium swap/chart URL for JAL/SOL (used as background) */
+const RAYDIUM_PAIR_URL =
+  `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(
+    JAL_MINT
+  )}&fixed=in`;
 
 /* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
@@ -589,27 +594,24 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
-      {/* === JAL/SOL chart embed (above the Hub) === */}
-      <div className="container" style={{ marginTop: 12, marginBottom: 12 }}>
-        <section className="card swap-embed-card" role="region" aria-label="JAL / SOL Chart">
-          <div className="swap-embed-header">
-            <h3 style={{ margin: 0 }}>JAL / SOL</h3>
-            <a
-              className="jal-link"
-              href={`https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(
-                JAL_MINT
-              )}&fixed=in`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open on Raydium ↗
-            </a>
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <RaydiumSwapEmbed inputMint="sol" outputMint={JAL_MINT} height={520} />
-          </div>
-        </section>
-      </div>
+      {/* === Background chart (fullscreen, non-interactive) === */}
+      <iframe
+        title="JAL/SOL Background Chart"
+        src={RAYDIUM_PAIR_URL}
+        allow="clipboard-read; clipboard-write"
+        style={{
+          position: "fixed",
+          inset: 0,
+          width: "100vw",
+          height: "100vh",
+          border: "0",
+          zIndex: -1,              // behind all UI
+          pointerEvents: "none",   // decorative only
+          opacity: 0.35,           // tune to taste
+          transform: "scale(1.02)",// bleed edges on resize
+          filter: "brightness(0.9) contrast(1.05) saturate(1.15)",
+        }}
+      />
 
       {/* Backdrop for overlay panels */}
       {overlayActive && (
