@@ -12,10 +12,13 @@ import {
 import { useSearchParams, Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, /* If your version exports it: */ TOKEN_2022_PROGRAM_ID as TOKEN_2022_ID_MAYBE } from "@solana/spl-token";
-// If your @solana/spl-token version doesn't export TOKEN_2022_PROGRAM_ID,
-// change the import above and uncomment this fallback:
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  // If your @solana/spl-token version exports TOKEN_2022_PROGRAM_ID, this alias will capture it:
+  TOKEN_2022_PROGRAM_ID as TOKEN_2022_ID_MAYBE,
+} from "@solana/spl-token";
+// If your @solana/spl-token does NOT export TOKEN_2022_PROGRAM_ID, you can instead:
 // import { TOKEN_2022_PROGRAM_ID as TOKEN_2022_ID_MAYBE } from "@solana/spl-token-2022";
 
 import { JAL_MINT } from "../config/tokens";
@@ -27,10 +30,11 @@ type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" |
 type TileKey = Exclude<Panel, "none" | "grid">;
 type LandingProps = { initialPanel?: Panel };
 
-// Poster art / wallet modal selectors
+/** Wallet modal selectors for scroll-lock flagging */
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
+/** Poster art for hover reveals */
 const POSTER = "/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png";
 const art = (pos: string, zoom = "240%"): React.CSSProperties =>
   ({
@@ -38,6 +42,10 @@ const art = (pos: string, zoom = "240%"): React.CSSProperties =>
     ["--art-pos" as any]: pos,
     ["--art-zoom" as any]: zoom,
   } as React.CSSProperties);
+
+/** Robust Token-2022 program ID (works whether your deps export it or not) */
+const TOKEN_2022_PROGRAM_ID: PublicKey =
+  TOKEN_2022_ID_MAYBE ?? new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
 
 /* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
@@ -69,7 +77,9 @@ function CopyBtn({ text }: { text: string }) {
           await navigator.clipboard.writeText(text);
           setOk(true);
           setTimeout(() => setOk(false), 1200);
-        } catch { /* noop */ }
+        } catch {
+          /* noop */
+        }
       }}
       aria-live="polite"
     >
@@ -196,12 +206,12 @@ type Product = {
   blurb?: string;
 };
 
-/* ---------- WalletToken model for Vault portfolio ---------- */
-type WalletToken = {
+/* ---------- Vault: token row model ---------- */
+type TokenRow = {
   mint: string;
   uiAmount: number;
   decimals: number;
-  symbol?: string; // to be filled later from metadata
+  program: "spl-token" | "token-2022";
 };
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
@@ -221,7 +231,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const firstFocusRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusRef = useRef<HTMLButtonElement | null>(null);
 
-  const reducedMotion = useMemo(
+  const reducedMotion = useMemo<boolean>(
     () =>
       typeof window !== "undefined" && window.matchMedia
         ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -234,7 +244,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     (navigator.connection?.saveData === true);
 
   // Prefetch heavy generator routes on intent (hover/focus)
-  const prefetchGenerator = useCallback(() => {
+  const prefetchGenerator = useCallback((): void => {
     import("./CryptoGeneratorIntro");
     import("./CryptoGenerator");
   }, []);
@@ -265,7 +275,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [shopFilter, setShopFilter] = useState<"All" | Product["tag"]>("All");
   const [shopNotice, setShopNotice] = useState<string | null>(null);
 
-  const visibleProducts = useMemo(
+  const visibleProducts = useMemo<Product[]>(
     () => products.filter((p) => (shopFilter === "All" ? true : p.tag === shopFilter)),
     [products, shopFilter]
   );
@@ -275,7 +285,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     if (saveData) {
       const i = new Image();
       i.src = POSTER;
-      return () => { i.src = ""; };
+      return () => {
+        i.src = "";
+      };
     }
     const imgs = [
       ...tiles.map((t) => {
@@ -352,17 +364,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   }, [wallet, reducedMotion]);
 
   /* ---------- wallet modal visibility flag ---------- */
-  const setWalletFlag = useCallback((on: boolean) => {
+  const setWalletFlag = useCallback((on: boolean): void => {
     const root = document.body;
     if (on) root.setAttribute("data-wallet-visible", "true");
     else root.removeAttribute("data-wallet-visible");
   }, []);
   useEffect(() => {
-    const check = () => setWalletFlag(!!document.querySelector(WALLET_MODAL_SELECTORS));
+    const check = (): void => setWalletFlag(!!document.querySelector(WALLET_MODAL_SELECTORS));
     check();
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true });
-    return () => { obs.disconnect(); setWalletFlag(false); };
+    return () => {
+      obs.disconnect();
+      setWalletFlag(false);
+    };
   }, [setWalletFlag]);
 
   /* ---------- overlay controls (scroll lock + Escape) ---------- */
@@ -373,7 +388,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => document.body.removeAttribute("data-hub-open");
   }, [overlayOpen]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape" && overlayOpen) setActivePanel("none");
     };
     window.addEventListener("keydown", onKey);
@@ -385,16 +400,22 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     if (!overlayOpen) return;
     hubTitleRef.current?.focus?.();
 
-    const trap = (e: KeyboardEvent) => {
+    const trap = (e: KeyboardEvent): void => {
       if (e.key !== "Tab") return;
       const first = firstFocusRef.current;
       const last = lastFocusRef.current;
       if (!first || !last) return;
       const active = document.activeElement as HTMLElement | null;
       if (e.shiftKey) {
-        if (active === first) { e.preventDefault(); last.focus(); }
+        if (active === first) {
+          e.preventDefault();
+          last.focus();
+        }
       } else {
-        if (active === last) { e.preventDefault(); first.focus(); }
+        if (active === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     document.addEventListener("keydown", trap);
@@ -403,7 +424,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   // Re-center overlay on resize/orientation change
   useEffect(() => {
-    const onResize = () => {
+    const onResize = (): void => {
       if (overlayOpen) {
         panelRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
       }
@@ -419,7 +440,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- Open helpers ---------- */
   const requiresWallet: Panel[] = ["jal", "vault", "payments", "loans"];
   const openPanel = useCallback(
-    (id: Panel) => {
+    (id: Panel): void => {
       setActivePanel(id);
       if (!connected && requiresWallet.includes(id)) setVisible(true);
       requestAnimationFrame(() =>
@@ -438,78 +459,92 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     activePanel === "loans" ? "Loans" :
     activePanel === "support" ? "Support" : "Welcome";
 
-  /* ---------- LIVE BALANCES (SOL + JAL + Portfolio) ---------- */
+  // Hover art presets for hub tiles
+  const ART_MAP: Partial<Record<TileKey, { pos: string; zoom?: string }>> = {
+    jal: { pos: "26% 38%", zoom: "240%" },
+    shop: { pos: "73% 38%", zoom: "240%" },
+    vault: { pos: "28% 78%", zoom: "240%" },
+    payments: { pos: "46% 64%", zoom: "240%" },
+    loans: { pos: "62% 42%", zoom: "240%" },
+    support: { pos: "82% 28%", zoom: "240%" },
+  };
+
+  /* ---------- LIVE BALANCES (SOL + JAL + Token-2022) ---------- */
   const [sol, setSol] = useState<number | null>(null);
   const [jal, setJal] = useState<number | null>(null);
-  const [portfolio, setPortfolio] = useState<WalletToken[]>([]);
-  const [balLoading, setBalLoading] = useState(false);
+  const [balLoading, setBalLoading] = useState<boolean>(false);
   const [balErr, setBalErr] = useState<string | null>(null);
+  const [portfolio, setPortfolio] = useState<TokenRow[]>([]); // never null
 
-  const fetchBalances = useCallback(async () => {
+  const fetchPortfolio = useCallback(async (): Promise<void> => {
     if (!publicKey || !connected) {
       setSol(null);
       setJal(null);
       setPortfolio([]);
       return;
     }
+
     setBalErr(null);
     setBalLoading(true);
 
-    const freshConn = makeConnection("confirmed");
+    const conn = makeConnection("confirmed");
 
     try {
-      const lamports = await freshConn.getBalance(publicKey, "confirmed");
+      // SOL
+      const lamports = await conn.getBalance(publicKey, "confirmed");
       setSol(lamports / LAMPORTS_PER_SOL);
     } catch (e) {
       console.error("[balances] SOL fetch failed:", e);
-      setSol(null); setBalErr("rpc");
+      setSol(null);
+      setBalErr("rpc");
     }
 
     try {
-      // Fetch legacy + token-2022 accounts
-      const TOKEN_2022_PROGRAM_ID = TOKEN_2022_ID_MAYBE as unknown as typeof TOKEN_PROGRAM_ID;
-      const [legacy, t22] = await Promise.all([
-        freshConn.getParsedTokenAccountsByOwner(
+      // SPL (legacy) + Token-2022
+      const [splRes, t22Res] = await Promise.all([
+        conn.getParsedTokenAccountsByOwner(
           publicKey,
           { programId: TOKEN_PROGRAM_ID },
           "confirmed"
         ),
-        TOKEN_2022_PROGRAM_ID
-          ? freshConn.getParsedTokenAccountsByOwner(
-              publicKey,
-              { programId: TOKEN_2022_PROGRAM_ID },
-              "confirmed"
-            ).catch(() => ({ value: [] as typeof legacy.value }))
-          : Promise.resolve({ value: [] as typeof legacy.value }),
+        conn.getParsedTokenAccountsByOwner(
+          publicKey,
+          { programId: TOKEN_2022_PROGRAM_ID },
+          "confirmed"
+        ),
       ]);
 
-      const merged = [...legacy.value, ...t22.value];
+      const rows: TokenRow[] = [];
 
-      const tokens: WalletToken[] = merged
-        .map(({ account }) => {
-          const info = account.data.parsed.info;
-          const raw = Number(info.tokenAmount?.amount ?? 0);
-          const dec = Number(info.tokenAmount?.decimals ?? 0);
-          const ui = dec > 0 ? raw / 10 ** dec : raw;
-          return {
-            mint: info.mint as string,
-            uiAmount: Number.isFinite(ui) ? ui : 0,
-            decimals: dec,
-          };
-        })
-        .filter(t => t.uiAmount > 0);
+      const pushRows = (
+        list: typeof splRes.value,
+        program: TokenRow["program"]
+      ): void => {
+        for (const { account } of list) {
+          const info = (account.data as any).parsed?.info;
+          const amount = Number(info?.tokenAmount?.amount ?? 0);
+          const decimals = Number(info?.tokenAmount?.decimals ?? 0);
+          const mint = String(info?.mint ?? "");
+          if (!mint || !Number.isFinite(amount) || !Number.isFinite(decimals)) continue;
 
-      // JAL total derived from portfolio
-      const jalTotal = tokens
-        .filter(t => t.mint === JAL_MINT)
-        .reduce((s, t) => s + t.uiAmount, 0);
+          const ui = decimals > 0 ? amount / 10 ** decimals : amount;
+          rows.push({ mint, uiAmount: ui, decimals, program });
+        }
+      };
 
+      pushRows(splRes.value, "spl-token");
+      pushRows(t22Res.value, "token-2022");
+
+      setPortfolio(rows);
+
+      // JAL total across both programs
+      const jalMint = String(JAL_MINT);
+      const jalTotal = rows.reduce((sum, r) => (r.mint === jalMint ? sum + r.uiAmount : sum), 0);
       setJal(jalTotal);
-      setPortfolio(tokens);
     } catch (e) {
       console.error("[balances] token accounts fetch failed:", e);
       setPortfolio([]);
-      setJal((v) => v ?? null);
+      setJal(null);
       setBalErr((s) => s ?? "rpc");
     } finally {
       setBalLoading(false);
@@ -517,11 +552,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   }, [publicKey, connected]);
 
   useEffect(() => {
-    if (!connected || !publicKey) { setSol(null); setJal(null); setPortfolio([]); return; }
-    void fetchBalances();
+    if (!connected || !publicKey) {
+      setSol(null);
+      setJal(null);
+      setPortfolio([]);
+      return;
+    }
+    void fetchPortfolio();
 
-    const poll = setInterval(fetchBalances, 15000);
+    // poll
+    const poll = setInterval(fetchPortfolio, 15000);
 
+    // live SOL via WS
     const wsConn = makeConnection("confirmed");
     const sub = wsConn.onAccountChange(
       publicKey,
@@ -533,30 +575,26 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       clearInterval(poll);
       wsConn.removeAccountChangeListener(sub).catch(() => {});
     };
-  }, [connected, publicKey, fetchBalances]);
+  }, [connected, publicKey, fetchPortfolio]);
 
   useEffect(() => {
     const adapter = wallet?.adapter;
     if (!adapter) return;
-    const onConnectBalances = () => { void fetchBalances(); };
+    const onConnectBalances = () => {
+      void fetchPortfolio();
+    };
     adapter.on("connect", onConnectBalances);
     return () => {
-      try { adapter.off("connect", onConnectBalances); } catch { /* no-op */ }
+      try {
+        adapter.off("connect", onConnectBalances);
+      } catch {
+        /* no-op */
+      }
     };
-  }, [wallet, fetchBalances]);
+  }, [wallet, fetchPortfolio]);
 
-  const fmt = (n: number | null, digits = 4) =>
+  const fmt = (n: number | null, digits = 4): string =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
-
-  // Hover art presets for hub tiles
-  const ART_MAP: Partial<Record<TileKey, { pos: string; zoom?: string }>> = {
-    jal: { pos: "26% 38%", zoom: "240%" },
-    shop: { pos: "73% 38%", zoom: "240%" },
-    vault: { pos: "28% 78%", zoom: "240%" },
-    payments: { pos: "46% 64%", zoom: "240%" },
-    loans: { pos: "62% 42%", zoom: "240%" },
-    support: { pos: "82% 28%", zoom: "240%" },
-  };
 
   /* ===========================================================
      Render
@@ -591,7 +629,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
               {panelTitle}
             </h2>
-            {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
+            {connected ? (
+              <DisconnectButton className="wallet-disconnect-btn" />
+            ) : (
+              <ConnectButton className="wallet-disconnect-btn" />
+            )}
           </div>
 
           <div className="hub-panel-body" ref={hubBodyRef}>
@@ -605,7 +647,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                       className="chip"
                       type="button"
                       style={{ marginLeft: 10 }}
-                      onClick={fetchBalances}
+                      onClick={fetchPortfolio}
                       aria-label="Refresh balances"
                     >
                       ↻ Refresh
@@ -634,7 +676,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   >
                     <h4>JAL</h4>
                     <div className="title">About &amp; Swap</div>
-                    <div className="icon" aria-hidden>➕</div>
+                    <div className="icon" aria-hidden>
+                      ➕
+                    </div>
                   </button>
 
                   <button
@@ -646,7 +690,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   >
                     <h4>Store</h4>
                     <div className="title">Buy with JAL</div>
-                    <div className="icon" aria-hidden>🏬</div>
+                    <div className="icon" aria-hidden>
+                      🏬
+                    </div>
                   </button>
 
                   <button
@@ -658,7 +704,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   >
                     <h4>Vault</h4>
                     <div className="title">Assets &amp; Activity</div>
-                    <div className="icon" aria-hidden>💳</div>
+                    <div className="icon" aria-hidden>
+                      💳
+                    </div>
                   </button>
 
                   <div className="feature-card feature-wide" role="group" aria-label="Get Started">
@@ -666,17 +714,28 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                       <div style={{ opacity: 0.85 }}>Get Started</div>
                       <div className="title">What do you want to do?</div>
                       <div className="chip-row">
-                        <Link className="chip" to="/crypto-generator/engine#step1" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
+                        <Link
+                          className="chip"
+                          to="/crypto-generator/engine#step1"
+                          onMouseEnter={prefetchGenerator}
+                          onFocus={prefetchGenerator}
+                        >
                           Create Token
                         </Link>
                         <Link className="chip" to="/crypto-generator" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
                           Create NFT
                         </Link>
-                        <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">Add Liquidity</a>
-                        <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">Swap Aggregator</a>
+                        <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">
+                          Add Liquidity
+                        </a>
+                        <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">
+                          Swap Aggregator
+                        </a>
                       </div>
                     </div>
-                    <div className="icon" aria-hidden>⚡</div>
+                    <div className="icon" aria-hidden>
+                      ⚡
+                    </div>
                   </div>
                 </div>
               </div>
@@ -716,12 +775,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                           width={960}
                           height={540}
                           decoding="async"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          }}
                         />
                       )}
                       <div className="hub-btn">
                         {t.title}
-                        {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
+                        {t.sub && (
+                          <span id={`tile-sub-${t.key}`} className="sub">
+                            {t.sub}
+                          </span>
+                        )}
                       </div>
                     </button>
                   );
@@ -761,9 +826,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                                 <li>Supply + mint authority you control</li>
                               </ul>
                             </div>
-                            <div className="muted" style={{ marginTop: 8 }}>Creates: SPL mint + ATA + Metadata</div>
+                            <div className="muted" style={{ marginTop: 8 }}>
+                              Creates: SPL mint + ATA + Metadata
+                            </div>
                             <div style={{ marginTop: 10 }}>
-                              <Link className="button gold" to="/crypto-generator/engine#step1">Start Token</Link>
+                              <Link className="button gold" to="/crypto-generator/engine#step1">
+                                Start Token
+                              </Link>
                             </div>
                             <div className="chip-row" style={{ marginTop: 10 }}>
                               <span className="chip">Loyalty</span>
@@ -783,9 +852,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                                 <li>Collection metadata for discovery</li>
                               </ul>
                             </div>
-                            <div className="muted" style={{ marginTop: 8 }}>Creates: NFT mint(s) + Collection Metadata</div>
+                            <div className="muted" style={{ marginTop: 8 }}>
+                              Creates: NFT mint(s) + Collection Metadata
+                            </div>
                             <div style={{ marginTop: 10 }}>
-                              <Link className="button neon" to="/crypto-generator">Start NFT</Link>
+                              <Link className="button neon" to="/crypto-generator">
+                                Start NFT
+                              </Link>
                             </div>
                             <div className="chip-row" style={{ marginTop: 10 }}>
                               <span className="chip">Art</span>
@@ -832,7 +905,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                               height={600}
                               loading="lazy"
                               decoding="async"
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = "none";
+                              }}
                             />
                           ) : null}
                           <span className="badge soon">Coming&nbsp;soon</span>
@@ -875,21 +950,28 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 (connected ? (
                   <div className="card">
                     <h3>Your Wallet</h3>
-                    <p>JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong></p>
+                    <p>
+                      JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong>
+                    </p>
 
                     {portfolio.length ? (
                       <div style={{ marginTop: 10 }}>
                         <div className="product-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
-                          {portfolio.map(t => (
+                          {portfolio.map((t) => (
                             <article key={t.mint} className="product-card">
                               <div className="product-body">
-                                <h4 className="product-title">{t.symbol ?? `${t.mint.slice(0,4)}…${t.mint.slice(-4)}`}</h4>
+                                <h4 className="product-title">
+                                  {`${t.mint.slice(0, 4)}…${t.mint.slice(-4)}`}
+                                </h4>
                                 <div className="product-blurb mono-sm">Mint: {t.mint}</div>
                                 <div className="product-price">
                                   <span className="price-jal">
                                     {t.uiAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                                   </span>
                                   <span className="muted">• {t.decimals} dec</span>
+                                </div>
+                                <div className="muted" style={{ fontSize: ".85rem" }}>
+                                  {t.program}
                                 </div>
                               </div>
                             </article>
@@ -917,8 +999,12 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   </p>
                   {activePanel === "support" && (
                     <div className="chip-row" style={{ marginTop: 10 }}>
-                      <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">Telegram</a>
-                      <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">X</a>
+                      <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">
+                        Telegram
+                      </a>
+                      <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">
+                        X
+                      </a>
                     </div>
                   )}
                 </div>
@@ -934,7 +1020,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
               aria-hidden="true"
               tabIndex={0}
-              onFocus={() => { firstFocusRef.current?.focus(); }}
+              onFocus={() => {
+                firstFocusRef.current?.focus();
+              }}
             />
           )}
         </section>
