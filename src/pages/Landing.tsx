@@ -13,7 +13,11 @@ import { useSearchParams, Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, /* If your version exports it: */ TOKEN_2022_PROGRAM_ID as TOKEN_2022_ID_MAYBE } from "@solana/spl-token";
+// If your @solana/spl-token version doesn't export TOKEN_2022_PROGRAM_ID,
+// change the import above and uncomment this fallback:
+// import { TOKEN_2022_PROGRAM_ID as TOKEN_2022_ID_MAYBE } from "@solana/spl-token-2022";
+
 import { JAL_MINT } from "../config/tokens";
 import { makeConnection } from "../config/rpc";
 
@@ -23,10 +27,10 @@ type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" |
 type TileKey = Exclude<Panel, "none" | "grid">;
 type LandingProps = { initialPanel?: Panel };
 
+// Poster art / wallet modal selectors
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
-// Poster art for hover reveals
 const POSTER = "/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png";
 const art = (pos: string, zoom = "240%"): React.CSSProperties =>
   ({
@@ -192,6 +196,14 @@ type Product = {
   blurb?: string;
 };
 
+/* ---------- WalletToken model for Vault portfolio ---------- */
+type WalletToken = {
+  mint: string;
+  uiAmount: number;
+  decimals: number;
+  symbol?: string; // to be filled later from metadata
+};
+
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, wallet } = useWallet();
   const { setVisible } = useWalletModal();
@@ -282,7 +294,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => imgs.forEach((i) => (i.src = ""));
   }, [tiles, saveData]);
 
-  /* ---------- URL/session init + bidirectional sync ---------- */
+  /* ---------- URL/session init + sync ---------- */
   const isPanel = (v: unknown): v is Panel =>
     v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault" || v === "payments" || v === "loans" || v === "support";
 
@@ -426,17 +438,22 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     activePanel === "loans" ? "Loans" :
     activePanel === "support" ? "Support" : "Welcome";
 
-  /* ---------- LIVE BALANCES (SOL + JAL) ---------- */
+  /* ---------- LIVE BALANCES (SOL + JAL + Portfolio) ---------- */
   const [sol, setSol] = useState<number | null>(null);
   const [jal, setJal] = useState<number | null>(null);
+  const [portfolio, setPortfolio] = useState<WalletToken[]>([]);
   const [balLoading, setBalLoading] = useState(false);
   const [balErr, setBalErr] = useState<string | null>(null);
 
   const fetchBalances = useCallback(async () => {
     if (!publicKey || !connected) {
-      setSol(null); setJal(null); return;
+      setSol(null);
+      setJal(null);
+      setPortfolio([]);
+      return;
     }
-    setBalErr(null); setBalLoading(true);
+    setBalErr(null);
+    setBalLoading(true);
 
     const freshConn = makeConnection("confirmed");
 
@@ -449,30 +466,58 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
 
     try {
-      const resp = await freshConn.getParsedTokenAccountsByOwner(
-        publicKey,
-        { programId: TOKEN_PROGRAM_ID },
-        "confirmed"
-      );
-      const total = resp.value.reduce((sum, { account }) => {
-        const info = account.data.parsed.info;
-        if (info.mint !== JAL_MINT) return sum;
-        const raw = Number(info.tokenAmount?.amount ?? 0);
-        const dec = Number(info.tokenAmount?.decimals ?? 0);
-        const ui = raw / 10 ** dec;
-        return sum + (isFinite(ui) ? ui : 0);
-      }, 0);
-      setJal(total);
+      // Fetch legacy + token-2022 accounts
+      const TOKEN_2022_PROGRAM_ID = TOKEN_2022_ID_MAYBE as unknown as typeof TOKEN_PROGRAM_ID;
+      const [legacy, t22] = await Promise.all([
+        freshConn.getParsedTokenAccountsByOwner(
+          publicKey,
+          { programId: TOKEN_PROGRAM_ID },
+          "confirmed"
+        ),
+        TOKEN_2022_PROGRAM_ID
+          ? freshConn.getParsedTokenAccountsByOwner(
+              publicKey,
+              { programId: TOKEN_2022_PROGRAM_ID },
+              "confirmed"
+            ).catch(() => ({ value: [] as typeof legacy.value }))
+          : Promise.resolve({ value: [] as typeof legacy.value }),
+      ]);
+
+      const merged = [...legacy.value, ...t22.value];
+
+      const tokens: WalletToken[] = merged
+        .map(({ account }) => {
+          const info = account.data.parsed.info;
+          const raw = Number(info.tokenAmount?.amount ?? 0);
+          const dec = Number(info.tokenAmount?.decimals ?? 0);
+          const ui = dec > 0 ? raw / 10 ** dec : raw;
+          return {
+            mint: info.mint as string,
+            uiAmount: Number.isFinite(ui) ? ui : 0,
+            decimals: dec,
+          };
+        })
+        .filter(t => t.uiAmount > 0);
+
+      // JAL total derived from portfolio
+      const jalTotal = tokens
+        .filter(t => t.mint === JAL_MINT)
+        .reduce((s, t) => s + t.uiAmount, 0);
+
+      setJal(jalTotal);
+      setPortfolio(tokens);
     } catch (e) {
-      console.error("[balances] JAL fetch failed:", e);
-      setJal(null); setBalErr((s) => s ?? "rpc");
+      console.error("[balances] token accounts fetch failed:", e);
+      setPortfolio([]);
+      setJal((v) => v ?? null);
+      setBalErr((s) => s ?? "rpc");
     } finally {
       setBalLoading(false);
     }
   }, [publicKey, connected]);
 
   useEffect(() => {
-    if (!connected || !publicKey) { setSol(null); setJal(null); return; }
+    if (!connected || !publicKey) { setSol(null); setJal(null); setPortfolio([]); return; }
     void fetchBalances();
 
     const poll = setInterval(fetchBalances, 15000);
@@ -521,127 +566,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   return (
     <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
-      {/* ===== Banking-style landing ===== */}
-      <section
-        className="bank-landing container"
-        aria-label="Overview"
-        aria-hidden={overlayActive || undefined}
-      >
-        <div className="bank-status">
-          {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
-          {connected && (
-            <button
-              className="chip"
-              type="button"
-              style={{ marginLeft: 10 }}
-              onClick={fetchBalances}
-              aria-label="Refresh balances"
-            >
-              ↻ Refresh
-            </button>
-          )}
-        </div>
-
-        <div className="balance-row">
-          <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
-            <div className="balance-amount">{fmt(jal)} JAL</div>
-            <div className="balance-label">JAL • Total</div>
-          </div>
-          <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
-            <div className="balance-amount">{fmt(sol)} SOL</div>
-            <div className="balance-label">SOL • Total</div>
-          </div>
-        </div>
-
-        <div className="feature-grid">
-          {/* Primary nav = Hub tiles */}
-          <button
-            type="button"
-            className="feature-card has-art"
-            style={art(ART_MAP.jal!.pos, ART_MAP.jal!.zoom)}
-            onClick={() => openPanel("jal")}
-            aria-label="Open JAL"
-            aria-controls="hub-panel"
-          >
-            <h4>JAL</h4>
-            <div className="title">About &amp; Swap</div>
-            <div className="icon" aria-hidden>➕</div>
-          </button>
-
-          <button
-            type="button"
-            className="feature-card has-art"
-            style={art(ART_MAP.shop!.pos, ART_MAP.shop!.zoom)}
-            onClick={() => openPanel("shop")}
-            aria-label="Open Store"
-            aria-controls="hub-panel"
-          >
-            <h4>Store</h4>
-            <div className="title">Buy with JAL</div>
-            <div className="icon" aria-hidden>🏬</div>
-          </button>
-
-          <button
-            type="button"
-            className="feature-card has-art"
-            style={art(ART_MAP.vault!.pos, ART_MAP.vault!.zoom)}
-            onClick={() => openPanel("vault")}
-            aria-label="Open Vault"
-            aria-controls="hub-panel"
-          >
-            <h4>Vault</h4>
-            <div className="title">Assets &amp; Activity</div>
-            <div className="icon" aria-hidden>💳</div>
-          </button>
-
-          <button
-            type="button"
-            className="feature-card has-art"
-            style={art("75% 78%", "240%")}
-            onClick={() => openPanel("grid")}
-            aria-label="Open Hub"
-            aria-controls="hub-panel"
-          >
-            <h4>Hub</h4>
-            <div className="title">All Panels</div>
-            <div className="icon" aria-hidden>🔗</div>
-          </button>
-
-          {/* Secondary actions — no overlap with tiles */}
-          <div className="feature-card feature-wide" role="group" aria-label="Get Started">
-            <div style={{ display: "grid", gap: 6 }}>
-              <div style={{ opacity: 0.85 }}>Get Started</div>
-              <div className="title">What do you want to do?</div>
-              <div className="chip-row">
-                <Link
-                  className="chip"
-                  to="/crypto-generator/engine#step1"
-                  onMouseEnter={prefetchGenerator}
-                  onFocus={prefetchGenerator}
-                  aria-label="Open Currency Generator"
-                >
-                  Create Token
-                </Link>
-                <Link
-                  className="chip"
-                  to="/crypto-generator"
-                  onMouseEnter={prefetchGenerator}
-                  onFocus={prefetchGenerator}
-                  aria-label="Open NFT Generator intro"
-                >
-                  Create NFT
-                </Link>
-                <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">Add Liquidity</a>
-                <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">Swap Aggregator</a>
-              </div>
-            </div>
-            <div className="icon" aria-hidden>⚡</div>
-          </div>
-        </div>
-
-        {!connected && <ConnectButton />}
-      </section>
-
       {/* Backdrop for overlay panels */}
       {overlayActive && (
         <button
@@ -653,7 +577,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         />
       )}
 
-      {/* NOTE: render Hub panel ONLY when not 'none' */}
+      {/* Render Hub only when not 'none' */}
       {activePanel !== "none" && (
         <section
           id="hub-panel"
@@ -671,6 +595,94 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           </div>
 
           <div className="hub-panel-body" ref={hubBodyRef}>
+            {/* Dashboard (balances + feature grid) INSIDE the hub when panel=grid */}
+            {activePanel === "grid" && (
+              <div className="hub-dashboard">
+                <div className="bank-status">
+                  {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
+                  {connected && (
+                    <button
+                      className="chip"
+                      type="button"
+                      style={{ marginLeft: 10 }}
+                      onClick={fetchBalances}
+                      aria-label="Refresh balances"
+                    >
+                      ↻ Refresh
+                    </button>
+                  )}
+                </div>
+
+                <div className="balance-row">
+                  <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
+                    <div className="balance-amount">{fmt(jal)} JAL</div>
+                    <div className="balance-label">JAL • Total</div>
+                  </div>
+                  <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
+                    <div className="balance-amount">{fmt(sol)} SOL</div>
+                    <div className="balance-label">SOL • Total</div>
+                  </div>
+                </div>
+
+                <div className="feature-grid">
+                  <button
+                    type="button"
+                    className="feature-card has-art"
+                    style={art(ART_MAP.jal!.pos, ART_MAP.jal!.zoom)}
+                    onClick={() => openPanel("jal")}
+                    aria-label="Open JAL"
+                  >
+                    <h4>JAL</h4>
+                    <div className="title">About &amp; Swap</div>
+                    <div className="icon" aria-hidden>➕</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="feature-card has-art"
+                    style={art(ART_MAP.shop!.pos, ART_MAP.shop!.zoom)}
+                    onClick={() => openPanel("shop")}
+                    aria-label="Open Store"
+                  >
+                    <h4>Store</h4>
+                    <div className="title">Buy with JAL</div>
+                    <div className="icon" aria-hidden>🏬</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="feature-card has-art"
+                    style={art(ART_MAP.vault!.pos, ART_MAP.vault!.zoom)}
+                    onClick={() => openPanel("vault")}
+                    aria-label="Open Vault"
+                  >
+                    <h4>Vault</h4>
+                    <div className="title">Assets &amp; Activity</div>
+                    <div className="icon" aria-hidden>💳</div>
+                  </button>
+
+                  <div className="feature-card feature-wide" role="group" aria-label="Get Started">
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <div style={{ opacity: 0.85 }}>Get Started</div>
+                      <div className="title">What do you want to do?</div>
+                      <div className="chip-row">
+                        <Link className="chip" to="/crypto-generator/engine#step1" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
+                          Create Token
+                        </Link>
+                        <Link className="chip" to="/crypto-generator" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
+                          Create NFT
+                        </Link>
+                        <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">Add Liquidity</a>
+                        <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">Swap Aggregator</a>
+                      </div>
+                    </div>
+                    <div className="icon" aria-hidden>⚡</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Back button only when not grid */}
             {activePanel !== "grid" && (
               <div className="hub-controls">
                 <button type="button" className="button ghost" onClick={() => setActivePanel("grid")}>
@@ -679,7 +691,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {/* Show tiles ONLY for panel=grid (no more 'none') */}
+            {/* Tiles appear only in grid mode */}
             {activePanel === "grid" && (
               <div className="hub-stack hub-stack--responsive" role="list" aria-hidden={overlayActive || undefined}>
                 {tiles.map((t) => {
@@ -725,7 +737,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
                   </p>
 
-                  {/* Generator shelf */}
                   <section
                     className="shop-promo has-art"
                     style={art("58% 42%", "220%")}
@@ -740,7 +751,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                       <p className="promo-sub">Choose what you’re launching. We’ll guide you step-by-step.</p>
 
                       <div className="product-grid" style={{ marginTop: 8 }}>
-                        {/* Currency */}
                         <article className="product-card">
                           <div className="product-body">
                             <h4 className="product-title">Currency / Token (Fungible)</h4>
@@ -763,7 +773,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                           </div>
                         </article>
 
-                        {/* NFT */}
                         <article className="product-card">
                           <div className="product-body">
                             <h4 className="product-title">NFT (Non-Fungible)</h4>
@@ -789,7 +798,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     </div>
                   </section>
 
-                  {/* NEW: How to create liquidity with JAL */}
                   <LiquidityHowToCard />
 
                   {shopNotice && (
@@ -798,7 +806,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     </div>
                   )}
 
-                  {/* Category filter */}
                   <div className="chip-row" style={{ marginTop: 10 }}>
                     {(["All", "Merch", "Digital", "Gift Cards"] as const).map((cat) => (
                       <button
@@ -813,7 +820,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     ))}
                   </div>
 
-                  {/* Product grid */}
                   <div className="product-grid" role="list" style={{ marginTop: 14 }}>
                     {visibleProducts.map((p) => (
                       <article key={p.id} className="product-card" role="listitem" aria-label={p.name}>
@@ -870,7 +876,29 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   <div className="card">
                     <h3>Your Wallet</h3>
                     <p>JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong></p>
-                    <p style={{ opacity: 0.85 }}>Recent activity and positions would appear here.</p>
+
+                    {portfolio.length ? (
+                      <div style={{ marginTop: 10 }}>
+                        <div className="product-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
+                          {portfolio.map(t => (
+                            <article key={t.mint} className="product-card">
+                              <div className="product-body">
+                                <h4 className="product-title">{t.symbol ?? `${t.mint.slice(0,4)}…${t.mint.slice(-4)}`}</h4>
+                                <div className="product-blurb mono-sm">Mint: {t.mint}</div>
+                                <div className="product-price">
+                                  <span className="price-jal">
+                                    {t.uiAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
+                                  </span>
+                                  <span className="muted">• {t.decimals} dec</span>
+                                </div>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p style={{ opacity: 0.85, marginTop: 8 }}>No SPL balances detected.</p>
+                    )}
                   </div>
                 ) : (
                   <div className="card">

@@ -228,23 +228,26 @@ main[role="main"]{
 }
 .landing-merge .landing-logo{ filter: drop-shadow(0 0 20px rgba(255,255,255,.45)) }
 
-/* 5.1 Bank Landing (balances + feature grid) */
-.bank-landing{
+/* 5.1 Hub Dashboard (balances + feature grid INSIDE hub) */
+.hub-dashboard{
   width:min(100% - 2rem, var(--max-w));
   margin-inline:auto;
   display:grid;
   gap: var(--section-gap);
-  padding: clamp(32px, 6vw, 64px) var(--gutter) 12px;
+  padding: clamp(24px, 4vw, 36px) var(--gutter) 12px;
 }
-.bank-status{
+
+.hub-dashboard .bank-status{
   display:flex; align-items:center; justify-content:center;
   gap:10px; opacity:.9;
 }
-.balance-row{
+
+.hub-dashboard .balance-row{
   display:flex; flex-wrap:wrap; justify-content:center;
   gap: var(--gutter);
 }
-.balance-card{
+
+.hub-dashboard .balance-card{
   min-width: 240px;
   padding: 14px 16px;
   border:1px solid var(--stroke);
@@ -252,16 +255,17 @@ main[role="main"]{
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
   box-shadow: 0 10px 30px rgba(0,0,0,.55);
 }
-.balance-amount{ font-size: clamp(1.15rem, 2.8vw, 1.5rem); font-weight:700 }
-.balance-label{ opacity:.85; font-size:.92rem }
+.hub-dashboard .balance-amount{ font-size: clamp(1.15rem, 2.8vw, 1.5rem); font-weight:700 }
+.hub-dashboard .balance-label{ opacity:.85; font-size:.92rem }
 
-.feature-grid{
+.hub-dashboard .feature-grid{
   display:grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--gutter);
   align-items:stretch;
 }
-.feature-card{
+
+.hub-dashboard .feature-card{
   position:relative;
   border:1px solid var(--stroke);
   border-radius: var(--r-lg);
@@ -271,9 +275,9 @@ main[role="main"]{
   display:grid; align-content:space-between;
   transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
-.feature-card:hover{ transform: translateY(-2px); border-color: var(--green); box-shadow: var(--glow-green) }
-.feature-card .title{ opacity:.9; margin-top:2px }
-.feature-card .icon{ justify-self:end; opacity:.95 }
+.hub-dashboard .feature-card:hover{ transform: translateY(-2px); border-color: var(--green); box-shadow: var(--glow-green) }
+.hub-dashboard .feature-card .title{ opacity:.9; margin-top:2px }
+.hub-dashboard .feature-card .icon{ justify-self:end; opacity:.95 }
 
 /* social row above logo */
 .landing-social{ display:flex; gap:10px; justify-content:center; align-items:center; padding-top:18px }
@@ -581,13 +585,14 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 
   .container{ width:min(100% - 3rem, var(--max-w)) }
 
-  .bank-landing{
+  /* dashboard inside the hub */
+  .hub-dashboard{
     gap: var(--section-gap);
-    padding: clamp(56px, 6vw, 96px) 24px calc(110px + env(safe-area-inset-bottom, 0px));
+    padding: clamp(40px, 5vw, 64px) 24px calc(90px + env(safe-area-inset-bottom, 0px));
   }
 
-  .balance-row{ gap: var(--gutter-lg) }
-  .feature-grid{ gap: var(--gutter-lg) }
+  .hub-dashboard .balance-row{ gap: var(--gutter-lg) }
+  .hub-dashboard .feature-grid{ gap: var(--gutter-lg) }
 
   .hub-panel{ margin-top: calc(var(--section-gap) + 6px) }
   .hub-panel-top{ padding: 16px 20px }
@@ -598,5 +603,3 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
   .shop-promo{ margin-top: var(--section-gap) }
   .product-grid{ gap: var(--gutter-lg) }
 }
-
-.stack-lg > * + *{ margin-top: var(--section-gap) }
