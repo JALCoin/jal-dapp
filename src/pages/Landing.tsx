@@ -228,7 +228,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   const [activePanel, setActivePanel] = useState<Panel>("none");
   const [merging, setMerging] = useState(false);
-  const [chartActive, setChartActive] = useState(false);
 
   const timerRef = useRef<number | null>(null);
   const hubBodyRef = useRef<HTMLDivElement | null>(null);
@@ -366,16 +365,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   /* Close hub on disconnect + global open/close */
   useEffect(() => {
-    if (!connected) {
-      setActivePanel("none");
-      setChartActive(false);
-    }
+    if (!connected) setActivePanel("none");
   }, [connected]);
 
   useEffect(() => {
     const adapter = wallet?.adapter;
     if (!adapter) return;
-    const onDisconnect = () => { setActivePanel("none"); setChartActive(false); };
+    const onDisconnect = () => setActivePanel("none");
     adapter.on("disconnect", onDisconnect);
     return () => { try { adapter.off("disconnect", onDisconnect); } catch {} };
   }, [wallet]);
@@ -408,21 +404,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* Overlay controls (scroll lock + Escape) */
   const overlayOpen = activePanel !== "none" && activePanel !== "grid";
   useEffect(() => {
-    if (overlayOpen || chartActive) document.body.setAttribute("data-hub-open", "true");
+    if (overlayOpen) document.body.setAttribute("data-hub-open", "true");
     else document.body.removeAttribute("data-hub-open");
     return () => document.body.removeAttribute("data-hub-open");
-  }, [overlayOpen, chartActive]);
+  }, [overlayOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        if (chartActive) setChartActive(false);
-        else if (overlayOpen) setActivePanel("none");
-      }
+      if (e.key === "Escape" && overlayOpen) setActivePanel("none");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [overlayOpen, chartActive]);
+  }, [overlayOpen]);
 
   // Focus trap while overlay open
   useEffect(() => {
@@ -605,52 +598,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const overlayActive = activePanel !== "none" && activePanel !== "grid";
   const shouldLoadGifs = !saveData && !reducedMotion;
 
-  const bgStyleBase: React.CSSProperties = useMemo(
-    () => ({
-      position: "fixed",
-      inset: 0,
-      width: "100vw",
-      height: "100vh",
-      border: "0",
-      transition: reducedMotion ? undefined : "all 450ms cubic-bezier(.22,.61,.36,1)",
-      filter: chartActive ? "none" : "brightness(0.9) contrast(1.05) saturate(1.15)",
-    }),
-    [reducedMotion, chartActive]
-  );
-
-  const bgStyle: React.CSSProperties = chartActive
-    ? { ...bgStyleBase, zIndex: 200, opacity: 1, transform: "scale(1)", pointerEvents: "auto" }
-    : { ...bgStyleBase, zIndex: 0, opacity: 0.35, transform: "scale(1.02)", pointerEvents: "none" };
-
   return (
     <main
       className={`landing-gradient ${merging ? "landing-merge" : ""}`}
       aria-live="polite"
-      style={{ background: "transparent" }}
     >
-      {/* Background Raydium chart — can animate to foreground & be interactive */}
-      <iframe
-        title="JAL/SOL Chart"
-        src={RAYDIUM_PAIR_URL}
-        allow="clipboard-read; clipboard-write"
-        style={bgStyle}
-      />
-
-      {/* Close button when chart is active in foreground */}
-      {chartActive && (
-        <div style={{ position: "fixed", zIndex: 210, top: 14, right: 14 }}>
-          <button
-            type="button"
-            className="button"
-            onClick={() => setChartActive(false)}
-            aria-label="Close swap"
-            title="Close swap"
-          >
-            ✕ Close Swap
-          </button>
-        </div>
-      )}
-
       {/* Foreground content wrapper */}
       <div style={{ position: "relative", zIndex: 1 }}>
         {/* Backdrop for overlay panels */}
@@ -955,14 +907,15 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 {activePanel === "jal" && (
                   <div className="in-hub">
                     <div className="chip-row" style={{ marginBottom: 8 }}>
-                      <button className="button gold" onClick={() => setChartActive(true)}>
-                        Open Swap (Raydium)
+                      <button
+                        className="button gold"
+                        onClick={() => window.open(RAYDIUM_PAIR_URL, "_blank", "noopener,noreferrer")}
+                      >
+                        Open Swap on Raydium
                       </button>
-                      {chartActive && (
-                        <button className="button" onClick={() => setChartActive(false)}>
-                          Close Swap
-                        </button>
-                      )}
+                      <a className="button" href="https://jup.ag" target="_blank" rel="noreferrer">
+                        Open Jupiter
+                      </a>
                     </div>
 
                     <Suspense fallback={<div className="card">Loading JAL…</div>}>
