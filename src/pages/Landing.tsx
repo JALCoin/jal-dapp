@@ -29,11 +29,9 @@ type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" |
 type TileKey = Exclude<Panel, "none" | "grid">;
 type LandingProps = { initialPanel?: Panel };
 
-/** Wallet modal selectors for scroll-lock flagging */
 const WALLET_MODAL_SELECTORS =
   '.wallet-adapter-modal, .wallet-adapter-modal-container, .wcm-modal, [class*="walletconnect"]';
 
-/** Poster art for hover reveals */
 const POSTER = "/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png";
 const art = (pos: string, zoom = "240%"): React.CSSProperties =>
   ({
@@ -42,16 +40,12 @@ const art = (pos: string, zoom = "240%"): React.CSSProperties =>
     ["--art-zoom" as any]: zoom,
   } as React.CSSProperties);
 
-/** Robust Token-2022 program ID (works whether your deps export it or not) */
 const TOKEN_2022_PROGRAM_ID: PublicKey =
   (TOKEN_2022_ID_MAYBE as unknown as PublicKey) ??
   new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
 
-/** Fullscreen Raydium swap/chart URL for JAL/SOL (used as background) */
 const RAYDIUM_PAIR_URL =
-  `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(
-    JAL_MINT
-  )}&fixed=in`;
+  `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(JAL_MINT)}&fixed=in`;
 
 /* ---------- Small helpers ---------- */
 function DisconnectButton({ className }: { className?: string }) {
@@ -83,7 +77,7 @@ function CopyBtn({ text }: { text: string }) {
           await navigator.clipboard.writeText(text);
           setOk(true);
           setTimeout(() => setOk(false), 1200);
-        } catch {/* noop */}
+        } catch {}
       }}
       aria-live="polite"
     >
@@ -235,6 +229,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const firstFocusRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusRef = useRef<HTMLButtonElement | null>(null);
 
+  // NEW: animated foreground swap mode
+  const [chartActive, setChartActive] = useState(false);
+
   const reducedMotion = useMemo<boolean>(
     () =>
       typeof window !== "undefined" && window.matchMedia
@@ -365,35 +362,29 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [wallet, reducedMotion]);
 
-  /* ---------- NEW: Close hub on disconnect + expose global open/close ---- */
-  // A) Close Hub whenever wallet isn't connected
+  /* ---------- NEW: Close hub on disconnect + global open/close ---------- */
   useEffect(() => {
-    if (!connected) setActivePanel("none");
+    if (!connected) {
+      setActivePanel("none");
+      setChartActive(false);
+    }
   }, [connected]);
 
-  // B) Close on explicit adapter 'disconnect' event
   useEffect(() => {
     const adapter = wallet?.adapter;
     if (!adapter) return;
-    const onDisconnect = () => setActivePanel("none");
+    const onDisconnect = () => { setActivePanel("none"); setChartActive(false); };
     adapter.on("disconnect", onDisconnect);
-    return () => {
-      try { adapter.off("disconnect", onDisconnect); } catch {}
-    };
+    return () => { try { adapter.off("disconnect", onDisconnect); } catch {} };
   }, [wallet]);
 
-  // C) Global handlers the hamburger/nav can call: window.openHub()/closeHub()
   useEffect(() => {
     (window as any).openHub = () => setActivePanel("grid");
     (window as any).closeHub = () => setActivePanel("none");
     return () => {
-      try {
-        delete (window as any).openHub;
-        delete (window as any).closeHub;
-      } catch {}
+      try { delete (window as any).openHub; delete (window as any).closeHub; } catch {}
     };
   }, []);
-  /* ---------------------------------------------------------------------- */
 
   /* ---------- wallet modal visibility flag ---------- */
   const setWalletFlag = useCallback((on: boolean): void => {
@@ -415,17 +406,21 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   /* ---------- overlay controls (scroll lock + Escape) ---------- */
   const overlayOpen = activePanel !== "none" && activePanel !== "grid";
   useEffect(() => {
-    if (overlayOpen) document.body.setAttribute("data-hub-open", "true");
+    if (overlayOpen || chartActive) document.body.setAttribute("data-hub-open", "true");
     else document.body.removeAttribute("data-hub-open");
     return () => document.body.removeAttribute("data-hub-open");
-  }, [overlayOpen]);
+  }, [overlayOpen, chartActive]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape" && overlayOpen) setActivePanel("none");
+      if (e.key === "Escape") {
+        if (chartActive) setChartActive(false);
+        else if (overlayOpen) setActivePanel("none");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [overlayOpen]);
+  }, [overlayOpen, chartActive]);
 
   // Overlay focus trap + focus management
   useEffect(() => {
@@ -500,7 +495,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [jal, setJal] = useState<number | null>(null);
   const [balLoading, setBalLoading] = useState<boolean>(false);
   const [balErr, setBalErr] = useState<string | null>(null);
-  const [portfolio, setPortfolio] = useState<TokenRow[]>([]); // never null
+  const [portfolio, setPortfolio] = useState<TokenRow[]>([]);
 
   const fetchPortfolio = useCallback(async (): Promise<void> => {
     if (!publicKey || !connected) {
@@ -516,7 +511,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     const conn = makeConnection("confirmed");
 
     try {
-      // SOL
       const lamports = await conn.getBalance(publicKey, "confirmed");
       setSol(lamports / LAMPORTS_PER_SOL);
     } catch (e) {
@@ -526,7 +520,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
 
     try {
-      // SPL (legacy) + Token-2022
       const [splRes, t22Res] = await Promise.all([
         conn.getParsedTokenAccountsByOwner(
           publicKey,
@@ -563,7 +556,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
       setPortfolio(rows);
 
-      // JAL total across both programs
       const jalMint = String(JAL_MINT);
       const jalTotal = rows.reduce((sum, r) => (r.mint === jalMint ? sum + r.uiAmount : sum), 0);
       setJal(jalTotal);
@@ -586,10 +578,8 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
     void fetchPortfolio();
 
-    // poll
     const poll = setInterval(fetchPortfolio, 15000);
 
-    // live SOL via WS
     const wsConn = makeConnection("confirmed");
     const sub = wsConn.onAccountChange(
       publicKey,
@@ -609,7 +599,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     const onConnectBalances = () => { void fetchPortfolio(); };
     adapter.on("connect", onConnectBalances);
     return () => {
-      try { adapter.off("connect", onConnectBalances); } catch { /* no-op */ }
+      try { adapter.off("connect", onConnectBalances); } catch {}
     };
   }, [wallet, fetchPortfolio]);
 
@@ -622,30 +612,60 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const overlayActive = activePanel !== "none" && activePanel !== "grid";
   const shouldLoadGifs = !saveData && !reducedMotion;
 
+  // Foreground animation styles for Raydium iframe
+  const bgStyleBase: React.CSSProperties = {
+    position: "fixed",
+    inset: 0,
+    width: "100vw",
+    height: "100vh",
+    border: "0",
+    transition: reducedMotion ? undefined : "all 450ms cubic-bezier(.22,.61,.36,1)",
+    filter: chartActive ? "none" : "brightness(0.9) contrast(1.05) saturate(1.15)",
+  };
+  const bgStyle: React.CSSProperties = chartActive
+    ? {
+        ...bgStyleBase,
+        zIndex: 200,            // above hub
+        opacity: 1,
+        transform: "scale(1)",
+        pointerEvents: "auto",  // interactive
+      }
+    : {
+        ...bgStyleBase,
+        zIndex: 0,              // behind all UI
+        opacity: 0.35,
+        transform: "scale(1.02)",
+        pointerEvents: "none",  // decorative only
+      };
+
   return (
     <main
       className={`landing-gradient ${merging ? "landing-merge" : ""}`}
       aria-live="polite"
-      style={{ background: "transparent" }} // let the iframe show through
+      style={{ background: "transparent" }}
     >
-      {/* === Background chart (fullscreen, non-interactive) === */}
+      {/* === Background chart (animates to foreground on demand) === */}
       <iframe
-        title="JAL/SOL Background Chart"
+        title="JAL/SOL Chart"
         src={RAYDIUM_PAIR_URL}
         allow="clipboard-read; clipboard-write"
-        style={{
-          position: "fixed",
-          inset: 0,
-          width: "100vw",
-          height: "100vh",
-          border: "0",
-          zIndex: 0,              // behind content
-          pointerEvents: "none",  // decorative only
-          opacity: 0.35,
-          transform: "scale(1.02)",
-          filter: "brightness(0.9) contrast(1.05) saturate(1.15)",
-        }}
+        style={bgStyle}
       />
+
+      {/* Close button when chart is active in foreground */}
+      {chartActive && (
+        <div style={{ position: "fixed", zIndex: 210, top: 14, right: 14 }}>
+          <button
+            type="button"
+            className="button"
+            onClick={() => setChartActive(false)}
+            aria-label="Close swap"
+            title="Close swap"
+          >
+            ✕ Close Swap
+          </button>
+        </div>
+      )}
 
       {/* === Foreground content wrapper (above background) === */}
       <div style={{ position: "relative", zIndex: 1 }}>
@@ -948,6 +968,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
                 {activePanel === "jal" && (
                   <div className="in-hub">
+                    {/* Foreground Swap CTA */}
+                    <div className="chip-row" style={{ marginBottom: 8 }}>
+                      <button className="button gold" onClick={() => setChartActive(true)}>
+                        Open Swap (Raydium)
+                      </button>
+                      {chartActive && (
+                        <button className="button" onClick={() => setChartActive(false)}>
+                          Close Swap
+                        </button>
+                      )}
+                    </div>
+
                     <Suspense fallback={<div className="card">Loading JAL…</div>}>
                       <Jal inHub />
                     </Suspense>

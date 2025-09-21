@@ -1,47 +1,44 @@
 /* ==========================================================================
-   JAL/SOL — Global CSS (index.css)
-   Neon cyber / premium ATM
+   JAL/SOL — Global CSS
+   Style system: neon-cyber / premium ATM
    ========================================================================== 
    00. Tokens & Resets
-   01. Foundations (Layout, Containers, Utils)
-   02. Global Motion / Accessibility
-   03. Header  (App.tsx HeaderView)
-   04. Sidebar (App.tsx SidebarView)
-   05. Landing + Hub (Landing.tsx)
-       5.1 Bank Landing (balances + feature grid)
-       5.2 Hub Panel
+   01. Foundations (Layout, Utils)
+   02. Global Motion / A11y
+   03. Header
+   04. Sidebar
+   05. Landing + Hub
+       5.1 Dashboard (balances + feature grid)
+       5.2 Hub Panel (container)
        5.3 Hub Tiles
-       5.4 JAL Panel + Swap Embed
+       5.4 JAL Panel + Swap Layer
    06. Components (Buttons, Chips, Cards, Links)
-       6.1 Pills (full hitbox)
+       6.1 Pills
        6.2 Trust Strip
    07. Shop (Promo, Grid, Cards, Controls)
-   08. Vault Screen
-   09. Overlays & Modals (Hub overlay, Modal card)
-   10. Quick Dock (floating)
-   11. Responsive & Performance Trims
+   08. Vault
+   09. Overlays & Modals
+   10. Quick Dock
+   11. Responsive & Trims
    ========================================================================== */
-
 
 /* === 00. TOKENS & RESETS ================================================ */
 
 :root{
-  /* Colors */
+  /* Color */
   --bg:#07090c; --bg-2:#0b0f14; --surface:#0f141b;
   --text:#e7fff7; --muted:#c8ffe9;
   --green:#11f1a7; --cyan:#00f0ff; --gold:#f4c86a;
 
-  /* Strokes */
+  /* Strokes / Glows */
   --stroke: rgba(255,255,255,.14);
   --stroke-2: rgba(255,255,255,.28);
-
-  /* Glows */
   --glow-green: 0 0 16px rgba(17,241,167,.55), 0 0 32px rgba(17,241,167,.35);
   --glow-cyan:  0 0 16px rgba(0,240,255,.55), 0 0 32px rgba(0,240,255,.35);
   --glow-gold:  0 0 14px rgba(244,200,106,.55), 0 0 26px rgba(244,200,106,.35);
   --glow-white: 0 0 12px rgba(255,255,255,.45), 0 0 24px rgba(255,255,255,.25);
 
-  /* Radii / blur / timing */
+  /* Shape / Motion */
   --r-sm:10px; --r-md:16px; --r-lg:20px;
   --blur:10px;
   --t-fast:140ms; --t-med:260ms; --t-slow:480ms;
@@ -58,13 +55,10 @@
   /* Hit targets */
   --pill-py:.68rem; --pill-px:1.1rem; --pill-min:44px;
 
-  /* Desktop spacing defaults */
-  --gutter:16px;
-  --gutter-lg:24px;
-  --section-gap:24px;
+  /* Spacing */
+  --gutter:16px; --gutter-lg:24px; --section-gap:24px;
 }
 
-/* Reset / Base */
 *,*::before,*::after{ box-sizing:border-box }
 html,body,#root{ min-height:100% }
 html,body{
@@ -87,12 +81,12 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
 }
 
 
-/* === 01. FOUNDATIONS (Layout, Containers, Utils) ======================== */
+/* === 01. FOUNDATIONS (Layout, Utils) =================================== */
 
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 .muted{ opacity:.75 }
 
-/* Lock scroll when overlays or menus are open */
+/* Lock scroll when overlays/menus open */
 body[data-wallet-visible="true"],
 body[data-menu-open="true"],
 body[data-hub-open="true"]{ overflow:hidden }
@@ -121,7 +115,7 @@ main[role="main"]{
 }
 
 
-/* === 02. GLOBAL MOTION / ACCESSIBILITY ================================= */
+/* === 02. GLOBAL MOTION / A11y ========================================== */
 
 @media (prefers-reduced-motion: reduce){
   .hamburger span, .hamburger, .sidebar-nav, .sidebar-overlay,
@@ -129,7 +123,7 @@ main[role="main"]{
 }
 
 
-/* === 03. HEADER (App.tsx HeaderView) =================================== */
+/* === 03. HEADER ========================================================= */
 
 .site-header{
   position:sticky; top:0; z-index:40;
@@ -181,7 +175,7 @@ main[role="main"]{
 .hamburger.is-open span:nth-child(3){ transform:translateY(-8px) rotate(-45deg) }
 
 
-/* === 04. SIDEBAR (App.tsx SidebarView) ================================= */
+/* === 04. SIDEBAR ======================================================== */
 
 .sidebar-overlay{
   position:fixed; inset:0; z-index:45; background: rgba(0,0,0,.55);
@@ -218,7 +212,7 @@ main[role="main"]{
 .wallet-disconnect-btn:hover{ transform: translateY(-1px); border-color: var(--green); box-shadow: var(--glow-green) }
 
 
-/* === 05. LANDING + HUB (Landing.tsx) =================================== */
+/* === 05. LANDING + HUB ================================================== */
 
 .landing-gradient{
   min-height:100dvh;
@@ -228,7 +222,7 @@ main[role="main"]{
 }
 .landing-merge .landing-logo{ filter: drop-shadow(0 0 20px rgba(255,255,255,.45)) }
 
-/* 5.1 Hub Dashboard (balances + feature grid INSIDE hub) */
+/* 5.1 Dashboard (inside Hub) */
 .hub-dashboard{
   width:min(100% - 2rem, var(--max-w));
   margin-inline:auto;
@@ -236,42 +230,28 @@ main[role="main"]{
   gap: var(--section-gap);
   padding: clamp(24px, 4vw, 36px) var(--gutter) 12px;
 }
-
 .hub-dashboard .bank-status{
-  display:flex; align-items:center; justify-content:center;
-  gap:10px; opacity:.9;
+  display:flex; align-items:center; justify-content:center; gap:10px; opacity:.9;
 }
-
 .hub-dashboard .balance-row{
-  display:flex; flex-wrap:wrap; justify-content:center;
-  gap: var(--gutter);
+  display:flex; flex-wrap:wrap; justify-content:center; gap: var(--gutter);
 }
-
 .hub-dashboard .balance-card{
-  min-width: 240px;
-  padding: 14px 16px;
-  border:1px solid var(--stroke);
-  border-radius: var(--r-lg);
+  min-width: 240px; padding: 14px 16px;
+  border:1px solid var(--stroke); border-radius: var(--r-lg);
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
   box-shadow: 0 10px 30px rgba(0,0,0,.55);
 }
 .hub-dashboard .balance-amount{ font-size: clamp(1.15rem, 2.8vw, 1.5rem); font-weight:700 }
 .hub-dashboard .balance-label{ opacity:.85; font-size:.92rem }
-
 .hub-dashboard .feature-grid{
-  display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--gutter);
-  align-items:stretch;
+  display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--gutter); align-items:stretch;
 }
-
 .hub-dashboard .feature-card{
-  position:relative;
-  border:1px solid var(--stroke);
-  border-radius: var(--r-lg);
+  position:relative; min-height:160px; padding:16px;
+  border:1px solid var(--stroke); border-radius: var(--r-lg);
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
-  min-height: 160px;
-  padding: 16px;
   display:grid; align-content:space-between;
   transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
@@ -279,7 +259,7 @@ main[role="main"]{
 .hub-dashboard .feature-card .title{ opacity:.9; margin-top:2px }
 .hub-dashboard .feature-card .icon{ justify-self:end; opacity:.95 }
 
-/* social row above logo */
+/* hero bits */
 .landing-social{ display:flex; gap:10px; justify-content:center; align-items:center; padding-top:18px }
 .landing-social a{
   inline-size:36px; block-size:36px; display:grid; place-items:center;
@@ -288,16 +268,11 @@ main[role="main"]{
 }
 .landing-social a:hover{ transform:translateY(-1px); border-color:var(--green); box-shadow:var(--glow-green) }
 .landing-disconnect{ display:flex; justify-content:center; margin:10px 0 }
-
-/* hero block */
-.landing-inner{
-  display:grid; place-items:center; gap:16px;
-  padding:clamp(24px,6vw,40px) 16px 12px; text-align:center;
-}
+.landing-inner{ display:grid; place-items:center; gap:16px; padding:clamp(24px,6vw,40px) 16px 12px; text-align:center }
 .landing-logo{ block-size:clamp(110px,20vw,180px); filter: drop-shadow(0 0 10px rgba(255,255,255,.65)) }
 .landing-logo-wrapper.wallet-connected .landing-logo{ filter: drop-shadow(0 0 14px rgba(255,255,255,.82)) }
 
-/* 5.2 Hub Panel */
+/* 5.2 Hub Panel (container) */
 .hub-panel{
   width:min(100% - 2rem, 1100px);
   margin:16px auto 24px;
@@ -323,9 +298,9 @@ main[role="main"]{
 
 .img-btn{
   position:relative; border-radius:var(--r-lg); overflow:hidden; aspect-ratio:16/10;
-  border:1px solid var(--stroke);
-  background:#0b0f14; transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  border:1px solid var(--stroke); background:#0b0f14;
   min-height:180px;
+  transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
 .img-btn:hover{ transform:translateY(-2px); border-color:var(--green); box-shadow:var(--glow-green) }
 .img-btn[disabled]{ cursor:not-allowed; opacity:.55; filter:grayscale(.6); transform:none!important; box-shadow:none!important; border-color:var(--stroke)!important }
@@ -342,7 +317,7 @@ main[role="main"]{
 .in-hub > *{ position:relative; z-index:6 }
 .hub-preview{ box-shadow: 0 16px 48px rgba(0,0,0,.6), 0 0 12px rgba(244,200,106,.25); margin-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 16px) }
 
-/* 5.4 JAL Panel + Swap Embed */
+/* 5.4 JAL Panel + Swap Layer (foreground Raydium) */
 .jal-title{ margin:0; font-size:clamp(1.3rem,2.8vw,1.6rem); letter-spacing:.02em }
 .jal-subtitle{ margin:.25rem 0 0; opacity:.85 }
 .jal-actions{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px }
@@ -351,13 +326,36 @@ main[role="main"]{
 .jal-btn:hover{ transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 .jal-btn--primary{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
 
+/* Reusable foreground swap layer */
+.swap-layer{
+  position:fixed; inset:0; z-index:0;
+  opacity:.35; transform:scale(1.02);
+  pointer-events:none; border:0;
+  transition: all 450ms cubic-bezier(.22,.61,.36,1);
+  filter: brightness(0.9) contrast(1.05) saturate(1.15);
+}
+.swap-layer--active{
+  z-index:200; opacity:1; transform:scale(1);
+  pointer-events:auto; filter:none;
+}
+.swap-close{
+  position:fixed; z-index:210; top:14px; right:14px;
+}
+
+/* Embedded (carded) swap */
 .swap-embed-card{ padding: clamp(.75rem, 2vw, 1rem) }
 .swap-embed-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px }
-.swap-embed-wrap{ position:relative; inline-size:100%; block-size: clamp(520px, 70vh, 760px); min-block-size:520px; border-radius: var(--r-lg); overflow:hidden; border:1px solid var(--stroke); background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)); box-shadow: 0 8px 30px rgba(0,0,0,.55) }
+.swap-embed-wrap{
+  position:relative; inline-size:100%;
+  block-size: clamp(520px, 70vh, 760px); min-block-size:520px;
+  border-radius: var(--r-lg); overflow:hidden; border:1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  box-shadow: 0 8px 30px rgba(0,0,0,.55);
+}
 .swap-embed-iframe{ position:absolute; inset:0; inline-size:100%; block-size:100%; border:0; background:transparent }
 .swap-embed-wrap .swap-embed-iframe{ opacity:1; transition:opacity var(--t-med) ease }
 .swap-embed-wrap.loading .swap-embed-iframe{ opacity:0 }
-@media (max-width: 640px){ .swap-embed-wrap{ block-size: min(72vh, 620px); min-block-size: 440px } }
+@media (max-width:640px){ .swap-embed-wrap{ block-size: min(72vh, 620px); min-block-size: 440px } }
 .swap-embed-hint{ margin-top:10px; opacity:.85; font-size:.9rem }
 .swap-embed-hint a{ text-decoration: underline }
 
@@ -388,7 +386,7 @@ main[role="main"]{
 .card.gold:hover{ border-color:var(--gold); box-shadow:var(--glow-gold) }
 .card.cyan:hover{ border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 
-/* 6.1 Pills — FULL hitbox */
+/* 6.1 Pills */
 .chip-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; position:relative; isolation:isolate; z-index:2 }
 .chip, .button, .jal-link,
 .trust-strip .chip, .trust-strip .button, .trust-strip .jal-link{
@@ -406,7 +404,7 @@ main[role="main"]{
 .chip:hover, .button:hover { transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 .chip.active{ border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
 
-/* 6.2 Trust Strip (under header) */
+/* 6.2 Trust Strip */
 .trust-strip{
   width: min(100% - 2rem, var(--max-w));
   margin: 12px auto 0;
@@ -428,7 +426,7 @@ main[role="main"]{
 }
 
 
-/* === 07. SHOP (Promo, Grid, Cards, Controls) =========================== */
+/* === 07. SHOP =========================================================== */
 
 .shop-promo{
   position:relative; margin-top:12px; border:1px solid var(--stroke);
@@ -473,7 +471,7 @@ main[role="main"]{
 @media (min-width:1200px){ .product-grid{ grid-template-columns: repeat(4, 1fr) } }
 
 
-/* === 08. VAULT SCREEN =================================================== */
+/* === 08. VAULT ========================================================== */
 
 .machine-bg{ position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(900px 520px at 50% -180px, rgba(17,241,167,.08), rgba(0,0,0,0) 55%) , radial-gradient(680px 420px at 100% 20%, rgba(0,240,255,.08), rgba(0,0,0,0) 60%) , radial-gradient(720px 520px at 0% 30%, rgba(244,200,106,.08), rgba(0,0,0,0) 60%); filter: blur(6px) }
 
@@ -508,14 +506,12 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 .modal-card{ inline-size:min(92vw, 560px); border:1px solid var(--stroke-2); border-radius:20px; background:linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9)); box-shadow:0 20px 80px rgba(0,0,0,.7); padding:18px }
 
 
-/* === 10. QUICK DOCK (Floating) ========================================= */
+/* === 10. QUICK DOCK ===================================================== */
 
 .quick-dock{
-  position:fixed;
-  right:16px;
+  position:fixed; right:16px;
   bottom: calc(var(--tabbar-h) + max(16px, env(safe-area-inset-bottom)));
-  z-index:1000;
-  display:grid; gap:10px; padding:12px;
+  z-index:1000; display:grid; gap:10px; padding:12px;
   border:1px solid var(--stroke-2); border-radius:var(--r-lg);
   background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9));
   backdrop-filter: blur(var(--blur));
@@ -525,7 +521,7 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 
 
-/* === 11. RESPONSIVE & PERFORMANCE TRIMS ================================ */
+/* === 11. RESPONSIVE & TRIMS ============================================ */
 
 .tabbar{
   position:fixed; inset-inline:0; inset-block-end:0; z-index:30;
@@ -541,32 +537,26 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 .tabbar .tab-icon{ inline-size:22px; block-size:22px; opacity:.95 }
 
 /* Small-device adjustments */
-@media (max-width: 680px){
+@media (max-width:680px){
   .hub-panel--overlay { padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) }
-
-  .shop-promo,
-  .shop-promo .shop-promo-inner,
-  .shop-promo .product-grid { inline-size: 100%; max-inline-size: 100%; min-inline-size: 0 }
+  .shop-promo, .shop-promo .shop-promo-inner, .shop-promo .product-grid { inline-size: 100%; max-inline-size: 100%; min-inline-size: 0 }
   .shop-promo .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
-
   .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
-
   .card, .product-card { max-inline-size:100%; min-inline-size:0; overflow:hidden }
   .product-media img, .hub-gif { max-inline-size:100%; block-size:auto }
-
   .chip-row { flex-wrap:wrap; gap:8px }
   .landing-wallet{ padding:1rem 1.25rem; font-size:1rem }
   .img-btn{ min-height:160px }
 }
 
 /* Vault responsiveness */
-@media (max-width: 720px){
+@media (max-width:720px){
   .vault-screen{ gap: 10px; padding: 14px 12px }
   .vault-title{ font-size: clamp(1.6rem, 7vw, 2.2rem) }
 }
 
 /* Performance trims on very small devices */
-@media (max-width: 480px){
+@media (max-width:480px){
   .card, .product-card, .hub-panel { box-shadow: 0 8px 18px rgba(0,0,0,.5) }
 }
 
@@ -577,29 +567,18 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 
 /* Desktop spacing tuning */
 @media (min-width:1024px){
-  :root{
-    --gutter:20px;
-    --gutter-lg:28px;
-    --section-gap:32px;
-  }
-
+  :root{ --gutter:20px; --gutter-lg:28px; --section-gap:32px }
   .container{ width:min(100% - 3rem, var(--max-w)) }
-
-  /* dashboard inside the hub */
   .hub-dashboard{
     gap: var(--section-gap);
     padding: clamp(40px, 5vw, 64px) 24px calc(90px + env(safe-area-inset-bottom, 0px));
   }
-
   .hub-dashboard .balance-row{ gap: var(--gutter-lg) }
   .hub-dashboard .feature-grid{ gap: var(--gutter-lg) }
-
   .hub-panel{ margin-top: calc(var(--section-gap) + 6px) }
   .hub-panel-top{ padding: 16px 20px }
   .hub-panel-body{ padding: 22px }
-
   .trust-strip{ margin-top: 20px; gap: 16px }
-
   .shop-promo{ margin-top: var(--section-gap) }
   .product-grid{ gap: var(--gutter-lg) }
 }
