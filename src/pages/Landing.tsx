@@ -365,6 +365,36 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [wallet, reducedMotion]);
 
+  /* ---------- NEW: Close hub on disconnect + expose global open/close ---- */
+  // A) Close Hub whenever wallet isn't connected
+  useEffect(() => {
+    if (!connected) setActivePanel("none");
+  }, [connected]);
+
+  // B) Close on explicit adapter 'disconnect' event
+  useEffect(() => {
+    const adapter = wallet?.adapter;
+    if (!adapter) return;
+    const onDisconnect = () => setActivePanel("none");
+    adapter.on("disconnect", onDisconnect);
+    return () => {
+      try { adapter.off("disconnect", onDisconnect); } catch {}
+    };
+  }, [wallet]);
+
+  // C) Global handlers the hamburger/nav can call: window.openHub()/closeHub()
+  useEffect(() => {
+    (window as any).openHub = () => setActivePanel("grid");
+    (window as any).closeHub = () => setActivePanel("none");
+    return () => {
+      try {
+        delete (window as any).openHub;
+        delete (window as any).closeHub;
+      } catch {}
+    };
+  }, []);
+  /* ---------------------------------------------------------------------- */
+
   /* ---------- wallet modal visibility flag ---------- */
   const setWalletFlag = useCallback((on: boolean): void => {
     const root = document.body;
@@ -596,7 +626,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     <main
       className={`landing-gradient ${merging ? "landing-merge" : ""}`}
       aria-live="polite"
-      style={{ background: "transparent" }} // ensure background doesn't cover the iframe
+      style={{ background: "transparent" }} // let the iframe show through
     >
       {/* === Background chart (fullscreen, non-interactive) === */}
       <iframe
@@ -609,10 +639,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           width: "100vw",
           height: "100vh",
           border: "0",
-          zIndex: 0,               // sit under the foreground wrapper
-          pointerEvents: "none",   // decorative only
+          zIndex: 0,              // behind content
+          pointerEvents: "none",  // decorative only
           opacity: 0.35,
-          transform: "scale(1.02)", // bleed edges on resize
+          transform: "scale(1.02)",
           filter: "brightness(0.9) contrast(1.05) saturate(1.15)",
         }}
       />
