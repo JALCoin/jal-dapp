@@ -582,3 +582,23 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
   .shop-promo{ margin-top: var(--section-gap) }
   .product-grid{ gap: var(--gutter-lg) }
 }
+/* Bring swap to foreground with a soft zoom */
+@keyframes swapIn {
+  from { transform: scale(0.985); opacity: .0; filter: blur(2px) brightness(.8) }
+  to   { transform: scale(1);     opacity: 1;  filter: blur(0)  brightness(1) }
+}
+
+/* Tiny floating chip to exit trade mode */
+.swap-exit{
+  position: fixed;
+  inset-block-start: calc(var(--safe-top) + 10px);
+  inset-inline-start: 10px;
+  z-index: 102;
+  padding: .55rem .8rem;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  backdrop-filter: blur(6px);
+}
+.swap-exit:hover{ transform: translateY(-1px); border-color: var(--cyan); box-shadow: var(--glow-cyan) }
+

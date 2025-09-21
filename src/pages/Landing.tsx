@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
@@ -24,6 +24,10 @@ import { JAL_MINT } from "../config/tokens";
 import { makeConnection } from "../config/rpc";
 
 const Jal = lazy(() => import("./Jal"));
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Types & constants                                                         */
+/* ────────────────────────────────────────────────────────────────────────── */
 
 type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "payments" | "loans" | "support";
 type TileKey = Exclude<Panel, "none" | "grid">;
@@ -47,7 +51,10 @@ const TOKEN_2022_PROGRAM_ID: PublicKey =
 const RAYDIUM_PAIR_URL =
   `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(JAL_MINT)}&fixed=in`;
 
-/* ---------- Small helpers ---------- */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Small helpers                                                             */
+/* ────────────────────────────────────────────────────────────────────────── */
+
 function DisconnectButton({ className }: { className?: string }) {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
@@ -65,7 +72,7 @@ function ConnectButton({ className }: { className?: string }) {
   return <WalletMultiButton className={className ?? "landing-wallet"} />;
 }
 
-/* ---------- How-to: Create Liquidity with JAL (helpers) ---------- */
+/* Liquidity helpers (Shop card) */
 function CopyBtn({ text }: { text: string }) {
   const [ok, setOk] = useState(false);
   return (
@@ -194,7 +201,7 @@ function LiquidityHowToCard() {
   );
 }
 
-/* ---------- Product model (Shop) ---------- */
+/* Models */
 type Product = {
   id: string;
   name: string;
@@ -203,14 +210,16 @@ type Product = {
   img?: string;
   blurb?: string;
 };
-
-/* ---------- Vault: token row model ---------- */
 type TokenRow = {
   mint: string;
   uiAmount: number;
   decimals: number;
   program: "spl-token" | "token-2022";
 };
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Component                                                                 */
+/* ────────────────────────────────────────────────────────────────────────── */
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const { publicKey, connected, wallet } = useWallet();
@@ -219,20 +228,16 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
 
   const [activePanel, setActivePanel] = useState<Panel>("none");
   const [merging, setMerging] = useState(false);
-  const timerRef = useRef<number | null>(null);
+  const [chartActive, setChartActive] = useState(false);
 
+  const timerRef = useRef<number | null>(null);
   const hubBodyRef = useRef<HTMLDivElement | null>(null);
   const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
-
-  // focus trap refs
   const firstFocusRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusRef = useRef<HTMLButtonElement | null>(null);
 
-  // NEW: animated foreground swap mode
-  const [chartActive, setChartActive] = useState(false);
-
-  const reducedMotion = useMemo<boolean>(
+  const reducedMotion = useMemo(
     () =>
       typeof window !== "undefined" && window.matchMedia
         ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -244,24 +249,22 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     // @ts-expect-error
     (navigator.connection?.saveData === true);
 
-  // Prefetch heavy generator routes on intent (hover/focus)
+  /* Prefetch heavy generator routes on intent */
   const prefetchGenerator = useCallback((): void => {
     import("./CryptoGeneratorIntro");
     import("./CryptoGenerator");
   }, []);
 
-  const tiles = useMemo<
-    { key: TileKey; title: string; sub?: string; gif: string; disabled?: boolean }[]
-  >(
+  const tiles = useMemo(
     () => [
-      { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
-      { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
-      { key: "vault", title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
+      { key: "jal" as const, title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
+      { key: "shop" as const, title: "JAL/SOL — SHOP", sub: "Buy items with JAL", gif: "/JALSOL.gif" },
+      { key: "vault" as const, title: "VAULT", sub: "Your assets", gif: "/VAULT.gif" },
     ],
     []
   );
 
-  /* ---------- SHOP: demo catalog + filtering ---------- */
+  /* Shop demo data */
   const products = useMemo<Product[]>(
     () => [
       { id: "hoodie", name: "JAL Hoodie", tag: "Merch", priceJal: 420, img: "/products/hoodie.png", blurb: "Heavyweight, embroidered." },
@@ -275,18 +278,17 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   );
   const [shopFilter, setShopFilter] = useState<"All" | Product["tag"]>("All");
   const [shopNotice, setShopNotice] = useState<string | null>(null);
-
-  const visibleProducts = useMemo<Product[]>(
+  const visibleProducts = useMemo(
     () => products.filter((p) => (shopFilter === "All" ? true : p.tag === shopFilter)),
     [products, shopFilter]
   );
 
-  /* ---------- preload gifs + poster (respect Save-Data) ---------- */
+  /* Preload gifs/poster (respect Save-Data) */
   useEffect(() => {
     if (saveData) {
       const i = new Image();
       i.src = POSTER;
-      return () => { i.src = ""; };
+      return () => void (i.src = "");
     }
     const imgs = [
       ...tiles.map((t) => {
@@ -305,9 +307,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => imgs.forEach((i) => (i.src = ""));
   }, [tiles, saveData]);
 
-  /* ---------- URL/session init + sync ---------- */
+  /* URL/session init + sync */
   const isPanel = (v: unknown): v is Panel =>
-    v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault" || v === "payments" || v === "loans" || v === "support";
+    ["none", "grid", "shop", "jal", "vault", "payments", "loans", "support"].includes(String(v));
 
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
@@ -341,7 +343,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     setActivePanel((p) => (p === next ? p : next));
   }, [params]);
 
-  /* ---------- Wallet events / merge effect ---------- */
+  /* Wallet events / merge effect */
   useEffect(() => {
     if (!wallet?.adapter) return;
     const onConnect = () => {
@@ -362,7 +364,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [wallet, reducedMotion]);
 
-  /* ---------- NEW: Close hub on disconnect + global open/close ---------- */
+  /* Close hub on disconnect + global open/close */
   useEffect(() => {
     if (!connected) {
       setActivePanel("none");
@@ -386,7 +388,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, []);
 
-  /* ---------- wallet modal visibility flag ---------- */
+  /* Wallet modal visibility flag */
   const setWalletFlag = useCallback((on: boolean): void => {
     const root = document.body;
     if (on) root.setAttribute("data-wallet-visible", "true");
@@ -403,7 +405,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [setWalletFlag]);
 
-  /* ---------- overlay controls (scroll lock + Escape) ---------- */
+  /* Overlay controls (scroll lock + Escape) */
   const overlayOpen = activePanel !== "none" && activePanel !== "grid";
   useEffect(() => {
     if (overlayOpen || chartActive) document.body.setAttribute("data-hub-open", "true");
@@ -422,11 +424,10 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [overlayOpen, chartActive]);
 
-  // Overlay focus trap + focus management
+  // Focus trap while overlay open
   useEffect(() => {
     if (!overlayOpen) return;
     hubTitleRef.current?.focus?.();
-
     const trap = (e: KeyboardEvent): void => {
       if (e.key !== "Tab") return;
       const first = firstFocusRef.current;
@@ -458,7 +459,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [overlayOpen, reducedMotion]);
 
-  /* ---------- Open helpers ---------- */
+  /* Panel open helper */
   const requiresWallet: Panel[] = ["jal", "vault", "payments", "loans"];
   const openPanel = useCallback(
     (id: Panel): void => {
@@ -480,7 +481,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     activePanel === "loans" ? "Loans" :
     activePanel === "support" ? "Support" : "Welcome";
 
-  // Hover art presets for hub tiles
   const ART_MAP: Partial<Record<TileKey, { pos: string; zoom?: string }>> = {
     jal: { pos: "26% 38%", zoom: "240%" },
     shop: { pos: "73% 38%", zoom: "240%" },
@@ -490,7 +490,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     support: { pos: "82% 28%", zoom: "240%" },
   };
 
-  /* ---------- LIVE BALANCES (SOL + JAL + Token-2022) ---------- */
+  /* Live balances */
   const [sol, setSol] = useState<number | null>(null);
   const [jal, setJal] = useState<number | null>(null);
   const [balLoading, setBalLoading] = useState<boolean>(false);
@@ -534,18 +534,13 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       ]);
 
       const rows: TokenRow[] = [];
-
-      const pushRows = (
-        list: typeof splRes.value,
-        program: TokenRow["program"]
-      ): void => {
+      const pushRows = (list: typeof splRes.value, program: TokenRow["program"]): void => {
         for (const { account } of list) {
           const info = (account.data as any).parsed?.info;
           const amount = Number(info?.tokenAmount?.amount ?? 0);
           const decimals = Number(info?.tokenAmount?.decimals ?? 0);
           const mint = String(info?.mint ?? "");
           if (!mint || !Number.isFinite(amount) || !Number.isFinite(decimals)) continue;
-
           const ui = decimals > 0 ? amount / 10 ** decimals : amount;
           rows.push({ mint, uiAmount: ui, decimals, program });
         }
@@ -606,37 +601,26 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const fmt = (n: number | null, digits = 4): string =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
 
-  /* ===========================================================
-     Render
-  ============================================================ */
+  /* Render */
   const overlayActive = activePanel !== "none" && activePanel !== "grid";
   const shouldLoadGifs = !saveData && !reducedMotion;
 
-  // Foreground animation styles for Raydium iframe
-  const bgStyleBase: React.CSSProperties = {
-    position: "fixed",
-    inset: 0,
-    width: "100vw",
-    height: "100vh",
-    border: "0",
-    transition: reducedMotion ? undefined : "all 450ms cubic-bezier(.22,.61,.36,1)",
-    filter: chartActive ? "none" : "brightness(0.9) contrast(1.05) saturate(1.15)",
-  };
+  const bgStyleBase: React.CSSProperties = useMemo(
+    () => ({
+      position: "fixed",
+      inset: 0,
+      width: "100vw",
+      height: "100vh",
+      border: "0",
+      transition: reducedMotion ? undefined : "all 450ms cubic-bezier(.22,.61,.36,1)",
+      filter: chartActive ? "none" : "brightness(0.9) contrast(1.05) saturate(1.15)",
+    }),
+    [reducedMotion, chartActive]
+  );
+
   const bgStyle: React.CSSProperties = chartActive
-    ? {
-        ...bgStyleBase,
-        zIndex: 200,            // above hub
-        opacity: 1,
-        transform: "scale(1)",
-        pointerEvents: "auto",  // interactive
-      }
-    : {
-        ...bgStyleBase,
-        zIndex: 0,              // behind all UI
-        opacity: 0.35,
-        transform: "scale(1.02)",
-        pointerEvents: "none",  // decorative only
-      };
+    ? { ...bgStyleBase, zIndex: 200, opacity: 1, transform: "scale(1)", pointerEvents: "auto" }
+    : { ...bgStyleBase, zIndex: 0, opacity: 0.35, transform: "scale(1.02)", pointerEvents: "none" };
 
   return (
     <main
@@ -644,7 +628,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       aria-live="polite"
       style={{ background: "transparent" }}
     >
-      {/* === Background chart (animates to foreground on demand) === */}
+      {/* Background Raydium chart — can animate to foreground & be interactive */}
       <iframe
         title="JAL/SOL Chart"
         src={RAYDIUM_PAIR_URL}
@@ -667,7 +651,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         </div>
       )}
 
-      {/* === Foreground content wrapper (above background) === */}
+      {/* Foreground content wrapper */}
       <div style={{ position: "relative", zIndex: 1 }}>
         {/* Backdrop for overlay panels */}
         {overlayActive && (
@@ -680,7 +664,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           />
         )}
 
-        {/* Render Hub only when not 'none' */}
+        {/* Hub */}
         {activePanel !== "none" && (
           <section
             id="hub-panel"
@@ -698,7 +682,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             </div>
 
             <div className="hub-panel-body" ref={hubBodyRef}>
-              {/* Dashboard (balances + feature grid) INSIDE the hub when panel=grid */}
+              {/* Dashboard (grid) */}
               {activePanel === "grid" && (
                 <div className="hub-dashboard">
                   <div className="bank-status">
@@ -794,7 +778,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 </div>
               )}
 
-              {/* Tiles appear only in grid mode */}
+              {/* Tiles only in grid */}
               {activePanel === "grid" && (
                 <div className="hub-stack hub-stack--responsive" role="list" aria-hidden={overlayActive || undefined}>
                   {tiles.map((t) => {
@@ -833,6 +817,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               )}
 
               <div className="hub-content">
+                {/* Shop */}
                 {activePanel === "shop" && (
                   <div className="card">
                     <h3 style={{ marginTop: 0 }}>Shop</h3>
@@ -966,9 +951,9 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   </div>
                 )}
 
+                {/* JAL */}
                 {activePanel === "jal" && (
                   <div className="in-hub">
-                    {/* Foreground Swap CTA */}
                     <div className="chip-row" style={{ marginBottom: 8 }}>
                       <button className="button gold" onClick={() => setChartActive(true)}>
                         Open Swap (Raydium)
@@ -986,6 +971,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                   </div>
                 )}
 
+                {/* Vault */}
                 {activePanel === "vault" &&
                   (connected ? (
                     <div className="card">
@@ -1024,6 +1010,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                     </div>
                   ))}
 
+                {/* Coming-soon panels */}
                 {["payments", "loans", "support"].includes(activePanel) && (
                   <div className="card">
                     <h3>{panelTitle}</h3>
