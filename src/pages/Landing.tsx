@@ -593,7 +593,11 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const shouldLoadGifs = !saveData && !reducedMotion;
 
   return (
-    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+    <main
+      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
+      aria-live="polite"
+      style={{ background: "transparent" }} // ensure background doesn't cover the iframe
+    >
       {/* === Background chart (fullscreen, non-interactive) === */}
       <iframe
         title="JAL/SOL Background Chart"
@@ -605,388 +609,391 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           width: "100vw",
           height: "100vh",
           border: "0",
-          zIndex: -1,              // behind all UI
+          zIndex: 0,               // sit under the foreground wrapper
           pointerEvents: "none",   // decorative only
-          opacity: 0.35,           // tune to taste
-          transform: "scale(1.02)",// bleed edges on resize
+          opacity: 0.35,
+          transform: "scale(1.02)", // bleed edges on resize
           filter: "brightness(0.9) contrast(1.05) saturate(1.15)",
         }}
       />
 
-      {/* Backdrop for overlay panels */}
-      {overlayActive && (
-        <button
-          type="button"
-          className="hub-overlay"
-          aria-label="Close panel"
-          onClick={() => setActivePanel("none")}
-          ref={firstFocusRef}
-        />
-      )}
+      {/* === Foreground content wrapper (above background) === */}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        {/* Backdrop for overlay panels */}
+        {overlayActive && (
+          <button
+            type="button"
+            className="hub-overlay"
+            aria-label="Close panel"
+            onClick={() => setActivePanel("none")}
+            ref={firstFocusRef}
+          />
+        )}
 
-      {/* Render Hub only when not 'none' */}
-      {activePanel !== "none" && (
-        <section
-          id="hub-panel"
-          className={`hub-panel hub-panel--fit ${overlayActive ? "hub-panel--overlay" : "hub-preview"}`}
-          role={overlayActive ? "dialog" : "region"}
-          aria-modal={overlayActive || undefined}
-          aria-label="JAL/SOL Hub"
-          ref={panelRef as any}
-        >
-          <div className="hub-panel-top">
-            <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
-              {panelTitle}
-            </h2>
-            {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
-          </div>
+        {/* Render Hub only when not 'none' */}
+        {activePanel !== "none" && (
+          <section
+            id="hub-panel"
+            className={`hub-panel hub-panel--fit ${overlayActive ? "hub-panel--overlay" : "hub-preview"}`}
+            role={overlayActive ? "dialog" : "region"}
+            aria-modal={overlayActive || undefined}
+            aria-label="JAL/SOL Hub"
+            ref={panelRef as any}
+          >
+            <div className="hub-panel-top">
+              <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
+                {panelTitle}
+              </h2>
+              {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
+            </div>
 
-          <div className="hub-panel-body" ref={hubBodyRef}>
-            {/* Dashboard (balances + feature grid) INSIDE the hub when panel=grid */}
-            {activePanel === "grid" && (
-              <div className="hub-dashboard">
-                <div className="bank-status">
-                  {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
-                  {connected && (
-                    <button
-                      className="chip"
-                      type="button"
-                      style={{ marginLeft: 10 }}
-                      onClick={fetchPortfolio}
-                      aria-label="Refresh balances"
-                    >
-                      ↻ Refresh
-                    </button>
-                  )}
-                </div>
-
-                <div className="balance-row">
-                  <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
-                    <div className="balance-amount">{fmt(jal)} JAL</div>
-                    <div className="balance-label">JAL • Total</div>
-                  </div>
-                  <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
-                    <div className="balance-amount">{fmt(sol)} SOL</div>
-                    <div className="balance-label">SOL • Total</div>
-                  </div>
-                </div>
-
-                <div className="feature-grid">
-                  <button
-                    type="button"
-                    className="feature-card has-art"
-                    style={art(ART_MAP.jal!.pos, ART_MAP.jal!.zoom)}
-                    onClick={() => openPanel("jal")}
-                    aria-label="Open JAL"
-                  >
-                    <h4>JAL</h4>
-                    <div className="title">About &amp; Swap</div>
-                    <div className="icon" aria-hidden>➕</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="feature-card has-art"
-                    style={art(ART_MAP.shop!.pos, ART_MAP.shop!.zoom)}
-                    onClick={() => openPanel("shop")}
-                    aria-label="Open Store"
-                  >
-                    <h4>Store</h4>
-                    <div className="title">Buy with JAL</div>
-                    <div className="icon" aria-hidden>🏬</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="feature-card has-art"
-                    style={art(ART_MAP.vault!.pos, ART_MAP.vault!.zoom)}
-                    onClick={() => openPanel("vault")}
-                    aria-label="Open Vault"
-                  >
-                    <h4>Vault</h4>
-                    <div className="title">Assets &amp; Activity</div>
-                    <div className="icon" aria-hidden>💳</div>
-                  </button>
-
-                  <div className="feature-card feature-wide" role="group" aria-label="Get Started">
-                    <div style={{ display: "grid", gap: 6 }}>
-                      <div style={{ opacity: 0.85 }}>Get Started</div>
-                      <div className="title">What do you want to do?</div>
-                      <div className="chip-row">
-                        <Link className="chip" to="/crypto-generator/engine#step1" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
-                          Create Token
-                        </Link>
-                        <Link className="chip" to="/crypto-generator" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
-                          Create NFT
-                        </Link>
-                        <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">Add Liquidity</a>
-                        <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">Swap Aggregator</a>
-                      </div>
-                    </div>
-                    <div className="icon" aria-hidden>⚡</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Back button only when not grid */}
-            {activePanel !== "grid" && (
-              <div className="hub-controls">
-                <button type="button" className="button ghost" onClick={() => setActivePanel("grid")}>
-                  ← Back to Hub
-                </button>
-              </div>
-            )}
-
-            {/* Tiles appear only in grid mode */}
-            {activePanel === "grid" && (
-              <div className="hub-stack hub-stack--responsive" role="list" aria-hidden={overlayActive || undefined}>
-                {tiles.map((t) => {
-                  const artCfg = ART_MAP[t.key];
-                  const hasArt = !!artCfg;
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      className={`img-btn${hasArt ? " has-art" : ""}`}
-                      style={hasArt ? art(artCfg!.pos, artCfg!.zoom) : undefined}
-                      onClick={() => openPanel(t.key)}
-                      role="listitem"
-                      aria-describedby={`tile-sub-${t.key}`}
-                    >
-                      {shouldLoadGifs && (
-                        <img
-                          src={t.gif}
-                          alt=""
-                          className="hub-gif"
-                          loading="lazy"
-                          width={960}
-                          height={540}
-                          decoding="async"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                        />
-                      )}
-                      <div className="hub-btn">
-                        {t.title}
-                        {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="hub-content">
-              {activePanel === "shop" && (
-                <div className="card">
-                  <h3 style={{ marginTop: 0 }}>Shop</h3>
-                  <p className="muted" style={{ marginTop: 4 }}>
-                    Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
-                  </p>
-
-                  <section
-                    className="shop-promo has-art"
-                    style={art("58% 42%", "220%")}
-                    role="region"
-                    aria-label="Create with JAL/SOL"
-                  >
-                    <div className="shop-promo-inner">
-                      <div className="promo-head">
-                        <span className="promo-badge">NEW</span>
-                        <h4 className="promo-title">Create with JAL/SOL</h4>
-                      </div>
-                      <p className="promo-sub">Choose what you’re launching. We’ll guide you step-by-step.</p>
-
-                      <div className="product-grid" style={{ marginTop: 8 }}>
-                        <article className="product-card">
-                          <div className="product-body">
-                            <h4 className="product-title">Currency / Token (Fungible)</h4>
-                            <div className="product-blurb">
-                              <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
-                                <li>Interchangeable units (e.g., 1 JAL = 1 JAL)</li>
-                                <li>Great for points, memecoins, governance</li>
-                                <li>Supply + mint authority you control</li>
-                              </ul>
-                            </div>
-                            <div className="muted" style={{ marginTop: 8 }}>Creates: SPL mint + ATA + Metadata</div>
-                            <div style={{ marginTop: 10 }}>
-                              <Link className="button gold" to="/crypto-generator/engine#step1">Start Token</Link>
-                            </div>
-                            <div className="chip-row" style={{ marginTop: 10 }}>
-                              <span className="chip">Loyalty</span>
-                              <span className="chip">Governance</span>
-                              <span className="chip">Memecoin</span>
-                            </div>
-                          </div>
-                        </article>
-
-                        <article className="product-card">
-                          <div className="product-body">
-                            <h4 className="product-title">NFT (Non-Fungible)</h4>
-                            <div className="product-blurb">
-                              <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
-                                <li>Unique items or passes (1/1 or small series)</li>
-                                <li>Artwork stored via Lighthouse/IPFS</li>
-                                <li>Collection metadata for discovery</li>
-                              </ul>
-                            </div>
-                            <div className="muted" style={{ marginTop: 8 }}>Creates: NFT mint(s) + Collection Metadata</div>
-                            <div style={{ marginTop: 10 }}>
-                              <Link className="button neon" to="/crypto-generator">Start NFT</Link>
-                            </div>
-                            <div className="chip-row" style={{ marginTop: 10 }}>
-                              <span className="chip">Art</span>
-                              <span className="chip">Membership</span>
-                              <span className="chip">Access Pass</span>
-                            </div>
-                          </div>
-                        </article>
-                      </div>
-                    </div>
-                  </section>
-
-                  <LiquidityHowToCard />
-
-                  {shopNotice && (
-                    <div className="shop-notice soon" role="status" aria-live="polite" style={{ marginTop: 10 }}>
-                      {shopNotice}
-                    </div>
-                  )}
-
-                  <div className="chip-row" style={{ marginTop: 10 }}>
-                    {(["All", "Merch", "Digital", "Gift Cards"] as const).map((cat) => (
+            <div className="hub-panel-body" ref={hubBodyRef}>
+              {/* Dashboard (balances + feature grid) INSIDE the hub when panel=grid */}
+              {activePanel === "grid" && (
+                <div className="hub-dashboard">
+                  <div className="bank-status">
+                    {connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}
+                    {connected && (
                       <button
-                        key={cat}
+                        className="chip"
                         type="button"
-                        className={`chip ${shopFilter === cat ? "active" : ""}`}
-                        onClick={() => setShopFilter(cat)}
-                        aria-pressed={shopFilter === cat}
+                        style={{ marginLeft: 10 }}
+                        onClick={fetchPortfolio}
+                        aria-label="Refresh balances"
                       >
-                        {cat}
+                        ↻ Refresh
                       </button>
-                    ))}
-                  </div>
-
-                  <div className="product-grid" role="list" style={{ marginTop: 14 }}>
-                    {visibleProducts.map((p) => (
-                      <article key={p.id} className="product-card" role="listitem" aria-label={p.name}>
-                        <div className={`product-media ${p.img ? "" : "noimg"}`} aria-hidden>
-                          {p.img ? (
-                            <img
-                              src={p.img}
-                              alt=""
-                              width={800}
-                              height={600}
-                              loading="lazy"
-                              decoding="async"
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                            />
-                          ) : null}
-                          <span className="badge soon">Coming&nbsp;soon</span>
-                        </div>
-                        <div className="product-body">
-                          <h4 className="product-title">{p.name}</h4>
-                          {p.blurb && <div className="product-blurb">{p.blurb}</div>}
-                          <div className="product-price">
-                            <span className="price-jal">{p.priceJal.toLocaleString()} JAL</span>
-                            <span className="muted">• {p.tag}</span>
-                          </div>
-                          <button
-                            type="button"
-                            className="button"
-                            aria-disabled="true"
-                            title="Checkout not available yet"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setShopNotice("Checkout isn’t live yet — payments with JAL are coming soon.");
-                            }}
-                          >
-                            Pay with JAL
-                          </button>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activePanel === "jal" && (
-                <div className="in-hub">
-                  <Suspense fallback={<div className="card">Loading JAL…</div>}>
-                    <Jal inHub />
-                  </Suspense>
-                </div>
-              )}
-
-              {activePanel === "vault" &&
-                (connected ? (
-                  <div className="card">
-                    <h3>Your Wallet</h3>
-                    <p>JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong></p>
-
-                    {portfolio.length ? (
-                      <div style={{ marginTop: 10 }}>
-                        <div className="product-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
-                          {portfolio.map((t) => (
-                            <article key={t.mint} className="product-card">
-                              <div className="product-body">
-                                <h4 className="product-title">{`${t.mint.slice(0,4)}…${t.mint.slice(-4)}`}</h4>
-                                <div className="product-blurb mono-sm">Mint: {t.mint}</div>
-                                <div className="product-price">
-                                  <span className="price-jal">
-                                    {t.uiAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
-                                  </span>
-                                  <span className="muted">• {t.decimals} dec</span>
-                                </div>
-                                <div className="muted" style={{ fontSize: ".85rem" }}>{t.program}</div>
-                              </div>
-                            </article>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <p style={{ opacity: 0.85, marginTop: 8 }}>No SPL balances detected.</p>
                     )}
                   </div>
-                ) : (
-                  <div className="card">
-                    <h3>Vault</h3>
-                    <p>Connect to view balances and recent activity.</p>
-                    <ConnectButton className="button gold" />
-                  </div>
-                ))}
 
-              {["payments", "loans", "support"].includes(activePanel) && (
-                <div className="card">
-                  <h3>{panelTitle}</h3>
-                  <p>
-                    Coming soon.{" "}
-                    {activePanel !== "support" ? "Preview only." : "For help, join our Telegram or reach us on X."}
-                  </p>
-                  {activePanel === "support" && (
-                    <div className="chip-row" style={{ marginTop: 10 }}>
-                      <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">Telegram</a>
-                      <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">X</a>
+                  <div className="balance-row">
+                    <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
+                      <div className="balance-amount">{fmt(jal)} JAL</div>
+                      <div className="balance-label">JAL • Total</div>
                     </div>
-                  )}
+                    <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
+                      <div className="balance-amount">{fmt(sol)} SOL</div>
+                      <div className="balance-label">SOL • Total</div>
+                    </div>
+                  </div>
+
+                  <div className="feature-grid">
+                    <button
+                      type="button"
+                      className="feature-card has-art"
+                      style={art(ART_MAP.jal!.pos, ART_MAP.jal!.zoom)}
+                      onClick={() => openPanel("jal")}
+                      aria-label="Open JAL"
+                    >
+                      <h4>JAL</h4>
+                      <div className="title">About &amp; Swap</div>
+                      <div className="icon" aria-hidden>➕</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="feature-card has-art"
+                      style={art(ART_MAP.shop!.pos, ART_MAP.shop!.zoom)}
+                      onClick={() => openPanel("shop")}
+                      aria-label="Open Store"
+                    >
+                      <h4>Store</h4>
+                      <div className="title">Buy with JAL</div>
+                      <div className="icon" aria-hidden>🏬</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="feature-card has-art"
+                      style={art(ART_MAP.vault!.pos, ART_MAP.vault!.zoom)}
+                      onClick={() => openPanel("vault")}
+                      aria-label="Open Vault"
+                    >
+                      <h4>Vault</h4>
+                      <div className="title">Assets &amp; Activity</div>
+                      <div className="icon" aria-hidden>💳</div>
+                    </button>
+
+                    <div className="feature-card feature-wide" role="group" aria-label="Get Started">
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <div style={{ opacity: 0.85 }}>Get Started</div>
+                        <div className="title">What do you want to do?</div>
+                        <div className="chip-row">
+                          <Link className="chip" to="/crypto-generator/engine#step1" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
+                            Create Token
+                          </Link>
+                          <Link className="chip" to="/crypto-generator" onMouseEnter={prefetchGenerator} onFocus={prefetchGenerator}>
+                            Create NFT
+                          </Link>
+                          <a className="chip" href="https://raydium.io" target="_blank" rel="noreferrer">Add Liquidity</a>
+                          <a className="chip" href="https://jup.ag" target="_blank" rel="noreferrer">Swap Aggregator</a>
+                        </div>
+                      </div>
+                      <div className="icon" aria-hidden>⚡</div>
+                    </div>
+                  </div>
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* hidden focus-sentinel when overlay is open */}
-          {overlayActive && (
-            <button
-              type="button"
-              ref={lastFocusRef}
-              style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
-              aria-hidden="true"
-              tabIndex={0}
-              onFocus={() => { firstFocusRef.current?.focus(); }}
-            />
-          )}
-        </section>
-      )}
+              {/* Back button only when not grid */}
+              {activePanel !== "grid" && (
+                <div className="hub-controls">
+                  <button type="button" className="button ghost" onClick={() => setActivePanel("grid")}>
+                    ← Back to Hub
+                  </button>
+                </div>
+              )}
+
+              {/* Tiles appear only in grid mode */}
+              {activePanel === "grid" && (
+                <div className="hub-stack hub-stack--responsive" role="list" aria-hidden={overlayActive || undefined}>
+                  {tiles.map((t) => {
+                    const artCfg = ART_MAP[t.key];
+                    const hasArt = !!artCfg;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        className={`img-btn${hasArt ? " has-art" : ""}`}
+                        style={hasArt ? art(artCfg!.pos, artCfg!.zoom) : undefined}
+                        onClick={() => openPanel(t.key)}
+                        role="listitem"
+                        aria-describedby={`tile-sub-${t.key}`}
+                      >
+                        {shouldLoadGifs && (
+                          <img
+                            src={t.gif}
+                            alt=""
+                            className="hub-gif"
+                            loading="lazy"
+                            width={960}
+                            height={540}
+                            decoding="async"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          />
+                        )}
+                        <div className="hub-btn">
+                          {t.title}
+                          {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="hub-content">
+                {activePanel === "shop" && (
+                  <div className="card">
+                    <h3 style={{ marginTop: 0 }}>Shop</h3>
+                    <p className="muted" style={{ marginTop: 4 }}>
+                      Payments are <strong>coming soon</strong>. Browse the catalog—CTAs are disabled until checkout goes live.
+                    </p>
+
+                    <section
+                      className="shop-promo has-art"
+                      style={art("58% 42%", "220%")}
+                      role="region"
+                      aria-label="Create with JAL/SOL"
+                    >
+                      <div className="shop-promo-inner">
+                        <div className="promo-head">
+                          <span className="promo-badge">NEW</span>
+                          <h4 className="promo-title">Create with JAL/SOL</h4>
+                        </div>
+                        <p className="promo-sub">Choose what you’re launching. We’ll guide you step-by-step.</p>
+
+                        <div className="product-grid" style={{ marginTop: 8 }}>
+                          <article className="product-card">
+                            <div className="product-body">
+                              <h4 className="product-title">Currency / Token (Fungible)</h4>
+                              <div className="product-blurb">
+                                <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
+                                  <li>Interchangeable units (e.g., 1 JAL = 1 JAL)</li>
+                                  <li>Great for points, memecoins, governance</li>
+                                  <li>Supply + mint authority you control</li>
+                                </ul>
+                              </div>
+                              <div className="muted" style={{ marginTop: 8 }}>Creates: SPL mint + ATA + Metadata</div>
+                              <div style={{ marginTop: 10 }}>
+                                <Link className="button gold" to="/crypto-generator/engine#step1">Start Token</Link>
+                              </div>
+                              <div className="chip-row" style={{ marginTop: 10 }}>
+                                <span className="chip">Loyalty</span>
+                                <span className="chip">Governance</span>
+                                <span className="chip">Memecoin</span>
+                              </div>
+                            </div>
+                          </article>
+
+                          <article className="product-card">
+                            <div className="product-body">
+                              <h4 className="product-title">NFT (Non-Fungible)</h4>
+                              <div className="product-blurb">
+                                <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
+                                  <li>Unique items or passes (1/1 or small series)</li>
+                                  <li>Artwork stored via Lighthouse/IPFS</li>
+                                  <li>Collection metadata for discovery</li>
+                                </ul>
+                              </div>
+                              <div className="muted" style={{ marginTop: 8 }}>Creates: NFT mint(s) + Collection Metadata</div>
+                              <div style={{ marginTop: 10 }}>
+                                <Link className="button neon" to="/crypto-generator">Start NFT</Link>
+                              </div>
+                              <div className="chip-row" style={{ marginTop: 10 }}>
+                                <span className="chip">Art</span>
+                                <span className="chip">Membership</span>
+                                <span className="chip">Access Pass</span>
+                              </div>
+                            </div>
+                          </article>
+                        </div>
+                      </div>
+                    </section>
+
+                    <LiquidityHowToCard />
+
+                    {shopNotice && (
+                      <div className="shop-notice soon" role="status" aria-live="polite" style={{ marginTop: 10 }}>
+                        {shopNotice}
+                      </div>
+                    )}
+
+                    <div className="chip-row" style={{ marginTop: 10 }}>
+                      {(["All", "Merch", "Digital", "Gift Cards"] as const).map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          className={`chip ${shopFilter === cat ? "active" : ""}`}
+                          onClick={() => setShopFilter(cat)}
+                          aria-pressed={shopFilter === cat}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="product-grid" role="list" style={{ marginTop: 14 }}>
+                      {visibleProducts.map((p) => (
+                        <article key={p.id} className="product-card" role="listitem" aria-label={p.name}>
+                          <div className={`product-media ${p.img ? "" : "noimg"}`} aria-hidden>
+                            {p.img ? (
+                              <img
+                                src={p.img}
+                                alt=""
+                                width={800}
+                                height={600}
+                                loading="lazy"
+                                decoding="async"
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                              />
+                            ) : null}
+                            <span className="badge soon">Coming&nbsp;soon</span>
+                          </div>
+                          <div className="product-body">
+                            <h4 className="product-title">{p.name}</h4>
+                            {p.blurb && <div className="product-blurb">{p.blurb}</div>}
+                            <div className="product-price">
+                              <span className="price-jal">{p.priceJal.toLocaleString()} JAL</span>
+                              <span className="muted">• {p.tag}</span>
+                            </div>
+                            <button
+                              type="button"
+                              className="button"
+                              aria-disabled="true"
+                              title="Checkout not available yet"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setShopNotice("Checkout isn’t live yet — payments with JAL are coming soon.");
+                              }}
+                            >
+                              Pay with JAL
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activePanel === "jal" && (
+                  <div className="in-hub">
+                    <Suspense fallback={<div className="card">Loading JAL…</div>}>
+                      <Jal inHub />
+                    </Suspense>
+                  </div>
+                )}
+
+                {activePanel === "vault" &&
+                  (connected ? (
+                    <div className="card">
+                      <h3>Your Wallet</h3>
+                      <p>JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong></p>
+
+                      {portfolio.length ? (
+                        <div style={{ marginTop: 10 }}>
+                          <div className="product-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
+                            {portfolio.map((t) => (
+                              <article key={t.mint} className="product-card">
+                                <div className="product-body">
+                                  <h4 className="product-title">{`${t.mint.slice(0,4)}…${t.mint.slice(-4)}`}</h4>
+                                  <div className="product-blurb mono-sm">Mint: {t.mint}</div>
+                                  <div className="product-price">
+                                    <span className="price-jal">
+                                      {t.uiAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
+                                    </span>
+                                    <span className="muted">• {t.decimals} dec</span>
+                                  </div>
+                                  <div className="muted" style={{ fontSize: ".85rem" }}>{t.program}</div>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p style={{ opacity: 0.85, marginTop: 8 }}>No SPL balances detected.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="card">
+                      <h3>Vault</h3>
+                      <p>Connect to view balances and recent activity.</p>
+                      <ConnectButton className="button gold" />
+                    </div>
+                  ))}
+
+                {["payments", "loans", "support"].includes(activePanel) && (
+                  <div className="card">
+                    <h3>{panelTitle}</h3>
+                    <p>
+                      Coming soon.{" "}
+                      {activePanel !== "support" ? "Preview only." : "For help, join our Telegram or reach us on X."}
+                    </p>
+                    {activePanel === "support" && (
+                      <div className="chip-row" style={{ marginTop: 10 }}>
+                        <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">Telegram</a>
+                        <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">X</a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* hidden focus-sentinel when overlay is open */}
+            {overlayActive && (
+              <button
+                type="button"
+                ref={lastFocusRef}
+                style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+                aria-hidden="true"
+                tabIndex={0}
+                onFocus={() => { firstFocusRef.current?.focus(); }}
+              />
+            )}
+          </section>
+        )}
+      </div>
     </main>
   );
 }
