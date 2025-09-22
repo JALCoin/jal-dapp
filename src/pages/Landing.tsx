@@ -229,6 +229,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [activePanel, setActivePanel] = useState<Panel>("none");
   const [merging, setMerging] = useState(false);
 
+  const didInitRef = useRef(false);                 // <-- init gate
   const timerRef = useRef<number | null>(null);
   const hubBodyRef = useRef<HTMLDivElement | null>(null);
   const hubTitleRef = useRef<HTMLHeadingElement | null>(null);
@@ -306,10 +307,21 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => imgs.forEach((i) => (i.src = ""));
   }, [tiles, saveData]);
 
-  /* URL/session init + sync */
+  /* URL/session helpers */
   const isPanel = (v: unknown): v is Panel =>
     ["none", "grid", "shop", "jal", "vault", "payments", "loans", "support"].includes(String(v));
 
+  // Clean any sticky flags on mount/unmount (prevents "UI feels gone")
+  useEffect(() => {
+    document.body.removeAttribute("data-hub-open");
+    document.body.removeAttribute("data-wallet-visible");
+    return () => {
+      document.body.removeAttribute("data-hub-open");
+      document.body.removeAttribute("data-wallet-visible");
+    };
+  }, []);
+
+  // INITIALIZE from URL or session (once)
   useEffect(() => {
     const fromUrl = params.get("panel") as Panel | null;
     const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
@@ -317,12 +329,18 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
       (fromSession && isPanel(fromSession) ? fromSession : null) ??
       initialPanel;
+
     setActivePanel(start);
+    didInitRef.current = true; // allow subsequent sync to write
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // SYNC activePanel -> URL + session (only after init)
   useEffect(() => {
+    if (!didInitRef.current) return;
+
     sessionStorage.setItem("landing:lastPanel", activePanel);
+
     const next = new URLSearchParams(params);
     const urlPanel = params.get("panel");
     if (activePanel === "none") {
@@ -336,6 +354,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     }
   }, [activePanel, params, setParams]);
 
+  // React to URL changes (external nav)
   useEffect(() => {
     const urlPanel = params.get("panel") as Panel | null;
     const next: Panel = urlPanel && isPanel(urlPanel) ? urlPanel : "none";
@@ -376,6 +395,20 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return () => { try { adapter.off("disconnect", onDisconnect); } catch {} };
   }, [wallet]);
 
+  // Re-open Hub when landing on Home already connected (no connect event)
+  useEffect(() => {
+    if (!didInitRef.current) return;
+
+    const urlPanel = params.get("panel");
+    if (urlPanel && isPanel(urlPanel)) return; // respect explicit URL
+
+    if (connected && activePanel === "none") {
+      const last = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
+      setActivePanel(last && isPanel(last) ? last : "grid");
+    }
+  }, [connected, activePanel, params]);
+
+  /* Window helpers */
   useEffect(() => {
     (window as any).openHub = () => setActivePanel("grid");
     (window as any).closeHub = () => setActivePanel("none");
