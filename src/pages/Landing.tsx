@@ -1208,4 +1208,3 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
     </main>
   );
 }
-```
