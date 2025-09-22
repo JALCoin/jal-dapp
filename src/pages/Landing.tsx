@@ -217,6 +217,83 @@ function LiquidityHowToCard() {
   );
 }
 
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Fiat helpers (self-contained, no GPS/IP)                                   */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+const LOCALE_TO_CCY: Record<string, string> = {
+  US:"USD", GB:"GBP", IE:"EUR", DE:"EUR", FR:"EUR", ES:"EUR", IT:"EUR", NL:"EUR", PT:"EUR",
+  AT:"EUR", BE:"EUR", FI:"EUR", SE:"SEK", NO:"NOK", DK:"DKK", CH:"CHF", CA:"CAD", AU:"AUD",
+  NZ:"NZD", JP:"JPY", SG:"SGD", HK:"HKD", AE:"AED", SA:"SAR", IN:"INR", ZA:"ZAR"
+};
+function guessCurrencyFromLocale(): string {
+  try { const c = localStorage.getItem("jal:currency"); if (c) return c; } catch {}
+  try {
+    const region = Intl.DateTimeFormat().resolvedOptions().locale.split("-")[1];
+    if (region && LOCALE_TO_CCY[region]) return LOCALE_TO_CCY[region];
+  } catch {}
+  return "USD";
+}
+async function fetchUsdFx(): Promise<Record<string, number> | null> {
+  try {
+    const r = await fetch("https://api.exchangerate.host/latest?base=USD");
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j?.rates ?? null;
+  } catch { return null; }
+}
+async function fetchSolUsd(): Promise<number | null> {
+  try {
+    const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
+    const j = await r.json();
+    const n = Number(j?.solana?.usd);
+    return Number.isFinite(n) ? n : null;
+  } catch { return null; }
+}
+async function fetchJalUsdViaJupiter(): Promise<number | null> {
+  try {
+    const JAL = encodeURIComponent(String(JAL_MINT));
+    const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+    const amountRaw = 1_000_000_000n; // 1 JAL (assumes 9 decimals)
+    const url = `https://quote-api.jup.ag/v6/quote?inputMint=${JAL}&outputMint=${USDC}&amount=${amountRaw.toString()}&slippageBps=10`;
+    const r = await fetch(url);
+    const j = await r.json();
+    const out = Number(j?.data?.[0]?.outAmount);
+    return Number.isFinite(out) ? out / 1e6 : null; // USDC 6dp
+  } catch { return null; }
+}
+function CurrencyPicker({
+  currency, setCurrency
+}: { currency: string; setCurrency: (c: string) => void }) {
+  const list = ["USD","EUR","GBP","JPY","AUD","CAD","CHF","SEK","NOK","DKK","SGD","HKD","INR"];
+  return (
+    <div className="chip-row" style={{ justifyContent: "center", marginTop: 6 }}>
+      {list.map(c => (
+        <button
+          key={c}
+          type="button"
+          className={`chip ${c===currency ? "active" : ""}`}
+          onClick={() => { setCurrency(c); try { localStorage.setItem("jal:currency", c); } catch {} }}
+          aria-pressed={c===currency}
+          title={`Show fiat as ${c}`}
+        >
+          {c}
+        </button>
+      ))}
+    </div>
+  );
+}
+function formatMoney(amtUsd: number | null, currency: string, fx: Record<string, number> | null) {
+  if (amtUsd == null) return "—";
+  const rate = fx?.[currency] ?? 1;
+  const n = amtUsd * rate;
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(n);
+  } catch {
+    return `${n.toFixed(2)} ${currency}`;
+  }
+}
+
 /* Models */
 type Product = {
   id: string;
@@ -252,18 +329,6 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
   const panelRef = useRef<HTMLElement | null>(null);
   const firstFocusRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusRef = useRef<HTMLButtonElement | null>(null);
-
-  // Optional: tiny dev banner (comment in/out as needed)
-  // const [devNote, setDevNote] = useState<string | null>("Landing mounted");
-  // useEffect(() => {
-  //   const onError = (e: ErrorEvent) => setDevNote(`[error] ${e.message}`);
-  //   const onRej = (e: PromiseRejectionEvent) =>
-  //     setDevNote(`[unhandled] ${String((e as any).reason?.message || (e as any).reason)}`);
-  //   window.addEventListener("error", onError);
-  //   window.addEventListener("unhandledrejection", onRej);
-  //   const t = setTimeout(() => setDevNote(null), 1200);
-  //   return () => { window.removeEventListener("error", onError); window.removeEventListener("unhandledrejection", onRej); clearTimeout(t); };
-  // }, []);
 
   const reducedMotion = useMemo(
     () =>
@@ -649,6 +714,29 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
     };
   }, [wallet, fetchPortfolio]);
 
+  // Fiat state & polling
+  const [currency, setCurrency] = useState<string>(guessCurrencyFromLocale());
+  const [fx, setFx] = useState<Record<string, number> | null>(null);
+  const [solUsd, setSolUsd] = useState<number | null>(null);
+  const [jalUsd, setJalUsd] = useState<number | null>(null);
+
+  useEffect(() => { let dead=false; fetchUsdFx().then(r=>{ if(!dead) setFx(r);}); return ()=>{dead=true}; }, []);
+  useEffect(() => {
+    let dead=false;
+    const run = async () => {
+      const [s, j] = await Promise.all([fetchSolUsd(), fetchJalUsdViaJupiter()]);
+      if (dead) return;
+      if (s != null) setSolUsd(s);
+      if (j != null) setJalUsd(j);
+    };
+    run();
+    const id = window.setInterval(run, 30000);
+    return () => { dead=true; clearInterval(id); };
+  }, []);
+
+  const solFiatTotal = sol != null && solUsd != null ? sol * solUsd : null;
+  const jalFiatTotal = jal != null && jalUsd != null ? jal * jalUsd : null;
+
   const fmt = (n: number | null, digits = 4): string =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
 
@@ -699,14 +787,26 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                   )}
                 </div>
 
+                <CurrencyPicker currency={currency} setCurrency={setCurrency} />
+
                 <div className="balance-row">
                   <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
                     <div className="balance-amount">{fmt(jal)} JAL</div>
-                    <div className="balance-label">JAL • Total</div>
+                    <div className="balance-label">
+                      JAL • Total
+                      <span className="muted" style={{ marginLeft: 8 }}>
+                        ≈ {formatMoney(jalFiatTotal, currency, fx)}
+                      </span>
+                    </div>
                   </div>
                   <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
                     <div className="balance-amount">{fmt(sol)} SOL</div>
-                    <div className="balance-label">SOL • Total</div>
+                    <div className="balance-label">
+                      SOL • Total
+                      <span className="muted" style={{ marginLeft: 8 }}>
+                        ≈ {formatMoney(solFiatTotal, currency, fx)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -930,6 +1030,9 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                           <div className="product-price">
                             <span className="price-jal">{p.priceJal.toLocaleString()} JAL</span>
                             <span className="muted">• {p.tag}</span>
+                            <span className="muted" style={{ marginLeft: 8 }}>
+                              {jalUsd ? `≈ ${formatMoney(p.priceJal * jalUsd, currency, fx)}` : " "}
+                            </span>
                           </div>
                           <button
                             type="button"
@@ -976,7 +1079,13 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                 (connected ? (
                   <div className="card">
                     <h3>Your Wallet</h3>
-                    <p>JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong></p>
+                    <p>
+                      JAL: <strong>{fmt(jal)}</strong>
+                      <span className="muted"> • ≈ {formatMoney(jal != null && jalUsd != null ? jal * jalUsd : null, currency, fx)}</span>
+                      {"  "}•{"  "}
+                      SOL: <strong>{fmt(sol)}</strong>
+                      <span className="muted"> • ≈ {formatMoney(sol != null && solUsd != null ? sol * solUsd : null, currency, fx)}</span>
+                    </p>
 
                     {portfolio.length ? (
                       <div style={{ marginTop: 10 }}>
