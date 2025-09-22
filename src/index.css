@@ -530,7 +530,26 @@ main[role="main"]{
 /* === 09. OVERLAYS & MODALS ============================================= */
 
 .hub-overlay{ position: fixed; inset: 0; z-index: 98; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); animation: overlayIn var(--t-slow) both }
-.hub-panel--overlay{ position: fixed; z-index: 99; inset-inline-start:50%; transform: translateX(-50%); inset-block-start: calc(var(--safe-top) + 6px); inset-block-end: calc(var(--safe-bottom) + 6px); inline-size: min(100% - 1.5rem, 1100px) }
+/* Perfectly center the overlay sheet horizontally */
+.hub-panel--overlay{
+  position: fixed;
+  /* vertical fitting w/ safe areas */
+  inset-block-start: calc(var(--safe-top) + 6px);
+  inset-block-end: calc(var(--safe-bottom) + 6px);
+
+  /* horizontal centering */
+  inset-inline: 0;          /* left: 0; right: 0; in logical props */
+  margin-inline: auto;      /* center it */
+  width: min(100% - 1.5rem, 1100px);
+
+  /* neutralize previous offsets */
+  transform: none;
+  margin-block: 0;          /* ignore .hub-panel vertical margins while fixed */
+
+  z-index: 99;
+}
+/* Ensure the base panel's auto margins don't interfere when fixed */
+.hub-panel--overlay.hub-panel{ margin-inline: auto; }
 
 /* Disable clicks on underlying chrome while hub open */
 body[data-hub-open="true"] .tabbar,
