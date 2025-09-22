@@ -1,6 +1,10 @@
-/* ==========================================================================
-   JAL/SOL — Global CSS
-   Style system: neon-cyber / premium ATM
+/* ===========================================================================
+   JAL/SOL — Global CSS (surgical upgrade)
+   Notes:
+   - Preserves your tokens & look; adds hooks for Hub overlay, Landing TV bg,
+     bottom-center nav, and global shell classes used by App.tsx.
+   - No component-level overrides; everything stays centralized here.
+   - New classes are marked with  ✨  in comments.
    ========================================================================== 
    00. Tokens & Resets
    01. Foundations (Layout, Utils)
@@ -12,6 +16,7 @@
        5.2 Hub Panel (container)
        5.3 Hub Tiles
        5.4 JAL Panel + Swap Layer
+       5.5 Landing Background (TradingView/GIF/Video) ✨
    06. Components (Buttons, Chips, Cards, Links)
        6.1 Pills
        6.2 Trust Strip
@@ -37,6 +42,10 @@
   --glow-cyan:  0 0 16px rgba(0,240,255,.55), 0 0 32px rgba(0,240,255,.35);
   --glow-gold:  0 0 14px rgba(244,200,106,.55), 0 0 26px rgba(244,200,106,.35);
   --glow-white: 0 0 12px rgba(255,255,255,.45), 0 0 24px rgba(255,255,255,.25);
+
+  /* ✨ Glass tints (used by overlays/nav) */
+  --glass: rgba(10,14,18,.28);
+  --panel-bg: rgba(13,18,24,.96);
 
   /* Shape / Motion */
   --r-sm:10px; --r-md:16px; --r-lg:20px;
@@ -72,7 +81,7 @@ html,body{
 }
 img{ display:block; max-width:100% }
 img,svg{ shape-rendering:geometricPrecision }
-a{ color:inherit; text-decoration:none }
+ a{ color:inherit; text-decoration:none }
 button{ font:inherit; color:inherit; background:none; border:none; cursor:pointer }
 :focus-visible{ outline:2px solid var(--green); outline-offset:2px }
 .sr-only{
@@ -85,6 +94,11 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
 
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 .muted{ opacity:.75 }
+
+/* ✨ App shell & page regions (used by App.tsx) */
+.app-shell{ min-height:100svh; position:relative; background:transparent; }
+.page{ min-height: calc(100svh - var(--header-h)); position:relative; z-index:1; }
+.glass{ backdrop-filter: blur(var(--blur)); background: var(--glass); }
 
 /* Lock scroll when overlays/menus open */
 body[data-wallet-visible="true"],
@@ -119,7 +133,7 @@ main[role="main"]{
 
 @media (prefers-reduced-motion: reduce){
   .hamburger span, .hamburger, .sidebar-nav, .sidebar-overlay,
-  .button, .card, .img-btn { transition:none; animation:none }
+  .button, .card, .img-btn, .tv-bg iframe, .bg-layer { transition:none; animation:none }
 }
 
 
@@ -291,6 +305,16 @@ main[role="main"]{
 .hub-title{ margin:0; font-size:clamp(1.1rem,2vw,1.35rem); text-shadow:0 0 12px rgba(255,255,255,.35) }
 .hub-panel-body{ overflow:auto; overscroll-behavior:contain; padding:18px; display:grid; gap:18px; grid-template-rows:auto 1fr }
 
+/* ✨ Alias: hub-sheet (for overlay portal) */
+.hub-sheet{ /* mirrors hub-panel */
+  width:min(100% - 1.5rem, 1100px);
+  max-height:min(88svh, 900px);
+  display:flex; flex-direction:column; overflow:auto;
+  border:1px solid var(--stroke-2); border-radius:var(--r-lg);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  box-shadow: 0 20px 80px rgba(0,0,0,.7), var(--glow-gold);
+}
+
 /* 5.3 Hub Tiles */
 .hub-stack{ position:relative; display:grid; gap:clamp(12px,2vw,18px); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); z-index:1 }
 .hub-stack::before{ content:""; position:absolute; inset:0; border-radius:var(--r-lg); box-shadow: inset 0 0 40px rgba(17,241,167,.08); pointer-events:none }
@@ -358,6 +382,22 @@ main[role="main"]{
 @media (max-width:640px){ .swap-embed-wrap{ block-size: min(72vh, 620px); min-block-size: 440px } }
 .swap-embed-hint{ margin-top:10px; opacity:.85; font-size:.9rem }
 .swap-embed-hint a{ text-decoration: underline }
+
+/* 5.5 ✨ Landing Background (TradingView/GIF/Video) */
+/* Fullscreen background layer that sits behind .page content. */
+.bg-layer{ position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+/* TradingView background holder; mount your iframe into .tv-bg > iframe */
+.tv-bg{ position:fixed; inset:0; z-index:0; overflow:hidden; opacity:.92; filter: saturate(1.05) contrast(1.02); }
+.tv-bg iframe{ position:absolute; inset:-2%; width:104%; height:104%; border:0; pointer-events:none; transition:opacity var(--t-med), transform var(--t-slow); }
+
+/* Optional: darken/blur mask over busy charts */
+.bg-scrim{ position:fixed; inset:0; z-index:0; pointer-events:none; background: radial-gradient(1000px 600px at 50% -220px, rgba(7,9,12,.25), rgba(7,9,12,.68) 55%, rgba(7,9,12,.85)); backdrop-filter: blur(2px); }
+
+/* ✨ Bottom-center nav (About / Manifesto / Content / Learn) */
+.bottom-nav{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:30; border-radius:999px; padding:6px 12px; backdrop-filter: blur(var(--blur)); background: var(--glass); border:1px solid var(--stroke); display:flex; gap:10px }
+.bottom-nav a{ padding:.5rem .85rem; border-radius:999px; border:1px solid var(--stroke); transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast) }
+.bottom-nav a:hover{ transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 
 
 /* === 06. COMPONENTS ===================================================== */
@@ -601,4 +641,3 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
   backdrop-filter: blur(6px);
 }
 .swap-exit:hover{ transform: translateY(-1px); border-color: var(--cyan); box-shadow: var(--glow-cyan) }
-
