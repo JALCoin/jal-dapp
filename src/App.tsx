@@ -6,7 +6,6 @@ import {
   lazy,
   Suspense,
   type PropsWithChildren,
-  useCallback,
 } from "react";
 import {
   BrowserRouter,
@@ -15,7 +14,6 @@ import {
   NavLink,
   Navigate,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
 
 import { clusterApiUrl, type Cluster } from "@solana/web3.js";
@@ -58,6 +56,41 @@ function prefetchGenerators() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Error boundary so nothing can blank the app                         */
+/* ------------------------------------------------------------------ */
+class AppErrorBoundary extends (/* no types to keep simple */ (class extends (Object as any) {}) as new (...a:any[]) => React.Component<any, any>) {
+  constructor(props: any) {
+    // @ts-ignore
+    super(props);
+    this.state = { hasError: false, err: null };
+  }
+  static getDerivedStateFromError(err: any) {
+    return { hasError: true, err };
+  }
+  componentDidCatch(err: any, info: any) {
+    // eslint-disable-next-line no-console
+    console.error("[AppErrorBoundary]", err, info);
+  }
+  render() {
+    // @ts-ignore
+    if (this.state?.hasError) {
+      return (
+        <main className="landing-gradient" style={{ padding: 24 }}>
+          <div className="container">
+            <div className="card">
+              <h3 style={{ marginTop: 0 }}>Something went wrong</h3>
+              <p className="muted">Try refreshing. If the issue persists, check the console logs.</p>
+            </div>
+          </div>
+        </main>
+      );
+    }
+    // @ts-ignore
+    return this.props.children;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Providers                                                           */
 /* ------------------------------------------------------------------ */
 function SolanaProviders({ children }: PropsWithChildren) {
@@ -65,9 +98,13 @@ function SolanaProviders({ children }: PropsWithChildren) {
   const cluster: Cluster = "mainnet-beta";
 
   const endpoint = useMemo(() => {
-    const injected = (window as any).__SOLANA_RPC_ENDPOINT__ as string | undefined;
-    const env = import.meta.env.VITE_SOLANA_RPC as string | undefined;
-    return injected ?? env ?? clusterApiUrl(cluster);
+    try {
+      const injected = (window as any)?.__SOLANA_RPC_ENDPOINT__ as string | undefined;
+      const env = import.meta.env?.VITE_SOLANA_RPC as string | undefined;
+      return injected ?? env ?? clusterApiUrl(cluster);
+    } catch {
+      return clusterApiUrl(cluster);
+    }
   }, [cluster]);
 
   const connectionConfig = useMemo(
@@ -78,11 +115,10 @@ function SolanaProviders({ children }: PropsWithChildren) {
     []
   );
 
-  const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
+  const WC_PROJECT_ID = import.meta.env?.VITE_WC_PROJECT_ID as string | undefined;
 
   const appUrl = useMemo(
-    () =>
-      typeof window !== "undefined" ? window.location.origin : "https://www.jalsol.com",
+    () => (typeof window !== "undefined" ? window.location.origin : "https://www.jalsol.com"),
     []
   );
 
@@ -161,7 +197,9 @@ function WalletModalVisibilityGuard() {
       v ? body.setAttribute("data-wallet-visible", "true") : body.removeAttribute("data-wallet-visible");
 
     const obs = new MutationObserver(() => {
-      const modal = document.querySelector(".wallet-adapter-modal");
+      const modal =
+        document.querySelector(".wallet-adapter-modal") ||
+        document.querySelector(".wallet-adapter-modal-container");
       set(Boolean(modal));
     });
     obs.observe(document.body, { childList: true, subtree: true });
@@ -180,40 +218,6 @@ function ScrollRestorer() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [pathname, search]);
   return null;
-}
-
-/** Query param helper for `panel` (supports: hub | shop | support | none) */
-function usePanelParam() {
-  const loc = useLocation();
-  const nav = useNavigate();
-
-  const panel = useMemo(() => {
-    const p = new URLSearchParams(loc.search).get("panel");
-    return (p ?? "none") as "hub" | "shop" | "support" | "none";
-  }, [loc.search]);
-
-  const setPanel = useCallback(
-    (next: "hub" | "shop" | "support" | "none") => {
-      const qs = new URLSearchParams(loc.search);
-      if (next === "none") qs.delete("panel");
-      else qs.set("panel", next);
-      nav({ pathname: loc.pathname, search: qs.toString() }, { replace: false });
-    },
-    [loc.pathname, loc.search, nav]
-  );
-
-  const openHub = useCallback(() => setPanel("hub"), [setPanel]);
-  const closeHub = useCallback(() => setPanel("none"), [setPanel]);
-
-  // reflect body attribute for scroll lock
-  useEffect(() => {
-    const body = document.body;
-    if (panel === "hub") body.setAttribute("data-hub-open", "true");
-    else body.removeAttribute("data-hub-open");
-    return () => body.removeAttribute("data-hub-open");
-  }, [panel]);
-
-  return { panel, setPanel, openHub, closeHub };
 }
 
 /* ------------------------------------------------------------------ */
@@ -295,7 +299,7 @@ function TrustStrip() {
 /* ------------------------------------------------------------------ */
 /* Layout                                                              */
 /* ------------------------------------------------------------------ */
-function HeaderView({ onMenu, isOpen, onHub }: { onMenu: () => void; isOpen: boolean; onHub: () => void }) {
+function HeaderView({ onMenu, isOpen }: { onMenu: () => void; isOpen: boolean }) {
   return (
     <header className="site-header">
       <div className="header-inner">
@@ -314,29 +318,15 @@ function HeaderView({ onMenu, isOpen, onHub }: { onMenu: () => void; isOpen: boo
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
         </NavLink>
 
-        {/* Right side: menu + quick hub */}
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            className="hamburger"
-            onClick={onHub}
-            aria-label="Open Hub"
-            title="Open Hub"
-            style={{ marginRight: 8 }}
-          >
-            <span style={{ opacity: 0, width: 0 }} />
-            <span style={{ width: 22, height: 2, background: "#fff", display: "block", borderRadius: 2 }} />
-            <span style={{ opacity: 0, width: 0 }} />
-          </button>
-          <button
-            className={`hamburger ${isOpen ? "is-open" : ""}`}
-            onClick={onMenu}
-            aria-label={isOpen ? "Close menu" : "Open menu"}
-            aria-haspopup="true"
-            aria-expanded={isOpen}
-          >
-            <span></span><span></span><span></span>
-          </button>
-        </div>
+        <button
+          className={`hamburger ${isOpen ? "is-open" : ""}`}
+          onClick={onMenu}
+          aria-label={isOpen ? "Close menu" : "Open menu"}
+          aria-haspopup="true"
+          aria-expanded={isOpen}
+        >
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </header>
   );
@@ -380,6 +370,7 @@ function DisconnectBtn() {
   if (!connected) return null;
   return (
     <button
+      type="button"
       className="wallet-disconnect-btn"
       onClick={() => disconnect().catch(() => {})}
     >
@@ -417,116 +408,11 @@ function TabBar() {
   );
 }
 
-/* Bottom-center info nav (About / Manifesto / Content / Learn) */
-function BottomInfoNav() {
-  return (
-    <footer className="bottom-nav glass" aria-label="Info navigation">
-      <NavLink to="/about">About</NavLink>
-      <NavLink to="/manifesto">Manifesto</NavLink>
-      <NavLink to="/content">Content</NavLink>
-      <NavLink to="/learn">Learn</NavLink>
-    </footer>
-  );
-}
-
-/* Optional: Landing background (TradingView / GIF / Video) */
-function BackgroundLayers() {
-  const { pathname } = useLocation();
-  const onLanding = pathname === "/";
-
-  if (!onLanding) return null;
-  return (
-    <>
-      {/* Mount your TradingView (or any) background in this iframe. */}
-      <div className="tv-bg" aria-hidden="true">
-        {/* Example placeholder — replace src with your TV lightweight widget HTML, or a hosted page that draws the chart. */}
-        <iframe
-          title="JAL/SOL Background Chart"
-          src="/tv-bg.html"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-        />
-      </div>
-      <div className="bg-scrim" aria-hidden="true" />
-    </>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Hub Overlay (portal-like, but simple div in DOM)                    */
-/* ------------------------------------------------------------------ */
-function HubOverlay() {
-  const { panel, closeHub } = usePanelParam();
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeHub();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [closeHub]);
-
-  if (panel !== "hub") return null;
-
-  return (
-    <>
-      <button className="hub-overlay" aria-label="Close hub overlay" onClick={closeHub} />
-      <div
-        className="hub-panel--overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-label="JAL/SOL Hub"
-        onClick={(e) => {
-          // Click outside sheet closes
-          if (e.target === e.currentTarget) closeHub();
-        }}
-      >
-        <div className="hub-sheet">
-          <div className="hub-panel-top">
-            <h3 className="hub-title">Hub</h3>
-            <div className="chip-row">
-              <NavLink className="chip" to="/crypto-generator" onMouseEnter={prefetchGenerators}>
-                Create Token
-              </NavLink>
-              <NavLink className="chip" to="/crypto-generator/engine" onMouseEnter={prefetchGenerators}>
-                Generator Engine
-              </NavLink>
-              <button className="chip" onClick={closeHub}>Close</button>
-            </div>
-          </div>
-
-          <div className="hub-panel-body">
-            {/* Mount your real Hub content here */}
-            <div className="hub-content">
-              <div className="card">
-                <h4 style={{ margin: 0 }}>Welcome to the Hub</h4>
-                <p className="muted" style={{ marginTop: 6 }}>
-                  Quick access to Generator, Vault, and swap tools. Replace this block with your real Hub component.
-                </p>
-                <div className="chip-row">
-                  <NavLink className="button" to="/crypto-generator" onMouseEnter={prefetchGenerators}>
-                    Start Generator
-                  </NavLink>
-                  <NavLink className="button" to="/crypto-generator/engine" onMouseEnter={prefetchGenerators}>
-                    Open Engine
-                  </NavLink>
-                </div>
-              </div>
-              {/* You can add preview tiles or embed the Raydium swap here */}
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /* App Root                                                            */
 /* ------------------------------------------------------------------ */
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { openHub } = usePanelParam(); // for header quick-open
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -548,35 +434,29 @@ export default function App() {
       <WalletModalVisibilityGuard />
       <BrowserRouter>
         <ScrollRestorer />
-
-        {/* Background layers only on Landing */}
-        <BackgroundLayers />
-
-        <HeaderView onMenu={() => setMenuOpen((v) => !v)} isOpen={menuOpen} onHub={openHub} />
+        <HeaderView onMenu={() => setMenuOpen((v) => !v)} isOpen={menuOpen} />
         <TrustStrip />
         <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-        <main role="main">
-          <Suspense fallback={<div className="card">Loading…</div>}>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
-              <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
-              {/* You can add stubs for About/Manifesto/Content/Learn */}
-              <Route path="/about" element={<div className="card">About (stub)</div>} />
-              <Route path="/manifesto" element={<div className="card">Manifesto (stub)</div>} />
-              <Route path="/content" element={<div className="card">Content (stub)</div>} />
-              <Route path="/learn" element={<div className="card">Learn (stub)</div>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </main>
+        <AppErrorBoundary>
+          <main role="main">
+            <Suspense
+              fallback={
+                <div className="container" style={{ padding: 24 }}>
+                  <div className="card">Loading…</div>
+                </div>
+              }
+            >
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
+                <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </main>
+        </AppErrorBoundary>
 
-        {/* Overlays */}
-        <HubOverlay />
-
-        {/* Bottom navigations */}
-        <BottomInfoNav />
         <TabBar />
       </BrowserRouter>
     </SolanaProviders>
