@@ -1,5 +1,5 @@
-import type React from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+// src/pages/Landing.tsx
+import { Link, useSearchParams } from "react-router-dom";
 import { lazy, Suspense, useCallback } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -13,9 +13,8 @@ const Jal = lazy(() => import("./Jal")); // optional: can be removed if unused o
   - Uses CSS hooks from index.css: .landing, .bg-layer/.tv-bg (mounted by App), .hero, .cta-grid, .btn, etc.
 */
 
-export default function Landing(): JSX.Element {
+export default function Landing() {
   const [params, setParams] = useSearchParams();
-  const nav = useNavigate();
   const { connected } = useWallet();
   const { setVisible } = useWalletModal();
 
@@ -96,7 +95,9 @@ export default function Landing(): JSX.Element {
         <Suspense fallback={<div className="card">Loading…</div>}>
           <div className="card">
             <h4 style={{ marginTop: 0 }}>What is JAL?</h4>
-            <p className="muted" style={{ marginTop: 6 }}>A unit of value for creators and communities. Learn and trade in the Hub.</p>
+            <p className="muted" style={{ marginTop: 6 }}>
+              A unit of value for creators and communities. Learn and trade in the Hub.
+            </p>
             {/* Keep this small to avoid heavy mount cost; the full JAL view lives in the Hub */}
             <Jal inHub={false as any} />
           </div>
