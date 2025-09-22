@@ -1,11 +1,12 @@
 // src/App.tsx
-import {
+import React, {
   useEffect,
   useMemo,
   useState,
   lazy,
   Suspense,
   type PropsWithChildren,
+  type ReactNode,
 } from "react";
 import {
   BrowserRouter,
@@ -56,36 +57,38 @@ function prefetchGenerators() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Error boundary so nothing can blank the app                         */
+/* Error boundary                                                      */
 /* ------------------------------------------------------------------ */
-class AppErrorBoundary extends (/* no types to keep simple */ (class extends (Object as any) {}) as new (...a:any[]) => React.Component<any, any>) {
-  constructor(props: any) {
-    // @ts-ignore
-    super(props);
-    this.state = { hasError: false, err: null };
+class AppErrorBoundary extends React.Component<
+  { children: ReactNode },
+  { hasError: boolean; error?: unknown }
+> {
+  state = { hasError: false as const, error: undefined as unknown };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { hasError: true, error };
   }
-  static getDerivedStateFromError(err: any) {
-    return { hasError: true, err };
-  }
-  componentDidCatch(err: any, info: any) {
+  componentDidCatch(error: unknown, info: React.ErrorInfo) {
+    // Keep this so production errors show up in console
     // eslint-disable-next-line no-console
-    console.error("[AppErrorBoundary]", err, info);
+    console.error("[AppErrorBoundary]", error, info);
   }
   render() {
-    // @ts-ignore
-    if (this.state?.hasError) {
+    if (this.state.hasError) {
       return (
         <main className="landing-gradient" style={{ padding: 24 }}>
           <div className="container">
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Something went wrong</h3>
-              <p className="muted">Try refreshing. If the issue persists, check the console logs.</p>
+              <p className="muted">Open the dev console for details.</p>
+              <pre style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>
+                {String((this.state.error as any)?.stack ?? this.state.error)}
+              </pre>
             </div>
           </div>
         </main>
       );
     }
-    // @ts-ignore
     return this.props.children;
   }
 }
