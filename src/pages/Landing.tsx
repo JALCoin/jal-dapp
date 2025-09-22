@@ -333,6 +333,59 @@ async function getJalUsd(): Promise<number | null> {
 const fmtMoney = (v: number | null, fiat: Fiat) =>
   v == null ? "—" : new Intl.NumberFormat(undefined, { style:"currency", currency: fiat, maximumFractionDigits: 6 }).format(v);
 
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Swap fee helpers (visual-only estimates)                                  */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+const AMM_FEE_BPS = 25;                 // 0.25% typical AMM taker fee
+const BASE_TX_LAMPORTS = 5_000;         // base network fee (no priority)
+const LAMPORTS_PER_SOL_F = 1_000_000_000;
+
+function estimateNetworkFeeSol(): number {
+  return BASE_TX_LAMPORTS / LAMPORTS_PER_SOL_F;
+}
+
+function fmtNetworkFee(
+  solUsd: number | null,
+  fxUSD: Record<string, number> | null,
+  fiat: Fiat
+): { sol: string; fiat: string } {
+  const solFee = estimateNetworkFeeSol();
+  const fiatRate = fxUSD?.[fiat] ?? 1;
+  const feeFiat = solUsd != null ? solFee * solUsd * fiatRate : null;
+
+  const solStr = `${solFee.toLocaleString(undefined, { maximumFractionDigits: 6 })} SOL`;
+  const fiatStr =
+    feeFiat == null
+      ? "—"
+      : new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: fiat,
+          maximumFractionDigits: 6,
+        }).format(feeFiat);
+
+  return { sol: solStr, fiat: fiatStr };
+}
+
+function SwapFeeChip({
+  label,
+  solUsd,
+  fxUSD,
+  fiat,
+}: {
+  label: string; // "SOL→JAL" | "JAL→SOL"
+  solUsd: number | null;
+  fxUSD: Record<string, number> | null;
+  fiat: Fiat;
+}) {
+  const { sol, fiat: fiatTxt } = fmtNetworkFee(solUsd, fxUSD, fiat);
+  return (
+    <span className="chip sm mono" title={`${label} estimated fees`}>
+      {label}: DEX ≈ {(AMM_FEE_BPS / 100).toFixed(2)}% • Net ≈ {sol} ({fiatTxt})
+    </span>
+  );
+}
+
 /* Models */
 type Product = {
   id: string;
@@ -839,6 +892,12 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                   <span className="chip sm mono">JAL ≈ {fmtMoney(perJAL, fiat)}</span>
                 </div>
 
+                {/* Estimated swap fees (directional) */}
+                <div style={{ display:"flex", justifyContent:"center", gap:10, flexWrap:"wrap", marginTop: 6 }}>
+                  <SwapFeeChip label="SOL→JAL" solUsd={solUsd} fxUSD={fxUSD} fiat={fiat} />
+                  <SwapFeeChip label="JAL→SOL" solUsd={solUsd} fxUSD={fxUSD} fiat={fiat} />
+                </div>
+
                 <div className="balance-row">
                   <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
                     <div className="balance-amount">{fmt(jal)} JAL</div>
@@ -1127,6 +1186,11 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                     <div className="chip-row" style={{ marginTop: 4 }}>
                       <span className="chip sm mono">JAL price ≈ {fmtMoney(perJAL, fiat)}</span>
                       <span className="chip sm mono">SOL price ≈ {fmtMoney(perSOL, fiat)}</span>
+                    </div>
+                    {/* Optional: show fee chips in Vault as well */}
+                    <div className="chip-row" style={{ marginTop: 6 }}>
+                      <SwapFeeChip label="SOL→JAL" solUsd={solUsd} fxUSD={fxUSD} fiat={fiat} />
+                      <SwapFeeChip label="JAL→SOL" solUsd={solUsd} fxUSD={fxUSD} fiat={fiat} />
                     </div>
 
                     {portfolio.length ? (
