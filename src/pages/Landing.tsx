@@ -42,9 +42,29 @@ const art = (pos: string, zoom = "240%"): React.CSSProperties =>
     ["--art-zoom" as any]: zoom,
   } as React.CSSProperties);
 
-const TOKEN_2022_PROGRAM_ID: PublicKey =
-  (TOKEN_2022_ID_MAYBE as unknown as PublicKey) ??
-  new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+// Safe resolver for TOKEN_2022 program id across package versions
+const TOKEN_2022_PROGRAM_ID: PublicKey = (() => {
+  try {
+    const maybe = TOKEN_2022_ID_MAYBE as unknown as any;
+    if (!maybe) return new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+    if (maybe instanceof PublicKey) return maybe;
+    if (typeof maybe === "string") return new PublicKey(maybe);
+    if (maybe?.toBase58) return new PublicKey(maybe.toBase58());
+    return new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+  } catch {
+    return new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+  }
+})();
+
+// Safe connection factory (helps surface early failures cleanly)
+const safeConn = () => {
+  try {
+    return makeConnection("confirmed");
+  } catch (e) {
+    console.error("[rpc] makeConnection failed", e);
+    throw e;
+  }
+};
 
 const RAYDIUM_PAIR_URL =
   `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(JAL_MINT)}&fixed=in`;
@@ -234,6 +254,23 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
   const panelRef = useRef<HTMLElement | null>(null);
   const firstFocusRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusRef = useRef<HTMLButtonElement | null>(null);
+
+  // ── DEV: visibility + error trap (remove when done) ─────────────────────
+  const [devNote, setDevNote] = useState<string | null>("Landing mounted");
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => setDevNote(`[error] ${e.message}`);
+    const onRej = (e: PromiseRejectionEvent) =>
+      setDevNote(`[unhandled] ${String((e as any).reason?.message || (e as any).reason)}`);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRej);
+    const t = setTimeout(() => setDevNote((n) => (n === "Landing mounted" ? null : n)), 1200);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRej);
+      clearTimeout(t);
+    };
+  }, []);
+  // ────────────────────────────────────────────────────────────────────────
 
   const reducedMotion = useMemo(
     () =>
@@ -530,7 +567,7 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
     setBalErr(null);
     setBalLoading(true);
 
-    const conn = makeConnection("confirmed");
+    const conn = safeConn();
 
     try {
       const lamports = await conn.getBalance(publicKey, "confirmed");
@@ -597,7 +634,7 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
 
     const poll = setInterval(fetchPortfolio, 15000);
 
-    const wsConn = makeConnection("confirmed");
+    const wsConn = safeConn();
     const sub = wsConn.onAccountChange(
       publicKey,
       (ai) => setSol(ai.lamports / LAMPORTS_PER_SOL),
@@ -633,6 +670,18 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
       aria-live="polite"
     >
       <div style={{ position: "relative", zIndex: 1 }}>
+        {/* DEV banner */}
+        {devNote && (
+          <div style={{
+            position:"fixed", inset:"10px auto auto 10px", zIndex:9999,
+            padding:"6px 10px", border:"1px solid rgba(255,255,255,.25)",
+            borderRadius:8, background:"rgba(13,18,24,.92)", boxShadow:"0 6px 20px rgba(0,0,0,.5)",
+            fontSize:12, pointerEvents:"none"
+          }}>
+            {devNote}
+          </div>
+        )}
+
         {/* Backdrop for overlay panels */}
         {overlayActive && (
           <button
@@ -652,6 +701,7 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
           aria-modal={overlayActive || undefined}
           aria-label="JAL/SOL Hub"
           ref={panelRef as any}
+          style={{ zIndex: 5 }}  // ensure above any stray bg layers
         >
           <div className="hub-panel-top">
             <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
