@@ -1,9 +1,9 @@
-/* ===========================================================================
-   JAL/SOL — Global CSS (surgical upgrade, with tiny fixes)
-   ========================================================================== 
-   00. Tokens & Resets
-   01. Foundations (Layout, Utils)
-   02. Global Motion / A11y
+/* =============================================================================
+   JAL/SOL — Global CSS (refined pass + footer removed)
+   Sections:
+   00. Tokens + Resets
+   01. Foundations
+   02. Motion / A11y
    03. Header
    04. Sidebar
    05. Landing + Hub
@@ -12,13 +12,13 @@
    08. Vault
    09. Overlays & Modals
    10. Quick Dock
-   11. Responsive & Trims
+   11. Responsive / Trims
    ========================================================================== */
 
-/* === 00. TOKENS & RESETS ================================================ */
+/* === 00. TOKENS + RESETS =============================================== */
 
 :root{
-  /* Color */
+  /* Colors */
   --bg:#07090c; --bg-2:#0b0f14; --surface:#0f141b;
   --text:#e7fff7; --muted:#c8ffe9;
   --green:#11f1a7; --cyan:#00f0ff; --gold:#f4c86a;
@@ -31,7 +31,7 @@
   --glow-gold:  0 0 14px rgba(244,200,106,.55), 0 0 26px rgba(244,200,106,.35);
   --glow-white: 0 0 12px rgba(255,255,255,.45), 0 0 24px rgba(255,255,255,.25);
 
-  /* ✨ Glass tints (used by overlays/nav) */
+  /* Glass */
   --glass: rgba(10,14,18,.28);
   --panel-bg: rgba(13,18,24,.96);
 
@@ -43,7 +43,7 @@
   /* Layout */
   --max-w:1200px;
   --header-h:88px;
-  --tabbar-h:68px;
+  --tabbar-h:0px; /* Footer removed */
 
   /* Safe areas */
   --safe-top: max(var(--header-h), env(safe-area-inset-top, 0px));
@@ -78,15 +78,14 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
 }
 
 
-/* === 01. FOUNDATIONS (Layout, Utils) =================================== */
+/* === 01. FOUNDATIONS ==================================================== */
 
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 .muted{ opacity:.75 }
 
-/* ✨ App shell & page regions (used by App.tsx) */
-.app-shell{ min-height:100svh; position:relative; background:transparent; }
-.page{ min-height: calc(100svh - var(--header-h)); position:relative; z-index:1; }
-.glass{ backdrop-filter: blur(var(--blur)); background: var(--glass); }
+.app-shell{ min-height:100svh; position:relative; background:transparent }
+.page{ min-height: calc(100svh - var(--header-h)); position:relative; z-index:1 }
+.glass{ backdrop-filter: blur(var(--blur)); background: var(--glass) }
 
 /* Lock scroll when overlays/menus open */
 body[data-wallet-visible="true"],
@@ -95,7 +94,8 @@ body[data-hub-open="true"]{ overflow:hidden }
 
 main[role="main"]{
   min-height: calc(100lvh - var(--header-h));
-  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  /* no footer pad needed now; keep safe-bottom for device insets */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   display:flex; flex-direction:column;
 }
 @supports not (height: 100lvh){
@@ -117,7 +117,7 @@ main[role="main"]{
 }
 
 
-/* === 02. GLOBAL MOTION / A11y ========================================== */
+/* === 02. MOTION / A11y ================================================= */
 
 @media (prefers-reduced-motion: reduce){
   .hamburger span, .hamburger, .sidebar-nav, .sidebar-overlay,
@@ -157,7 +157,7 @@ main[role="main"]{
   margin-inline:auto; cursor:pointer;
   transition: transform var(--t-fast), filter var(--t-fast);
 }
-.logo.header-logo:hover { transform: translateY(-1px); filter: drop-shadow(0 0 12px rgba(255,255,255,.9)); }
+.logo.header-logo:hover { transform: translateY(-1px); filter: drop-shadow(0 0 12px rgba(255,255,255,.9)) }
 
 .main-nav{ display:none!important }
 
@@ -221,12 +221,11 @@ main[role="main"]{
   background:
     radial-gradient(900px 540px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
     var(--bg);
-  position:relative; /* ensure above bg layers */
-  z-index:1;
+  position:relative; z-index:1;
 }
 .landing-merge .landing-logo{ filter: drop-shadow(0 0 20px rgba(255,255,255,.45)) }
 
-/* 5.1 Dashboard (inside Hub) */
+/* Dashboard */
 .hub-dashboard{
   width:min(100% - 2rem, var(--max-w));
   margin-inline:auto;
@@ -234,12 +233,8 @@ main[role="main"]{
   gap: var(--section-gap);
   padding: clamp(24px, 4vw, 36px) var(--gutter) 12px;
 }
-.hub-dashboard .bank-status{
-  display:flex; align-items:center; justify-content:center; gap:10px; opacity:.9;
-}
-.hub-dashboard .balance-row{
-  display:flex; flex-wrap:wrap; justify-content:center; gap: var(--gutter);
-}
+.hub-dashboard .bank-status{ display:flex; align-items:center; justify-content:center; gap:10px; opacity:.9 }
+.hub-dashboard .balance-row{ display:flex; flex-wrap:wrap; justify-content:center; gap: var(--gutter) }
 .hub-dashboard .balance-card{
   min-width: 240px; padding: 14px 16px;
   border:1px solid var(--stroke); border-radius: var(--r-lg);
@@ -248,10 +243,7 @@ main[role="main"]{
 }
 .hub-dashboard .balance-amount{ font-size: clamp(1.15rem, 2.8vw, 1.5rem); font-weight:700 }
 .hub-dashboard .balance-label{ opacity:.85; font-size:.92rem }
-.hub-dashboard .feature-grid{
-  display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--gutter); align-items:stretch;
-}
+.hub-dashboard .feature-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gutter); align-items:stretch }
 .hub-dashboard .feature-card{
   position:relative; min-height:160px; padding:16px;
   border:1px solid var(--stroke); border-radius: var(--r-lg);
@@ -276,7 +268,7 @@ main[role="main"]{
 .landing-logo{ block-size:clamp(110px,20vw,180px); filter: drop-shadow(0 0 10px rgba(255,255,255,.65)) }
 .landing-logo-wrapper.wallet-connected .landing-logo{ filter: drop-shadow(0 0 14px rgba(255,255,255,.82)) }
 
-/* 5.2 Hub Panel (container) */
+/* Hub Panel */
 .hub-panel{
   width:min(100% - 2rem, 1100px);
   margin:16px auto 24px;
@@ -295,7 +287,7 @@ main[role="main"]{
 .hub-title{ margin:0; font-size:clamp(1.1rem,2vw,1.35rem); text-shadow:0 0 12px rgba(255,255,255,.35) }
 .hub-panel-body{ overflow:auto; overscroll-behavior:contain; padding:18px; display:grid; gap:18px; grid-template-rows:auto 1fr }
 
-/* ✨ Alias: hub-sheet (for overlay portal) */
+/* Overlay variant (dialog) */
 .hub-sheet{
   width:min(100% - 1.5rem, 1100px);
   max-height:min(88svh, 900px);
@@ -305,15 +297,14 @@ main[role="main"]{
   box-shadow: 0 20px 80px rgba(0,0,0,.7), var(--glow-gold);
 }
 
-/* 5.3 Hub Tiles */
+/* Tiles */
 .hub-stack{ position:relative; display:grid; gap:clamp(12px,2vw,18px); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); z-index:1 }
 .hub-stack::before{ content:""; position:absolute; inset:0; border-radius:var(--r-lg); box-shadow: inset 0 0 40px rgba(17,241,167,.08); pointer-events:none }
 .hub-stack--responsive{ align-items:start }
 
 .img-btn{
   position:relative; border-radius:var(--r-lg); overflow:hidden; aspect-ratio:16/10;
-  border:1px solid var(--stroke); background:#0b0f14;
-  min-height:180px;
+  border:1px solid var(--stroke); background:#0b0f14; min-height:180px;
   transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
 .img-btn:hover{ transform:translateY(-2px); border-color:var(--green); box-shadow:var(--glow-green) }
@@ -331,7 +322,7 @@ main[role="main"]{
 .in-hub > *{ position:relative; z-index:6 }
 .hub-preview{ box-shadow: 0 16px 48px rgba(0,0,0,.6), 0 0 12px rgba(244,200,106,.25); margin-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 16px) }
 
-/* 5.4 JAL Panel + Swap Layer (foreground Raydium) */
+/* JAL Panel + Swap Layer */
 .jal-title{ margin:0; font-size:clamp(1.3rem,2.8vw,1.6rem); letter-spacing:.02em }
 .jal-subtitle{ margin:.25rem 0 0; opacity:.85 }
 .jal-actions{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px }
@@ -340,7 +331,7 @@ main[role="main"]{
 .jal-btn:hover{ transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 .jal-btn--primary{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
 
-/* Reusable foreground swap layer */
+/* Foreground swap layer */
 .swap-layer{
   position:fixed; inset:0; z-index:0;
   opacity:.35; transform:scale(1.02);
@@ -348,15 +339,10 @@ main[role="main"]{
   transition: all 450ms cubic-bezier(.22,.61,.36,1);
   filter: brightness(0.9) contrast(1.05) saturate(1.15);
 }
-.swap-layer--active{
-  z-index:200; opacity:1; transform:scale(1);
-  pointer-events:auto; filter:none;
-}
-.swap-close{
-  position:fixed; z-index:210; top:14px; right:14px;
-}
+.swap-layer--active{ z-index:200; opacity:1; transform:scale(1); pointer-events:auto; filter:none }
+.swap-close{ position:fixed; z-index:210; top:14px; right:14px }
 
-/* Embedded (carded) swap */
+/* Embedded swap */
 .swap-embed-card{ padding: clamp(.75rem, 2vw, 1rem) }
 .swap-embed-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px }
 .swap-embed-wrap{
@@ -366,20 +352,19 @@ main[role="main"]{
   background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
   box-shadow: 0 8px 30px rgba(0,0,0,.55);
 }
-.swap-embed-iframe{ position:absolute; inset:0; inline-size:100%; block-size:100%; border:0; background:transparent }
-.swap-embed-wrap .swap-embed-iframe{ opacity:1; transition:opacity var(--t-med) ease }
+.swap-embed-iframe{ position:absolute; inset:0; inline-size:100%; block-size:100%; border:0; background:transparent; transition:opacity var(--t-med) ease }
 .swap-embed-wrap.loading .swap-embed-iframe{ opacity:0 }
 @media (max-width:640px){ .swap-embed-wrap{ block-size: min(72vh, 620px); min-block-size: 440px } }
 .swap-embed-hint{ margin-top:10px; opacity:.85; font-size:.9rem }
 .swap-embed-hint a{ text-decoration: underline }
 
-/* 5.5 ✨ Landing Background (TradingView/GIF/Video) */
-.bg-layer{ position:fixed; inset:0; z-index:0; pointer-events:none; }
-.tv-bg{ position:fixed; inset:0; z-index:0; overflow:hidden; opacity:.92; filter: saturate(1.05) contrast(1.02); }
-.tv-bg iframe{ position:absolute; inset:-2%; width:104%; height:104%; border:0; pointer-events:none; transition:opacity var(--t-med), transform var(--t-slow); }
-.bg-scrim{ position:fixed; inset:0; z-index:0; pointer-events:none; background: radial-gradient(1000px 600px at 50% -220px, rgba(7,9,12,.25), rgba(7,9,12,.68) 55%, rgba(7,9,12,.85)); backdrop-filter: blur(2px); }
+/* Landing background layers */
+.bg-layer{ position:fixed; inset:0; z-index:0; pointer-events:none }
+.tv-bg{ position:fixed; inset:0; z-index:0; overflow:hidden; opacity:.92; filter: saturate(1.05) contrast(1.02) }
+.tv-bg iframe{ position:absolute; inset:-2%; width:104%; height:104%; border:0; pointer-events:none; transition:opacity var(--t-med), transform var(--t-slow) }
+.bg-scrim{ position:fixed; inset:0; z-index:0; pointer-events:none; background: radial-gradient(1000px 600px at 50% -220px, rgba(7,9,12,.25), rgba(7,9,12,.68) 55%, rgba(7,9,12,.85)); backdrop-filter: blur(2px) }
 
-/* ✨ Bottom-center nav (About / Manifesto / Content / Learn) */
+/* Optional bottom-center nav */
 .bottom-nav{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:30; border-radius:999px; padding:6px 12px; backdrop-filter: blur(var(--blur)); background: var(--glass); border:1px solid var(--stroke); display:flex; gap:10px }
 .bottom-nav a{ padding:.5rem .85rem; border-radius:999px; border:1px solid var(--stroke); transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast) }
 .bottom-nav a:hover{ transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
@@ -405,13 +390,13 @@ main[role="main"]{
   border:1px solid var(--stroke); border-radius:var(--r-lg);
   padding: clamp(1rem, 2.5vw, 1.25rem);
   box-shadow: 0 10px 30px rgba(0,0,0,.55);
-  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast)
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
 }
 .card:hover{ border-color:var(--green); box-shadow:var(--glow-green); transform:translateY(-2px) }
 .card.gold:hover{ border-color:var(--gold); box-shadow:var(--glow-gold) }
 .card.cyan:hover{ border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 
-/* 6.1 Pills */
+/* Pills */
 .chip-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; position:relative; isolation:isolate; z-index:2 }
 .chip, .button, .jal-link,
 .trust-strip .chip, .trust-strip .button, .trust-strip .jal-link{
@@ -429,7 +414,6 @@ main[role="main"]{
 .chip:hover, .button:hover { transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 .chip.active{ border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
 
-/* 🔧 Additions: small/mono variants + status dot for RpcStatusChip */
 .chip.sm{ padding:.38rem .6rem; min-height:36px; font-size:.85rem }
 .chip.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
 .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
@@ -438,7 +422,7 @@ main[role="main"]{
 .chip .dot.warn{ background:#f4c86a }
 .chip .dot.down{ background:#ff6b6b }
 
-/* 6.2 Trust Strip */
+/* Trust Strip */
 .trust-strip{
   width: min(100% - 2rem, var(--max-w));
   margin: 12px auto 0;
@@ -466,7 +450,7 @@ main[role="main"]{
   position:relative; margin-top:12px; border:1px solid var(--stroke);
   border-radius:var(--r-lg);
   background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 0 1px rgba(244,200,106,.12) inset; overflow:hidden
+  box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 0 1px rgba(244,200,106,.12) inset; overflow:hidden;
 }
 .shop-promo.has-art::after{ opacity:.28; filter:saturate(1.05) contrast(1.02) }
 .shop-promo-inner{ position:relative; z-index:1; padding:clamp(14px, 3vw, 18px); display:grid; gap:8px }
@@ -530,26 +514,16 @@ main[role="main"]{
 /* === 09. OVERLAYS & MODALS ============================================= */
 
 .hub-overlay{ position: fixed; inset: 0; z-index: 98; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); animation: overlayIn var(--t-slow) both }
-/* Perfectly center the overlay sheet horizontally */
+
+/* Center the overlay sheet */
 .hub-panel--overlay{
   position: fixed;
-  /* vertical fitting w/ safe areas */
   inset-block-start: calc(var(--safe-top) + 6px);
   inset-block-end: calc(var(--safe-bottom) + 6px);
-
-  /* horizontal centering */
-  inset-inline: 0;          /* left: 0; right: 0; in logical props */
-  margin-inline: auto;      /* center it */
-  width: min(100% - 1.5rem, 1100px);
-
-  /* neutralize previous offsets */
-  transform: none;
-  margin-block: 0;          /* ignore .hub-panel vertical margins while fixed */
-
-  z-index: 99;
+  inset-inline: 0; margin-inline:auto; width: min(100% - 1.5rem, 1100px);
+  transform:none; margin-block:0; z-index: 99;
 }
-/* Ensure the base panel's auto margins don't interfere when fixed */
-.hub-panel--overlay.hub-panel{ margin-inline: auto; }
+.hub-panel--overlay.hub-panel{ margin-inline:auto }
 
 /* Disable clicks on underlying chrome while hub open */
 body[data-hub-open="true"] .tabbar,
@@ -574,20 +548,10 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 
 
-/* === 11. RESPONSIVE & TRIMS ============================================ */
+/* === 11. RESPONSIVE / TRIMS ============================================ */
 
-.tabbar{
-  position:fixed; inset-inline:0; inset-block-end:0; z-index:30;
-  block-size:var(--tabbar-h); display:grid; grid-auto-flow:column; place-items:center;
-  background:linear-gradient(180deg, rgba(12,16,22,.82), rgba(12,16,22,.94));
-  border-top:1px solid var(--stroke-2);
-  backdrop-filter:blur(var(--blur));
-  padding-bottom: env(safe-area-inset-bottom, 0px)
-}
-.tabbar a{ display:grid; gap:6px; place-items:center; padding:6px 4px; font-size:.8rem; opacity:.9; transition:transform var(--t-fast), color var(--t-fast) }
-.tabbar a:hover{ transform:translateY(-1px); color:var(--cyan); text-shadow:var(--glow-cyan) }
-.tabbar a.active{ color:var(--gold); text-shadow:var(--glow-gold) }
-.tabbar .tab-icon{ inline-size:22px; block-size:22px; opacity:.95 }
+/* Footer removed entirely */
+.tabbar{ display:none !important; }
 
 @media (max-width:680px){
   .hub-panel--overlay { padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) }
@@ -629,6 +593,7 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
   .shop-promo{ margin-top: var(--section-gap) }
   .product-grid{ gap: var(--gutter-lg) }
 }
+
 @keyframes swapIn {
   from { transform: scale(0.985); opacity: .0; filter: blur(2px) brightness(.8) }
   to   { transform: scale(1);     opacity: 1;  filter: blur(0)  brightness(1) }
