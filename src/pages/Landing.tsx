@@ -27,7 +27,7 @@ const Jal = lazy(() => import("./Jal"));
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
-type Panel = "grid" | "shop" | "jal" | "vault" | "payments" | "loans" | "support"; // removed "none"
+type Panel = "grid" | "shop" | "jal" | "vault" | "payments" | "loans" | "support";
 type TileKey = Panel;
 type LandingProps = { initialPanel?: Panel };
 
@@ -42,7 +42,7 @@ const art = (pos: string, zoom = "240%"): React.CSSProperties =>
     ["--art-zoom" as any]: zoom,
   } as React.CSSProperties);
 
-// Safe resolver for TOKEN_2022 program id across package versions
+// TOKEN_2022 id resolver (handles differing package exports)
 const TOKEN_2022_PROGRAM_ID: PublicKey = (() => {
   try {
     const maybe = TOKEN_2022_ID_MAYBE as unknown as any;
@@ -56,7 +56,9 @@ const TOKEN_2022_PROGRAM_ID: PublicKey = (() => {
   }
 })();
 
-// Safe connection factory (helps surface early failures cleanly)
+const RAYDIUM_PAIR_URL =
+  `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(JAL_MINT)}&fixed=in`;
+
 const safeConn = () => {
   try {
     return makeConnection("confirmed");
@@ -65,9 +67,6 @@ const safeConn = () => {
     throw e;
   }
 };
-
-const RAYDIUM_PAIR_URL =
-  `https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${encodeURIComponent(JAL_MINT)}&fixed=in`;
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Small helpers                                                             */
@@ -243,7 +242,6 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
   const { setVisible } = useWalletModal();
   const [params, setParams] = useSearchParams();
 
-  // DEFAULT TO GRID (never render empty)
   const [activePanel, setActivePanel] = useState<Panel>("grid");
   const [merging, setMerging] = useState(false);
 
@@ -255,22 +253,17 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
   const firstFocusRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusRef = useRef<HTMLButtonElement | null>(null);
 
-  // ── DEV: visibility + error trap (remove when done) ─────────────────────
-  const [devNote, setDevNote] = useState<string | null>("Landing mounted");
-  useEffect(() => {
-    const onError = (e: ErrorEvent) => setDevNote(`[error] ${e.message}`);
-    const onRej = (e: PromiseRejectionEvent) =>
-      setDevNote(`[unhandled] ${String((e as any).reason?.message || (e as any).reason)}`);
-    window.addEventListener("error", onError);
-    window.addEventListener("unhandledrejection", onRej);
-    const t = setTimeout(() => setDevNote((n) => (n === "Landing mounted" ? null : n)), 1200);
-    return () => {
-      window.removeEventListener("error", onError);
-      window.removeEventListener("unhandledrejection", onRej);
-      clearTimeout(t);
-    };
-  }, []);
-  // ────────────────────────────────────────────────────────────────────────
+  // Optional: tiny dev banner (comment in/out as needed)
+  // const [devNote, setDevNote] = useState<string | null>("Landing mounted");
+  // useEffect(() => {
+  //   const onError = (e: ErrorEvent) => setDevNote(`[error] ${e.message}`);
+  //   const onRej = (e: PromiseRejectionEvent) =>
+  //     setDevNote(`[unhandled] ${String((e as any).reason?.message || (e as any).reason)}`);
+  //   window.addEventListener("error", onError);
+  //   window.addEventListener("unhandledrejection", onRej);
+  //   const t = setTimeout(() => setDevNote(null), 1200);
+  //   return () => { window.removeEventListener("error", onError); window.removeEventListener("unhandledrejection", onRej); clearTimeout(t); };
+  // }, []);
 
   const reducedMotion = useMemo(
     () =>
@@ -436,7 +429,6 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
     if (urlPanel && isPanel(urlPanel)) return;
     if (connected && activePanel === "grid") {
       const last = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
-      // If last was a subpanel, keep grid unless you want to auto-open it
       if (last && isPanel(last) && last !== "grid") setActivePanel("grid");
     }
   }, [connected, activePanel, params]);
@@ -477,7 +469,7 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape" && overlayOpen) setActivePanel("grid"); // go back to grid
+      if (e.key === "Escape" && overlayOpen) setActivePanel("grid");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -665,34 +657,8 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
   const shouldLoadGifs = !saveData && !reducedMotion;
 
   return (
-    <main
-      className={`landing-gradient ${merging ? "landing-merge" : ""}`}
-      aria-live="polite"
-    >
-      <div style={{ position: "relative", zIndex: 1 }}>
-        {/* DEV banner */}
-        {devNote && (
-          <div style={{
-            position:"fixed", inset:"10px auto auto 10px", zIndex:9999,
-            padding:"6px 10px", border:"1px solid rgba(255,255,255,.25)",
-            borderRadius:8, background:"rgba(13,18,24,.92)", boxShadow:"0 6px 20px rgba(0,0,0,.5)",
-            fontSize:12, pointerEvents:"none"
-          }}>
-            {devNote}
-          </div>
-        )}
-
-        {/* Backdrop for overlay panels */}
-        {overlayActive && (
-          <button
-            type="button"
-            className="hub-overlay"
-            aria-label="Close panel"
-            onClick={() => setActivePanel("grid")}
-            ref={firstFocusRef}
-          />
-        )}
-
+    <main className={`landing-gradient ${merging ? "landing-merge" : ""}`} aria-live="polite">
+      <div style={{ position: "relative" }}>
         {/* Hub / Grid + overlays */}
         <section
           id="hub-panel"
@@ -701,13 +667,17 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
           aria-modal={overlayActive || undefined}
           aria-label="JAL/SOL Hub"
           ref={panelRef as any}
-          style={{ zIndex: 5 }}  // ensure above any stray bg layers
+          style={{ position: "relative", zIndex: 20 }}   // ABOVE overlay
         >
           <div className="hub-panel-top">
             <h2 className="hub-title" ref={hubTitleRef} tabIndex={-1}>
               {panelTitle}
             </h2>
-            {connected ? <DisconnectButton className="wallet-disconnect-btn" /> : <ConnectButton className="wallet-disconnect-btn" />}
+            {connected ? (
+              <DisconnectButton className="wallet-disconnect-btn" />
+            ) : (
+              <ConnectButton className="wallet-disconnect-btn" />
+            )}
           </div>
 
           <div className="hub-panel-body" ref={hubBodyRef}>
@@ -1071,6 +1041,18 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
             />
           )}
         </section>
+
+        {/* Backdrop for overlay panels — render AFTER panel; keep z-index lower */}
+        {overlayActive && (
+          <button
+            type="button"
+            className="hub-overlay"
+            aria-label="Close panel"
+            onClick={() => setActivePanel("grid")}
+            ref={firstFocusRef}
+            style={{ position: "fixed", inset: 0, zIndex: 10 }}
+          />
+        )}
       </div>
     </main>
   );
