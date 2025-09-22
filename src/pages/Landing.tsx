@@ -1,3 +1,4 @@
+```tsx
 // src/pages/Landing.tsx
 import type React from "react";
 import {
@@ -218,81 +219,120 @@ function LiquidityHowToCard() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
-/* Fiat helpers (self-contained, no GPS/IP)                                   */
+/* Fiat: contained/collapsible picker + **per-token** fiat prices            */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-const LOCALE_TO_CCY: Record<string, string> = {
-  US:"USD", GB:"GBP", IE:"EUR", DE:"EUR", FR:"EUR", ES:"EUR", IT:"EUR", NL:"EUR", PT:"EUR",
-  AT:"EUR", BE:"EUR", FI:"EUR", SE:"SEK", NO:"NOK", DK:"DKK", CH:"CHF", CA:"CAD", AU:"AUD",
-  NZ:"NZD", JP:"JPY", SG:"SGD", HK:"HKD", AE:"AED", SA:"SAR", IN:"INR", ZA:"ZAR"
-};
-function guessCurrencyFromLocale(): string {
-  try { const c = localStorage.getItem("jal:currency"); if (c) return c; } catch {}
+type Fiat =
+  | "USD" | "EUR" | "GBP" | "JPY" | "AUD" | "CAD" | "CHF" | "SEK"
+  | "NOK" | "DKK" | "SGD" | "HKD" | "INR";
+
+const FIATS: Fiat[] = ["USD","EUR","GBP","JPY","AUD","CAD","CHF","SEK","NOK","DKK","SGD","HKD","INR"];
+
+function inferDefaultFiat(): Fiat {
   try {
-    const region = Intl.DateTimeFormat().resolvedOptions().locale.split("-")[1];
-    if (region && LOCALE_TO_CCY[region]) return LOCALE_TO_CCY[region];
+    const saved = localStorage.getItem("jal:fiat") as Fiat | null;
+    if (saved && FIATS.includes(saved)) return saved;
+  } catch {}
+  try {
+    const loc = navigator.language.toLowerCase();
+    if (loc.includes("-au")) return "AUD";
+    if (loc.includes("-gb")) return "GBP";
+    if (loc.includes("-jp")) return "JPY";
+    if (loc.includes("-ca")) return "CAD";
+    if (loc.includes("-ch")) return "CHF";
+    if (loc.includes("-se")) return "SEK";
+    if (loc.includes("-no")) return "NOK";
+    if (loc.includes("-dk")) return "DKK";
+    if (loc.includes("-sg")) return "SGD";
+    if (loc.includes("-hk")) return "HKD";
+    if (loc.includes("-in")) return "INR";
+    if (/-de|-fr|-es|-it|-nl|-pt|-be|-fi|-ie/.test(loc)) return "EUR";
   } catch {}
   return "USD";
 }
-async function fetchUsdFx(): Promise<Record<string, number> | null> {
+
+// Collapsible fiat picker popover
+function FiatPicker({
+  value, onChange,
+}: { value: Fiat; onChange: (v: Fiat) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position:"relative", display:"inline-block" }}>
+      <button
+        type="button"
+        className="chip sm mono"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(v => !v)}
+        title="Choose fiat currency"
+      >
+        Fiat: {value}
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          className="glass"
+          style={{
+            position:"absolute", insetInlineStart:0, marginTop:8,
+            border:"1px solid var(--stroke)", borderRadius:12, padding:8,
+            minWidth:220, zIndex:10, boxShadow:"0 10px 30px rgba(0,0,0,.55)"
+          }}
+        >
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, maxHeight:180, overflow:"auto" }}>
+            {FIATS.map(code => (
+              <button
+                key={code}
+                role="option"
+                aria-selected={value===code}
+                className={`chip sm ${value===code ? "active" : ""}`}
+                onClick={() => { onChange(code); setOpen(false); try { localStorage.setItem("jal:fiat", code); } catch {} }}
+              >
+                {code}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Data fetchers
+async function getFxUSD(): Promise<Record<string, number> | null> {
   try {
-    const r = await fetch("https://api.exchangerate.host/latest?base=USD");
-    if (!r.ok) return null;
+    const r = await fetch("https://open.er-api.com/v6/latest/USD");
     const j = await r.json();
     return j?.rates ?? null;
   } catch { return null; }
 }
-async function fetchSolUsd(): Promise<number | null> {
+async function getSolUsd(): Promise<number | null> {
   try {
-    const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
+    const r = await fetch("https://price.jup.ag/v6/price?ids=SOL");
     const j = await r.json();
-    const n = Number(j?.solana?.usd);
-    return Number.isFinite(n) ? n : null;
+    const p = Number(j?.data?.SOL?.price);
+    return Number.isFinite(p) ? p : null;
   } catch { return null; }
 }
-async function fetchJalUsdViaJupiter(): Promise<number | null> {
+async function getJalUsd(): Promise<number | null> {
   try {
-    const JAL = encodeURIComponent(String(JAL_MINT));
-    const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-    const amountRaw = 1_000_000_000n; // 1 JAL (assumes 9 decimals)
-    const url = `https://quote-api.jup.ag/v6/quote?inputMint=${JAL}&outputMint=${USDC}&amount=${amountRaw.toString()}&slippageBps=10`;
-    const r = await fetch(url);
+    const id = encodeURIComponent(String(JAL_MINT));
+    const r = await fetch(`https://price.jup.ag/v6/price?ids=${id}`);
     const j = await r.json();
-    const out = Number(j?.data?.[0]?.outAmount);
-    return Number.isFinite(out) ? out / 1e6 : null; // USDC 6dp
+    const p = Number(j?.data?.[String(JAL_MINT)]?.price);
+    return Number.isFinite(p) ? p : null;
   } catch { return null; }
 }
-function CurrencyPicker({
-  currency, setCurrency
-}: { currency: string; setCurrency: (c: string) => void }) {
-  const list = ["USD","EUR","GBP","JPY","AUD","CAD","CHF","SEK","NOK","DKK","SGD","HKD","INR"];
-  return (
-    <div className="chip-row" style={{ justifyContent: "center", marginTop: 6 }}>
-      {list.map(c => (
-        <button
-          key={c}
-          type="button"
-          className={`chip ${c===currency ? "active" : ""}`}
-          onClick={() => { setCurrency(c); try { localStorage.setItem("jal:currency", c); } catch {} }}
-          aria-pressed={c===currency}
-          title={`Show fiat as ${c}`}
-        >
-          {c}
-        </button>
-      ))}
-    </div>
-  );
-}
-function formatMoney(amtUsd: number | null, currency: string, fx: Record<string, number> | null) {
-  if (amtUsd == null) return "—";
-  const rate = fx?.[currency] ?? 1;
-  const n = amtUsd * rate;
-  try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(n);
-  } catch {
-    return `${n.toFixed(2)} ${currency}`;
-  }
-}
+const fmtMoney = (v: number | null, fiat: Fiat) =>
+  v == null ? "—" : new Intl.NumberFormat(undefined, { style:"currency", currency: fiat, maximumFractionDigits: 6 }).format(v);
 
 /* Models */
 type Product = {
@@ -714,28 +754,34 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
     };
   }, [wallet, fetchPortfolio]);
 
-  // Fiat state & polling
-  const [currency, setCurrency] = useState<string>(guessCurrencyFromLocale());
-  const [fx, setFx] = useState<Record<string, number> | null>(null);
+  /* Fiat state & polling (per-token prices, not totals) */
+  const [fiat, setFiat] = useState<Fiat>(() => inferDefaultFiat());
+  const [fxUSD, setFxUSD] = useState<Record<string, number> | null>(null);
   const [solUsd, setSolUsd] = useState<number | null>(null);
   const [jalUsd, setJalUsd] = useState<number | null>(null);
 
-  useEffect(() => { let dead=false; fetchUsdFx().then(r=>{ if(!dead) setFx(r);}); return ()=>{dead=true}; }, []);
   useEffect(() => {
-    let dead=false;
+    let alive = true;
+    (async () => { const m = await getFxUSD(); if (alive) setFxUSD(m); })();
+    const t = setInterval(async () => { const m = await getFxUSD(); if (alive && m) setFxUSD(m); }, 60_000 * 30);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+  useEffect(() => {
+    let alive = true;
     const run = async () => {
-      const [s, j] = await Promise.all([fetchSolUsd(), fetchJalUsdViaJupiter()]);
-      if (dead) return;
-      if (s != null) setSolUsd(s);
-      if (j != null) setJalUsd(j);
+      const [pSol, pJal] = await Promise.all([getSolUsd(), getJalUsd()]);
+      if (!alive) return;
+      setSolUsd(pSol); setJalUsd(pJal);
     };
     run();
-    const id = window.setInterval(run, 30000);
-    return () => { dead=true; clearInterval(id); };
+    const t = setInterval(run, 20_000);
+    return () => { alive = false; clearInterval(t); };
   }, []);
 
-  const solFiatTotal = sol != null && solUsd != null ? sol * solUsd : null;
-  const jalFiatTotal = jal != null && jalUsd != null ? jal * jalUsd : null;
+  const usdToFiat = (n: number | null): number | null =>
+    n == null ? null : (fxUSD?.[fiat] ?? 1) * n;
+  const perSOL = usdToFiat(solUsd);
+  const perJAL = usdToFiat(jalUsd);
 
   const fmt = (n: number | null, digits = 4): string =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -787,26 +833,21 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                   )}
                 </div>
 
-                <CurrencyPicker currency={currency} setCurrency={setCurrency} />
+                {/* Collapsible fiat options + unit price chips */}
+                <div style={{ display:"flex", justifyContent:"center", gap:10, flexWrap:"wrap", marginTop: 6 }}>
+                  <FiatPicker value={fiat} onChange={setFiat} />
+                  <span className="chip sm mono">SOL ≈ {fmtMoney(perSOL, fiat)}</span>
+                  <span className="chip sm mono">JAL ≈ {fmtMoney(perJAL, fiat)}</span>
+                </div>
 
                 <div className="balance-row">
                   <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
                     <div className="balance-amount">{fmt(jal)} JAL</div>
-                    <div className="balance-label">
-                      JAL • Total
-                      <span className="muted" style={{ marginLeft: 8 }}>
-                        ≈ {formatMoney(jalFiatTotal, currency, fx)}
-                      </span>
-                    </div>
+                    <div className="balance-label">JAL • Price ≈ {fmtMoney(perJAL, fiat)}</div>
                   </div>
                   <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
                     <div className="balance-amount">{fmt(sol)} SOL</div>
-                    <div className="balance-label">
-                      SOL • Total
-                      <span className="muted" style={{ marginLeft: 8 }}>
-                        ≈ {formatMoney(solFiatTotal, currency, fx)}
-                      </span>
-                    </div>
+                    <div className="balance-label">SOL • Price ≈ {fmtMoney(perSOL, fiat)}</div>
                   </div>
                 </div>
 
@@ -1031,7 +1072,7 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                             <span className="price-jal">{p.priceJal.toLocaleString()} JAL</span>
                             <span className="muted">• {p.tag}</span>
                             <span className="muted" style={{ marginLeft: 8 }}>
-                              {jalUsd ? `≈ ${formatMoney(p.priceJal * jalUsd, currency, fx)}` : " "}
+                              {jalUsd ? `≈ ${fmtMoney((fxUSD?.[fiat] ?? 1) * (jalUsd * p.priceJal), fiat)}` : ""}
                             </span>
                           </div>
                           <button
@@ -1081,11 +1122,13 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                     <h3>Your Wallet</h3>
                     <p>
                       JAL: <strong>{fmt(jal)}</strong>
-                      <span className="muted"> • ≈ {formatMoney(jal != null && jalUsd != null ? jal * jalUsd : null, currency, fx)}</span>
                       {"  "}•{"  "}
                       SOL: <strong>{fmt(sol)}</strong>
-                      <span className="muted"> • ≈ {formatMoney(sol != null && solUsd != null ? sol * solUsd : null, currency, fx)}</span>
                     </p>
+                    <div className="chip-row" style={{ marginTop: 4 }}>
+                      <span className="chip sm mono">JAL price ≈ {fmtMoney(perJAL, fiat)}</span>
+                      <span className="chip sm mono">SOL price ≈ {fmtMoney(perSOL, fiat)}</span>
+                    </div>
 
                     {portfolio.length ? (
                       <div style={{ marginTop: 10 }}>
@@ -1166,3 +1209,4 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
     </main>
   );
 }
+```
