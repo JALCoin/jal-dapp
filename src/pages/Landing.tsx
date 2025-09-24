@@ -17,8 +17,6 @@ import {
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID as TOKEN_2022_ID_MAYBE,
 } from "@solana/spl-token";
-// If your @solana/spl-token does NOT export TOKEN_2022_PROGRAM_ID:
-// import { TOKEN_2022_PROGRAM_ID as TOKEN_2022_ID_MAYBE } from "@solana/spl-token-2022";
 
 import { JAL_MINT } from "../config/tokens";
 import { makeConnection } from "../config/rpc";
@@ -334,37 +332,67 @@ const fmtMoney = (v: number | null, fiat: Fiat) =>
   v == null ? "—" : new Intl.NumberFormat(undefined, { style:"currency", currency: fiat, maximumFractionDigits: 6 }).format(v);
 
 /* ────────────────────────────────────────────────────────────────────────── */
-/* Swap fee helpers (visual-only estimates)                                  */
+/* Swap fees: AMM + network (with priority controls)                         */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-const AMM_FEE_BPS = 25;                 // 0.25% typical AMM taker fee
-const BASE_TX_LAMPORTS = 5_000;         // base network fee (no priority)
+const AMM_FEE_BPS = 25;              // ≈0.25% (typical taker fee)
 const LAMPORTS_PER_SOL_F = 1_000_000_000;
 
-function estimateNetworkFeeSol(): number {
-  return BASE_TX_LAMPORTS / LAMPORTS_PER_SOL_F;
+// ~200k CU is a safe-ish upper bound for a single-router swap.
+// You can lower this once you profile your route builder.
+const DEFAULT_EST_CU = 200_000;
+
+type FeeHints = { low: number; med: number; high: number }; // µLamports per CU
+
+async function fetchPriorityHints(): Promise<FeeHints | null> {
+  try {
+    const conn = makeConnection("confirmed") as any;
+    const arr = await conn.getRecentPrioritizationFees?.();
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    const micros = arr
+      .map((x: any) => Number(x?.prioritizationFee))
+      .filter((n: number) => Number.isFinite(n))
+      .sort((a: number, b: number) => a - b);
+    if (!micros.length) return null;
+    const pick = (p: number) => micros[Math.max(0, Math.min(micros.length - 1, Math.floor(micros.length * p)))];
+    return { low: pick(0.2), med: pick(0.5), high: pick(0.85) };
+  } catch {
+    return null;
+  }
 }
 
-function fmtNetworkFee(
+function calcNetworkFeeSol(priorityMicrosPerCU: number, computeUnits: number) {
+  // priority fee: (µ-lamports/CU) * CU / 1e6 => lamports
+  const priorityLamports = (priorityMicrosPerCU * computeUnits) / 1_000_000;
+  const baseLamports = 5_000; // baseline w/o priority; real chain may differ slightly
+  return (baseLamports + priorityLamports) / LAMPORTS_PER_SOL_F;
+}
+
+function pctFromBps(bps: number) {
+  return (bps / 100).toFixed(2);
+}
+
+function formatFeePair(
   solUsd: number | null,
   fxUSD: Record<string, number> | null,
-  fiat: Fiat
+  fiat: Fiat,
+  priorityMicrosPerCU: number,
+  computeUnits: number
 ): { sol: string; fiat: string } {
-  const solFee = estimateNetworkFeeSol();
+  const solFee = calcNetworkFeeSol(priorityMicrosPerCU, computeUnits);
   const fiatRate = fxUSD?.[fiat] ?? 1;
   const feeFiat = solUsd != null ? solFee * solUsd * fiatRate : null;
-
-  const solStr = `${solFee.toLocaleString(undefined, { maximumFractionDigits: 6 })} SOL`;
-  const fiatStr =
-    feeFiat == null
-      ? "—"
-      : new Intl.NumberFormat(undefined, {
-          style: "currency",
-          currency: fiat,
-          maximumFractionDigits: 6,
-        }).format(feeFiat);
-
-  return { sol: solStr, fiat: fiatStr };
+  return {
+    sol: `${solFee.toLocaleString(undefined, { maximumFractionDigits: 6 })} SOL`,
+    fiat:
+      feeFiat == null
+        ? "—"
+        : new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: fiat,
+            maximumFractionDigits: 6,
+          }).format(feeFiat),
+  };
 }
 
 function SwapFeeChip({
@@ -372,16 +400,20 @@ function SwapFeeChip({
   solUsd,
   fxUSD,
   fiat,
+  priorityMicrosPerCU,
+  computeUnits,
 }: {
   label: string; // "SOL→JAL" | "JAL→SOL"
   solUsd: number | null;
   fxUSD: Record<string, number> | null;
   fiat: Fiat;
+  priorityMicrosPerCU: number;
+  computeUnits: number;
 }) {
-  const { sol, fiat: fiatTxt } = fmtNetworkFee(solUsd, fxUSD, fiat);
+  const { sol, fiat: fiatTxt } = formatFeePair(solUsd, fxUSD, fiat, priorityMicrosPerCU, computeUnits);
   return (
     <span className="chip sm mono" title={`${label} estimated fees`}>
-      {label}: DEX ≈ {(AMM_FEE_BPS / 100).toFixed(2)}% • Net ≈ {sol} ({fiatTxt})
+      {label}: DEX ≈ {pctFromBps(AMM_FEE_BPS)}% • Net ≈ {sol} ({fiatTxt})
     </span>
   );
 }
@@ -838,6 +870,24 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
   const fmt = (n: number | null, digits = 4): string =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
 
+  /* NEW: priority + compute units controls (lightweight UI state) */
+  const [priorityHints, setPriorityHints] = useState<FeeHints | null>(null);
+  const [priorityMicrosPerCU, setPriorityMicrosPerCU] = useState<number>(0); // µLamports/CU
+  const [computeUnits, setComputeUnits] = useState<number>(DEFAULT_EST_CU);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const hints = await fetchPriorityHints();
+      if (!alive) return;
+      setPriorityHints(hints);
+      if (hints?.med && priorityMicrosPerCU === 0) {
+        setPriorityMicrosPerCU(Math.round(hints.med));
+      }
+    })();
+    return () => { alive = false; };
+  }, []); // once
+
   /* Render */
   const overlayActive = activePanel !== "grid";
   const shouldLoadGifs = !saveData && !reducedMotion;
@@ -892,10 +942,50 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                   <span className="chip sm mono">JAL ≈ {fmtMoney(perJAL, fiat)}</span>
                 </div>
 
+                {/* Priority/network fee controls */}
+                <div className="chip-row" style={{ justifyContent:"center", gap:10, marginTop: 8 }}>
+                  <span className="chip sm mono" title="Micro-lamports per compute unit">
+                    Priority: {priorityMicrosPerCU.toLocaleString()} µLamports/CU
+                  </span>
+                  {priorityHints && (
+                    <>
+                      <button className="chip sm" onClick={() => setPriorityMicrosPerCU(Math.round(priorityHints.low))}>Low</button>
+                      <button className="chip sm" onClick={() => setPriorityMicrosPerCU(Math.round(priorityHints.med))}>Med</button>
+                      <button className="chip sm" onClick={() => setPriorityMicrosPerCU(Math.round(priorityHints.high))}>High</button>
+                    </>
+                  )}
+                  <label className="chip sm mono" title="Estimated compute units for the swap route">
+                    CU:
+                    <input
+                      type="number"
+                      className="shop-search"
+                      style={{ width: 110, marginLeft: 6 }}
+                      min={50_000}
+                      step={10_000}
+                      value={computeUnits}
+                      onChange={(e) => setComputeUnits(Math.max(50_000, Number(e.target.value) || DEFAULT_EST_CU))}
+                    />
+                  </label>
+                </div>
+
                 {/* Estimated swap fees (directional) */}
                 <div style={{ display:"flex", justifyContent:"center", gap:10, flexWrap:"wrap", marginTop: 6 }}>
-                  <SwapFeeChip label="SOL→JAL" solUsd={solUsd} fxUSD={fxUSD} fiat={fiat} />
-                  <SwapFeeChip label="JAL→SOL" solUsd={solUsd} fxUSD={fxUSD} fiat={fiat} />
+                  <SwapFeeChip
+                    label="SOL→JAL"
+                    solUsd={solUsd}
+                    fxUSD={fxUSD}
+                    fiat={fiat}
+                    priorityMicrosPerCU={priorityMicrosPerCU}
+                    computeUnits={computeUnits}
+                  />
+                  <SwapFeeChip
+                    label="JAL→SOL"
+                    solUsd={solUsd}
+                    fxUSD={fxUSD}
+                    fiat={fiat}
+                    priorityMicrosPerCU={priorityMicrosPerCU}
+                    computeUnits={computeUnits}
+                  />
                 </div>
 
                 <div className="balance-row">
@@ -1187,10 +1277,24 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                       <span className="chip sm mono">JAL price ≈ {fmtMoney(perJAL, fiat)}</span>
                       <span className="chip sm mono">SOL price ≈ {fmtMoney(perSOL, fiat)}</span>
                     </div>
-                    {/* Optional: show fee chips in Vault as well */}
+                    {/* Fee visibility in Vault */}
                     <div className="chip-row" style={{ marginTop: 6 }}>
-                      <SwapFeeChip label="SOL→JAL" solUsd={solUsd} fxUSD={fxUSD} fiat={fiat} />
-                      <SwapFeeChip label="JAL→SOL" solUsd={solUsd} fxUSD={fxUSD} fiat={fiat} />
+                      <SwapFeeChip
+                        label="SOL→JAL"
+                        solUsd={solUsd}
+                        fxUSD={fxUSD}
+                        fiat={fiat}
+                        priorityMicrosPerCU={priorityMicrosPerCU}
+                        computeUnits={computeUnits}
+                      />
+                      <SwapFeeChip
+                        label="JAL→SOL"
+                        solUsd={solUsd}
+                        fxUSD={fxUSD}
+                        fiat={fiat}
+                        priorityMicrosPerCU={priorityMicrosPerCU}
+                        computeUnits={computeUnits}
+                      />
                     </div>
 
                     {portfolio.length ? (
