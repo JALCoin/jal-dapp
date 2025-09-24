@@ -216,7 +216,7 @@ function LiquidityHowToCard() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
-/* Fiat: contained/collapsible picker + **per-token** fiat prices            */
+/* Fiat + pricing helpers                                                    */
 /* ────────────────────────────────────────────────────────────────────────── */
 
 type Fiat =
@@ -248,10 +248,7 @@ function inferDefaultFiat(): Fiat {
   return "USD";
 }
 
-// Collapsible fiat picker popover
-function FiatPicker({
-  value, onChange,
-}: { value: Fiat; onChange: (v: Fiat) => void }) {
+function FiatPicker({ value, onChange }: { value: Fiat; onChange: (v: Fiat) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -337,40 +334,45 @@ const fmtMoney = (v: number | null, fiat: Fiat) =>
 
 const AMM_FEE_BPS = 25;              // ≈0.25% (typical taker fee)
 const LAMPORTS_PER_SOL_F = 1_000_000_000;
+const BASE_TX_LAMPORTS = 5_000;      // baseline (no priority)
 
 // ~200k CU is a safe-ish upper bound for a single-router swap.
-// You can lower this once you profile your route builder.
 const DEFAULT_EST_CU = 200_000;
+const LS_PRIORITY = "jal:priorityMicrosPerCU";
+const LS_CU = "jal:computeUnits";
+const MIN_CU = 50_000;
+const MAX_CU = 1_200_000;
 
 type FeeHints = { low: number; med: number; high: number }; // µLamports per CU
 
-async function fetchPriorityHints(): Promise<FeeHints | null> {
-  try {
-    const conn = makeConnection("confirmed") as any;
-    const arr = await conn.getRecentPrioritizationFees?.();
-    if (!Array.isArray(arr) || arr.length === 0) return null;
-    const micros = arr
-      .map((x: any) => Number(x?.prioritizationFee))
-      .filter((n: number) => Number.isFinite(n))
-      .sort((a: number, b: number) => a - b);
-    if (!micros.length) return null;
-    const pick = (p: number) => micros[Math.max(0, Math.min(micros.length - 1, Math.floor(micros.length * p)))];
-    return { low: pick(0.2), med: pick(0.5), high: pick(0.85) };
-  } catch {
-    return null;
-  }
+function usePriorityHints() {
+  const [hints, setHints] = useState<FeeHints | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const conn = safeConn() as any;
+        const arr = await conn.getRecentPrioritizationFees?.();
+        if (!alive || !Array.isArray(arr) || !arr.length) return;
+        const micros = arr
+          .map((x: any) => Number(x?.prioritizationFee))
+          .filter((n: number) => Number.isFinite(n) && n >= 0)
+          .sort((a, b) => a - b);
+        if (!micros.length) return;
+        const pick = (p: number) => micros[Math.max(0, Math.min(micros.length - 1, Math.floor(micros.length * p)))];
+        setHints({ low: pick(0.2), med: pick(0.5), high: pick(0.85) });
+      } catch {}
+    })();
+    return () => { alive = false; };
+  }, []);
+  return hints;
 }
 
 function calcNetworkFeeSol(priorityMicrosPerCU: number, computeUnits: number) {
-  // priority fee: (µ-lamports/CU) * CU / 1e6 => lamports
   const priorityLamports = (priorityMicrosPerCU * computeUnits) / 1_000_000;
-  const baseLamports = 5_000; // baseline w/o priority; real chain may differ slightly
-  return (baseLamports + priorityLamports) / LAMPORTS_PER_SOL_F;
+  return (BASE_TX_LAMPORTS + priorityLamports) / LAMPORTS_PER_SOL_F;
 }
-
-function pctFromBps(bps: number) {
-  return (bps / 100).toFixed(2);
-}
+const pctFromBps = (bps: number) => (bps / 100).toFixed(2);
 
 function formatFeePair(
   solUsd: number | null,
@@ -870,23 +872,25 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
   const fmt = (n: number | null, digits = 4): string =>
     n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
 
-  /* NEW: priority + compute units controls (lightweight UI state) */
-  const [priorityHints, setPriorityHints] = useState<FeeHints | null>(null);
-  const [priorityMicrosPerCU, setPriorityMicrosPerCU] = useState<number>(0); // µLamports/CU
-  const [computeUnits, setComputeUnits] = useState<number>(DEFAULT_EST_CU);
+  /* Priority + compute units (persisted) */
+  const priorityHints = usePriorityHints();
+  const [priorityMicrosPerCU, setPriorityMicrosPerCU] = useState<number>(() => {
+    try { const n = Number(localStorage.getItem(LS_PRIORITY)); return Number.isFinite(n) ? n : 0; } catch {}
+    return 0;
+  });
+  const [computeUnits, setComputeUnits] = useState<number>(() => {
+    try { const n = Number(localStorage.getItem(LS_CU)); return Number.isFinite(n) ? n : DEFAULT_EST_CU; } catch {}
+    return DEFAULT_EST_CU;
+  });
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      const hints = await fetchPriorityHints();
-      if (!alive) return;
-      setPriorityHints(hints);
-      if (hints?.med && priorityMicrosPerCU === 0) {
-        setPriorityMicrosPerCU(Math.round(hints.med));
-      }
-    })();
-    return () => { alive = false; };
-  }, []); // once
+    if (priorityMicrosPerCU === 0 && priorityHints?.med) {
+      setPriorityMicrosPerCU(Math.round(priorityHints.med));
+    }
+  }, [priorityHints, priorityMicrosPerCU]);
+
+  useEffect(() => { try { localStorage.setItem(LS_PRIORITY, String(priorityMicrosPerCU)); } catch {} }, [priorityMicrosPerCU]);
+  useEffect(() => { try { localStorage.setItem(LS_CU, String(computeUnits)); } catch {} }, [computeUnits]);
 
   /* Render */
   const overlayActive = activePanel !== "grid";
@@ -960,16 +964,22 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                       type="number"
                       className="shop-search"
                       style={{ width: 110, marginLeft: 6 }}
-                      min={50_000}
+                      min={MIN_CU}
                       step={10_000}
                       value={computeUnits}
-                      onChange={(e) => setComputeUnits(Math.max(50_000, Number(e.target.value) || DEFAULT_EST_CU))}
+                      onChange={(e) => {
+                        const n = Math.floor(Number(e.target.value) || DEFAULT_EST_CU);
+                        setComputeUnits(Math.max(MIN_CU, Math.min(MAX_CU, n)));
+                      }}
                     />
                   </label>
                 </div>
 
                 {/* Estimated swap fees (directional) */}
-                <div style={{ display:"flex", justifyContent:"center", gap:10, flexWrap:"wrap", marginTop: 6 }}>
+                <div
+                  style={{ display:"flex", justifyContent:"center", gap:10, flexWrap:"wrap", marginTop: 6 }}
+                  aria-live="polite"
+                >
                   <SwapFeeChip
                     label="SOL→JAL"
                     solUsd={solUsd}
