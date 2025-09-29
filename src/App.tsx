@@ -41,10 +41,12 @@ import "@solana/wallet-adapter-react-ui/styles.css";
 import Landing from "./pages/Landing";
 import { JAL_MINT } from "./config/tokens";
 
+// Lazy pages
 const CryptoGeneratorIntro = lazy(() => import("./pages/CryptoGeneratorIntro"));
 const CryptoGenerator = lazy(() => import("./pages/CryptoGenerator"));
+const Sell = lazy(() => import("./pages/Sell"));
 
-/* Prefetch */
+/* --------------------------- Prefetch (Generators) --------------------------- */
 let generatorsPrefetched = false;
 function prefetchGenerators() {
   if (generatorsPrefetched) return;
@@ -53,7 +55,7 @@ function prefetchGenerators() {
   import("./pages/CryptoGenerator");
 }
 
-/* Error boundary */
+/* --------------------------------- Errors ---------------------------------- */
 class AppErrorBoundary extends React.Component<
   { children: ReactNode },
   { hasError: boolean; error?: unknown }
@@ -86,7 +88,7 @@ class AppErrorBoundary extends React.Component<
   }
 }
 
-/* Providers */
+/* -------------------------------- Providers -------------------------------- */
 function SolanaProviders({ children }: PropsWithChildren) {
   const network: WalletAdapterNetwork = WalletAdapterNetwork.Mainnet;
   const cluster: Cluster = "mainnet-beta";
@@ -149,7 +151,7 @@ function SolanaProviders({ children }: PropsWithChildren) {
   );
 }
 
-/* Helpers */
+/* --------------------------------- Helpers --------------------------------- */
 function MobileDeepLinkReturnGuard() {
   const { wallet, connected, connecting, connect } = useWallet();
   useEffect(() => {
@@ -194,7 +196,7 @@ function ScrollRestorer() {
   return null;
 }
 
-/* Trust strip */
+/* ------------------------------ Trust Strip ------------------------------- */
 function RpcStatusChip() {
   const { connection } = useConnection();
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
@@ -259,7 +261,7 @@ function TrustStrip() {
   );
 }
 
-/* Header / Sidebar / Tabs */
+/* ----------------------------- Header & Nav ------------------------------ */
 function HeaderView({ onMenu, isOpen }: { onMenu: () => void; isOpen: boolean }) {
   return (
     <header className="site-header">
@@ -305,19 +307,8 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           >
             Generator
           </NavLink>
-
-          {/* New info pages */}
-          <NavLink to="/about" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
-            About
-          </NavLink>
-          <NavLink to="/manifesto" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
-            Manifesto
-          </NavLink>
-          <NavLink to="/content" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
-            Content
-          </NavLink>
-          <NavLink to="/learn" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
-            Learn
+          <NavLink to="/sell" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            Sell Space
           </NavLink>
         </nav>
         <div style={{ marginTop: 8 }} />
@@ -338,33 +329,7 @@ function DisconnectBtn() {
   );
 }
 
-function TabBar() {
-  const location = useLocation();
-  const base = location.pathname || "/";
-  const link = (panel?: string) => {
-    const p = new URLSearchParams(location.search);
-    if (!panel) p.delete("panel"); else p.set("panel", panel);
-    const q = p.toString();
-    return q ? `${base}?${q}` : base;
-  };
-  const isActive = (panel?: string) => {
-    const p = new URLSearchParams(location.search).get("panel");
-    if (!panel) return !p || p === "none";
-    return p === panel;
-  };
-  return (
-    <nav className="tabbar" aria-label="App tabs">
-      <NavLink to={link("shop")} className={() => (isActive("shop") ? "active" : "")}>
-        <div className="tab-icon">🏬</div> STORE
-      </NavLink>
-      <NavLink to={link("support")} className={() => (isActive("support") ? "active" : "")}>
-        <div className="tab-icon">👤</div> SUPPORT
-      </NavLink>
-    </nav>
-  );
-}
-
-/* Simple stubs for info pages (native styling) */
+/* --------------------------------- Pages ---------------------------------- */
 function PageStub({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <main className="landing-gradient">
@@ -378,7 +343,7 @@ function PageStub({ title, children }: { title: string; children?: ReactNode }) 
   );
 }
 
-/* App Root */
+/* ---------------------------------- App ----------------------------------- */
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -414,21 +379,16 @@ export default function App() {
             >
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/sell" element={<Sell />} />
                 <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
                 <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
-
-                {/* New info routes */}
+                {/* You can add more simple pages later like About, etc. */}
                 <Route path="/about" element={<PageStub title="About" />} />
-                <Route path="/manifesto" element={<PageStub title="Manifesto" />} />
-                <Route path="/content" element={<PageStub title="Content" />} />
-                <Route path="/learn" element={<PageStub title="Learn" />} />
-
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
           </main>
         </AppErrorBoundary>
-        <TabBar />
       </BrowserRouter>
     </SolanaProviders>
   );
