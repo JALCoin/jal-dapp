@@ -1,12 +1,12 @@
 // src/pages/Landing.tsx
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { JAL_MINT } from "../config/tokens";
 
 export default function Landing() {
   const mint = String(JAL_MINT);
 
-  // Pre-filled Raydium links
-  const buyUrl = useMemo(
+  const swapUrl = useMemo(
     () =>
       `https://raydium.io/swap/?inputCurrency=SOL&outputCurrency=${encodeURIComponent(
         mint
@@ -14,38 +14,50 @@ export default function Landing() {
     [mint]
   );
 
-  const sellUrl = useMemo(
-    () =>
-      `https://raydium.io/swap/?inputCurrency=${encodeURIComponent(
-        mint
-      )}&outputCurrency=SOL&fixed=in`,
-    [mint]
-  );
+  // BUY: open the in-site Shop panel
+  const buyHref = "/?panel=shop";
 
-  // Generic swap (users can change either side)
-  const swapUrl = useMemo(
-    () =>
-      `https://raydium.io/swap/?inputCurrency=SOL&outputCurrency=${encodeURIComponent(
-        mint
-      )}`,
-    [mint]
-  );
+  // SELL: go to our Sell Space page
+  const sellHref = "/sell";
 
   return (
     <main className="landing-simple">
       <div className="landing-simple-inner">
-        <img className="logo-simple" src="/JALSOL1.gif" alt="JAL/SOL" />
-
+        <img
+          className="logo-simple"
+          src="/JALSOL1.gif"
+          alt="JAL/SOL logo"
+          width={180}
+          height={96}
+        />
         <h1 className="hero-title">JAL / SOL</h1>
         <p className="hero-sub">Choose an action to get started.</p>
 
         <div className="bss-row bss-row--big">
-          <a className="bss-btn buy"  href={buyUrl}  target="_blank" rel="noreferrer">BUY</a>
-          <a className="bss-btn swap" href={swapUrl} target="_blank" rel="noreferrer">SWAP</a>
-          <a className="bss-btn sell" href={sellUrl} target="_blank" rel="noreferrer">SELL</a>
+          {/* BUY → Shop panel */}
+          <Link className="bss-btn buy" to={buyHref}>
+            BUY
+          </Link>
+
+          {/* SWAP → Raydium (new tab) */}
+          <a
+            className="bss-btn swap"
+            href={swapUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            SWAP
+          </a>
+
+          {/* SELL → Sell page */}
+          <Link className="bss-btn sell" to={sellHref}>
+            SELL
+          </Link>
         </div>
 
-        <p className="hint">Opens Raydium in a new tab. Connect your wallet there.</p>
+        <p className="hint" style={{ marginTop: "1rem" }}>
+          <strong>SWAP</strong> opens Raydium in a new tab.
+        </p>
       </div>
     </main>
   );
