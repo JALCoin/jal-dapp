@@ -23,8 +23,8 @@ import { makeConnection } from "../config/rpc";
 
 // NEW: embed + finalizer (lazy to keep initial bundle slim)
 const Jal = lazy(() => import("./Jal"));
-const RaydiumSwapEmbed = lazy(() => import("./RaydiumSwapEmbed"));
-const CurrencyFinalizer = lazy(() => import("./CurrencyFinalizer"));
+const RaydiumSwapEmbed = lazy(() => import("../components/RaydiumSwapEmbed"));
+const CurrencyFinalizer = lazy(() => import("../components/CurrencyFinalizer"));
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
