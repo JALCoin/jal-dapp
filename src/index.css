@@ -612,3 +612,44 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
   backdrop-filter: blur(6px);
 }
 .swap-exit:hover{ transform: translateY(-1px); border-color: var(--cyan); box-shadow: var(--glow-cyan) }
+
+/* Vault section headers and separators */
+.vault-section {
+  display: grid;
+  gap: 10px;
+}
+.vault-section + .vault-section {
+  margin-top: 14px;
+}
+.vault-section .section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.vault-section .section-head h3 {
+  margin: 0;
+}
+.vault-section .section-sub {
+  opacity: .85;
+  font-size: .95rem;
+}
+
+/* Optional light divider line inside a card body */
+.v-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+  margin: 10px 0;
+}
+
+/* CurrencyFinalizer list spacing (uses your “product-grid” look) */
+.finalizer-wrap {
+  margin-top: 10px;
+}
+.finalizer-wrap .product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+/* Raydium embed: allow a slightly shorter height on mobile */
+@media (max-width: 420px){
+  .swap-embed-wrap { min-block-size: 400px; }
+}

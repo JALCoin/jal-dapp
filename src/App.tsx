@@ -36,7 +36,6 @@ import { GlowWalletAdapter } from "@solana/wallet-adapter-glow";
 import { BackpackWalletAdapter } from "@solana/wallet-adapter-backpack";
 import { LedgerWalletAdapter } from "@solana/wallet-adapter-ledger";
 import { WalletConnectWalletAdapter } from "@solana/wallet-adapter-walletconnect";
-
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 import Landing from "./pages/Landing";
@@ -45,9 +44,7 @@ import { JAL_MINT } from "./config/tokens";
 const CryptoGeneratorIntro = lazy(() => import("./pages/CryptoGeneratorIntro"));
 const CryptoGenerator = lazy(() => import("./pages/CryptoGenerator"));
 
-/* ------------------------------------------------------------------ */
-/* Route prefetch on intent                                            */
-/* ------------------------------------------------------------------ */
+/* Prefetch */
 let generatorsPrefetched = false;
 function prefetchGenerators() {
   if (generatorsPrefetched) return;
@@ -56,20 +53,16 @@ function prefetchGenerators() {
   import("./pages/CryptoGenerator");
 }
 
-/* ------------------------------------------------------------------ */
-/* Error boundary                                                      */
-/* ------------------------------------------------------------------ */
+/* Error boundary */
 class AppErrorBoundary extends React.Component<
   { children: ReactNode },
   { hasError: boolean; error?: unknown }
 > {
   state = { hasError: false as const, error: undefined as unknown };
-
   static getDerivedStateFromError(error: unknown) {
     return { hasError: true, error };
   }
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
-    // Keep this so production errors show up in console
     // eslint-disable-next-line no-console
     console.error("[AppErrorBoundary]", error, info);
   }
@@ -93,9 +86,7 @@ class AppErrorBoundary extends React.Component<
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* Providers                                                           */
-/* ------------------------------------------------------------------ */
+/* Providers */
 function SolanaProviders({ children }: PropsWithChildren) {
   const network: WalletAdapterNetwork = WalletAdapterNetwork.Mainnet;
   const cluster: Cluster = "mainnet-beta";
@@ -111,15 +102,11 @@ function SolanaProviders({ children }: PropsWithChildren) {
   }, [cluster]);
 
   const connectionConfig = useMemo(
-    () => ({
-      commitment: "confirmed" as const,
-      confirmTransactionInitialTimeout: 45_000,
-    }),
+    () => ({ commitment: "confirmed" as const, confirmTransactionInitialTimeout: 45_000 }),
     []
   );
 
   const WC_PROJECT_ID = import.meta.env?.VITE_WC_PROJECT_ID as string | undefined;
-
   const appUrl = useMemo(
     () => (typeof window !== "undefined" ? window.location.origin : "https://www.jalsol.com"),
     []
@@ -162,25 +149,18 @@ function SolanaProviders({ children }: PropsWithChildren) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Small helpers                                                       */
-/* ------------------------------------------------------------------ */
+/* Helpers */
 function MobileDeepLinkReturnGuard() {
   const { wallet, connected, connecting, connect } = useWallet();
-
   useEffect(() => {
     const tryReconnect = () => {
       if (document.visibilityState !== "visible") return;
       if (connected || connecting || !wallet) return;
-
       const name = wallet.adapter?.name?.toLowerCase() ?? "";
       if (name.includes("phantom") || name.includes("walletconnect")) {
-        setTimeout(() => {
-          connect().catch(() => {});
-        }, 120);
+        setTimeout(() => { connect().catch(() => {}); }, 120);
       }
     };
-
     document.addEventListener("visibilitychange", tryReconnect);
     window.addEventListener("focus", tryReconnect);
     return () => {
@@ -188,17 +168,14 @@ function MobileDeepLinkReturnGuard() {
       window.removeEventListener("focus", tryReconnect);
     };
   }, [wallet, connected, connecting, connect]);
-
   return null;
 }
 
-/** Toggle body[data-wallet-visible] when the wallet modal mounts */
 function WalletModalVisibilityGuard() {
   useEffect(() => {
     const body = document.body;
     const set = (v: boolean) =>
       v ? body.setAttribute("data-wallet-visible", "true") : body.removeAttribute("data-wallet-visible");
-
     const obs = new MutationObserver(() => {
       const modal =
         document.querySelector(".wallet-adapter-modal") ||
@@ -206,26 +183,18 @@ function WalletModalVisibilityGuard() {
       set(Boolean(modal));
     });
     obs.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      obs.disconnect();
-      body.removeAttribute("data-wallet-visible");
-    };
+    return () => { obs.disconnect(); body.removeAttribute("data-wallet-visible"); };
   }, []);
   return null;
 }
 
-/** Scroll to top on route change for nicer navigation on mobile */
 function ScrollRestorer() {
   const { pathname, search } = useLocation();
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "auto" });
-  }, [pathname, search]);
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, [pathname, search]);
   return null;
 }
 
-/* ------------------------------------------------------------------ */
-/* Trust strip (under header)                                          */
-/* ------------------------------------------------------------------ */
+/* Trust strip */
 function RpcStatusChip() {
   const { connection } = useConnection();
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
@@ -233,14 +202,12 @@ function RpcStatusChip() {
 
   useEffect(() => {
     let mounted = true;
-
     const withTimeout = <T,>(p: Promise<T>, ms: number) =>
       new Promise<T>((resolve, reject) => {
         const id = setTimeout(() => reject(new Error("timeout")), ms);
         p.then((v) => { clearTimeout(id); resolve(v); })
          .catch((e) => { clearTimeout(id); reject(e); });
       });
-
     const check = async () => {
       const t0 = performance.now();
       try {
@@ -255,7 +222,6 @@ function RpcStatusChip() {
         setState("down");
       }
     };
-
     check();
     const id = setInterval(check, 20000);
     return () => { mounted = false; clearInterval(id); };
@@ -266,7 +232,6 @@ function RpcStatusChip() {
     state === "ok"       ? `Healthy${latencyMs != null ? ` • ${latencyMs}ms` : ""}` :
     state === "warn"     ? `Degraded${latencyMs != null ? ` • ${latencyMs}ms` : ""}` :
                            "Down";
-
   const dotClass = state === "ok" ? "ok" : state === "warn" ? "warn" : "down";
 
   return (
@@ -282,45 +247,31 @@ function TrustStrip() {
   const explorerUrl = `https://explorer.solana.com/address/${jal}`;
   const raydiumUrl  = `https://raydium.io/swap/?inputCurrency=SOL&outputCurrency=${jal}`;
   const short = `${jal.slice(0,4)}…${jal.slice(-4)}`;
-
   return (
     <div className="trust-strip" aria-label="Trust & quick links">
       <a className="chip sm mono" href={explorerUrl} target="_blank" rel="noreferrer" title="View JAL mint on Solana Explorer">
         Mint: {short}
       </a>
-      <a className="chip sm" href={explorerUrl} target="_blank" rel="noreferrer">
-        Explorer
-      </a>
-      <a className="chip sm" href={raydiumUrl} target="_blank" rel="noreferrer">
-        Swap on Raydium
-      </a>
+      <a className="chip sm" href={explorerUrl} target="_blank" rel="noreferrer">Explorer</a>
+      <a className="chip sm" href={raydiumUrl} target="_blank" rel="noreferrer">Swap on Raydium</a>
       <RpcStatusChip />
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Layout                                                              */
-/* ------------------------------------------------------------------ */
+/* Header / Sidebar / Tabs */
 function HeaderView({ onMenu, isOpen }: { onMenu: () => void; isOpen: boolean }) {
   return (
     <header className="site-header">
       <div className="header-inner">
         <div className="social-links" aria-label="Social Links">
-          <a
-            href="https://x.com/JAL358"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="X"
-          >
+          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
             <img src="/icons/X.png" alt="" />
           </a>
         </div>
-
         <NavLink to="/" end aria-label="Home">
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
         </NavLink>
-
         <button
           className={`hamburger ${isOpen ? "is-open" : ""}`}
           onClick={onMenu}
@@ -342,12 +293,7 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
       <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
         <nav>
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
+          <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             Home
           </NavLink>
           <NavLink
@@ -358,6 +304,20 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
             onClick={onClose}
           >
             Generator
+          </NavLink>
+
+          {/* New info pages */}
+          <NavLink to="/about" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            About
+          </NavLink>
+          <NavLink to="/manifesto" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            Manifesto
+          </NavLink>
+          <NavLink to="/content" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            Content
+          </NavLink>
+          <NavLink to="/learn" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            Learn
           </NavLink>
         </nav>
         <div style={{ marginTop: 8 }} />
@@ -372,24 +332,18 @@ function DisconnectBtn() {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
   return (
-    <button
-      type="button"
-      className="wallet-disconnect-btn"
-      onClick={() => disconnect().catch(() => {})}
-    >
+    <button type="button" className="wallet-disconnect-btn" onClick={() => disconnect().catch(() => {})}>
       Disconnect
     </button>
   );
 }
 
-/* Bottom tab bar (STORE + SUPPORT) */
 function TabBar() {
   const location = useLocation();
   const base = location.pathname || "/";
   const link = (panel?: string) => {
     const p = new URLSearchParams(location.search);
-    if (!panel) p.delete("panel");
-    else p.set("panel", panel);
+    if (!panel) p.delete("panel"); else p.set("panel", panel);
     const q = p.toString();
     return q ? `${base}?${q}` : base;
   };
@@ -398,7 +352,6 @@ function TabBar() {
     if (!panel) return !p || p === "none";
     return p === panel;
   };
-
   return (
     <nav className="tabbar" aria-label="App tabs">
       <NavLink to={link("shop")} className={() => (isActive("shop") ? "active" : "")}>
@@ -411,16 +364,26 @@ function TabBar() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* App Root                                                            */
-/* ------------------------------------------------------------------ */
+/* Simple stubs for info pages (native styling) */
+function PageStub({ title, children }: { title: string; children?: ReactNode }) {
+  return (
+    <main className="landing-gradient">
+      <div className="container" style={{ padding: 24 }}>
+        <div className="card">
+          <h1 className="jal-title" style={{ marginTop: 0 }}>{title}</h1>
+          {children ?? <p className="muted" style={{ marginTop: 6 }}>Coming soon.</p>}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/* App Root */
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -440,7 +403,6 @@ export default function App() {
         <HeaderView onMenu={() => setMenuOpen((v) => !v)} isOpen={menuOpen} />
         <TrustStrip />
         <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
-
         <AppErrorBoundary>
           <main role="main">
             <Suspense
@@ -454,12 +416,18 @@ export default function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
                 <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
+
+                {/* New info routes */}
+                <Route path="/about" element={<PageStub title="About" />} />
+                <Route path="/manifesto" element={<PageStub title="Manifesto" />} />
+                <Route path="/content" element={<PageStub title="Content" />} />
+                <Route path="/learn" element={<PageStub title="Learn" />} />
+
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
           </main>
         </AppErrorBoundary>
-
         <TabBar />
       </BrowserRouter>
     </SolanaProviders>

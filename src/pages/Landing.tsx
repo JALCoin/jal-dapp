@@ -21,7 +21,10 @@ import {
 import { JAL_MINT } from "../config/tokens";
 import { makeConnection } from "../config/rpc";
 
+// NEW: embed + finalizer (lazy to keep initial bundle slim)
 const Jal = lazy(() => import("./Jal"));
+const RaydiumSwapEmbed = lazy(() => import("./RaydiumSwapEmbed"));
+const CurrencyFinalizer = lazy(() => import("./CurrencyFinalizer"));
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
@@ -300,7 +303,6 @@ function FiatPicker({ value, onChange }: { value: Fiat; onChange: (v: Fiat) => v
   );
 }
 
-// Data fetchers
 async function getFxUSD(): Promise<Record<string, number> | null> {
   try {
     const r = await fetch("https://open.er-api.com/v6/latest/USD");
@@ -529,7 +531,7 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
   const isPanel = (v: unknown): v is Panel =>
     ["grid", "shop", "jal", "vault", "payments", "loans", "support"].includes(String(v));
 
-  // Clean any sticky flags on mount/unmount
+  // Clean sticky flags on mount/unmount
   useEffect(() => {
     document.body.removeAttribute("data-hub-open");
     document.body.removeAttribute("data-wallet-visible");
@@ -892,6 +894,22 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
   useEffect(() => { try { localStorage.setItem(LS_PRIORITY, String(priorityMicrosPerCU)); } catch {} }, [priorityMicrosPerCU]);
   useEffect(() => { try { localStorage.setItem(LS_CU, String(computeUnits)); } catch {} }, [computeUnits]);
 
+  /* NEW: “Minted Creations” sourced from generator’s localStorage keys */
+  const [creations, setCreations] = useState<{ mint: string; symbol?: string }[]>([]);
+  useEffect(() => {
+    try {
+      const m = localStorage.getItem("mint");
+      if (m) {
+        const sym = localStorage.getItem("vaultSymbol") || undefined;
+        setCreations([{ mint: m, symbol: sym }]);
+      } else {
+        setCreations([]);
+      }
+    } catch {
+      setCreations([]);
+    }
+  }, []); // refresh hook could listen to panel changes if needed
+
   /* Render */
   const overlayActive = activePanel !== "grid";
   const shouldLoadGifs = !saveData && !reducedMotion;
@@ -998,7 +1016,7 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                   />
                 </div>
 
-                <div className="balance-row">
+                <div className="balance-row" aria-busy={balLoading || undefined}>
                   <div className={`balance-card ${balLoading ? "loading" : ""} ${balErr ? "error" : ""}`}>
                     <div className="balance-amount">{fmt(jal)} JAL</div>
                     <div className="balance-label">JAL • Price ≈ {fmtMoney(perJAL, fiat)}</div>
@@ -1267,74 +1285,126 @@ export default function Landing({ initialPanel = "grid" }: LandingProps) {
                     </a>
                   </div>
 
+                  {/* NEW: embedded Raydium swap surface */}
+                  <Suspense fallback={<div className="card">Loading swap…</div>}>
+                    <div className="card" style={{ marginBottom: 12 }}>
+                      <h4 style={{ marginTop: 0 }}>Swap SOL ⇄ JAL</h4>
+                      <RaydiumSwapEmbed />
+                    </div>
+                  </Suspense>
+
                   <Suspense fallback={<div className="card">Loading JAL…</div>}>
                     <Jal inHub />
                   </Suspense>
                 </div>
               )}
 
-              {/* Vault */}
+              {/* VAULT */}
               {activePanel === "vault" &&
                 (connected ? (
-                  <div className="card">
-                    <h3>Your Wallet</h3>
-                    <p>
-                      JAL: <strong>{fmt(jal)}</strong>
-                      {"  "}•{"  "}
-                      SOL: <strong>{fmt(sol)}</strong>
-                    </p>
-                    <div className="chip-row" style={{ marginTop: 4 }}>
-                      <span className="chip sm mono">JAL price ≈ {fmtMoney(perJAL, fiat)}</span>
-                      <span className="chip sm mono">SOL price ≈ {fmtMoney(perSOL, fiat)}</span>
-                    </div>
-                    {/* Fee visibility in Vault */}
-                    <div className="chip-row" style={{ marginTop: 6 }}>
-                      <SwapFeeChip
-                        label="SOL→JAL"
-                        solUsd={solUsd}
-                        fxUSD={fxUSD}
-                        fiat={fiat}
-                        priorityMicrosPerCU={priorityMicrosPerCU}
-                        computeUnits={computeUnits}
-                      />
-                      <SwapFeeChip
-                        label="JAL→SOL"
-                        solUsd={solUsd}
-                        fxUSD={fxUSD}
-                        fiat={fiat}
-                        priorityMicrosPerCU={priorityMicrosPerCU}
-                        computeUnits={computeUnits}
-                      />
+                  <>
+                    {/* Wallet Holdings */}
+                    <div className="card">
+                      <h3 style={{ marginTop: 0 }}>Wallet Holdings</h3>
+                      <p>
+                        JAL: <strong>{fmt(jal)}</strong>
+                        {"  "}•{"  "}
+                        SOL: <strong>{fmt(sol)}</strong>
+                      </p>
+                      <div className="chip-row" style={{ marginTop: 4 }}>
+                        <span className="chip sm mono">JAL price ≈ {fmtMoney(perJAL, fiat)}</span>
+                        <span className="chip sm mono">SOL price ≈ {fmtMoney(perSOL, fiat)}</span>
+                      </div>
+                      {/* Fee visibility in Vault */}
+                      <div className="chip-row" style={{ marginTop: 6 }}>
+                        <SwapFeeChip
+                          label="SOL→JAL"
+                          solUsd={solUsd}
+                          fxUSD={fxUSD}
+                          fiat={fiat}
+                          priorityMicrosPerCU={priorityMicrosPerCU}
+                          computeUnits={computeUnits}
+                        />
+                        <SwapFeeChip
+                          label="JAL→SOL"
+                          solUsd={solUsd}
+                          fxUSD={fxUSD}
+                          fiat={fiat}
+                          priorityMicrosPerCU={priorityMicrosPerCU}
+                          computeUnits={computeUnits}
+                        />
+                      </div>
+
+                      {portfolio.length ? (
+                        <div style={{ marginTop: 10 }}>
+                          <div className="product-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
+                            {portfolio.map((t) => (
+                              <article key={t.mint} className="product-card">
+                                <div className="product-body">
+                                  <h4 className="product-title">{`${t.mint.slice(0,4)}…${t.mint.slice(-4)}`}</h4>
+                                  <div className="product-blurb mono-sm">Mint: {t.mint}</div>
+                                  <div className="product-price">
+                                    <span className="price-jal">
+                                      {t.uiAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
+                                    </span>
+                                    <span className="muted">• {t.decimals} dec</span>
+                                  </div>
+                                  <div className="muted" style={{ fontSize: ".85rem" }}>{t.program}</div>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p style={{ opacity: 0.85, marginTop: 8 }}>No SPL balances detected.</p>
+                      )}
                     </div>
 
-                    {portfolio.length ? (
-                      <div style={{ marginTop: 10 }}>
-                        <div className="product-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
-                          {portfolio.map((t) => (
-                            <article key={t.mint} className="product-card">
+                    {/* Minted Creations */}
+                    <div className="card" style={{ marginTop: 14 }}>
+                      <h3 style={{ marginTop: 0 }}>Minted Creations</h3>
+                      <p className="muted" style={{ marginTop: 4 }}>
+                        Tokens you originated. Finalize metadata or review identity on-chain.
+                      </p>
+
+                      {/* Show recent creation from localStorage (from TokenFinalizerModal flow) */}
+                      {creations.length ? (
+                        <div className="product-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", marginTop: 8 }}>
+                          {creations.map((c) => (
+                            <article key={c.mint} className="product-card">
                               <div className="product-body">
-                                <h4 className="product-title">{`${t.mint.slice(0,4)}…${t.mint.slice(-4)}`}</h4>
-                                <div className="product-blurb mono-sm">Mint: {t.mint}</div>
-                                <div className="product-price">
-                                  <span className="price-jal">
-                                    {t.uiAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
-                                  </span>
-                                  <span className="muted">• {t.decimals} dec</span>
+                                <h4 className="product-title">
+                                  {(c.symbol ?? "TOKEN").toUpperCase()}
+                                </h4>
+                                <div className="product-blurb mono-sm">
+                                  Mint: {`${c.mint.slice(0,4)}…${c.mint.slice(-4)}`}
                                 </div>
-                                <div className="muted" style={{ fontSize: ".85rem" }}>{t.program}</div>
+                                <div className="chip-row" style={{ marginTop: 8 }}>
+                                  <a className="chip sm" href={`https://solscan.io/address/${c.mint}`} target="_blank" rel="noreferrer">Solscan</a>
+                                  <a className="chip sm" href={`https://explorer.solana.com/address/${c.mint}`} target="_blank" rel="noreferrer">Explorer</a>
+                                </div>
                               </div>
                             </article>
                           ))}
                         </div>
-                      </div>
-                    ) : (
-                      <p style={{ opacity: 0.85, marginTop: 8 }}>No SPL balances detected.</p>
-                    )}
-                  </div>
+                      ) : (
+                        <div className="muted" style={{ marginTop: 8 }}>
+                          Nothing here yet. <Link to="/crypto-generator/engine#step1">Create a token</Link> to see it listed.
+                        </div>
+                      )}
+
+                      {/* Inline finalizer/scanner so users can fix metadata now */}
+                      <Suspense fallback={<div className="card" style={{ marginTop: 10 }}>Scanning your tokens…</div>}>
+                        <div style={{ marginTop: 12 }}>
+                          <CurrencyFinalizer />
+                        </div>
+                      </Suspense>
+                    </div>
+                  </>
                 ) : (
                   <div className="card">
                     <h3>Vault</h3>
-                    <p>Connect to view balances and recent activity.</p>
+                    <p>Connect to view balances and your minted creations.</p>
                     <ConnectButton className="button gold" />
                   </div>
                 ))}
