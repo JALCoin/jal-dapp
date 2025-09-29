@@ -17,14 +17,15 @@ export default function Landing() {
   return (
     <main className="landing-simple">
       <div className="landing-simple-inner">
+        {/* Keep just the main centered logo */}
         <img
           className="logo-simple"
           src="/JALSOL1.gif"
           alt="JAL/SOL logo"
-          width={180}
-          height={96}
+          width={220}
+          height={120}
         />
-        <h1 className="hero-title">JAL / SOL</h1>
+
         <p className="hero-sub">Choose an action to get started.</p>
 
         <div className="bss-row bss-row--big">
