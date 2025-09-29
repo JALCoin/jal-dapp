@@ -14,12 +14,6 @@ export default function Landing() {
     [mint]
   );
 
-  // BUY: open the in-site Shop panel
-  const buyHref = "/?panel=shop";
-
-  // SELL: go to our Sell Space page
-  const sellHref = "/sell";
-
   return (
     <main className="landing-simple">
       <div className="landing-simple-inner">
@@ -34,8 +28,8 @@ export default function Landing() {
         <p className="hero-sub">Choose an action to get started.</p>
 
         <div className="bss-row bss-row--big">
-          {/* BUY → Shop panel */}
-          <Link className="bss-btn buy" to={buyHref}>
+          {/* BUY → Shop page */}
+          <Link className="bss-btn buy" to="/shop">
             BUY
           </Link>
 
@@ -50,7 +44,7 @@ export default function Landing() {
           </a>
 
           {/* SELL → Sell page */}
-          <Link className="bss-btn sell" to={sellHref}>
+          <Link className="bss-btn sell" to="/sell">
             SELL
           </Link>
         </div>

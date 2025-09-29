@@ -45,6 +45,7 @@ import { JAL_MINT } from "./config/tokens";
 const CryptoGeneratorIntro = lazy(() => import("./pages/CryptoGeneratorIntro"));
 const CryptoGenerator = lazy(() => import("./pages/CryptoGenerator"));
 const Sell = lazy(() => import("./pages/Sell"));
+const Shop = lazy(() => import("./pages/Shop")); // BUY target
 
 /* --------------------------- Prefetch (Generators) --------------------------- */
 let generatorsPrefetched = false;
@@ -310,6 +311,9 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           <NavLink to="/sell" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             Sell Space
           </NavLink>
+          <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            Shop
+          </NavLink>
         </nav>
         <div style={{ marginTop: 8 }} />
         <WalletMultiButton />
@@ -379,10 +383,10 @@ export default function App() {
             >
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/sell" element={<Sell />} />
+                <Route path="/shop" element={<Shop />} />           {/* BUY */}
+                <Route path="/sell" element={<Sell />} />           {/* SELL */}
                 <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
                 <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
-                {/* You can add more simple pages later like About, etc. */}
                 <Route path="/about" element={<PageStub title="About" />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
