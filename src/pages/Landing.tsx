@@ -17,20 +17,13 @@ export default function Landing() {
   return (
     <main className="landing-simple">
       <div className="landing-simple-inner">
-        {/* Keep just the main centered logo */}
-        <img
-          className="logo-simple"
-          src="/JALSOL1.gif"
-          alt="JAL/SOL logo"
-          width={220}
-          height={120}
-        />
+        {/* Removed middle GIF */}
 
         <p className="hero-sub">Choose an action to get started.</p>
 
         <div className="bss-row bss-row--big">
-          {/* BUY → Shop page */}
-          <Link className="bss-btn buy" to="/shop">
+          {/* BUY → Shop panel */}
+          <Link className="bss-btn buy" to="/?panel=shop">
             BUY
           </Link>
 
