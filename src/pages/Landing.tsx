@@ -1,5 +1,5 @@
 // src/pages/Landing.tsx
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { JAL_MINT } from "../config/tokens";
 
 export default function Landing() {
