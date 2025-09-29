@@ -653,3 +653,51 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 @media (max-width: 420px){
   .swap-embed-wrap { min-block-size: 400px; }
 }
+/* Hide advanced chrome on the landing */
+.trust-strip{ display:none !important; }
+
+/* Super-simple landing */
+.landing-simple{
+  min-height: calc(100svh - var(--header-h));
+  display:grid; place-items:center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(900px 540px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
+    var(--bg);
+}
+.landing-simple-inner{
+  width:min(100%, 780px);
+  display:grid; gap:14px; justify-items:center; text-align:center;
+}
+.logo-simple{ height: clamp(90px, 12vw, 120px); filter: drop-shadow(0 0 10px rgba(255,255,255,.7)) }
+.hero-title{ margin:.25rem 0 0; font-size: clamp(1.6rem, 4.8vw, 2.4rem); letter-spacing:.04em }
+.hero-sub{ margin:0; opacity:.85 }
+
+/* BUY | SWAP | SELL */
+.bss-row{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(140px,1fr));
+  gap:14px;
+  margin: 10px 0 4px;
+}
+.bss-row--big .bss-btn{ padding: 1.15rem 1.4rem; font-size: clamp(1rem, 2.6vw, 1.25rem) }
+
+.bss-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:16px;
+  border:1px solid var(--stroke);
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  font-weight:800; letter-spacing:.06em;
+  transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  min-height:56px;
+}
+.bss-btn:hover{ transform:translateY(-1px) }
+.bss-btn.buy  { border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
+.bss-btn.swap { border-color: rgba(0,240,255,.45);  box-shadow: var(--glow-cyan) }
+.bss-btn.sell { border-color: rgba(244,200,106,.45); box-shadow: var(--glow-gold) }
+
+.hint{ opacity:.75; font-size:.95rem; margin-top: 4px }
+
+@media (max-width:640px){
+  .bss-row{ grid-template-columns: 1fr; }
+}
