@@ -44,8 +44,8 @@ import { JAL_MINT } from "./config/tokens";
 // Lazy pages
 const CryptoGeneratorIntro = lazy(() => import("./pages/CryptoGeneratorIntro"));
 const CryptoGenerator = lazy(() => import("./pages/CryptoGenerator"));
-const Sell = lazy(() => import("./pages/Sell"));
-const Shop = lazy(() => import("./pages/Shop")); // BUY target
+const Sell  = lazy(() => import("./pages/Sell"));
+const Shop  = lazy(() => import("./pages/Shop"));
 
 /* --------------------------- Prefetch (Generators) --------------------------- */
 let generatorsPrefetched = false;
@@ -61,7 +61,7 @@ class AppErrorBoundary extends React.Component<
   { children: ReactNode },
   { hasError: boolean; error?: unknown }
 > {
-  state = { hasError: false as const, error: undefined as unknown };
+  state = { hasError: false, error: undefined as unknown };
   static getDerivedStateFromError(error: unknown) {
     return { hasError: true, error };
   }
@@ -295,9 +295,15 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
     <>
       <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
-        <nav>
+        <nav className="sidebar-links">
           <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             Home
+          </NavLink>
+          <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            Shop
+          </NavLink>
+          <NavLink to="/sell" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            Sell Space
           </NavLink>
           <NavLink
             to="/crypto-generator"
@@ -308,13 +314,8 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           >
             Generator
           </NavLink>
-          <NavLink to="/sell" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
-            Sell Space
-          </NavLink>
-          <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
-            Shop
-          </NavLink>
         </nav>
+
         <div style={{ marginTop: 8 }} />
         <WalletMultiButton />
         <DisconnectBtn />

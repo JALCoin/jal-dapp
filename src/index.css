@@ -194,9 +194,13 @@ main[role="main"]{
   animation: drawerIn var(--t-slow) cubic-bezier(.22,.61,.36,1) forwards;
   display:flex; flex-direction:column; gap:8px; padding:20px;
 }
+/* NEW: neat stacked links */
+.sidebar-nav nav{ display:grid; gap:10px; }
+
 @keyframes drawerIn{ to{ transform: translateX(0) } }
 
 .sidebar-nav .nav-link{
+  display:block; /* NEW: full-width hit area */
   padding:.9rem 1rem; border-radius: var(--r-md);
   border:1px solid var(--stroke);
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0));
