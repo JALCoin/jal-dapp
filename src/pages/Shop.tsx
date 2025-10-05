@@ -44,7 +44,7 @@ export default function Shop() {
                         <li><strong>You control:</strong> total supply, mint authority, and distribution.</li>
                       </ul>
                       <div className="muted" style={{ marginTop: 8 }}>
-                        <em>JAL/SOL tone:</em> Create your own digital economy — mint value people can hold, trade, and align with.
+                        <em>JAL/SOL:</em> Create your own digital economy — mint value people can hold, trade, and align with.
                       </div>
                     </div>
 
@@ -78,7 +78,7 @@ export default function Shop() {
                         <li><strong>You control:</strong> artwork &amp; metadata stored on-chain via Lighthouse/IPFS.</li>
                       </ul>
                       <div className="muted" style={{ marginTop: 8 }}>
-                        <em>JAL/SOL tone:</em> Turn moments into ownership — a signed digital artifact the network remembers.
+                        <em>JAL/SOL:</em> Turn moments into ownership — a signed digital artifact the network remembers.
                       </div>
                     </div>
 
