@@ -1,7 +1,10 @@
 // src/pages/CryptoGenerator.tsx
 import type { FC } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+
 import {
   Keypair,
   PublicKey,
@@ -17,13 +20,11 @@ import {
   createInitializeMintInstruction,
   createMintToInstruction,
 } from "@solana/spl-token";
-import { useNavigate, useLocation } from "react-router-dom";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+
 import TokenFinalizerModal from "../utils/TokenFinalizerModal";
 import { makeConnection } from "../config/rpc";
 
-/* ---------------------------------- */
-/* Wizard steps */
+/* ----------------------------- Wizard steps ----------------------------- */
 const STEPS = [
   "Generate Token Mint",
   "Initialize Mint",
@@ -33,12 +34,9 @@ const STEPS = [
   "Vault Complete",
 ] as const;
 type StepIndex = 0 | 1 | 2 | 3 | 4 | 5;
-/* ---------------------------------- */
 
 const CryptoGenerator: FC = () => {
   const { publicKey, sendTransaction, connected } = useWallet();
-
-  // Single shared connection that respects env/injected RPC + headers
   const connection = useMemo(() => makeConnection("confirmed"), []);
 
   const navigate = useNavigate();
@@ -62,7 +60,7 @@ const CryptoGenerator: FC = () => {
   const [decimals, setDecimals] = useState(9);
   const [supplyUi, setSupplyUi] = useState<number | "">("");
 
-  // persist a little draft so refreshes aren't painful
+  // Persist small draft for refresh resilience
   useEffect(() => {
     const raw = localStorage.getItem("token_draft");
     if (!raw) return;
@@ -136,7 +134,7 @@ const CryptoGenerator: FC = () => {
 
     try {
       switch (step) {
-        /* 1) Create a new mint account */
+        // 1) Create a new mint account
         case 0: {
           const lamports = await getMinimumBalanceForRentExemptMint(connection);
           const mintAccount = Keypair.generate();
@@ -152,21 +150,15 @@ const CryptoGenerator: FC = () => {
 
           const tx = new Transaction().add(ix);
           const sig = await sendTransaction(tx, connection, { signers: [mintAccount] });
-
           log(`Mint created: ${mintAccount.publicKey.toBase58()}`);
           log(explorerTx(sig));
           break;
         }
 
-        /* 2) Initialize mint */
+        // 2) Initialize mint
         case 1: {
           if (!mint) throw new Error("Mint not set");
-          const ix = createInitializeMintInstruction(
-            mint,
-            decimals,
-            publicKey,
-            null
-          );
+          const ix = createInitializeMintInstruction(mint, decimals, publicKey, null);
           const tx = new Transaction().add(ix);
           const sig = await sendTransaction(tx, connection);
           log(`Mint initialized (decimals=${decimals})`);
@@ -174,7 +166,7 @@ const CryptoGenerator: FC = () => {
           break;
         }
 
-        /* 3) Create ATA for the user (if needed) */
+        // 3) Create ATA for the user (if needed)
         case 2: {
           if (!mint) throw new Error("Mint not set");
           const ataAddr = await getAssociatedTokenAddress(mint, publicKey);
@@ -199,7 +191,7 @@ const CryptoGenerator: FC = () => {
           break;
         }
 
-        /* 4) Mint initial supply to ATA */
+        // 4) Mint initial supply to ATA
         case 3: {
           if (!mint) throw new Error("Mint not set");
           if (parsedSupplyBase == null) throw new Error("Enter a valid initial supply.");
@@ -210,25 +202,22 @@ const CryptoGenerator: FC = () => {
           const ix = createMintToInstruction(mint, dest, publicKey, parsedSupplyBase);
           const tx = new Transaction().add(ix);
           const sig = await sendTransaction(tx, connection);
-          log(
-            `Supply minted: ${Number(supplyUi).toLocaleString()} (decimals=${decimals})`
-          );
+          log(`Supply minted: ${Number(supplyUi).toLocaleString()} (decimals=${decimals})`);
           log(explorerTx(sig));
           break;
         }
 
-        /* 5) Open metadata finalizer modal */
+        // 5) Open metadata finalizer modal
         case 4: {
           setShowFinalizer(true);
           return; // advance occurs in onSuccess
         }
 
-        /* 6) Persist and finish */
+        // 6) Persist and finish
         case 5: {
           if (mint && ata) {
             localStorage.setItem("mint", mint.toBase58());
             localStorage.setItem("ata", ata.toBase58());
-            // Save some basics to speed up metadata defaults, etc.
             localStorage.setItem(
               "token_draft",
               JSON.stringify({ name, symbol, decimals, supplyUi })
@@ -247,7 +236,10 @@ const CryptoGenerator: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [step, mint, ata, publicKey, sendTransaction, connection, loading, decimals, parsedSupplyBase, supplyUi, name, symbol]);
+  }, [
+    step, mint, ata, publicKey, sendTransaction, connection, loading,
+    decimals, parsedSupplyBase, supplyUi, name, symbol
+  ]);
 
   const reset = () => {
     setStep(0);
@@ -269,10 +261,10 @@ const CryptoGenerator: FC = () => {
   const isDone = step === STEPS.length - 1;
 
   return (
-    <main className="min-h-screen flex items-start justify-center py-20 px-4">
-      <div className="w-full max-w-xl space-y-6" id={`step${(step as number) + 1}`}>
+    <main className="crypto-generator">
+      <div className="crypto-panel" id={`step${(step as number) + 1}`}>
         {/* Wallet */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-2">
           <WalletMultiButton />
         </div>
 
@@ -317,7 +309,7 @@ const CryptoGenerator: FC = () => {
           </p>
         )}
 
-        {/* Step 1 inputs: Token basics */}
+        {/* Step 1 inputs */}
         {step === 0 && (
           <div className="card">
             <h3 style={{ marginTop: 0 }}>Token Basics</h3>
@@ -417,12 +409,8 @@ const CryptoGenerator: FC = () => {
               </p>
             )}
             <div className="chip-row" style={{ marginTop: 8 }}>
-              <button onClick={goToVault} className="button">
-                Go to Vault
-              </button>
-              <button onClick={() => navigate("/shop")} className="button ghost">
-                Back to Shop
-              </button>
+              <button onClick={goToVault} className="button">Go to Vault</button>
+              <button onClick={() => navigate("/shop")} className="button ghost">Back to Shop</button>
             </div>
           </div>
         )}
@@ -430,9 +418,7 @@ const CryptoGenerator: FC = () => {
         {/* Logs */}
         {logs.length > 0 && (
           <div className="card" role="log" aria-live="polite">
-            <p className="mb-2" style={{ color: "#11f1a7", fontWeight: 700 }}>
-              Log
-            </p>
+            <p className="mb-2" style={{ color: "#11f1a7", fontWeight: 700 }}>Log</p>
             {logs.map((msg, i) => (
               <p key={i} className="text-sm" style={{ opacity: 0.95 }}>
                 {msg}
@@ -458,7 +444,6 @@ const CryptoGenerator: FC = () => {
                 connection={connection}
                 onClose={() => setShowFinalizer(false)}
                 onSuccess={handleMetadataSuccess}
-                // You might prefill with name/symbol later
               />
             </div>
           </div>
@@ -469,4 +454,3 @@ const CryptoGenerator: FC = () => {
 };
 
 export default CryptoGenerator;
-

@@ -705,3 +705,41 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 @media (max-width:640px){
   .bss-row{ grid-template-columns: 1fr; }
 }
+/* === CRYPTO GENERATOR PANEL ======================================= */
+.crypto-generator {
+  min-height: calc(100svh - var(--header-h));
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 5vw, 64px) 16px;
+  background:
+    radial-gradient(1000px 600px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
+    var(--bg);
+}
+
+.crypto-panel {
+  width: min(100%, 720px);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  border: 1px solid var(--stroke-2);
+  border-radius: var(--r-lg);
+  box-shadow: 0 20px 80px rgba(0,0,0,.7), var(--glow-gold);
+  backdrop-filter: blur(var(--blur));
+  padding: clamp(24px, 4vw, 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.crypto-panel .card {
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-md);
+  padding: 1rem;
+}
+
+@media (max-width:640px){
+  .crypto-panel {
+    width: 100%;
+    padding: 20px 16px;
+    border-radius: var(--r-md);
+  }
+}
