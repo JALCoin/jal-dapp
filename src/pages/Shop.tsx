@@ -16,7 +16,6 @@ export default function Shop() {
             className="shop-promo has-art"
             style={
               {
-                // same art helper style you already use elsewhere
                 ["--art-img" as any]: `url('/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png')`,
                 ["--art-pos" as any]: "58% 42%",
                 ["--art-zoom" as any]: "220%",
@@ -30,29 +29,35 @@ export default function Shop() {
                 <span className="promo-badge">NEW</span>
                 <h4 className="promo-title">Create with JAL/SOL</h4>
               </div>
-              <p className="promo-sub">
-                Choose what you’re launching. We’ll guide you step-by-step.
-              </p>
+              <p className="promo-sub">Pick what you’re launching. We’ll guide you, step by step.</p>
 
               <div className="product-grid" style={{ marginTop: 8 }}>
-                <article className="product-card">
+                {/* ===== Fungible Token ===== */}
+                <article className="product-card" aria-labelledby="tok-title">
                   <div className="product-body">
-                    <h4 className="product-title">Currency / Token (Fungible)</h4>
+                    <h4 id="tok-title" className="product-title">Currency / Token (Fungible)</h4>
+
                     <div className="product-blurb">
                       <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
-                        <li>Interchangeable units (e.g., 1 JAL = 1 JAL)</li>
-                        <li>Great for points, memecoins, governance</li>
-                        <li>Supply + mint authority you control</li>
+                        <li><strong>What it is:</strong> interchangeable units — every token is equal (1 JAL = 1 JAL).</li>
+                        <li><strong>Best for:</strong> points &amp; rewards, community/memecoins, governance voting.</li>
+                        <li><strong>You control:</strong> total supply, mint authority, and distribution.</li>
                       </ul>
+                      <div className="muted" style={{ marginTop: 8 }}>
+                        <em>JAL/SOL tone:</em> Create your own digital economy — mint value people can hold, trade, and align with.
+                      </div>
                     </div>
+
                     <div className="muted" style={{ marginTop: 8 }}>
-                      Creates: SPL mint + ATA + Metadata
+                      Creates: <strong>SPL Mint</strong> + <strong>Associated Token Account</strong> + <strong>Metadata</strong>
                     </div>
+
                     <div style={{ marginTop: 10 }}>
-                      <Link className="button gold" to="/crypto-generator/engine#step1">
+                      <Link className="button gold" to="/crypto-generator/engine#step1" aria-label="Start a fungible token">
                         Start Token
                       </Link>
                     </div>
+
                     <div className="chip-row" style={{ marginTop: 10 }}>
                       <span className="chip">Loyalty</span>
                       <span className="chip">Governance</span>
@@ -61,24 +66,32 @@ export default function Shop() {
                   </div>
                 </article>
 
-                <article className="product-card">
+                {/* ===== NFT ===== */}
+                <article className="product-card" aria-labelledby="nft-title">
                   <div className="product-body">
-                    <h4 className="product-title">NFT (Non-Fungible)</h4>
+                    <h4 id="nft-title" className="product-title">NFT / Asset (Non-Fungible)</h4>
+
                     <div className="product-blurb">
                       <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
-                        <li>Unique items or passes (1/1 or small series)</li>
-                        <li>Artwork stored via Lighthouse/IPFS</li>
-                        <li>Collection metadata for discovery</li>
+                        <li><strong>What it is:</strong> unique items or passes (1/1 or limited series), not interchangeable.</li>
+                        <li><strong>Best for:</strong> art drops, membership &amp; access, collectibles.</li>
+                        <li><strong>You control:</strong> artwork &amp; metadata stored on-chain via Lighthouse/IPFS.</li>
                       </ul>
+                      <div className="muted" style={{ marginTop: 8 }}>
+                        <em>JAL/SOL tone:</em> Turn moments into ownership — a signed digital artifact the network remembers.
+                      </div>
                     </div>
+
                     <div className="muted" style={{ marginTop: 8 }}>
-                      Creates: NFT mint(s) + Collection Metadata
+                      Creates: <strong>NFT Mint(s)</strong> + <strong>Collection Metadata</strong>
                     </div>
+
                     <div style={{ marginTop: 10 }}>
-                      <Link className="button neon" to="/crypto-generator">
+                      <Link className="button neon" to="/crypto-generator" aria-label="Start an NFT">
                         Start NFT
                       </Link>
                     </div>
+
                     <div className="chip-row" style={{ marginTop: 10 }}>
                       <span className="chip">Art</span>
                       <span className="chip">Membership</span>
@@ -111,7 +124,12 @@ export default function Shop() {
                     <div className="product-price">
                       <span className="muted">• {p.tag}</span>
                     </div>
-                    <button type="button" className="button" aria-disabled="true" title="Checkout not available yet">
+                    <button
+                      type="button"
+                      className="button"
+                      aria-disabled="true"
+                      title="Checkout not available yet"
+                    >
                       Pay with JAL
                     </button>
                   </div>
