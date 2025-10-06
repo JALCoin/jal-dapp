@@ -1,5 +1,5 @@
 /* =============================================================================
-   JAL/SOL — Global CSS (refined pass + footer removed)
+   JAL/SOL — Global CSS (refined pass, footer removed, trust-strip visible off landing)
    Sections:
    00. Tokens + Resets
    01. Foundations
@@ -54,15 +54,17 @@
 
   /* Spacing */
   --gutter:16px; --gutter-lg:24px; --section-gap:24px;
+
+  /* Background recipes */
+  --bg-hero: radial-gradient(1000px 600px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%), var(--bg);
+  --bg-hero-sm: radial-gradient(900px 540px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%), var(--bg);
 }
 
 *,*::before,*::after{ box-sizing:border-box }
 html,body,#root{ min-height:100% }
 html,body{
   margin:0; padding:0; color:var(--text);
-  background:
-    radial-gradient(1000px 600px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
-    var(--bg);
+  background: var(--bg-hero);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial, "Noto Sans";
   line-height:1.6; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   overflow-x:hidden;
@@ -94,7 +96,6 @@ body[data-hub-open="true"]{ overflow:hidden }
 
 main[role="main"]{
   min-height: calc(100lvh - var(--header-h));
-  /* no footer pad needed now; keep safe-bottom for device insets */
   padding-bottom: env(safe-area-inset-bottom, 0px);
   display:flex; flex-direction:column;
 }
@@ -194,13 +195,11 @@ main[role="main"]{
   animation: drawerIn var(--t-slow) cubic-bezier(.22,.61,.36,1) forwards;
   display:flex; flex-direction:column; gap:8px; padding:20px;
 }
-/* NEW: neat stacked links */
-.sidebar-nav nav{ display:grid; gap:10px; }
-
+.sidebar-nav nav{ display:grid; gap:10px }
 @keyframes drawerIn{ to{ transform: translateX(0) } }
 
 .sidebar-nav .nav-link{
-  display:block; /* NEW: full-width hit area */
+  display:block;
   padding:.9rem 1rem; border-radius: var(--r-md);
   border:1px solid var(--stroke);
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0));
@@ -222,9 +221,7 @@ main[role="main"]{
 
 .landing-gradient{
   min-height:100dvh;
-  background:
-    radial-gradient(900px 540px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
-    var(--bg);
+  background: var(--bg-hero-sm);
   position:relative; z-index:1;
 }
 .landing-merge .landing-logo{ filter: drop-shadow(0 0 20px rgba(255,255,255,.45)) }
@@ -576,7 +573,6 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
   .card, .product-card, .hub-panel { box-shadow: 0 8px 18px rgba(0,0,0,.5) }
 }
 
-/* Decorative layers should never eat clicks */
 .feature-card.has-art::after,
 .img-btn.has-art::after,
 .shop-promo.has-art::after { pointer-events:none!important }
@@ -618,25 +614,11 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 .swap-exit:hover{ transform: translateY(-1px); border-color: var(--cyan); box-shadow: var(--glow-cyan) }
 
 /* Vault section headers and separators */
-.vault-section {
-  display: grid;
-  gap: 10px;
-}
-.vault-section + .vault-section {
-  margin-top: 14px;
-}
-.vault-section .section-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-.vault-section .section-head h3 {
-  margin: 0;
-}
-.vault-section .section-sub {
-  opacity: .85;
-  font-size: .95rem;
-}
+.vault-section { display: grid; gap: 10px }
+.vault-section + .vault-section { margin-top: 14px }
+.vault-section .section-head { display: flex; align-items: baseline; gap: 10px }
+.vault-section .section-head h3 { margin: 0 }
+.vault-section .section-sub { opacity: .85; font-size: .95rem }
 
 /* Optional light divider line inside a card body */
 .v-divider {
@@ -646,28 +628,20 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 }
 
 /* CurrencyFinalizer list spacing (uses your “product-grid” look) */
-.finalizer-wrap {
-  margin-top: 10px;
-}
-.finalizer-wrap .product-grid {
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-}
+.finalizer-wrap { margin-top: 10px }
+.finalizer-wrap .product-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) }
 
 /* Raydium embed: allow a slightly shorter height on mobile */
 @media (max-width: 420px){
-  .swap-embed-wrap { min-block-size: 400px; }
+  .swap-embed-wrap { min-block-size: 400px }
 }
-/* Hide advanced chrome on the landing */
-.trust-strip{ display:none !important; }
 
-/* Super-simple landing */
+/* === Simple landing variant ============================================ */
 .landing-simple{
   min-height: calc(100svh - var(--header-h));
   display:grid; place-items:center;
   padding: 24px 16px;
-  background:
-    radial-gradient(900px 540px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
-    var(--bg);
+  background: var(--bg-hero-sm);
 }
 .landing-simple-inner{
   width:min(100%, 780px);
@@ -703,17 +677,16 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 .hint{ opacity:.75; font-size:.95rem; margin-top: 4px }
 
 @media (max-width:640px){
-  .bss-row{ grid-template-columns: 1fr; }
+  .bss-row{ grid-template-columns: 1fr }
 }
-/* === CRYPTO GENERATOR PANEL ======================================= */
+
+/* === CRYPTO GENERATOR PANEL ============================================ */
 .crypto-generator {
   min-height: calc(100svh - var(--header-h));
   display: grid;
   place-items: center;
   padding: clamp(24px, 5vw, 64px) 16px;
-  background:
-    radial-gradient(1000px 600px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
-    var(--bg);
+  background: var(--bg-hero);
 }
 
 .crypto-panel {
