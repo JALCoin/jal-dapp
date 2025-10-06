@@ -1,33 +1,87 @@
 // src/pages/Shop.tsx
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+
+const CATALOG = [
+  { id: "hoodie", name: "JAL Hoodie", tag: "Merch" },
+  { id: "cap", name: "Logo Cap", tag: "Merch" },
+  { id: "stickers", name: "Sticker Pack", tag: "Merch" },
+  { id: "gift25", name: "Gift Card 25", tag: "Gift Cards" },
+  { id: "gift50", name: "Gift Card 50", tag: "Gift Cards" },
+  { id: "wallpaper", name: "Phone Wallpaper", tag: "Digital" },
+] as const;
 
 export default function Shop() {
+  const navigate = useNavigate();
+  const tokenBtnRef = useRef<HTMLAnchorElement | null>(null);
+  const nftBtnRef = useRef<HTMLAnchorElement | null>(null);
+
+  // Light route prefetch (safe to fail if filenames differ)
+  const prefetchToken = useCallback(() => {
+    // engine route
+    import("../pages/CryptoGenerator").catch(() => {});
+    import("../pages/CryptoGeneratorEngine").catch(() => {});
+  }, []);
+  const prefetchNFT = useCallback(() => {
+    import("../pages/CryptoGenerator").catch(() => {});
+  }, []);
+
+  // Idle prefetch on mount
+  useEffect(() => {
+    const run = () => { prefetchToken(); prefetchNFT(); };
+    if ("requestIdleCallback" in window) {
+      // @ts-expect-error: not in TS lib DOM by default everywhere
+      const id = window.requestIdleCallback(run);
+      return () => window.cancelIdleCallback?.(id as any);
+    } else {
+      const t = setTimeout(run, 250);
+      return () => clearTimeout(t);
+    }
+  }, [prefetchToken, prefetchNFT]);
+
+  // Keyboard shortcuts: G (token), N (nft)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const k = e.key.toLowerCase();
+      if (k === "g") { e.preventDefault(); tokenBtnRef.current?.focus(); navigate("/crypto-generator/engine#step1"); }
+      if (k === "n") { e.preventDefault(); nftBtnRef.current?.focus(); navigate("/crypto-generator"); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navigate]);
+
+  const artStyle = useMemo(
+    () =>
+      ({
+        ["--art-img" as any]: `url('/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png')`,
+        ["--art-pos" as any]: "58% 42%",
+        ["--art-zoom" as any]: "220%",
+      }) as React.CSSProperties,
+    []
+  );
+
   return (
-    <main className="landing-gradient">
+    <main className="landing-gradient" role="main">
       <div className="container" style={{ padding: 24 }}>
-        <div className="card">
+        <div className="card" role="region" aria-label="Shop overview">
           <h2 style={{ marginTop: 0 }}>Shop</h2>
-          <p className="muted" style={{ marginTop: 6 }}>
+          <p className="muted" id="shop-sub" style={{ marginTop: 6 }}>
             Payments are <strong>coming soon</strong>. Browse the preview and start creating with JAL/SOL.
           </p>
 
           {/* Promo: Create with JAL/SOL */}
           <section
             className="shop-promo has-art"
-            style={
-              {
-                ["--art-img" as any]: `url('/fdfd19ca-7b20-42d8-b430-4ca75a94f0eb.png')`,
-                ["--art-pos" as any]: "58% 42%",
-                ["--art-zoom" as any]: "220%",
-              } as React.CSSProperties
-            }
+            style={artStyle}
             role="region"
-            aria-label="Create with JAL/SOL"
+            aria-labelledby="create-title"
+            aria-describedby="shop-sub"
           >
             <div className="shop-promo-inner">
               <div className="promo-head">
                 <span className="promo-badge">NEW</span>
-                <h4 className="promo-title">Create with JAL/SOL</h4>
+                <h4 id="create-title" className="promo-title">Create with JAL/SOL</h4>
               </div>
               <p className="promo-sub">Pick what you’re launching. We’ll guide you, step by step.</p>
 
@@ -53,7 +107,14 @@ export default function Shop() {
                     </div>
 
                     <div style={{ marginTop: 10 }}>
-                      <Link className="button gold" to="/crypto-generator/engine#step1" aria-label="Start a fungible token">
+                      <Link
+                        ref={tokenBtnRef}
+                        className="button gold"
+                        to="/crypto-generator/engine#step1"
+                        aria-label="Start a fungible token (G)"
+                        onMouseEnter={prefetchToken}
+                        onFocus={prefetchToken}
+                      >
                         Start Token
                       </Link>
                     </div>
@@ -87,7 +148,14 @@ export default function Shop() {
                     </div>
 
                     <div style={{ marginTop: 10 }}>
-                      <Link className="button neon" to="/crypto-generator" aria-label="Start an NFT">
+                      <Link
+                        ref={nftBtnRef}
+                        className="button neon"
+                        to="/crypto-generator"
+                        aria-label="Start an NFT (N)"
+                        onMouseEnter={prefetchNFT}
+                        onFocus={prefetchNFT}
+                      >
                         Start NFT
                       </Link>
                     </div>
@@ -104,20 +172,13 @@ export default function Shop() {
           </section>
 
           {/* Catalog preview */}
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 16 }} role="region" aria-label="Catalog preview">
             <h3 style={{ marginTop: 0 }}>Catalog (Preview)</h3>
             <div className="product-grid" role="list" style={{ marginTop: 14 }}>
-              {[
-                { id: "hoodie", name: "JAL Hoodie", tag: "Merch" },
-                { id: "cap", name: "Logo Cap", tag: "Merch" },
-                { id: "stickers", name: "Sticker Pack", tag: "Merch" },
-                { id: "gift25", name: "Gift Card 25", tag: "Gift Cards" },
-                { id: "gift50", name: "Gift Card 50", tag: "Gift Cards" },
-                { id: "wallpaper", name: "Phone Wallpaper", tag: "Digital" },
-              ].map((p) => (
+              {CATALOG.map((p) => (
                 <article key={p.id} className="product-card" role="listitem" aria-label={p.name}>
                   <div className="product-media noimg">
-                    <span className="badge soon">Coming&nbsp;soon</span>
+                    <span className="badge soon" aria-live="polite">Coming&nbsp;soon</span>
                   </div>
                   <div className="product-body">
                     <h4 className="product-title">{p.name}</h4>
