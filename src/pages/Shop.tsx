@@ -16,28 +16,28 @@ export default function Shop() {
   const tokenBtnRef = useRef<HTMLAnchorElement | null>(null);
   const nftBtnRef = useRef<HTMLAnchorElement | null>(null);
 
-  // Light route prefetch (safe to fail if filenames differ)
-  const prefetchToken = useCallback(() => {
-    // engine route
-    import("../pages/CryptoGenerator").catch(() => {});
-    import("../pages/CryptoGeneratorEngine").catch(() => {});
-  }, []);
-  const prefetchNFT = useCallback(() => {
+  // Prefetch only modules that actually exist
+  const prefetchGenerator = useCallback(() => {
     import("../pages/CryptoGenerator").catch(() => {});
   }, []);
 
-  // Idle prefetch on mount
+  // Idle prefetch on mount (no TS pragma needed)
   useEffect(() => {
-    const run = () => { prefetchToken(); prefetchNFT(); };
-    if ("requestIdleCallback" in window) {
-      // @ts-expect-error: not in TS lib DOM by default everywhere
-      const id = window.requestIdleCallback(run);
-      return () => window.cancelIdleCallback?.(id as any);
+    const ric = (window as any).requestIdleCallback as
+      | ((cb: () => void) => number)
+      | undefined;
+    let h: number | ReturnType<typeof setTimeout>;
+
+    const run = () => prefetchGenerator();
+
+    if (ric) {
+      h = ric(run);
+      return () => { /* no standard cancel; safe to ignore */ };
     } else {
-      const t = setTimeout(run, 250);
-      return () => clearTimeout(t);
+      h = setTimeout(run, 250);
+      return () => clearTimeout(h as any);
     }
-  }, [prefetchToken, prefetchNFT]);
+  }, [prefetchGenerator]);
 
   // Keyboard shortcuts: G (token), N (nft)
   useEffect(() => {
@@ -112,8 +112,8 @@ export default function Shop() {
                         className="button gold"
                         to="/crypto-generator/engine#step1"
                         aria-label="Start a fungible token (G)"
-                        onMouseEnter={prefetchToken}
-                        onFocus={prefetchToken}
+                        onMouseEnter={prefetchGenerator}
+                        onFocus={prefetchGenerator}
                       >
                         Start Token
                       </Link>
@@ -153,8 +153,8 @@ export default function Shop() {
                         className="button neon"
                         to="/crypto-generator"
                         aria-label="Start an NFT (N)"
-                        onMouseEnter={prefetchNFT}
-                        onFocus={prefetchNFT}
+                        onMouseEnter={prefetchGenerator}
+                        onFocus={prefetchGenerator}
                       >
                         Start NFT
                       </Link>
