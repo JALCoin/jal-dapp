@@ -19,28 +19,16 @@ export default function Landing() {
     : "https://raydium.io/swap/?utm_source=jalsol&utm_medium=landing";
 
   // Prefetch the generator (Shop) and the guide (Sell)
-  const prefetchGenerator = useCallback(() => {
-    import("../pages/Shop").catch(() => {});
-  }, []);
-  const prefetchGuide = useCallback(() => {
-    import("../pages/Sell").catch(() => {});
-  }, []);
+  const prefetchGenerator = useCallback(() => { import("../pages/Shop").catch(() => {}); }, []);
+  const prefetchGuide = useCallback(() => { import("../pages/Sell").catch(() => {}); }, []);
 
   // Gentle prefetch on idle
   useEffect(() => {
     const id =
       (window as any).requestIdleCallback
-        ? (window as any).requestIdleCallback(() => {
-            prefetchGenerator();
-            prefetchGuide();
-          })
-        : setTimeout(() => {
-            prefetchGenerator();
-            prefetchGuide();
-          }, 250);
-    return () => {
-      if (typeof id === "number") clearTimeout(id);
-    };
+        ? (window as any).requestIdleCallback(() => { prefetchGenerator(); prefetchGuide(); })
+        : setTimeout(() => { prefetchGenerator(); prefetchGuide(); }, 250);
+    return () => { if (typeof id === "number") clearTimeout(id); };
   }, [prefetchGenerator, prefetchGuide]);
 
   /**
@@ -54,81 +42,63 @@ export default function Landing() {
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       const k = e.key.toLowerCase();
-      // Generator
-      if (k === "g" || k === "b") {
-        e.preventDefault();
-        genRef.current?.focus();
-        navigate("/shop");
-      }
-      // Swap
-      if (k === "s") {
-        e.preventDefault();
-        swapRef.current?.focus();
-        (swapRef.current as HTMLAnchorElement)?.click();
-      }
-      // Guide (creator ops)
-      if (k === "l") {
-        e.preventDefault();
-        guideRef.current?.focus();
-        navigate("/sell");
-      }
+      if (k === "g" || k === "b") { e.preventDefault(); genRef.current?.focus(); navigate("/shop"); }
+      if (k === "s")           { e.preventDefault(); swapRef.current?.focus(); (swapRef.current as HTMLAnchorElement)?.click(); }
+      if (k === "l")           { e.preventDefault(); guideRef.current?.focus(); navigate("/sell"); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
-  // Inline visual helpers so this looks premium without touching global CSS
-  const bgWrapStyle: React.CSSProperties = {
+  // Local visuals (keeps your global CSS untouched)
+  const shell: React.CSSProperties = {
     position: "relative",
     minHeight: "calc(100vh - 140px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    display: "grid",
+    placeItems: "center",
+    padding: "32px 16px",
     overflow: "hidden",
   };
-  const ringStyle: React.CSSProperties = {
+  const panel: React.CSSProperties = {
+    width: "min(880px, 96vw)",
+    borderRadius: 20,
+    padding: "42px 28px",
+    textAlign: "center",
+    background:
+      "radial-gradient(120% 120% at 50% 0%, rgba(255,255,255,0.06), rgba(0,0,0,0.4) 55%), linear-gradient(180deg, rgba(10,10,10,0.6), rgba(10,10,10,0.2))",
+    boxShadow: "0 20px 80px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.05)",
+    backdropFilter: "blur(6px)",
+  };
+  const halo: React.CSSProperties = {
     position: "absolute",
-    width: 900,
-    height: 900,
+    inset: "-25% -25% auto -25%",
+    height: 560,
     borderRadius: "50%",
+    background:
+      "conic-gradient(from 160deg at 60% 40%, rgba(0,255,200,.22), rgba(255,220,120,.22), rgba(160,120,255,.22), rgba(0,255,200,.22))",
     filter: "blur(120px)",
-    opacity: 0.18,
+    opacity: 0.75,
     pointerEvents: "none",
   };
 
   return (
-    <main className="landing-simple" aria-label="JAL/SOL quick start">
-      <div style={bgWrapStyle}>
-        {/* Soft conic glow + radial rings */}
-        <div
-          aria-hidden
-          style={{
-            ...ringStyle,
-            background:
-              "conic-gradient(from 180deg at 50% 50%, rgba(0,255,200,.6), rgba(255,220,120,.6), rgba(180,120,255,.6), rgba(0,255,200,.6))",
-          }}
-        />
-        <div
-          aria-hidden
-          style={{
-            ...ringStyle,
-            width: 1200,
-            height: 1200,
-            background: "radial-gradient(closest-side, rgba(255,255,255,.08), transparent 70%)",
-            opacity: 0.25,
-          }}
-        />
+    <main className="landing-simple" aria-label="JAL/SOL landing hub">
+      <div style={shell}>
+        <div aria-hidden style={halo} />
 
-        <div className="landing-simple-inner" style={{ textAlign: "center", position: "relative", zIndex: 2 }}>
-          <h1 className="hero-title" style={{ marginBottom: 8 }}>
-            Currency of Identity
-          </h1>
-          <p className="hero-sub" style={{ maxWidth: 680, margin: "0 auto 28px" }}>
-            One generator. Mint your brand, add liquidity, attach products, and loop fiat back into crypto.
+        <section style={panel}>
+          {/* Brand intro */}
+          <p className="muted" style={{ letterSpacing: ".12em", textTransform: "uppercase", margin: 0 }}>
+            Official Hub · JAL / SOL
+          </p>
+          <h1 className="hero-title" style={{ margin: "6px 0 10px" }}>Jeremy Aaron Lugg</h1>
+          <p className="hero-sub" style={{ maxWidth: 720, margin: "0 auto 26px" }}>
+            Machinist · Fitter · Crypto builder. This is where my followers land to access my tools,
+            products, and resources.
           </p>
 
-          <div className="bss-row bss-row--big" data-section="bss" style={{ gap: 16, justifyContent: "center" }}>
-            {/* GENERATOR → /shop (single source of truth) */}
+          {/* Primary actions */}
+          <div className="bss-row bss-row--big" style={{ gap: 14, justifyContent: "center", marginBottom: 16 }}>
             <Link
               ref={genRef}
               className="bss-btn buy"
@@ -136,12 +106,11 @@ export default function Landing() {
               aria-label="Open Generator (G or B)"
               onMouseEnter={prefetchGenerator}
               onFocus={prefetchGenerator}
-              style={{ boxShadow: "0 0 28px rgba(0,255,200,.25)" }}
+              style={{ boxShadow: "0 0 26px rgba(0,255,200,.25)" }}
             >
               OPEN GENERATOR
             </Link>
 
-            {/* SWAP → Raydium (new tab) */}
             <a
               ref={swapRef}
               className="bss-btn swap"
@@ -149,12 +118,11 @@ export default function Landing() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Swap on Raydium (S) — opens in new tab"
-              style={{ boxShadow: "0 0 28px rgba(120,220,255,.25)" }}
+              style={{ boxShadow: "0 0 26px rgba(120,220,255,.25)" }}
             >
-              SWAP FOR $JAL
+              SWAP $JAL ↔ SOL
             </a>
 
-            {/* GUIDE → /sell */}
             <Link
               ref={guideRef}
               className="bss-btn sell"
@@ -162,43 +130,53 @@ export default function Landing() {
               aria-label="Open Creator Guide (L)"
               onMouseEnter={prefetchGuide}
               onFocus={prefetchGuide}
-              style={{ boxShadow: "0 0 28px rgba(255,210,120,.25)" }}
+              style={{ boxShadow: "0 0 26px rgba(255,210,120,.25)" }}
             >
-              CREATOR&nbsp;GUIDE
+              CREATOR GUIDE
             </Link>
           </div>
 
-          <p className="hint" style={{ marginTop: 14 }}>
-            <strong>Shortcuts:</strong> <kbd>G</kbd> Open Generator · <kbd>S</kbd> Swap · <kbd>L</kbd> Guide
+          {/* Social / resources strip */}
+          <div
+            className="resource-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0,1fr))",
+              gap: 10,
+              margin: "8px auto 18px",
+              maxWidth: 720,
+            }}
+          >
+            <a className="chip sm" href="https://x.com/JAL358" target="_blank" rel="noreferrer">X / Twitter</a>
+            <a className="chip sm" href="https://raydium.io/swap" target="_blank" rel="noreferrer">Raydium</a>
+            <a className="chip sm" href="https://t.me" target="_blank" rel="noreferrer">Telegram</a>
+            <a className="chip sm" href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a>
+          </div>
+
+          <p className="hint" style={{ marginTop: 0 }}>
+            <strong>Shortcuts:</strong> <kbd>G</kbd> Generator · <kbd>S</kbd> Swap · <kbd>L</kbd> Guide
           </p>
 
           {!mint && (
             <p className="hint" aria-live="polite" style={{ opacity: 0.8 }}>
-              Heads up: JAL mint address not set — swap will open Raydium home.
+              Heads up: JAL mint address not set — swap opens Raydium home.
             </p>
           )}
 
-          {/* Micro-roadmap preview */}
-          <section className="mt-8 text-white/75" style={{ marginTop: 28 }}>
-            <ol className="list-decimal list-inside space-y-1 text-sm" style={{ maxWidth: 420, margin: "0 auto" }}>
-              <li>
-                <strong>Identity</strong> — set name, symbol, image (IPFS).
-              </li>
-              <li>
-                <strong>Mint</strong> — create mint, ATA, initial supply.
-              </li>
-              <li>
-                <strong>Liquidity</strong> — pair with SOL on Raydium.
-              </li>
-              <li>
-                <strong>Product</strong> — attach token to a shippable item.
-              </li>
-              <li>
-                <strong>Reinvest</strong> — route a slice of fiat back to LP or burns.
-              </li>
+          {/* Micro-roadmap for context */}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", marginTop: 18, paddingTop: 16 }}>
+            <ol
+              className="list-decimal list-inside text-sm"
+              style={{ maxWidth: 520, margin: "0 auto", textAlign: "left", color: "rgba(255,255,255,0.75)" }}
+            >
+              <li><strong>Identity</strong> — set name, symbol, image (IPFS).</li>
+              <li><strong>Mint</strong> — create mint, ATA, initial supply.</li>
+              <li><strong>Liquidity</strong> — pair with SOL on Raydium.</li>
+              <li><strong>Product</strong> — attach token to a shippable item.</li>
+              <li><strong>Reinvest</strong> — route a slice of fiat back to LP or burns.</li>
             </ol>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </main>
   );

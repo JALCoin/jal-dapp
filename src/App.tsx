@@ -42,19 +42,22 @@ import "@solana/wallet-adapter-react-ui/styles.css";
 import Landing from "./pages/Landing";
 import { JAL_MINT } from "./config/tokens";
 
-// Lazy pages
-const CryptoGeneratorIntro = lazy(() => import("./pages/CryptoGeneratorIntro"));
-const CryptoGenerator     = lazy(() => import("./pages/CryptoGenerator"));
-const Sell                = lazy(() => import("./pages/Sell"));
-const Shop                = lazy(() => import("./pages/Shop"));
+/* ------------------------------- Lazy routes ------------------------------ */
+const Shop         = lazy(() => import("./pages/Shop"));                 // single generator
+const Sell         = lazy(() => import("./pages/Sell"));                 // creator guide / ops
+const Vault        = lazy(() => import("./pages/Vault"));                // YOUR page
+// Legacy (kept for compatibility)
+const CryptoGeneratorIntro  = lazy(() => import("./pages/CryptoGeneratorIntro"));
+const CryptoGenerator       = lazy(() => import("./pages/CryptoGenerator"));
 
-/* --------------------------- Prefetch (key routes) -------------------------- */
+/* --------------------------- Prefetch (core paths) ------------------------- */
 let prefetched = false;
 function prefetchKeyRoutes() {
   if (prefetched) return;
   prefetched = true;
   import("./pages/Shop").catch(() => {});
   import("./pages/Sell").catch(() => {});
+  import("./pages/Vault").catch(() => {});
 }
 
 /* --------------------------------- Errors ---------------------------------- */
@@ -89,7 +92,7 @@ class AppErrorBoundary extends React.Component<
   }
 }
 
-/** Reset the error boundary on route change so we don't get "stuck" */
+/** Reset error boundary on route change */
 function RouteAwareBoundary({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   return <AppErrorBoundary key={pathname}>{children}</AppErrorBoundary>;
@@ -247,7 +250,7 @@ function RpcStatusChip() {
 
 function TrustStrip() {
   const jal = (JAL_MINT ?? "").toString().trim();
-  const hasMint = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(jal); // base58-ish length check
+  const hasMint = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(jal);
   const short = hasMint ? `${jal.slice(0,4)}…${jal.slice(-4)}` : "not set";
 
   const explorerUrl = hasMint
@@ -298,8 +301,7 @@ function HeaderView({ onMenu, isOpen }: { onMenu: () => void; isOpen: boolean })
 
 function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
-  const onEnterShop  = () => { prefetchKeyRoutes(); onClose(); };
-  const onEnterGuide = () => { prefetchKeyRoutes(); onClose(); };
+  const onEnter = () => { prefetchKeyRoutes(); onClose(); };
 
   return (
     <>
@@ -309,10 +311,13 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             Home
           </NavLink>
-          <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onEnterShop}>
-            Shop / Generator
+          <NavLink to="/vault" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onEnter}>
+            Vault
           </NavLink>
-          <NavLink to="/sell" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onEnterGuide}>
+          <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onEnter}>
+            Generator
+          </NavLink>
+          <NavLink to="/sell" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onEnter}>
             Creator Guide
           </NavLink>
         </nav>
@@ -353,7 +358,7 @@ function PageStub({ title, children }: { title: string; children?: ReactNode }) 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Prefetch core routes right away for snappy first interaction
+  // Prefetch core routes for snappy first interaction
   useEffect(() => { prefetchKeyRoutes(); }, []);
 
   useEffect(() => {
@@ -388,14 +393,13 @@ export default function App() {
             >
               <Routes>
                 <Route path="/" element={<Landing />} />
-                {/* The one generator entry point */}
-                <Route path="/shop" element={<Shop />} />
-                {/* Guide / ops */}
-                <Route path="/sell" element={<Sell />} />
+                <Route path="/vault" element={<Vault />} />          {/* Your personal hub */}
+                <Route path="/shop" element={<Shop />} />            {/* Single generator */}
+                <Route path="/sell" element={<Sell />} />            {/* Creator guide */}
                 {/* Legacy routes kept for compatibility */}
                 <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
                 <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
-                {/* Optional top-level pages */}
+                {/* Optional pages */}
                 <Route path="/about" element={<PageStub title="About" />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
