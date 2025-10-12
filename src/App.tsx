@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useCallback,
   lazy,
   Suspense,
   type PropsWithChildren,
@@ -52,9 +53,7 @@ let prefetched = false;
 function prefetchKeyRoutes() {
   if (prefetched) return;
   prefetched = true;
-  // The one true generator lives at /shop
   import("./pages/Shop").catch(() => {});
-  // Creator guide / ops space
   import("./pages/Sell").catch(() => {});
 }
 
@@ -68,7 +67,6 @@ class AppErrorBoundary extends React.Component<
     return { hasError: true, error };
   }
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
-    // eslint-disable-next-line no-console
     console.error("[AppErrorBoundary]", error, info);
   }
   render() {
@@ -89,6 +87,12 @@ class AppErrorBoundary extends React.Component<
     }
     return this.props.children;
   }
+}
+
+/** Reset the error boundary on route change so we don't get "stuck" */
+function RouteAwareBoundary({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  return <AppErrorBoundary key={pathname}>{children}</AppErrorBoundary>;
 }
 
 /* -------------------------------- Providers -------------------------------- */
@@ -205,77 +209,61 @@ function RpcStatusChip() {
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [state, setState] = useState<"checking" | "ok" | "warn" | "down">("checking");
 
-  useEffect(() => {
-    let mounted = true;
-    const withTimeout = <T,>(p: Promise<T>, ms: number) =>
-      new Promise<T>((resolve, reject) => {
-        const id = setTimeout(() => reject(new Error("timeout")), ms);
-        p.then((v) => { clearTimeout(id); resolve(v); })
-         .catch((e) => { clearTimeout(id); reject(e); });
-      });
-    const check = async () => {
-      const t0 = performance.now();
-      try {
-        await withTimeout(connection.getEpochInfo(), 3000);
-        const dt = performance.now() - t0;
-        if (!mounted) return;
-        setLatencyMs(Math.round(dt));
-        setState(dt < 1200 ? "ok" : "warn");
-      } catch {
-        if (!mounted) return;
-        setLatencyMs(null);
-        setState("down");
-      }
-    };
-    check();
-    const id = setInterval(check, 20000);
-    return () => { mounted = false; clearInterval(id); };
+  const ping = useCallback(async () => {
+    const t0 = performance.now();
+    try {
+      const res = connection.getEpochInfo();
+      await Promise.race([res, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 3000))]);
+      const dt = performance.now() - t0;
+      setLatencyMs(Math.round(dt));
+      setState(dt < 1200 ? "ok" : "warn");
+    } catch {
+      setLatencyMs(null);
+      setState("down");
+    }
   }, [connection]);
 
+  useEffect(() => {
+    let id: any;
+    ping();
+    id = setInterval(ping, 20000);
+    return () => clearInterval(id);
+  }, [ping]);
+
+  const host = (() => { try { return new URL((connection as any)._rpcEndpoint).host; } catch { return "RPC"; } })();
+  const dot = state === "ok" ? "ok" : state === "warn" ? "warn" : "down";
   const label =
     state === "checking" ? "Checking…" :
-    state === "ok"       ? `Healthy${latencyMs != null ? ` • ${latencyMs}ms` : ""}` :
-    state === "warn"     ? `Degraded${latencyMs != null ? ` • ${latencyMs}ms` : ""}` :
-                           "Down";
-  const dotClass = state === "ok" ? "ok" : state === "warn" ? "warn" : "down";
+    state === "ok" ? `Healthy • ${latencyMs}ms` :
+    state === "warn" ? `Degraded • ${latencyMs ?? "—"}ms` : "Down";
 
   return (
-    <span className="chip sm">
-      <span className={`dot ${dotClass}`} style={{ marginRight: 8 }} />
-      Mainnet • RPC: {label}
-    </span>
+    <button className="chip sm" onClick={ping} title="Click to recheck">
+      <span className={`dot ${dot}`} style={{ marginRight: 8 }} />
+      Mainnet • {host}: {label}
+    </button>
   );
 }
 
 function TrustStrip() {
-  const jal = (JAL_MINT || "").toString().trim();
-  const hasMint = jal.length >= 32;
+  const jal = (JAL_MINT ?? "").toString().trim();
+  const hasMint = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(jal); // base58-ish length check
   const short = hasMint ? `${jal.slice(0,4)}…${jal.slice(-4)}` : "not set";
 
   const explorerUrl = hasMint
-    ? `https://explorer.solana.com/address/${jal}`
-    : "https://explorer.solana.com/";
+    ? `https://explorer.solana.com/address/${jal}?cluster=mainnet`
+    : "https://explorer.solana.com/?cluster=mainnet";
   const raydiumUrl = hasMint
-    ? `https://raydium.io/swap/?inputCurrency=SOL&outputCurrency=${encodeURIComponent(jal)}`
-    : `https://raydium.io/swap/`;
+    ? `https://raydium.io/swap/?inputCurrency=SOL&outputCurrency=${encodeURIComponent(jal)}&fixed=in&utm_source=jalsol&utm_medium=truststrip`
+    : `https://raydium.io/swap/?utm_source=jalsol&utm_medium=truststrip`;
 
   return (
     <div className="trust-strip" aria-label="Trust & quick links">
-      <a
-        className={`chip sm mono ${hasMint ? "" : "disabled"}`}
-        href={explorerUrl}
-        target="_blank"
-        rel="noreferrer"
-        title={hasMint ? "View JAL mint on Solana Explorer" : "Open Solana Explorer"}
-      >
+      <a className={`chip sm mono ${hasMint ? "" : "disabled"}`} href={explorerUrl} target="_blank" rel="noreferrer">
         Mint: {short}
       </a>
-      <a className="chip sm" href={explorerUrl} target="_blank" rel="noreferrer">
-        Explorer
-      </a>
-      <a className="chip sm" href={raydiumUrl} target="_blank" rel="noreferrer">
-        Swap on Raydium
-      </a>
+      <a className="chip sm" href={explorerUrl} target="_blank" rel="noreferrer">Explorer</a>
+      <a className="chip sm" href={raydiumUrl} target="_blank" rel="noreferrer">Swap on Raydium</a>
       <RpcStatusChip />
     </div>
   );
@@ -327,7 +315,6 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           <NavLink to="/sell" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onEnterGuide}>
             Creator Guide
           </NavLink>
-          {/* Legacy generator routes remain accessible but not promoted in nav */}
         </nav>
 
         <div style={{ marginTop: 8 }} />
@@ -366,6 +353,9 @@ function PageStub({ title, children }: { title: string; children?: ReactNode }) 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Prefetch core routes right away for snappy first interaction
+  useEffect(() => { prefetchKeyRoutes(); }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
     window.addEventListener("keydown", onKey);
@@ -387,7 +377,7 @@ export default function App() {
         <HeaderView onMenu={() => setMenuOpen((v) => !v)} isOpen={menuOpen} />
         <TrustStrip />
         <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
-        <AppErrorBoundary>
+        <RouteAwareBoundary>
           <main role="main">
             <Suspense
               fallback={
@@ -400,9 +390,9 @@ export default function App() {
                 <Route path="/" element={<Landing />} />
                 {/* The one generator entry point */}
                 <Route path="/shop" element={<Shop />} />
-                {/* Guide / ops (keep your existing Sell.tsx content, just relabeled in nav/UI) */}
+                {/* Guide / ops */}
                 <Route path="/sell" element={<Sell />} />
-                {/* Legacy routes kept for compatibility; feel free to remove later */}
+                {/* Legacy routes kept for compatibility */}
                 <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
                 <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
                 {/* Optional top-level pages */}
@@ -411,7 +401,7 @@ export default function App() {
               </Routes>
             </Suspense>
           </main>
-        </AppErrorBoundary>
+        </RouteAwareBoundary>
       </BrowserRouter>
     </SolanaProviders>
   );

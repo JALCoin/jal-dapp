@@ -77,72 +77,128 @@ export default function Landing() {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
+  // Inline visual helpers so this looks premium without touching global CSS
+  const bgWrapStyle: React.CSSProperties = {
+    position: "relative",
+    minHeight: "calc(100vh - 140px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  };
+  const ringStyle: React.CSSProperties = {
+    position: "absolute",
+    width: 900,
+    height: 900,
+    borderRadius: "50%",
+    filter: "blur(120px)",
+    opacity: 0.18,
+    pointerEvents: "none",
+  };
+
   return (
-    <main className="landing-simple">
-      <div className="landing-simple-inner" role="region" aria-label="JAL/SOL quick start">
-        <h1 className="hero-title">Currency of Identity</h1>
-        <p className="hero-sub">
-          One generator. Mint your brand, add liquidity, attach products, and loop fiat back into crypto.
-        </p>
+    <main className="landing-simple" aria-label="JAL/SOL quick start">
+      <div style={bgWrapStyle}>
+        {/* Soft conic glow + radial rings */}
+        <div
+          aria-hidden
+          style={{
+            ...ringStyle,
+            background:
+              "conic-gradient(from 180deg at 50% 50%, rgba(0,255,200,.6), rgba(255,220,120,.6), rgba(180,120,255,.6), rgba(0,255,200,.6))",
+          }}
+        />
+        <div
+          aria-hidden
+          style={{
+            ...ringStyle,
+            width: 1200,
+            height: 1200,
+            background: "radial-gradient(closest-side, rgba(255,255,255,.08), transparent 70%)",
+            opacity: 0.25,
+          }}
+        />
 
-        <div className="bss-row bss-row--big" data-section="bss">
-          {/* GENERATOR → /shop (single source of truth) */}
-          <Link
-            ref={genRef}
-            className="bss-btn buy"
-            to="/shop"
-            aria-label="Open Generator (G or B)"
-            onMouseEnter={prefetchGenerator}
-            onFocus={prefetchGenerator}
-          >
-            OPEN GENERATOR
-          </Link>
-
-          {/* SWAP → Raydium (new tab) */}
-          <a
-            ref={swapRef}
-            className="bss-btn swap"
-            href={swapUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Swap on Raydium (S) — opens in new tab"
-          >
-            SWAP FOR $JAL
-          </a>
-
-          {/* GUIDE → /sell (use this as your Creator Guide / Ops space) */}
-          <Link
-            ref={guideRef}
-            className="bss-btn sell"
-            to="/sell"
-            aria-label="Open Creator Guide (L)"
-            onMouseEnter={prefetchGuide}
-            onFocus={prefetchGuide}
-          >
-            CREATOR&nbsp;GUIDE
-          </Link>
-        </div>
-
-        <p className="hint" style={{ marginTop: "1rem" }}>
-          <strong>Shortcuts:</strong> <kbd>G</kbd> Open Generator · <kbd>S</kbd> Swap · <kbd>L</kbd> Guide
-        </p>
-
-        {!mint && (
-          <p className="hint" aria-live="polite" style={{ opacity: 0.8 }}>
-            Heads up: JAL mint address not set — swap will open Raydium home.
+        <div className="landing-simple-inner" style={{ textAlign: "center", position: "relative", zIndex: 2 }}>
+          <h1 className="hero-title" style={{ marginBottom: 8 }}>
+            Currency of Identity
+          </h1>
+          <p className="hero-sub" style={{ maxWidth: 680, margin: "0 auto 28px" }}>
+            One generator. Mint your brand, add liquidity, attach products, and loop fiat back into crypto.
           </p>
-        )}
 
-        {/* Micro-roadmap preview to set expectations */}
-        <section className="mt-8 text-white/75">
-          <ol className="list-decimal list-inside space-y-1 text-sm">
-            <li><strong>Identity</strong> — set name, symbol, image (IPFS).</li>
-            <li><strong>Mint</strong> — create mint, ATA, initial supply.</li>
-            <li><strong>Liquidity</strong> — pair with SOL on Raydium.</li>
-            <li><strong>Product</strong> — attach token to a shippable item.</li>
-            <li><strong>Reinvest</strong> — route a slice of fiat back to LP or burns.</li>
-          </ol>
-        </section>
+          <div className="bss-row bss-row--big" data-section="bss" style={{ gap: 16, justifyContent: "center" }}>
+            {/* GENERATOR → /shop (single source of truth) */}
+            <Link
+              ref={genRef}
+              className="bss-btn buy"
+              to="/shop"
+              aria-label="Open Generator (G or B)"
+              onMouseEnter={prefetchGenerator}
+              onFocus={prefetchGenerator}
+              style={{ boxShadow: "0 0 28px rgba(0,255,200,.25)" }}
+            >
+              OPEN GENERATOR
+            </Link>
+
+            {/* SWAP → Raydium (new tab) */}
+            <a
+              ref={swapRef}
+              className="bss-btn swap"
+              href={swapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Swap on Raydium (S) — opens in new tab"
+              style={{ boxShadow: "0 0 28px rgba(120,220,255,.25)" }}
+            >
+              SWAP FOR $JAL
+            </a>
+
+            {/* GUIDE → /sell */}
+            <Link
+              ref={guideRef}
+              className="bss-btn sell"
+              to="/sell"
+              aria-label="Open Creator Guide (L)"
+              onMouseEnter={prefetchGuide}
+              onFocus={prefetchGuide}
+              style={{ boxShadow: "0 0 28px rgba(255,210,120,.25)" }}
+            >
+              CREATOR&nbsp;GUIDE
+            </Link>
+          </div>
+
+          <p className="hint" style={{ marginTop: 14 }}>
+            <strong>Shortcuts:</strong> <kbd>G</kbd> Open Generator · <kbd>S</kbd> Swap · <kbd>L</kbd> Guide
+          </p>
+
+          {!mint && (
+            <p className="hint" aria-live="polite" style={{ opacity: 0.8 }}>
+              Heads up: JAL mint address not set — swap will open Raydium home.
+            </p>
+          )}
+
+          {/* Micro-roadmap preview */}
+          <section className="mt-8 text-white/75" style={{ marginTop: 28 }}>
+            <ol className="list-decimal list-inside space-y-1 text-sm" style={{ maxWidth: 420, margin: "0 auto" }}>
+              <li>
+                <strong>Identity</strong> — set name, symbol, image (IPFS).
+              </li>
+              <li>
+                <strong>Mint</strong> — create mint, ATA, initial supply.
+              </li>
+              <li>
+                <strong>Liquidity</strong> — pair with SOL on Raydium.
+              </li>
+              <li>
+                <strong>Product</strong> — attach token to a shippable item.
+              </li>
+              <li>
+                <strong>Reinvest</strong> — route a slice of fiat back to LP or burns.
+              </li>
+            </ol>
+          </section>
+        </div>
       </div>
     </main>
   );
