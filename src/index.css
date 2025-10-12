@@ -716,3 +716,23 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
     border-radius: var(--r-md);
   }
 }
+.identity-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.identity-panel .chip {
+  min-width: 120px;
+  font-size: 0.85rem;
+}
+@media (max-width: 640px) {
+  .identity-panel div.flex {
+    flex-direction: column;
+  }
+  .identity-panel .chip {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
