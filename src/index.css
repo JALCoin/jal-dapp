@@ -1,5 +1,5 @@
 /* =============================================================================
-   JAL/SOL — Global CSS (refined pass, footer removed, trust-strip visible off landing)
+   JAL/SOL — Global CSS
    Sections:
    00. Tokens + Resets
    01. Foundations
@@ -13,6 +13,9 @@
    09. Overlays & Modals
    10. Quick Dock
    11. Responsive / Trims
+   12. Simple Landing (BUY / SWAP / SELL)
+   13. Identity Profile Card
+   14. Crypto Generator Panel
    ========================================================================== */
 
 /* === 00. TOKENS + RESETS =============================================== */
@@ -43,7 +46,7 @@
   /* Layout */
   --max-w:1200px;
   --header-h:88px;
-  --tabbar-h:0px; /* Footer removed */
+  --tabbar-h:0px; /* No footer */
 
   /* Safe areas */
   --safe-top: max(var(--header-h), env(safe-area-inset-top, 0px));
@@ -79,17 +82,15 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
 
-
 /* === 01. FOUNDATIONS ==================================================== */
 
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 .muted{ opacity:.75 }
 
-.app-shell{ min-height:100svh; position:relative; background:transparent }
+.app-shell{ min-height:100svh; position:relative }
 .page{ min-height: calc(100svh - var(--header-h)); position:relative; z-index:1 }
 .glass{ backdrop-filter: blur(var(--blur)); background: var(--glass) }
 
-/* Lock scroll when overlays/menus open */
 body[data-wallet-visible="true"],
 body[data-menu-open="true"],
 body[data-hub-open="true"]{ overflow:hidden }
@@ -103,20 +104,19 @@ main[role="main"]{
   main[role="main"]{ min-height: calc(100dvh - var(--header-h)) }
 }
 
-/* Poster-art helper */
+/* Poster art helper */
 .has-art{ position:relative; overflow:hidden; isolation:isolate }
 .has-art::after{
   content:""; position:absolute; inset:-1px; z-index:0; border-radius:inherit;
   background:
     radial-gradient(1200px 800px at var(--art-pos, 50% 50%), rgba(255,255,255,.06), rgba(255,255,255,0)),
     var(--art-img, none);
-  background-size: auto, var(--art-zoom, 220%);
+  background-size:auto, var(--art-zoom, 220%);
   background-repeat:no-repeat;
-  background-position: 0 0, var(--art-pos, 50% 50%);
+  background-position:0 0, var(--art-pos, 50% 50%);
   mask-image: linear-gradient(180deg, rgba(0,0,0,.4), rgba(0,0,0,0) 85%);
   opacity:.22; pointer-events:none;
 }
-
 
 /* === 02. MOTION / A11y ================================================= */
 
@@ -124,7 +124,6 @@ main[role="main"]{
   .hamburger span, .hamburger, .sidebar-nav, .sidebar-overlay,
   .button, .card, .img-btn, .tv-bg iframe, .bg-layer { transition:none; animation:none }
 }
-
 
 /* === 03. HEADER ========================================================= */
 
@@ -177,7 +176,6 @@ main[role="main"]{
 .hamburger.is-open span:nth-child(2){ opacity:0 }
 .hamburger.is-open span:nth-child(3){ transform:translateY(-8px) rotate(-45deg) }
 
-
 /* === 04. SIDEBAR ======================================================== */
 
 .sidebar-overlay{
@@ -216,22 +214,14 @@ main[role="main"]{
 }
 .wallet-disconnect-btn:hover{ transform: translateY(-1px); border-color: var(--green); box-shadow: var(--glow-green) }
 
-
 /* === 05. LANDING + HUB ================================================== */
 
-.landing-gradient{
-  min-height:100dvh;
-  background: var(--bg-hero-sm);
-  position:relative; z-index:1;
-}
+.landing-gradient{ min-height:100dvh; background: var(--bg-hero-sm); position:relative; z-index:1 }
 .landing-merge .landing-logo{ filter: drop-shadow(0 0 20px rgba(255,255,255,.45)) }
 
-/* Dashboard */
 .hub-dashboard{
-  width:min(100% - 2rem, var(--max-w));
-  margin-inline:auto;
-  display:grid;
-  gap: var(--section-gap);
+  width:min(100% - 2rem, var(--max-w)); margin-inline:auto;
+  display:grid; gap: var(--section-gap);
   padding: clamp(24px, 4vw, 36px) var(--gutter) 12px;
 }
 .hub-dashboard .bank-status{ display:flex; align-items:center; justify-content:center; gap:10px; opacity:.9 }
@@ -256,7 +246,6 @@ main[role="main"]{
 .hub-dashboard .feature-card .title{ opacity:.9; margin-top:2px }
 .hub-dashboard .feature-card .icon{ justify-self:end; opacity:.95 }
 
-/* hero bits */
 .landing-social{ display:flex; gap:10px; justify-content:center; align-items:center; padding-top:18px }
 .landing-social a{
   inline-size:36px; block-size:36px; display:grid; place-items:center;
@@ -271,10 +260,8 @@ main[role="main"]{
 
 /* Hub Panel */
 .hub-panel{
-  width:min(100% - 2rem, 1100px);
-  margin:16px auto 24px;
-  max-height:min(88dvh, 880px);
-  display:flex; flex-direction:column; position:relative; overflow:hidden;
+  width:min(100% - 2rem, 1100px); margin:16px auto 24px;
+  max-height:min(88dvh, 880px); display:flex; flex-direction:column; position:relative; overflow:hidden;
   border:1px solid var(--stroke-2); border-radius:var(--r-lg);
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
   box-shadow: 0 20px 80px rgba(0,0,0,.7), var(--glow-gold);
@@ -288,10 +275,9 @@ main[role="main"]{
 .hub-title{ margin:0; font-size:clamp(1.1rem,2vw,1.35rem); text-shadow:0 0 12px rgba(255,255,255,.35) }
 .hub-panel-body{ overflow:auto; overscroll-behavior:contain; padding:18px; display:grid; gap:18px; grid-template-rows:auto 1fr }
 
-/* Overlay variant (dialog) */
+/* Sheet */
 .hub-sheet{
-  width:min(100% - 1.5rem, 1100px);
-  max-height:min(88svh, 900px);
+  width:min(100% - 1.5rem, 1100px); max-height:min(88svh, 900px);
   display:flex; flex-direction:column; overflow:auto;
   border:1px solid var(--stroke-2); border-radius:var(--r-lg);
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
@@ -323,7 +309,7 @@ main[role="main"]{
 .in-hub > *{ position:relative; z-index:6 }
 .hub-preview{ box-shadow: 0 16px 48px rgba(0,0,0,.6), 0 0 12px rgba(244,200,106,.25); margin-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 16px) }
 
-/* JAL Panel + Swap Layer */
+/* JAL panel bits */
 .jal-title{ margin:0; font-size:clamp(1.3rem,2.8vw,1.6rem); letter-spacing:.02em }
 .jal-subtitle{ margin:.25rem 0 0; opacity:.85 }
 .jal-actions{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px }
@@ -369,7 +355,6 @@ main[role="main"]{
 .bottom-nav{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:30; border-radius:999px; padding:6px 12px; backdrop-filter: blur(var(--blur)); background: var(--glass); border:1px solid var(--stroke); display:flex; gap:10px }
 .bottom-nav a{ padding:.5rem .85rem; border-radius:999px; border:1px solid var(--stroke); transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast) }
 .bottom-nav a:hover{ transform:translateY(-1px); border-color:var(--cyan); box-shadow:var(--glow-cyan) }
-
 
 /* === 06. COMPONENTS ===================================================== */
 
@@ -444,7 +429,6 @@ main[role="main"]{
   position:relative; z-index:3; pointer-events:auto;
 }
 
-
 /* === 07. SHOP =========================================================== */
 
 .shop-promo{
@@ -489,7 +473,6 @@ main[role="main"]{
 .product-empty{ padding:12px 0 }
 @media (min-width:1200px){ .product-grid{ grid-template-columns: repeat(4, 1fr) } }
 
-
 /* === 08. VAULT ========================================================== */
 
 .machine-bg{ position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(900px 520px at 50% -180px, rgba(17,241,167,.08), rgba(0,0,0,0) 55%) , radial-gradient(680px 420px at 100% 20%, rgba(0,240,255,.08), rgba(0,0,0,0) 60%) , radial-gradient(720px 520px at 0% 30%, rgba(244,200,106,.08), rgba(0,0,0,0) 60%); filter: blur(6px) }
@@ -511,12 +494,10 @@ main[role="main"]{
 .card .chip-row .chip { padding: .4rem .65rem }
 .mono-sm{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; opacity: .95 }
 
-
 /* === 09. OVERLAYS & MODALS ============================================= */
 
 .hub-overlay{ position: fixed; inset: 0; z-index: 98; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); animation: overlayIn var(--t-slow) both }
 
-/* Center the overlay sheet */
 .hub-panel--overlay{
   position: fixed;
   inset-block-start: calc(var(--safe-top) + 6px);
@@ -526,13 +507,11 @@ main[role="main"]{
 }
 .hub-panel--overlay.hub-panel{ margin-inline:auto }
 
-/* Disable clicks on underlying chrome while hub open */
 body[data-hub-open="true"] .tabbar,
 body[data-hub-open="true"] .site-header{ pointer-events:none }
 
 .modal-overlay{ position:fixed; inset:0; z-index:60; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); display:grid; place-items:center }
 .modal-card{ inline-size:min(92vw, 560px); border:1px solid var(--stroke-2); border-radius:20px; background:linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9)); box-shadow:0 20px 80px rgba(0,0,0,.7); padding:18px }
-
 
 /* === 10. QUICK DOCK ===================================================== */
 
@@ -548,17 +527,15 @@ body[data-hub-open="true"] .site-header{ pointer-events:none }
 .quick-dock .chip, .quick-dock .button{ padding:.6rem .9rem; min-height:40px }
 body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 
-
 /* === 11. RESPONSIVE / TRIMS ============================================ */
 
-/* Footer removed entirely */
 .tabbar{ display:none !important; }
 
 @media (max-width:680px){
   .hub-panel--overlay { padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) }
   .shop-promo, .shop-promo .shop-promo-inner, .shop-promo .product-grid { inline-size: 100%; max-inline-size: 100%; min-inline-size: 0 }
-  .shop-promo .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
-  .product-grid { display:grid; grid-template-columns: 1fr; gap:12px }
+  .shop-promo .product-grid { grid-template-columns: 1fr; gap:12px }
+  .product-grid { grid-template-columns: 1fr; gap:12px }
   .card, .product-card { max-inline-size:100%; min-inline-size:0; overflow:hidden }
   .product-media img, .hub-gif { max-inline-size:100%; block-size:auto }
   .chip-row { flex-wrap:wrap; gap:8px }
@@ -613,30 +590,26 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 }
 .swap-exit:hover{ transform: translateY(-1px); border-color: var(--cyan); box-shadow: var(--glow-cyan) }
 
-/* Vault section headers and separators */
 .vault-section { display: grid; gap: 10px }
 .vault-section + .vault-section { margin-top: 14px }
 .vault-section .section-head { display: flex; align-items: baseline; gap: 10px }
 .vault-section .section-head h3 { margin: 0 }
 .vault-section .section-sub { opacity: .85; font-size: .95rem }
 
-/* Optional light divider line inside a card body */
 .v-divider {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
   margin: 10px 0;
 }
 
-/* CurrencyFinalizer list spacing (uses your “product-grid” look) */
 .finalizer-wrap { margin-top: 10px }
 .finalizer-wrap .product-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) }
 
-/* Raydium embed: allow a slightly shorter height on mobile */
 @media (max-width: 420px){
   .swap-embed-wrap { min-block-size: 400px }
 }
 
-/* === Simple landing variant ============================================ */
+/* === 12. Simple landing variant (BUY/SWAP/SELL) ======================== */
 .landing-simple{
   min-height: calc(100svh - var(--header-h));
   display:grid; place-items:center;
@@ -645,13 +618,12 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 }
 .landing-simple-inner{
   width:min(100%, 780px);
-  display:grid; gap:14px; justify-items:center; text-align:center;
+  display:grid; gap:18px; justify-items:center; text-align:center;
 }
 .logo-simple{ height: clamp(90px, 12vw, 120px); filter: drop-shadow(0 0 10px rgba(255,255,255,.7)) }
 .hero-title{ margin:.25rem 0 0; font-size: clamp(1.6rem, 4.8vw, 2.4rem); letter-spacing:.04em }
 .hero-sub{ margin:0; opacity:.85 }
 
-/* BUY | SWAP | SELL */
 .bss-row{
   display:grid;
   grid-template-columns: repeat(3, minmax(140px,1fr));
@@ -659,7 +631,6 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
   margin: 10px 0 4px;
 }
 .bss-row--big .bss-btn{ padding: 1.15rem 1.4rem; font-size: clamp(1rem, 2.6vw, 1.25rem) }
-
 .bss-btn{
   display:inline-flex; align-items:center; justify-content:center;
   border-radius:16px;
@@ -673,14 +644,36 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
 .bss-btn.buy  { border-color: rgba(17,241,167,.45); box-shadow: var(--glow-green) }
 .bss-btn.swap { border-color: rgba(0,240,255,.45);  box-shadow: var(--glow-cyan) }
 .bss-btn.sell { border-color: rgba(244,200,106,.45); box-shadow: var(--glow-gold) }
-
 .hint{ opacity:.75; font-size:.95rem; margin-top: 4px }
+@media (max-width:640px){ .bss-row{ grid-template-columns: 1fr } }
 
+/* === 13. Identity Profile Card (centered) ============================== */
+.id-card { width: 100%; display: grid; place-items: center; }
+.id-card__inner{
+  display:grid; justify-items:center; gap:10px;
+  padding: 18px 16px;
+  border:1px solid var(--stroke-2);
+  border-radius: 20px;
+  background: var(--glass);
+  backdrop-filter: blur(var(--blur));
+  box-shadow: 0 12px 40px rgba(0,0,0,.55), 0 0 40px rgba(0,255,200,.12);
+  max-width: 560px;
+  width: min(100%, 560px);
+  animation: swapIn 480ms cubic-bezier(.22,.61,.36,1);
+}
+.id-card__logo{ height: 44px; filter: drop-shadow(0 0 8px rgba(255,255,255,.35)) }
+.id-card__title{ margin: 2px 0 0; font-size: clamp(1.25rem, 3.8vw, 1.6rem); letter-spacing:.04em }
+.id-card__sub{ margin: 0; opacity: .9; font-size:.95rem }
+.id-card__chips{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top: 4px }
+.id-card__status{ margin-top: 6px; font-size: .85rem; opacity: .85; display:flex; align-items:center; gap:8px }
+.id-card__status .dot{ inline-size:10px; block-size:10px; border-radius:50% }
+.id-card__status .ok{ background: var(--green) }
 @media (max-width:640px){
-  .bss-row{ grid-template-columns: 1fr }
+  .id-card__inner{ width: calc(100% - 16px); padding: 16px 14px; border-radius: 16px }
+  .id-card__chips .chip{ width: 100%; justify-content:center }
 }
 
-/* === CRYPTO GENERATOR PANEL ============================================ */
+/* === 14. Crypto Generator Panel ======================================= */
 .crypto-generator {
   min-height: calc(100svh - var(--header-h));
   display: grid;
@@ -688,7 +681,6 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
   padding: clamp(24px, 5vw, 64px) 16px;
   background: var(--bg-hero);
 }
-
 .crypto-panel {
   width: min(100%, 720px);
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
@@ -701,38 +693,12 @@ body[data-hub-open="true"] .quick-dock{ pointer-events:auto }
   flex-direction: column;
   gap: 1.25rem;
 }
-
 .crypto-panel .card {
   background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
   border: 1px solid var(--stroke);
   border-radius: var(--r-md);
   padding: 1rem;
 }
-
 @media (max-width:640px){
-  .crypto-panel {
-    width: 100%;
-    padding: 20px 16px;
-    border-radius: var(--r-md);
-  }
+  .crypto-panel { width: 100%; padding: 20px 16px; border-radius: var(--r-md) }
 }
-.identity-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.identity-panel .chip {
-  min-width: 120px;
-  font-size: 0.85rem;
-}
-@media (max-width: 640px) {
-  .identity-panel div.flex {
-    flex-direction: column;
-  }
-  .identity-panel .chip {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
