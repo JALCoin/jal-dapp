@@ -1,4 +1,4 @@
-p// src/pages/Landing.tsx
+// src/pages/Landing.tsx
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useCallback } from "react";
 import { JAL_MINT } from "../config/tokens";
