@@ -1,27 +1,26 @@
 // src/pages/Landing.tsx
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useRef, useCallback, useMemo } from "react";
+import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import { JAL_MINT } from "../config/tokens";
-
-/**
- * Landing – Identity-first header panel + quick actions (BUY / SWAP / SELL)
- * - Centers a glass "identity panel" under the logo with Mint / Explorer / Swap / Status
- * - Keeps your quick-action row and prefetch/shortcuts
- */
 
 export default function Landing() {
   const navigate = useNavigate();
+
+  // Refs for keyboard shortcuts
   const buyRef = useRef<HTMLAnchorElement | null>(null);
   const swapRef = useRef<HTMLAnchorElement | null>(null);
   const sellRef = useRef<HTMLAnchorElement | null>(null);
 
+  // Mint + URLs
   const mint = String(JAL_MINT || "").trim();
+  const shortMint =
+    mint && mint.length > 10 ? `${mint.slice(0, 4)}…${mint.slice(-3)}` : mint;
 
   const swapUrl = mint
     ? `https://raydium.io/swap/?inputCurrency=SOL&outputCurrency=${encodeURIComponent(
         mint
       )}&fixed=in&utm_source=jalsol&utm_medium=landing`
-    : "https://raydium.io/swap/?utm_source=jalsol&utm_medium=landing";
+    : `https://raydium.io/swap/?utm_source=jalsol&utm_medium=landing`;
 
   const explorerUrl = useMemo(
     () =>
@@ -31,7 +30,7 @@ export default function Landing() {
     [mint]
   );
 
-  // Light route prefetch for faster transitions
+  // Prefetch lightweight routes for snappy nav
   const prefetchShop = useCallback(() => {
     import("../pages/Shop").catch(() => {});
   }, []);
@@ -39,21 +38,20 @@ export default function Landing() {
     import("../pages/Sell").catch(() => {});
   }, []);
 
-  // Gentle prefetch on mount (no layout work)
+  // Idle prefetch on mount
   useEffect(() => {
-    const id =
-      (window as any).requestIdleCallback
-        ? (window as any).requestIdleCallback(() => {
-            prefetchShop();
-            prefetchSell();
-          })
-        : setTimeout(() => {
-            prefetchShop();
-            prefetchSell();
-          }, 250);
-    return () => {
-      if (typeof id === "number") clearTimeout(id);
-    };
+    const idle =
+      (window as any).requestIdleCallback ||
+      ((cb: Function) => setTimeout(cb, 200));
+    const cancel =
+      (window as any).cancelIdleCallback || ((id: number) => clearTimeout(id));
+
+    const id = idle(() => {
+      prefetchShop();
+      prefetchSell();
+    });
+
+    return () => cancel(id as number);
   }, [prefetchShop, prefetchSell]);
 
   // Keyboard shortcuts: B / S / L
@@ -69,7 +67,7 @@ export default function Landing() {
       if (k === "s") {
         e.preventDefault();
         swapRef.current?.focus();
-        (swapRef.current as HTMLAnchorElement)?.click();
+        (swapRef.current as HTMLAnchorElement | null)?.click();
       }
       if (k === "l") {
         e.preventDefault();
@@ -81,32 +79,56 @@ export default function Landing() {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
-  const shortMint =
-    mint && mint.length > 10 ? `${mint.slice(0, 4)}…${mint.slice(-3)}` : mint;
+  // Copy mint helper
+  const [copied, setCopied] = useState(false);
+  const onCopyMint = async () => {
+    try {
+      if (!mint) return;
+      await navigator.clipboard.writeText(mint);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // no-op: clipboard can be blocked
+    }
+  };
 
   return (
-    <main className="landing-simple">
-      <div className="landing-simple-inner" role="region" aria-label="JAL/SOL entry">
-        {/* --- Identity Panel (centered under logo) ---------------------- */}
-        <section className="identity-panel text-center">
-          <div className="inline-block rounded-2xl border border-[var(--stroke-2)] bg-[var(--glass)] backdrop-blur px-5 py-4 shadow-[0_0_40px_rgba(0,255,200,0.12)]">
-            <h1 className="font-semibold text-lg tracking-wide">JAL / SOL</h1>
-            <p className="text-sm opacity-80">Foundation Utility Network</p>
+    <main className="landing-simple" role="main">
+      <div className="landing-simple-inner" style={{ gap: 18 }}>
+        {/* Identity / profile card */}
+        <section className="id-card" aria-label="Project identity">
+          <div className="id-card__inner">
+            <img
+              src="/logo/jalsol-mark.svg"
+              alt="JAL/SOL"
+              className="id-card__logo"
+              loading="eager"
+              decoding="async"
+            />
+            <h1 className="id-card__title">JAL / SOL</h1>
+            <p className="id-card__sub">Foundation Utility Network</p>
 
-            <div className="flex flex-wrap justify-center gap-2 mt-3">
-              {/* Mint */}
+            <div className="id-card__chips" role="group" aria-label="Quick links">
               <a
                 className="chip sm mono"
                 href={explorerUrl}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Open mint in Solscan"
                 title={mint || "Mint not set"}
+                aria-label="Open mint in Solscan"
               >
                 Mint: {shortMint || "—"}
               </a>
-
-              {/* Swap */}
+              {mint && (
+                <button
+                  type="button"
+                  className="chip sm mono"
+                  onClick={onCopyMint}
+                  aria-live="polite"
+                >
+                  {copied ? "Copied ✓" : "Copy Mint"}
+                </button>
+              )}
               <a
                 ref={swapRef}
                 className="chip sm"
@@ -117,8 +139,6 @@ export default function Landing() {
               >
                 Swap on Raydium
               </a>
-
-              {/* Explorer */}
               <a
                 className="chip sm"
                 href={explorerUrl}
@@ -130,28 +150,17 @@ export default function Landing() {
               </a>
             </div>
 
-            <div className="mt-3 text-xs opacity-80 flex justify-center items-center gap-2">
-              <span
-                aria-hidden
-                className="inline-block w-2 h-2 rounded-full"
-                style={{ background: "var(--green)" }}
-              />
-              <span>Mainnet</span>
-              <span>•</span>
-              <span>RPC: Healthy</span>
-              <span>•</span>
-              <span>{(window as any).__RPC_MS || "512ms"}</span>
+            <div className="id-card__status" aria-live="polite">
+              <span aria-hidden className="dot ok" /> Mainnet • RPC: Healthy •
+              512ms
             </div>
           </div>
         </section>
 
-        {/* --- Quick actions -------------------------------------------- */}
-        <p className="hero-sub" style={{ marginTop: 14 }}>
-          Choose an action to get started.
-        </p>
+        {/* Actions */}
+        <p className="hero-sub">Choose an action to get started.</p>
 
         <div className="bss-row bss-row--big" data-section="bss">
-          {/* BUY → /shop (SPA route) */}
           <Link
             ref={buyRef}
             className="bss-btn buy"
@@ -163,7 +172,6 @@ export default function Landing() {
             BUY
           </Link>
 
-          {/* SWAP → (duplicate action for large buttons) */}
           <a
             className="bss-btn swap"
             href={swapUrl}
@@ -174,7 +182,6 @@ export default function Landing() {
             SWAP
           </a>
 
-          {/* SELL → /sell */}
           <Link
             ref={sellRef}
             className="bss-btn sell"
@@ -187,7 +194,7 @@ export default function Landing() {
           </Link>
         </div>
 
-        <p className="hint" style={{ marginTop: "1rem" }}>
+        <p className="hint">
           <strong>SWAP</strong> opens Raydium in a new tab.
         </p>
 
