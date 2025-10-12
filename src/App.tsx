@@ -43,17 +43,19 @@ import { JAL_MINT } from "./config/tokens";
 
 // Lazy pages
 const CryptoGeneratorIntro = lazy(() => import("./pages/CryptoGeneratorIntro"));
-const CryptoGenerator = lazy(() => import("./pages/CryptoGenerator"));
-const Sell  = lazy(() => import("./pages/Sell"));
-const Shop  = lazy(() => import("./pages/Shop"));
+const CryptoGenerator     = lazy(() => import("./pages/CryptoGenerator"));
+const Sell                = lazy(() => import("./pages/Sell"));
+const Shop                = lazy(() => import("./pages/Shop"));
 
-/* --------------------------- Prefetch (Generators) --------------------------- */
-let generatorsPrefetched = false;
-function prefetchGenerators() {
-  if (generatorsPrefetched) return;
-  generatorsPrefetched = true;
-  import("./pages/CryptoGeneratorIntro");
-  import("./pages/CryptoGenerator");
+/* --------------------------- Prefetch (key routes) -------------------------- */
+let prefetched = false;
+function prefetchKeyRoutes() {
+  if (prefetched) return;
+  prefetched = true;
+  // The one true generator lives at /shop
+  import("./pages/Shop").catch(() => {});
+  // Creator guide / ops space
+  import("./pages/Sell").catch(() => {});
 }
 
 /* --------------------------------- Errors ---------------------------------- */
@@ -246,17 +248,34 @@ function RpcStatusChip() {
 }
 
 function TrustStrip() {
-  const jal = JAL_MINT;
-  const explorerUrl = `https://explorer.solana.com/address/${jal}`;
-  const raydiumUrl  = `https://raydium.io/swap/?inputCurrency=SOL&outputCurrency=${jal}`;
-  const short = `${jal.slice(0,4)}…${jal.slice(-4)}`;
+  const jal = (JAL_MINT || "").toString().trim();
+  const hasMint = jal.length >= 32;
+  const short = hasMint ? `${jal.slice(0,4)}…${jal.slice(-4)}` : "not set";
+
+  const explorerUrl = hasMint
+    ? `https://explorer.solana.com/address/${jal}`
+    : "https://explorer.solana.com/";
+  const raydiumUrl = hasMint
+    ? `https://raydium.io/swap/?inputCurrency=SOL&outputCurrency=${encodeURIComponent(jal)}`
+    : `https://raydium.io/swap/`;
+
   return (
     <div className="trust-strip" aria-label="Trust & quick links">
-      <a className="chip sm mono" href={explorerUrl} target="_blank" rel="noreferrer" title="View JAL mint on Solana Explorer">
+      <a
+        className={`chip sm mono ${hasMint ? "" : "disabled"}`}
+        href={explorerUrl}
+        target="_blank"
+        rel="noreferrer"
+        title={hasMint ? "View JAL mint on Solana Explorer" : "Open Solana Explorer"}
+      >
         Mint: {short}
       </a>
-      <a className="chip sm" href={explorerUrl} target="_blank" rel="noreferrer">Explorer</a>
-      <a className="chip sm" href={raydiumUrl} target="_blank" rel="noreferrer">Swap on Raydium</a>
+      <a className="chip sm" href={explorerUrl} target="_blank" rel="noreferrer">
+        Explorer
+      </a>
+      <a className="chip sm" href={raydiumUrl} target="_blank" rel="noreferrer">
+        Swap on Raydium
+      </a>
       <RpcStatusChip />
     </div>
   );
@@ -291,6 +310,9 @@ function HeaderView({ onMenu, isOpen }: { onMenu: () => void; isOpen: boolean })
 
 function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
+  const onEnterShop  = () => { prefetchKeyRoutes(); onClose(); };
+  const onEnterGuide = () => { prefetchKeyRoutes(); onClose(); };
+
   return (
     <>
       <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
@@ -299,21 +321,13 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             Home
           </NavLink>
-          <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
-            Shop
+          <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onEnterShop}>
+            Shop / Generator
           </NavLink>
-          <NavLink to="/sell" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
-            Sell Space
+          <NavLink to="/sell" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onEnterGuide}>
+            Creator Guide
           </NavLink>
-          <NavLink
-            to="/crypto-generator"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onMouseEnter={prefetchGenerators}
-            onFocus={prefetchGenerators}
-            onClick={onClose}
-          >
-            Generator
-          </NavLink>
+          {/* Legacy generator routes remain accessible but not promoted in nav */}
         </nav>
 
         <div style={{ marginTop: 8 }} />
@@ -384,10 +398,14 @@ export default function App() {
             >
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/shop" element={<Shop />} />           {/* BUY */}
-                <Route path="/sell" element={<Sell />} />           {/* SELL */}
+                {/* The one generator entry point */}
+                <Route path="/shop" element={<Shop />} />
+                {/* Guide / ops (keep your existing Sell.tsx content, just relabeled in nav/UI) */}
+                <Route path="/sell" element={<Sell />} />
+                {/* Legacy routes kept for compatibility; feel free to remove later */}
                 <Route path="/crypto-generator" element={<CryptoGeneratorIntro />} />
                 <Route path="/crypto-generator/engine" element={<CryptoGenerator />} />
+                {/* Optional top-level pages */}
                 <Route path="/about" element={<PageStub title="About" />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
