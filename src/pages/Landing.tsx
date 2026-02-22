@@ -1,21 +1,25 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
 import { useWalletModal, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
-import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-
 const Jal = lazy(() => import("./Jal"));
 
-type Panel = "none" | "grid" | "shop" | "jal" | "vault" | "support";
-type TileKey = Exclude<Panel, "none">;
+/**
+ * NEW LANDING FLOW
+ * 1) Blank screen with centered logo
+ * 2) Clicking logo opens a NAV overlay (Home / About JAL / Shop)
+ * 3) Home shows: summary + embedded $JAL~Engine window + packaged software section (placeholders for now)
+ *
+ * Notes:
+ * - Balances removed (per your instruction).
+ * - Wallet connect is available but not forced.
+ * - Uses CSS classes only (index.css controls layout).
+ */
 
+type Panel = "none" | "nav" | "home" | "jal" | "shop";
 type LandingProps = { initialPanel?: Panel };
-
-/** Replace if your JAL mint changes */
-const JAL_MINT = new PublicKey("9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v");
 
 const PHANTOM_WALLET = "Phantom" as WalletName; // placeholder for future deep-link use
 const WALLET_MODAL_SELECTORS =
@@ -45,73 +49,106 @@ function ConnectButton({ className }: { className?: string }) {
   return <WalletMultiButton className={className ?? "landing-wallet"} />;
 }
 
+/* ---------- NAV Overlay (full-width curved buttons) ---------- */
+function NavOverlay({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (panel: Panel) => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <button
+        className="nav-overlay-backdrop"
+        aria-label="Close navigation"
+        onClick={onClose}
+      />
+      <section className="nav-overlay" role="dialog" aria-modal="true" aria-label="Navigation">
+        <div className="nav-overlay-inner">
+          <button className="nav-big" onClick={() => onSelect("home")}>HOME</button>
+          <button className="nav-big" onClick={() => onSelect("jal")}>ABOUT JAL</button>
+          <button className="nav-big" onClick={() => onSelect("shop")}>SHOP</button>
+
+          <button className="nav-close" onClick={onClose} aria-label="Close navigation">
+            Close
+          </button>
+        </div>
+      </section>
+    </>
+  );
+}
+
+/* ---------- Home Page Content (inside Landing) ---------- */
+function HomeContent() {
+  return (
+    <div className="home-wrap">
+      {/* Top summary section */}
+      <section className="home-summary card">
+        <h2 className="home-title">jalsol.com</h2>
+
+        <p className="home-lead">
+          Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer • Digital Creator.
+          A minimalistic application linked to the Solana blockchain.
+        </p>
+
+        <p className="home-lead">
+          $JAL operates within the <strong>JAL/SOL</strong> liquidity pool on Raydium and can be verified on Solscan.
+        </p>
+
+        <div className="home-links">
+          <a className="chip" href="https://raydium.io/" target="_blank" rel="noreferrer">Raydium (JAL/SOL)</a>
+          <a className="chip" href="https://solscan.io/" target="_blank" rel="noreferrer">Solscan ($JAL)</a>
+        </div>
+      </section>
+
+      {/* Embedded Engine Window */}
+      <section className="engine-window card">
+        <div className="engine-head">
+          <h3 className="engine-title">$JAL~Engine</h3>
+          <div className="engine-sub">Jeroid deployment • CEX executor • logs</div>
+        </div>
+
+        <div className="engine-controls">
+          <button className="button gold" type="button">Start</button>
+          <button className="button" type="button">Stop</button>
+          <button className="button ghost" type="button">Settings</button>
+          <button className="button ghost" type="button">View Logs</button>
+        </div>
+
+        <div className="engine-log" aria-label="Engine log output">
+          <pre>
+{`[engine] idle
+[executor] not connected
+[deploy] awaiting configuration`}
+          </pre>
+        </div>
+      </section>
+
+      {/* Packaged product section */}
+      <section className="engine-package card gold">
+        <h3>Engine Package</h3>
+        <p>
+          A packaged version of the engine + deployment system for anyone who wants to create their own iteration of the
+          trading system inside jalsol.com.
+        </p>
+
+        <div className="engine-package-actions">
+          <button className="button gold" type="button">View Package</button>
+          <button className="button" type="button">Purchase</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 /* ---------- Page ---------- */
 export default function Landing({ initialPanel = "none" }: LandingProps) {
-  const { publicKey, connected, connecting, wallet, select, connect } = useWallet();
+  const navigate = useNavigate();
+  const { connected, connecting, wallet, select, connect } = useWallet();
   const { setVisible } = useWalletModal();
-  const [params, setParams] = useSearchParams();
 
-  const [activePanel, setActivePanel] = useState<Panel>("none");
-
-  /* ---------- Tiles for Hub overlay ---------- */
-  const tiles = useMemo<{ key: TileKey; title: string; sub?: string; gif?: string; disabled?: boolean }[]>(
-    () => [
-      { key: "jal", title: "JAL", sub: "About & Swap", gif: "/JAL.gif" },
-      { key: "shop", title: "JAL/SOL — SHOP", sub: "Buy with JAL", gif: "/JALSOL.gif" },
-      { key: "vault", title: "VAULT", sub: "Assets & Activity", gif: "/VAULT.gif" },
-      { key: "support", title: "SUPPORT", sub: "Links & Help", gif: "/SUPPORT.gif" }, // optional: if missing, image will just hide
-    ],
-    []
-  );
-
-  /* ---------- Asset preload ---------- */
-  useEffect(() => {
-    const imgs = tiles
-      .filter((t) => !!t.gif)
-      .map((t) => {
-        const i = new Image();
-        i.decoding = "async";
-        i.loading = "eager";
-        i.src = t.gif as string;
-        return i;
-      });
-    return () => imgs.forEach((i) => (i.src = ""));
-  }, [tiles]);
-
-  /* ---------- URL/session init ---------- */
-  useEffect(() => {
-    const fromUrl = params.get("panel") as Panel | null;
-    const fromSession = (sessionStorage.getItem("landing:lastPanel") as Panel | null) ?? null;
-
-    const isPanel = (v: unknown): v is Panel =>
-      v === "none" || v === "grid" || v === "shop" || v === "jal" || v === "vault" || v === "support";
-
-    const start: Panel =
-      (fromUrl && isPanel(fromUrl) ? fromUrl : null) ??
-      (fromSession && isPanel(fromSession) ? fromSession : null) ??
-      initialPanel;
-
-    setActivePanel(start);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    sessionStorage.setItem("landing:lastPanel", activePanel);
-    const urlPanel = params.get("panel");
-
-    if (activePanel === "none") {
-      if (urlPanel) {
-        params.delete("panel");
-        setParams(params, { replace: true });
-      }
-      return;
-    }
-
-    if (urlPanel !== activePanel) {
-      params.set("panel", activePanel);
-      setParams(params, { replace: true });
-    }
-  }, [activePanel, params, setParams]);
+  const [panel, setPanel] = useState<Panel>(initialPanel);
 
   /* ---------- Wallet modal visibility flag ---------- */
   const setWalletFlag = useCallback((on: boolean) => {
@@ -165,253 +202,129 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     };
   }, [connected, connecting, wallet, select, connect]);
 
-  /* ---------- Overlay controls ---------- */
-  const overlayOpen = activePanel !== "none";
-
+  /* ---------- Overlay lock ---------- */
+  const navOpen = panel === "nav";
   useEffect(() => {
-    if (overlayOpen) document.body.setAttribute("data-hub-open", "true");
-    else document.body.removeAttribute("data-hub-open");
-    return () => document.body.removeAttribute("data-hub-open");
-  }, [overlayOpen]);
+    if (navOpen) document.body.setAttribute("data-nav-open", "true");
+    else document.body.removeAttribute("data-nav-open");
+    return () => document.body.removeAttribute("data-nav-open");
+  }, [navOpen]);
 
+  /* ---------- ESC closes NAV ---------- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && overlayOpen) setActivePanel("none");
+      if (e.key === "Escape" && navOpen) setPanel("none");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [overlayOpen]);
+  }, [navOpen]);
 
-  /* ---------- Open helpers ---------- */
-  const requiresWallet: Panel[] = ["jal", "vault"];
-  const openPanel = (id: Panel) => {
-    setActivePanel(id);
-    if (!connected && requiresWallet.includes(id)) setVisible(true);
+  /* ---------- Click logo on blank landing ---------- */
+  const enter = () => setPanel("nav");
+
+  /* ---------- Select nav option ---------- */
+  const onNavSelect = (next: Panel) => {
+    setPanel(next);
+
+    // Optional: route hooks if you want separate pages later
+    if (next === "home") navigate("/", { replace: true });
+    if (next === "jal") navigate("/about", { replace: true });
+    if (next === "shop") navigate("/shop", { replace: true });
   };
 
-  const panelTitle =
-    activePanel === "grid" ? "Hub" :
-    activePanel === "shop" ? "Shop" :
-    activePanel === "jal" ? "JAL" :
-    activePanel === "vault" ? "Vault" :
-    activePanel === "support" ? "Support" :
-    "Home";
+  /* ---------- Content selection ---------- */
+  const content = useMemo(() => {
+    if (panel === "home") return <HomeContent />;
 
-  /* ---------- LIVE BALANCES: JAL (SPL) + SOL ---------- */
-  const [sol, setSol] = useState<number | null>(null);
-  const [jal, setJal] = useState<number | null>(null);
+    if (panel === "jal") {
+      return (
+        <div className="home-wrap">
+          <section className="card">
+            <h2>About JAL</h2>
+            <p>
+              $JAL is accessible on Raydium and verifiable on Solscan. This application exists as a minimal interface
+              connected to the Solana blockchain.
+            </p>
 
-  useEffect(() => {
-    let cancelled = false;
+            {!connected && (
+              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button className="button gold" type="button" onClick={() => setVisible(true)}>Connect Wallet</button>
+              </div>
+            )}
 
-    const fetchBalances = async () => {
-      if (!publicKey) { setSol(null); setJal(null); return; }
+            {connected && (
+              <div style={{ marginTop: 12 }}>
+                <Suspense fallback={<div>Loading…</div>}>
+                  <Jal inHub />
+                </Suspense>
+              </div>
+            )}
+          </section>
+        </div>
+      );
+    }
 
-      const endpoint =
-        (globalThis as any).__SOLANA_RPC_ENDPOINT__ ||
-        "https://api.mainnet-beta.solana.com";
+    if (panel === "shop") {
+      return (
+        <div className="home-wrap">
+          <section className="card">
+            <h2>Shop</h2>
+            <p>
+              Sole trader activity: design and creation of physical and digital products to sell online.
+              jalsol.com is the hub for that.
+            </p>
+            <div className="home-links" style={{ marginTop: 10 }}>
+              <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">Etsy Shop</a>
+              <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">jalsol.com</a>
+            </div>
+          </section>
+        </div>
+      );
+    }
 
-      const connection = new Connection(endpoint, "confirmed");
+    return null;
+  }, [panel, connected, setVisible]);
 
-      try {
-        const lamports = await connection.getBalance(publicKey, { commitment: "confirmed" });
-        if (!cancelled) setSol(lamports / LAMPORTS_PER_SOL);
-      } catch (e) {
-        console.error("SOL balance fetch failed:", e);
-        if (!cancelled) setSol(null);
-      }
-
-      try {
-        const resp = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID });
-        const totalJal = resp.value
-          .filter((acc) => acc.account.data.parsed.info.mint === JAL_MINT.toBase58())
-          .reduce((sum, acc) => {
-            const amt = acc.account.data.parsed.info.tokenAmount;
-            const ui = Number(amt.uiAmountString ?? amt.uiAmount ?? 0);
-            return sum + (isFinite(ui) ? ui : 0);
-          }, 0);
-        if (!cancelled) setJal(totalJal);
-      } catch (e) {
-        console.error("JAL balance fetch failed:", e);
-        if (!cancelled) setJal(null);
-      }
-    };
-
-    void fetchBalances();
-    const id = setInterval(fetchBalances, 20000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [publicKey]);
-
-  const fmt = (n: number | null, digits = 4) =>
-    n == null ? "--" : n.toLocaleString(undefined, { maximumFractionDigits: digits });
-
-  /* ===========================================================
-     Render
-  ============================================================ */
   return (
-    <div className="landing-gradient" aria-live="polite">
-      {/* ===== ATM Home (ONLY) ===== */}
-      <section className="bank-landing container" aria-label="Overview">
-        <div className="bank-status">{connected ? "WALLET CONNECTED" : "WALLET NOT CONNECTED"}</div>
+    <main className="landing-blank" aria-label="JAL/SOL Landing">
+      {/* ===== BLANK SCREEN LANDING (logo centered) ===== */}
+      {panel === "none" && (
+        <button className="center-logo-btn" onClick={enter} aria-label="Enter jalsol.com">
+          <img className="center-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
+          <div className="center-logo-hint">ENTER</div>
+        </button>
+      )}
 
-        <div className="balance-row">
-          <div className="balance-card">
-            <div className="balance-amount">{fmt(jal)} JAL</div>
-            <div className="balance-label">JAL • Total</div>
-          </div>
-          <div className="balance-card">
-            <div className="balance-amount">{fmt(sol)} SOL</div>
-            <div className="balance-label">SOL • Total</div>
-          </div>
-        </div>
-
-        <div className="feature-grid">
-          <button className="feature-card" onClick={() => openPanel("jal")} aria-label="Open JAL">
-            <h4>JAL</h4><div className="title">About &amp; Swap</div><div className="icon">➕</div>
-          </button>
-
-          <button className="feature-card" onClick={() => openPanel("shop")} aria-label="Open Store">
-            <h4>Store</h4><div className="title">Buy with JAL</div><div className="icon">🏬</div>
-          </button>
-
-          <button className="feature-card" onClick={() => openPanel("vault")} aria-label="Open Vault">
-            <h4>Vault</h4><div className="title">Assets &amp; Activity</div><div className="icon">💳</div>
-          </button>
-
-          <button className="feature-card" onClick={() => openPanel("grid")} aria-label="Open Hub">
-            <h4>Hub</h4><div className="title">All Panels</div><div className="icon">🔗</div>
-          </button>
-        </div>
-
-        {!connected && <ConnectButton />}
-      </section>
-
-      {/* ===== Overlay backdrop ===== */}
-      {overlayOpen && (
-        <button
-          className="hub-overlay"
-          aria-label="Close panel"
-          onClick={() => setActivePanel("none")}
+      {/* ===== NAV OVERLAY ===== */}
+      {navOpen && (
+        <NavOverlay
+          onSelect={onNavSelect}
+          onClose={() => setPanel("none")}
         />
       )}
 
-      {/* ===== Overlay panel container ===== */}
-      {overlayOpen && (
-        <section
-          className="hub-panel hub-panel--overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-label="JAL/SOL Panel"
-        >
-          <div className="hub-panel-top">
-            <h2 className="hub-title">{panelTitle}</h2>
-            {connected ? (
-              <DisconnectButton className="wallet-disconnect-btn" />
-            ) : (
-              <ConnectButton className="wallet-disconnect-btn" />
-            )}
-          </div>
-
-          <div className="hub-panel-body">
-            {activePanel !== "grid" && (
-              <div className="hub-controls">
-                <button type="button" className="button ghost" onClick={() => setActivePanel("grid")}>
-                  ← Back to Hub
-                </button>
-              </div>
-            )}
-
-            {activePanel === "grid" && (
-              <div className="hub-stack hub-stack--responsive" role="list">
-                {tiles.map((t) => (
-                  <button
-                    key={t.key}
-                    type="button"
-                    className="img-btn"
-                    onClick={() => openPanel(t.key)}
-                    role="listitem"
-                    aria-describedby={`tile-sub-${t.key}`}
-                    disabled={t.disabled}
-                  >
-                    {t.gif && (
-                      <img
-                        src={t.gif}
-                        alt=""
-                        className="hub-gif"
-                        loading="lazy"
-                        width={960}
-                        height={540}
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                      />
-                    )}
-
-                    <div className="hub-btn">
-                      {t.title}
-                      {t.sub && <span id={`tile-sub-${t.key}`} className="sub">{t.sub}</span>}
-                      {t.disabled && <span className="locked">Connect wallet to use</span>}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="hub-content">
-              {activePanel === "shop" && (
-                <div className="card">
-                  <h3>Shop</h3>
-                  <p>Browse items purchasable with JAL. (Hook your product list here.)</p>
-                  {!connected && (
-                    <p style={{ opacity: 0.85 }}>Preview mode — connect to checkout.</p>
-                  )}
-                </div>
-              )}
-
-              {activePanel === "jal" && (
-                connected ? (
-                  <div className="in-hub">
-                    <Suspense fallback={<div className="card">Loading JAL…</div>}>
-                      <Jal inHub />
-                    </Suspense>
-                  </div>
-                ) : (
-                  <div className="card">
-                    <h3>JAL</h3>
-                    <p>Connect to swap and access token tools.</p>
-                    <ConnectButton className="button gold" />
-                  </div>
-                )
-              )}
-
-              {activePanel === "vault" && (
-                connected ? (
-                  <div className="card">
-                    <h3>Vault</h3>
-                    <p>JAL: <strong>{fmt(jal)}</strong> • SOL: <strong>{fmt(sol)}</strong></p>
-                    <p style={{ opacity: 0.85 }}>Recent activity and positions will live here.</p>
-                  </div>
-                ) : (
-                  <div className="card">
-                    <h3>Vault</h3>
-                    <p>Connect to view balances and activity.</p>
-                    <ConnectButton className="button gold" />
-                  </div>
-                )
-              )}
-
-              {activePanel === "support" && (
-                <div className="card">
-                  <h3>Support</h3>
-                  <p>Need help? Use the links below.</p>
-                  <div className="chip-row" style={{ marginTop: 10 }}>
-                    <a className="chip" href="https://t.me/jalsolcommute" target="_blank" rel="noreferrer">Telegram</a>
-                    <a className="chip" href="https://x.com/JAL358" target="_blank" rel="noreferrer">X</a>
-                  </div>
-                </div>
+      {/* ===== PAGE CONTENT (HOME / ABOUT JAL / SHOP) ===== */}
+      {panel !== "none" && panel !== "nav" && (
+        <section className="home-shell">
+          <div className="home-shell-top">
+            {/* Wallet controls available on pages */}
+            <div className="home-wallet">
+              {connected ? (
+                <DisconnectButton className="wallet-disconnect-btn" />
+              ) : (
+                <ConnectButton className="wallet-disconnect-btn" />
               )}
             </div>
+
+            {/* Quick open nav */}
+            <button className="home-open-nav" type="button" onClick={() => setPanel("nav")}>
+              Menu
+            </button>
           </div>
+
+          {content}
         </section>
       )}
-    </div>
+    </main>
   );
 }

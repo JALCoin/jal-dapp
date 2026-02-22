@@ -70,9 +70,10 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
 }
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 
-/* Lock page scroll when wallet modal or hub overlay is visible */
+/* Lock page scroll when wallet modal / overlays are visible */
 body[data-wallet-visible="true"]{ overflow:hidden }
 body[data-hub-open="true"]{ overflow:hidden }
+body[data-nav-open="true"]{ overflow:hidden }
 
 /* ---------- Main layout ---------- */
 main[role="main"]{
@@ -208,7 +209,7 @@ main[role="main"]{
   box-shadow: var(--glow-gold);
 }
 
-/* Disconnect (header + sidebar) */
+/* Disconnect (header + sidebar + landing pages) */
 .wallet-disconnect-btn{
   margin-top:8px;
   padding:.75rem 1rem;
@@ -224,173 +225,177 @@ main[role="main"]{
 }
 
 /* ==================================
-   LANDING + EMBEDDED HUB (Landing.tsx)
+   Landing (NEW: blank screen + nav overlay)
 ================================== */
-.landing-gradient{
+.landing-blank{
   min-height:100dvh;
+  display:grid;
+  place-items:center;
   background:
     radial-gradient(900px 540px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
     var(--bg);
 }
-.landing-merge .landing-logo{
-  filter: drop-shadow(0 0 20px rgba(255,255,255,.45));
-}
 
-/* social row above logo */
-.landing-social{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-  align-items:center;
-  padding-top:18px;
-}
-.landing-social a{
-  width:36px; height:36px;
-  display:grid; place-items:center;
-  border:1px solid var(--stroke);
-  border-radius:10px;
-  transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-}
-.landing-social a:hover{
-  transform:translateY(-1px);
-  border-color:var(--green);
-  box-shadow:var(--glow-green);
-}
-.landing-disconnect{ display:flex; justify-content:center; margin:10px 0 }
-
-/* hero block */
-.landing-inner{
+/* Center logo button */
+.center-logo-btn{
   display:grid;
   place-items:center;
-  gap:16px;
-  padding:clamp(24px,6vw,40px) 16px 12px;
-  text-align:center;
-}
-.landing-logo{
-  height:clamp(110px,20vw,180px);
-  filter: drop-shadow(0 0 10px rgba(255,255,255,.65));
-}
-.landing-logo-wrapper.wallet-connected .landing-logo{
-  filter: drop-shadow(0 0 14px rgba(255,255,255,.82));
-}
-
-/* connect / toggle button */
-.landing-wallet{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:.9rem 1.1rem;
-  border-radius:16px;
-  border:1px solid var(--stroke);
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), opacity var(--t-fast);
-}
-.landing-wallet:hover{
-  transform:translateY(-1px);
-  border-color:var(--green);
-  box-shadow:var(--glow-green);
-}
-.landing-wallet.fade-out{ opacity:.35; pointer-events:none }
-
-/* ==================================
-   BANKING LANDING PRIMITIVES
-   (Tidy "one-screen" decision layer)
-================================== */
-.bank-landing{
-  display:grid;
-  gap:20px;
-  padding:18px 14px 92px; /* room for tabbar */
-}
-@media (min-width:720px){
-  .bank-landing{ padding:26px 20px 110px; gap:24px }
-}
-
-/* Top summary: two balances */
-.balance-row{
-  display:grid;
-  gap:14px;
-  grid-template-columns: 1fr 1fr;
-}
-.balance-card{
-  border:1px solid var(--stroke);
+  gap:10px;
+  padding:18px 18px 14px;
   border-radius:var(--r-lg);
-  padding:16px 18px;
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  box-shadow:0 8px 26px rgba(0,0,0,.5);
-}
-.balance-amount{
-  font-size:clamp(1.4rem, 4.8vw, 2.1rem);
-  font-weight:700;
-  color:var(--gold);
-  text-shadow:var(--glow-gold);
-}
-.balance-label{
-  opacity:.85;
-  margin-top:4px;
-}
-.bank-status{ text-align:right; opacity:.9 }
-
-/* 2×2 feature grid */
-.feature-grid{
-  display:grid;
-  gap:16px;
-  grid-template-columns: repeat(2, 1fr);
-}
-.feature-card{
-  position:relative;
-  border:1px solid var(--stroke);
-  border-radius:var(--r-lg);
-  min-height:150px;
-  padding:16px;
-  overflow:hidden;
-  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
-  transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-}
-.feature-card:hover{
-  transform:translateY(-2px);
-  border-color:var(--green);
-  box-shadow:var(--glow-green);
-}
-.feature-card h4{ margin:0 0 6px; font-weight:600; opacity:.85 }
-.feature-card .title{ font-size:clamp(1.1rem, 3.8vw, 1.6rem); font-weight:700 }
-.feature-card .icon{
-  position:absolute;
-  right:14px;
-  bottom:14px;
-  opacity:.9;
-  filter:drop-shadow(0 0 8px rgba(255,255,255,.35));
-}
-
-/* Wide featured banner (optional) */
-.feature-wide{
-  grid-column: 1 / -1;
-  min-height:160px;
-  display:grid;
-  align-content:center;
-}
-
-/* Chips row (optional) */
-.chip-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
-.chip{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:.45rem .7rem;
-  border:1px solid var(--stroke);
-  border-radius:999px;
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  font-size:.9rem;
-  opacity:.95;
+  border:1px solid rgba(255,255,255,.10);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+  box-shadow: 0 18px 70px rgba(0,0,0,.75);
   transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
-.chip:hover{
-  transform:translateY(-1px);
-  border-color:var(--cyan);
-  box-shadow:var(--glow-cyan);
+.center-logo-btn:hover{
+  transform: translateY(-2px);
+  border-color: rgba(244,200,106,.45);
+  box-shadow: 0 18px 70px rgba(0,0,0,.75), var(--glow-gold);
+}
+.center-logo{
+  width:min(72vw, 320px);
+  height:auto;
+  filter: drop-shadow(0 0 14px rgba(255,255,255,.55));
+}
+.center-logo-hint{
+  font-size:.85rem;
+  letter-spacing:.24em;
+  opacity:.85;
+  text-transform:uppercase;
+  text-shadow: var(--glow-white);
+}
+
+/* Nav overlay */
+.nav-overlay-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:48;
+  background: rgba(0,0,0,.62);
+  backdrop-filter: blur(2px);
+  animation: overlayIn var(--t-slow) both;
+}
+
+.nav-overlay{
+  position:fixed;
+  inset:0;
+  z-index:49;
+  display:grid;
+  place-items:center;
+  padding: 92px 16px 92px; /* room for header/tabbar if present */
+}
+.nav-overlay-inner{
+  width:min(100% - 1rem, 720px);
+  display:grid;
+  gap:14px;
+}
+.nav-big{
+  width:100%;
+  padding: 18px 18px;
+  border-radius: 26px;
+  border:1px solid rgba(255,255,255,.14);
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0));
+  box-shadow: 0 14px 40px rgba(0,0,0,.6);
+  font-size: 1.05rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), color var(--t-fast);
+}
+.nav-big:hover{
+  transform: translateY(-2px);
+  border-color: rgba(17,241,167,.45);
+  box-shadow: 0 14px 40px rgba(0,0,0,.6), var(--glow-green);
+  color: var(--text);
+}
+.nav-close{
+  margin-top:6px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border:1px solid rgba(255,255,255,.12);
+  opacity:.85;
+  transition: opacity var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.nav-close:hover{
+  opacity:1;
+  border-color: rgba(0,240,255,.45);
+  box-shadow: var(--glow-cyan);
+}
+
+/* Home shell (pages after choosing nav item) */
+.home-shell{
+  min-height:100dvh;
+  width:100%;
+  padding: 18px 0 92px; /* room for tabbar */
+}
+.home-shell-top{
+  width:min(100% - 2rem, var(--max-w));
+  margin: 0 auto 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.home-open-nav{
+  padding:.65rem .9rem;
+  border-radius: var(--r-md);
+  border:1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.home-open-nav:hover{
+  transform: translateY(-1px);
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+.home-wallet{ display:flex; align-items:center; gap:10px }
+
+/* Content wrapper */
+.home-wrap{
+  width:min(100% - 2rem, var(--max-w));
+  margin: 0 auto;
+  display:grid;
+  gap:16px;
+}
+.home-title{ margin:0 0 8px; letter-spacing:.04em }
+.home-lead{ margin: 0 0 10px; opacity:.92 }
+.home-links{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px }
+
+/* Engine window */
+.engine-window{ overflow:hidden }
+.engine-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.engine-title{ margin:0 }
+.engine-sub{ opacity:.75; font-size:.95rem }
+.engine-controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin: 10px 0 12px;
+}
+.engine-log{
+  border:1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-md);
+  background: rgba(0,0,0,.35);
+  padding: 12px 12px;
+  max-height: 240px;
+  overflow:auto;
+}
+.engine-log pre{
+  margin:0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: .9rem;
+  line-height: 1.4;
+  opacity:.92;
 }
 
 /* ==================================
-   HUB PANEL (embedded + overlay)
+   HUB PANEL (legacy classes - kept)
+   (safe to keep if other pages still use it)
 ================================== */
 .hub-panel{
   width:min(100% - 2rem, 1100px);
@@ -431,78 +436,6 @@ main[role="main"]{
   grid-template-rows:auto 1fr;
 }
 
-/* Hub tile grid */
-.hub-stack{
-  position:relative;
-  display:grid;
-  gap:clamp(12px,2vw,18px);
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
-.hub-stack::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:var(--r-lg);
-  box-shadow: inset 0 0 40px rgba(17,241,167,.08);
-  pointer-events:none;
-}
-.hub-stack--responsive{ align-items:start }
-
-/* Hub tiles */
-.img-btn{
-  position:relative;
-  border-radius:var(--r-lg);
-  overflow:hidden;
-  aspect-ratio:16/10;
-  border:1px solid var(--stroke);
-  background:#0b0f14;
-  transition:transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-}
-.img-btn:hover{
-  transform:translateY(-2px);
-  border-color:var(--green);
-  box-shadow:var(--glow-green);
-}
-.img-btn[disabled]{
-  cursor:not-allowed;
-  opacity:.55;
-  filter:grayscale(.6);
-  transform:none!important;
-  box-shadow:none!important;
-  border-color:var(--stroke)!important;
-}
-.hub-gif{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  opacity:.95;
-}
-.hub-btn{
-  position:absolute;
-  left:12px;
-  bottom:10px;
-  font-weight:600;
-  padding:.4rem .65rem;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.2);
-  background:rgba(0,0,0,.5);
-  backdrop-filter:blur(6px);
-}
-.hub-btn .sub{ display:block; font-weight:400; opacity:.8; margin-top:2px }
-.hub-btn .locked{ display:block; font-size:.8rem; margin-top:4px; opacity:.8; color:var(--muted) }
-
-.hub-content{ display:grid; gap:18px }
-.hub-controls{ display:flex; justify-content:flex-start; margin-bottom:8px }
-.hub-controls .button, .hub-controls .wallet-disconnect-btn{ padding:.55rem .8rem; border-radius:12px }
-
-/* Ensure overlays stack cleanly */
-.in-hub{ position:relative; z-index:5; isolation:isolate }
-.hub-stack{ position:relative; z-index:1 }
-.in-hub > *{ position:relative; z-index:6 }
-
-/* Hub overlay modal */
 .hub-overlay{
   position: fixed;
   inset: 0;
@@ -516,8 +449,8 @@ main[role="main"]{
   z-index: 49;
   left: 50%;
   transform: translateX(-50%);
-  top: 88px;     /* room for sticky header */
-  bottom: 74px;  /* room for bottom tabbar */
+  top: 88px;
+  bottom: 74px;
   width: min(100% - 2rem, 1100px);
 }
 @media (max-width: 640px){
@@ -631,10 +564,11 @@ main[role="main"]{
 @media (max-width: 640px){
   .wallet-adapter-modal-wrapper{ width:92vw!important }
   .landing-wallet{ padding:1rem 1.25rem; font-size:1rem }
-  .img-btn{ min-height:160px }
 }
 
-/* Motion preferences */
+/* ==================================
+   Motion preferences
+================================== */
 @media (prefers-reduced-motion: reduce){
   .hamburger span,
   .hamburger,
@@ -642,8 +576,9 @@ main[role="main"]{
   .sidebar-overlay,
   .button,
   .card,
-  .img-btn,
-  .logo.header-logo{
+  .logo.header-logo,
+  .center-logo-btn,
+  .nav-big{
     transition:none;
     animation:none;
   }

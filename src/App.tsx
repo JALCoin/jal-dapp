@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "re
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import BootLoader from "./components/BootLoader";
 import Landing from "./pages/Landing";
 
 /* ------------------------ Small pieces ------------------------ */
@@ -10,7 +11,17 @@ function DisconnectBtn() {
   const { connected, disconnect } = useWallet();
   if (!connected) return null;
   return (
-    <button className="wallet-disconnect-btn" onClick={() => disconnect()}>
+    <button
+      type="button"
+      className="wallet-disconnect-btn"
+      onClick={async () => {
+        try {
+          await disconnect();
+        } catch (e) {
+          console.error("[wallet] disconnect error:", e);
+        }
+      }}
+    >
       Disconnect
     </button>
   );
@@ -46,6 +57,7 @@ function HeaderView({
 
         {/* Right: hamburger */}
         <button
+          type="button"
           className={`hamburger ${isOpen ? "is-open" : ""}`}
           onClick={onMenu}
           aria-label="Open menu"
@@ -69,8 +81,17 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             Home
           </NavLink>
+          <NavLink to="/about" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            About JAL
+          </NavLink>
+          <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+            Shop
+          </NavLink>
         </nav>
-        <div style={{ marginTop: 8 }} />
+
+        <div style={{ marginTop: 10 }} />
+
+        {/* Wallet controls */}
         <WalletMultiButton />
         <DisconnectBtn />
       </aside>
@@ -78,7 +99,7 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
   );
 }
 
-/* Bottom tab bar (only STORE + SUPPORT) */
+/* Bottom tab bar (STORE + SUPPORT). Keeps existing query-string panel behavior. */
 function TabBar() {
   const location = useLocation();
   const base = location.pathname || "/";
@@ -115,22 +136,49 @@ function TabBar() {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // 5-second boot loader (once per tab session)
+  const [booted, setBooted] = useState(false);
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    const already = sessionStorage.getItem("jal:booted") === "1";
+    if (already) setBooted(true);
+  }, []);
+
+  const onBootDone = () => {
+    sessionStorage.setItem("jal:booted", "1");
+    setBooted(true);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  if (!booted) {
+    return <BootLoader seconds={5} onDone={onBootDone} />;
+  }
 
   return (
     <BrowserRouter>
       <HeaderView onMenu={() => setMenuOpen(true)} isOpen={menuOpen} />
       <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
+
       <main role="main">
         <Routes>
           <Route path="/" element={<Landing />} />
+
+          {/* Placeholder routes so header/nav doesn't break.
+              Replace these components when you send the other files. */}
+          <Route path="/about" element={<Landing />} />
+          <Route path="/shop" element={<Landing />} />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+
       <TabBar />
     </BrowserRouter>
   );
