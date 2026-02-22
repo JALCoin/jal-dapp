@@ -10,6 +10,7 @@ type EngineAction = {
   key: EngineActionKey;
   title: string;
   desc: string;
+  route: string;
 };
 
 function safeTrim(v: string) {
@@ -52,21 +53,25 @@ export default function Home() {
         key: "token-gen",
         title: "JALSOL — Solana token generation",
         desc: "Create SPL tokens and utilities that plug into the ecosystem.",
+        route: "/app/token",
       },
       {
         key: "lp-raydium",
         title: "Raydium — JAL/SOL liquidity layer",
         desc: "Pool overview, LP references, and future tooling lives here.",
+        route: "/app/raydium",
       },
       {
         key: "jal-engine",
         title: "$JAL~Engine — read the market + deploy Jeroids",
         desc: "Sign in with Read Only or Full Access to enable features.",
+        route: "/app/engine",
       },
       {
         key: "inventory",
         title: "Inventory — packaged system + guides",
         desc: "Docs + sale bundle for builders who want their own iteration.",
+        route: "/app/inventory",
       },
     ],
     []
@@ -129,13 +134,22 @@ export default function Home() {
       pushLog("[auth] session-only (not saved)");
     }
 
-    // TODO: wire to your actual engine connector later (server / local runner)
     closeAuth();
+  };
+
+  const [activeAction, setActiveAction] = useState<EngineActionKey>("jal-engine");
+
+  const goAction = (k: EngineActionKey) => {
+    const a = actions.find((x) => x.key === k);
+    setActiveAction(k);
+    pushLog(`[hub] selected: ${k}`);
+    if (a?.route) navigate(a.route);
   };
 
   const engineStart = () => {
     setEngineStatus("running");
     pushLog("[engine] start requested");
+    navigate("/app/engine");
   };
 
   const engineStop = () => {
@@ -143,14 +157,14 @@ export default function Home() {
     pushLog("[engine] stop requested");
   };
 
-  const engineSettings = () => pushLog("[engine] open settings (coming soon)");
-  const engineAnalysis = () => pushLog("[engine] open log analysis (coming soon)");
+  const engineSettings = () => {
+    pushLog("[engine] settings opened");
+    navigate("/app/engine/settings");
+  };
 
-  const [activeAction, setActiveAction] = useState<EngineActionKey>("jal-engine");
-
-  const selectAction = (k: EngineActionKey) => {
-    setActiveAction(k);
-    pushLog(`[hub] selected: ${k}`);
+  const engineAnalysis = () => {
+    pushLog("[engine] log analysis opened");
+    navigate("/app/engine/logs");
   };
 
   return (
@@ -204,7 +218,8 @@ export default function Home() {
 
           <div className="engine-foreground">
             <div className="engine-head">
-              <div>
+              <div className="engine-head-left" aria-hidden="true" />
+              <div className="engine-head-center">
                 <h2 className="engine-title">$JAL~Engine</h2>
                 <div className="engine-sub">CEX connector • Jeroid deployment • logs</div>
               </div>
@@ -219,14 +234,14 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Selectable modules */}
+            {/* Selectable modules (NAVIGATES) */}
             <div className="engine-select" aria-label="Engine modules">
               {actions.map((a) => (
                 <button
                   key={a.key}
                   type="button"
                   className={`engine-select-row ${activeAction === a.key ? "active" : ""}`}
-                  onClick={() => selectAction(a.key)}
+                  onClick={() => goAction(a.key)}
                 >
                   <div className="engine-select-title">{a.title}</div>
                   <div className="engine-select-desc">{a.desc}</div>
@@ -234,7 +249,7 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Controls */}
+            {/* Controls (NAVIGATES) */}
             <div className="engine-controls" aria-label="Engine controls">
               <button
                 type="button"
@@ -261,7 +276,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== Packaged system (premium gold, restrained) ===== */}
+        {/* ===== Packaged system (NAVIGATES) ===== */}
         <section className="card bundle-card machine-surface panel-frame" aria-label="Packaged system">
           <h2 className="bundle-title">Packaged System</h2>
           <p className="bundle-lead">
@@ -270,18 +285,10 @@ export default function Home() {
           </p>
 
           <div className="engine-controls" aria-label="Bundle actions">
-            <button
-              type="button"
-              className="button gold"
-              onClick={() => pushLog("[bundle] view selected")}
-            >
+            <button type="button" className="button gold" onClick={() => navigate("/app/inventory")}>
               View
             </button>
-            <button
-              type="button"
-              className="button"
-              onClick={() => pushLog("[bundle] purchase selected")}
-            >
+            <button type="button" className="button" onClick={() => navigate("/app/inventory/purchase")}>
               Purchase
             </button>
           </div>
@@ -303,12 +310,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="engine-modal-close"
-                onClick={closeAuth}
-                aria-label="Close"
-              >
+              <button type="button" className="engine-modal-close" onClick={closeAuth} aria-label="Close">
                 ✕
               </button>
             </div>

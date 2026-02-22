@@ -81,7 +81,13 @@ function HeaderView({
 }
 
 /* ------------------------ Sidebar ------------------------ */
-function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
+function SidebarView({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   if (!open) return null;
   return (
     <>
@@ -113,6 +119,36 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           >
             Shop
           </NavLink>
+
+          {/* Feature pages */}
+          <NavLink
+            to="/app/token"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
+            Token Generation
+          </NavLink>
+          <NavLink
+            to="/app/raydium"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
+            Raydium / Liquidity
+          </NavLink>
+          <NavLink
+            to="/app/engine"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
+            $JAL~Engine
+          </NavLink>
+          <NavLink
+            to="/app/inventory"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
+            Inventory
+          </NavLink>
         </nav>
       </aside>
     </>
@@ -120,11 +156,26 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
 }
 
 /* ------------------------ Simple pages (inline) ------------------------ */
+function FeaturePage({ title }: { title: string }) {
+  return (
+    <main className="home-shell" aria-label={title}>
+      <div className="home-wrap">
+        <section className="card machine-surface panel-frame">
+          <h1 className="home-title">{title}</h1>
+          <p className="home-lead">
+            This page is live-routed. Wire the feature UI here.
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 function AboutPage() {
   return (
     <main className="home-shell" aria-label="About JAL">
       <div className="home-wrap">
-        <section className="card">
+        <section className="card machine-surface panel-frame">
           <h1 className="home-title">About JAL</h1>
           <p className="home-lead">
             jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader •
@@ -135,7 +186,12 @@ function AboutPage() {
             and verifiable on Solscan.
           </p>
           <div className="home-links">
-            <a className="chip" href="https://raydium.io/" target="_blank" rel="noreferrer">
+            <a
+              className="chip"
+              href="https://raydium.io/"
+              target="_blank"
+              rel="noreferrer"
+            >
               Raydium (JAL/SOL)
             </a>
             <a className="chip" href="https://solscan.io/" target="_blank" rel="noreferrer">
@@ -152,14 +208,19 @@ function ShopPage() {
   return (
     <main className="home-shell" aria-label="Shop">
       <div className="home-wrap">
-        <section className="card">
+        <section className="card machine-surface panel-frame">
           <h1 className="home-title">Shop</h1>
           <p className="home-lead">
             Sole trader activity: design + creation of physical and digital products, sold online.
             jalsol.com is the hub.
           </p>
           <div className="home-links">
-            <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
+            <a
+              className="chip"
+              href="https://jalrelics.etsy.com"
+              target="_blank"
+              rel="noreferrer"
+            >
               Etsy Shop
             </a>
             <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
@@ -207,6 +268,18 @@ function AppShell() {
         <Route path="home" element={<Home />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="shop" element={<ShopPage />} />
+
+        {/* Feature pages */}
+        <Route path="token" element={<FeaturePage title="Token Generation" />} />
+        <Route path="raydium" element={<FeaturePage title="Raydium / Liquidity" />} />
+        <Route path="engine" element={<FeaturePage title="$JAL~Engine" />} />
+        <Route path="engine/settings" element={<FeaturePage title="$JAL~Engine — Settings" />} />
+        <Route path="engine/logs" element={<FeaturePage title="$JAL~Engine — Log Analysis" />} />
+        <Route path="inventory" element={<FeaturePage title="Inventory / Packaged System" />} />
+        <Route
+          path="inventory/purchase"
+          element={<FeaturePage title="Inventory — Purchase" />}
+        />
 
         <Route path="*" element={<Navigate to="/app/nav" replace />} />
       </Routes>
