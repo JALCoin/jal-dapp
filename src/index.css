@@ -605,3 +605,256 @@ main[role="main"]{
   50%  { transform: scale(1.03); filter: drop-shadow(0 0 18px rgba(244,200,106,.55)); }
   100% { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
 }
+/* ===============================
+   HOME — upgraded layout blocks
+=================================*/
+.home-hero .home-title{
+  font-size: clamp(1.4rem, 3.2vw, 2rem);
+  letter-spacing: .04em;
+}
+.home-hero .home-lead{
+  margin: 10px 0 0;
+  opacity: .92;
+}
+
+/* ===============================
+   ENGINE WINDOW — pulsing logo background + selectable modules
+=================================*/
+.engine-window--hero{
+  position: relative;
+  overflow: hidden;
+  min-height: 360px;
+}
+
+.engine-loading{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  opacity: .16; /* low opacity background */
+}
+
+.engine-loading-logo{
+  width: min(520px, 78vw);
+  filter: drop-shadow(0 0 14px rgba(255,255,255,.55));
+  animation: pulseGlow 1.2s ease-in-out infinite;
+}
+
+.engine-foreground{
+  position:relative;
+  z-index:2;
+}
+
+.engine-select{
+  display:grid;
+  gap:10px;
+  margin: 12px 0 14px;
+}
+
+.engine-choice{
+  text-align:left;
+  width:100%;
+  padding: .9rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.16);
+  background:
+    radial-gradient(700px 180px at 50% 10%, rgba(255,255,255,.05), rgba(255,255,255,0)),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), opacity var(--t-fast);
+  opacity:.92;
+}
+
+.engine-choice:hover{
+  transform: translateY(-1px);
+  border-color: rgba(17,241,167,.55);
+  box-shadow: var(--glow-green);
+  opacity:1;
+}
+
+.engine-choice.active{
+  border-color: rgba(244,200,106,.55);
+  box-shadow: var(--glow-gold);
+  opacity:1;
+}
+
+.engine-body{
+  margin-top: 6px;
+}
+
+.engine-p{
+  margin: 10px 0 0;
+}
+.engine-dim{
+  opacity:.78;
+}
+/* ===== Engine background logo pulse (inside Home engine window) ===== */
+.engine-window{ position:relative; }
+.engine-bg{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  opacity:.12;           /* low opacity behind content */
+  filter: blur(.2px);
+}
+.engine-bg-logo{
+  width:min(520px, 76vw);
+  animation: pulseGlow 1.2s ease-in-out infinite;
+}
+
+/* keep content above background */
+.engine-window > *:not(.engine-bg){
+  position:relative;
+  z-index:2;
+}
+
+/* selectors list */
+.engine-select{
+  display:grid;
+  gap:10px;
+  margin: 10px 0 14px;
+}
+.engine-select-row{
+  text-align:left;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  border:1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.engine-select-row:hover{
+  transform: translateY(-1px);
+  border-color: rgba(17,241,167,.55);
+  box-shadow: var(--glow-green);
+}
+.engine-select-title{
+  font-weight:700;
+  letter-spacing:.02em;
+}
+.engine-select-desc{
+  opacity:.82;
+  margin-top:3px;
+  font-size:.95rem;
+}
+
+/* auth buttons in header row */
+.engine-auth{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+/* ===== Modal (CoinSpot API sign-in) ===== */
+.engine-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:80;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(2px);
+  animation: overlayIn var(--t-slow) both;
+}
+
+.engine-modal{
+  position:fixed;
+  z-index:81;
+  left:50%;
+  top:50%;
+  transform: translate(-50%, -50%);
+  width: min(680px, 92vw);
+  border-radius: var(--r-lg);
+  border:1px solid var(--stroke-2);
+  background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.92));
+  box-shadow: 0 30px 120px rgba(0,0,0,.85), var(--glow-white);
+  overflow:hidden;
+}
+
+.engine-modal-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+.engine-modal-title{
+  font-weight:800;
+  letter-spacing:.04em;
+}
+.engine-modal-sub{
+  opacity:.78;
+  font-size:.95rem;
+  margin-top:2px;
+}
+
+.engine-modal-close{
+  width:40px;
+  height:40px;
+  border-radius: 12px;
+  border:1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.engine-modal-close:hover{
+  transform: translateY(-1px);
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.engine-modal-body{
+  padding: 14px 16px 16px;
+  display:grid;
+  gap:12px;
+}
+
+.engine-field{
+  display:grid;
+  gap:6px;
+}
+.engine-field span{
+  opacity:.85;
+  font-size:.9rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.engine-field input{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.35);
+  color: var(--text);
+  outline:none;
+}
+.engine-field input:focus{
+  border-color: rgba(17,241,167,.55);
+  box-shadow: var(--glow-green);
+}
+
+.engine-remember{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  opacity:.85;
+  font-size:.95rem;
+}
+.engine-remember input{
+  width:18px;
+  height:18px;
+}
+
+.engine-modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top: 4px;
+}
+
+.engine-modal-note{
+  opacity:.75;
+  font-size:.9rem;
+  margin: 2px 0 0;
+}
