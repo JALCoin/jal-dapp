@@ -1,37 +1,23 @@
-import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  NavLink,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 
-import BootLoader from "./components/BootLoader";
 import Landing from "./pages/Landing";
 
-/* ------------------------ Small pieces ------------------------ */
-function DisconnectBtn() {
-  const { connected, disconnect } = useWallet();
-  if (!connected) return null;
-  return (
-    <button
-      type="button"
-      className="wallet-disconnect-btn"
-      onClick={async () => {
-        try {
-          await disconnect();
-        } catch (e) {
-          console.error("[wallet] disconnect error:", e);
-        }
-      }}
-    >
-      Disconnect
-    </button>
-  );
-}
-
+/* ------------------------ Header ------------------------ */
 function HeaderView({
   onMenu,
+  onLogo,
   isOpen,
 }: {
   onMenu: () => void;
+  onLogo: () => void;
   isOpen: boolean;
 }) {
   return (
@@ -39,115 +25,112 @@ function HeaderView({
       <div className="header-inner">
         {/* Left: socials */}
         <div className="social-links" aria-label="Social Links">
-          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <a
+            href="https://x.com/JAL358"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="X"
+          >
             <img src="/icons/X.png" alt="" />
           </a>
-          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+          <a
+            href="https://t.me/jalsolcommute"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Telegram"
+          >
             <img src="/icons/Telegram.png" alt="" />
           </a>
-          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+          <a
+            href="https://www.tiktok.com/@358jalsol"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="TikTok"
+          >
             <img src="/icons/TikTok.png" alt="" />
           </a>
         </div>
 
-        {/* Center: logo (acts as Home button) */}
-        <NavLink to="/" aria-label="Home">
+        {/* Center: logo opens NAV overlay */}
+        <button
+          type="button"
+          onClick={onLogo}
+          aria-label="Open navigation"
+          className="logo-btn"
+        >
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
-        </NavLink>
+        </button>
 
         {/* Right: hamburger */}
         <button
-          type="button"
           className={`hamburger ${isOpen ? "is-open" : ""}`}
           onClick={onMenu}
           aria-label="Open menu"
           aria-haspopup="true"
           aria-expanded={isOpen}
         >
-          <span></span><span></span><span></span>
+          <span></span>
+          <span></span>
+          <span></span>
         </button>
       </div>
     </header>
   );
 }
 
-function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
+/* ------------------------ Sidebar ------------------------ */
+function SidebarView({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   if (!open) return null;
+
   return (
     <>
-      <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
+      <button
+        className="sidebar-overlay"
+        aria-label="Close menu overlay"
+        onClick={onClose}
+      />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
         <nav>
-          <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+          <NavLink
+            to="/home"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
             Home
           </NavLink>
-          <NavLink to="/about" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+          <NavLink
+            to="/about"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
             About JAL
           </NavLink>
-          <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+          <NavLink
+            to="/shop"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
             Shop
           </NavLink>
         </nav>
-
-        <div style={{ marginTop: 10 }} />
-
-        {/* Wallet controls */}
-        <WalletMultiButton />
-        <DisconnectBtn />
       </aside>
     </>
   );
 }
 
-/* Bottom tab bar (STORE + SUPPORT). Keeps existing query-string panel behavior. */
-function TabBar() {
-  const location = useLocation();
-  const base = location.pathname || "/";
-
-  const link = (panel?: string) => {
-    const p = new URLSearchParams(location.search);
-    if (!panel) p.delete("panel");
-    else p.set("panel", panel);
-    const q = p.toString();
-    return q ? `${base}?${q}` : base;
-  };
-
-  const isActive = (panel?: string) => {
-    const p = new URLSearchParams(location.search).get("panel");
-    if (!panel) return !p || p === "none";
-    return p === panel;
-  };
-
-  return (
-    <nav className="tabbar" aria-label="App tabs">
-      <NavLink to={link("shop")} className={() => (isActive("shop") ? "active" : "")}>
-        <div className="tab-icon">🏬</div>
-        STORE
-      </NavLink>
-      <a href={link("support")} className={isActive("support") ? "active" : ""}>
-        <div className="tab-icon">👤</div>
-        SUPPORT
-      </a>
-    </nav>
-  );
-}
-
 /* ------------------------ App Root ------------------------ */
-export default function App() {
+function AppShell() {
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // 5-second boot loader (once per tab session)
-  const [booted, setBooted] = useState(false);
-
-  useEffect(() => {
-    const already = sessionStorage.getItem("jal:booted") === "1";
-    if (already) setBooted(true);
-  }, []);
-
-  const onBootDone = () => {
-    sessionStorage.setItem("jal:booted", "1");
-    setBooted(true);
-  };
+  // "Entered" = any route except "/"
+  const entered = location.pathname !== "/";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -157,29 +140,45 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  if (!booted) {
-    return <BootLoader seconds={5} onDone={onBootDone} />;
-  }
+  // Close sidebar on route changes
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   return (
-    <BrowserRouter>
-      <HeaderView onMenu={() => setMenuOpen(true)} isOpen={menuOpen} />
-      <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
+    <>
+      {entered && (
+        <>
+          <HeaderView
+            onMenu={() => setMenuOpen(true)}
+            onLogo={() => window.dispatchEvent(new CustomEvent("JALSOL:OPEN_NAV"))}
+            isOpen={menuOpen}
+          />
+          <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
+        </>
+      )}
 
       <main role="main">
         <Routes>
+          {/* Entry only */}
           <Route path="/" element={<Landing />} />
 
-          {/* Placeholder routes so header/nav doesn't break.
-              Replace these components when you send the other files. */}
-          <Route path="/about" element={<Landing />} />
-          <Route path="/shop" element={<Landing />} />
+          {/* After-enter pages (still driven by Landing content for now) */}
+          <Route path="/home" element={<Landing initialPanel="home" />} />
+          <Route path="/about" element={<Landing initialPanel="jal" />} />
+          <Route path="/shop" element={<Landing initialPanel="shop" />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+    </>
+  );
+}
 
-      <TabBar />
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
     </BrowserRouter>
   );
 }

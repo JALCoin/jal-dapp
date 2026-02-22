@@ -2,6 +2,7 @@
    JAL/SOL — Global CSS (index.css)
    Aesthetic: neon cyber / premium ATM
    Rule: layout & visual control lives here (not per-component Tailwind)
+   UPDATE: Entry-only landing + NAV overlay + NO footer/tabbar
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -70,7 +71,7 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
 }
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 
-/* Lock page scroll when wallet modal / overlays are visible */
+/* Lock page scroll when overlays are visible */
 body[data-wallet-visible="true"]{ overflow:hidden }
 body[data-hub-open="true"]{ overflow:hidden }
 body[data-nav-open="true"]{ overflow:hidden }
@@ -84,6 +85,7 @@ main[role="main"]{
 
 /* ==================================
    HEADER (App.tsx HeaderView)
+   (You will toggle rendering in App.tsx after ENTER)
 ================================== */
 .site-header{
   position:sticky;
@@ -119,7 +121,7 @@ main[role="main"]{
 }
 .social-links img{ width:18px; height:18px; object-fit:contain }
 
-/* centered GIF logo (acts as home button) */
+/* centered GIF logo (acts as nav overlay opener) */
 .logo.header-logo{
   height:clamp(68px,9.5vw,96px);
   filter: drop-shadow(0 0 10px rgba(255,255,255,.7));
@@ -164,6 +166,7 @@ main[role="main"]{
 
 /* ==================================
    SIDEBAR (App.tsx SidebarView)
+   NOTE: wallet controls removed in code, but styling retained.
 ================================== */
 .sidebar-overlay{
   position:fixed;
@@ -209,7 +212,7 @@ main[role="main"]{
   box-shadow: var(--glow-gold);
 }
 
-/* Disconnect (header + sidebar + landing pages) */
+/* Disconnect (kept in case used elsewhere) */
 .wallet-disconnect-btn{
   margin-top:8px;
   padding:.75rem 1rem;
@@ -225,114 +228,147 @@ main[role="main"]{
 }
 
 /* ==================================
-   Landing (NEW: blank screen + nav overlay)
+   LANDING — ENTRY ONLY + NAV OVERLAY
+   Matches Landing.tsx rewrite:
+   - .landing-blank
+   - .center-logo-btn / .center-logo / .center-logo-hint
+   - .nav-overlay-backdrop / .nav-overlay / .nav-overlay-top / .nav-back / .nav-overlay-body / .nav-pill
+   - .home-shell / .home-shell-top / .home-open-nav / .home-wrap ...
 ================================== */
 .landing-blank{
   min-height:100dvh;
   display:grid;
   place-items:center;
+  padding: 24px 16px;
   background:
     radial-gradient(900px 540px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
     var(--bg);
 }
 
-/* Center logo button */
+/* optional fade hook from Landing.tsx: .landing-blank.is-fading */
+.landing-blank.is-fading{
+  animation: pageFade var(--t-med) both;
+}
+@keyframes pageFade{
+  from{ opacity:1 }
+  to{ opacity:.78 }
+}
+
+/* Center logo button (single CTA) */
 .center-logo-btn{
+  width:min(560px, 92vw);
+  aspect-ratio: 16 / 9;
   display:grid;
   place-items:center;
   gap:10px;
-  padding:18px 18px 14px;
+  padding:22px 18px 18px;
   border-radius:var(--r-lg);
-  border:1px solid rgba(255,255,255,.10);
-  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
-  box-shadow: 0 18px 70px rgba(0,0,0,.75);
+  border:1px solid rgba(255,255,255,.12);
+  background:
+    radial-gradient(640px 260px at 50% 28%, rgba(255,255,255,.07), rgba(255,255,255,0)),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  box-shadow: 0 20px 80px rgba(0,0,0,.78), var(--glow-white);
   transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
 .center-logo-btn:hover{
   transform: translateY(-2px);
-  border-color: rgba(244,200,106,.45);
-  box-shadow: 0 18px 70px rgba(0,0,0,.75), var(--glow-gold);
+  border-color: rgba(244,200,106,.55);
+  box-shadow: 0 24px 96px rgba(0,0,0,.82), var(--glow-gold);
 }
 .center-logo{
-  width:min(72vw, 320px);
+  width:min(440px, 78vw);
   height:auto;
-  filter: drop-shadow(0 0 14px rgba(255,255,255,.55));
+  opacity:.96;
+  filter: drop-shadow(0 0 12px rgba(255,255,255,.45));
 }
 .center-logo-hint{
   font-size:.85rem;
-  letter-spacing:.24em;
-  opacity:.85;
+  letter-spacing:.22em;
+  opacity:.82;
   text-transform:uppercase;
   text-shadow: var(--glow-white);
 }
 
-/* Nav overlay */
+/* NAV overlay */
 .nav-overlay-backdrop{
   position:fixed;
   inset:0;
-  z-index:48;
-  background: rgba(0,0,0,.62);
+  z-index:60;
+  background: rgba(0,0,0,.72);
   backdrop-filter: blur(2px);
-  animation: overlayIn var(--t-slow) both;
+  animation: navFadeIn var(--t-med) both;
 }
-
 .nav-overlay{
   position:fixed;
   inset:0;
-  z-index:49;
+  z-index:61;
   display:grid;
-  place-items:center;
-  padding: 92px 16px 92px; /* room for header/tabbar if present */
+  grid-template-rows: auto 1fr;
+  animation: navFadeIn var(--t-med) both;
 }
-.nav-overlay-inner{
-  width:min(100% - 1rem, 720px);
-  display:grid;
-  gap:14px;
-}
-.nav-big{
-  width:100%;
-  padding: 18px 18px;
-  border-radius: 26px;
-  border:1px solid rgba(255,255,255,.14);
-  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0));
-  box-shadow: 0 14px 40px rgba(0,0,0,.6);
-  font-size: 1.05rem;
-  letter-spacing:.14em;
-  text-transform:uppercase;
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), color var(--t-fast);
-}
-.nav-big:hover{
-  transform: translateY(-2px);
-  border-color: rgba(17,241,167,.45);
-  box-shadow: 0 14px 40px rgba(0,0,0,.6), var(--glow-green);
-  color: var(--text);
-}
-.nav-close{
-  margin-top:6px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  border:1px solid rgba(255,255,255,.12);
-  opacity:.85;
-  transition: opacity var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-}
-.nav-close:hover{
-  opacity:1;
-  border-color: rgba(0,240,255,.45);
-  box-shadow: var(--glow-cyan);
+@keyframes navFadeIn{
+  from{ opacity:0 }
+  to{ opacity:1 }
 }
 
-/* Home shell (pages after choosing nav item) */
+.nav-overlay-top{
+  padding: 18px 18px 8px;
+  display:flex;
+  justify-content:flex-end;
+}
+.nav-back{
+  font-size:.95rem;
+  opacity:.85;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: opacity var(--t-fast), border-color var(--t-fast), text-shadow var(--t-fast);
+}
+.nav-back:hover{
+  opacity:1;
+  border-color: rgba(255,255,255,.18);
+  text-shadow: var(--glow-white);
+}
+
+.nav-overlay-body{
+  width: min(680px, 92vw);
+  margin: 0 auto;
+  display:grid;
+  align-content:center;
+  gap: 14px;
+  padding: 0 0 40px;
+}
+.nav-pill{
+  width:100%;
+  height:64px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke-2);
+  background:
+    radial-gradient(700px 180px at 50% 10%, rgba(255,255,255,.06), rgba(255,255,255,0)),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  box-shadow: 0 12px 40px rgba(0,0,0,.62);
+  font-size: 1.05rem;
+  letter-spacing:.06em;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.nav-pill:hover{
+  transform: translateY(-1px);
+  border-color: rgba(17,241,167,.55);
+  box-shadow: 0 16px 54px rgba(0,0,0,.66), var(--glow-green);
+}
+
+/* Pages after selecting nav item */
 .home-shell{
   min-height:100dvh;
   width:100%;
-  padding: 18px 0 92px; /* room for tabbar */
+  padding: 18px 0 56px;
 }
 .home-shell-top{
   width:min(100% - 2rem, var(--max-w));
   margin: 0 auto 12px;
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-end;
   gap:12px;
 }
 .home-open-nav{
@@ -347,15 +383,15 @@ main[role="main"]{
   border-color: var(--cyan);
   box-shadow: var(--glow-cyan);
 }
-.home-wallet{ display:flex; align-items:center; gap:10px }
 
-/* Content wrapper */
 .home-wrap{
   width:min(100% - 2rem, var(--max-w));
   margin: 0 auto;
   display:grid;
   gap:16px;
 }
+
+/* Home blocks (used by Landing.tsx content) */
 .home-title{ margin:0 0 8px; letter-spacing:.04em }
 .home-lead{ margin: 0 0 10px; opacity:.92 }
 .home-links{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px }
@@ -394,8 +430,7 @@ main[role="main"]{
 }
 
 /* ==================================
-   HUB PANEL (legacy classes - kept)
-   (safe to keep if other pages still use it)
+   HUB PANEL (legacy classes - kept safe)
 ================================== */
 .hub-panel{
   width:min(100% - 2rem, 1100px);
@@ -493,56 +528,15 @@ main[role="main"]{
 .card.cyan:hover{ border-color:var(--cyan); box-shadow:var(--glow-cyan) }
 
 /* ==================================
-   Footer (if used)
+   FORCE REMOVE: Footer + Tabbar (no longer used)
 ================================== */
+.tabbar,
 .site-footer{
-  margin-top:auto;
-  text-align:center;
-  padding: 2.5rem 1rem;
-  color: var(--muted);
-  border-top:1px solid var(--stroke);
-  background: linear-gradient(180deg, rgba(12,16,22,.5), rgba(12,16,22,0));
-  text-shadow: var(--glow-white);
+  display:none !important;
 }
 
 /* ==================================
-   Bottom tab bar (mobile-first)
-================================== */
-.tabbar{
-  position:fixed;
-  left:0; right:0;
-  bottom:0;
-  z-index:30;
-  height:68px;
-  display:grid;
-  grid-auto-flow:column;
-  place-items:center;
-  background:linear-gradient(180deg, rgba(12,16,22,.82), rgba(12,16,22,.94));
-  border-top:1px solid var(--stroke-2);
-  backdrop-filter:blur(var(--blur));
-}
-.tabbar a{
-  display:grid;
-  gap:6px;
-  place-items:center;
-  padding:6px 4px;
-  font-size:.8rem;
-  opacity:.9;
-  transition:transform var(--t-fast), color var(--t-fast);
-}
-.tabbar a:hover{
-  transform:translateY(-1px);
-  color:var(--cyan);
-  text-shadow:var(--glow-cyan);
-}
-.tabbar a.active{
-  color:var(--gold);
-  text-shadow:var(--glow-gold);
-}
-.tabbar .tab-icon{ width:22px; height:22px; opacity:.95 }
-
-/* ==================================
-   Wallet Adapter polish
+   Wallet Adapter polish (safe to keep)
 ================================== */
 .wallet-adapter-modal-wrapper{
   border-radius: var(--r-lg)!important;
@@ -578,8 +572,37 @@ main[role="main"]{
   .card,
   .logo.header-logo,
   .center-logo-btn,
-  .nav-big{
+  .nav-pill,
+  .nav-overlay,
+  .nav-overlay-backdrop{
     transition:none;
     animation:none;
   }
+}
+/* Header logo wrapped in a button (App.tsx) */
+.logo-btn{
+  justify-self:center;
+  border:0;
+  padding:0;
+  background:transparent;
+}
+
+/* 5s loading screen (Landing.tsx) */
+.loading-screen{
+  position:fixed;
+  inset:0;
+  z-index:70;
+  display:grid;
+  place-items:center;
+  background:#000;
+}
+.loading-logo{
+  width:min(440px, 78vw);
+  filter: drop-shadow(0 0 14px rgba(255,255,255,.55));
+  animation: pulseGlow 1.2s ease-in-out infinite;
+}
+@keyframes pulseGlow{
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
+  50%  { transform: scale(1.03); filter: drop-shadow(0 0 18px rgba(244,200,106,.55)); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
 }
