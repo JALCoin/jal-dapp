@@ -77,8 +77,9 @@ body[data-hub-open="true"]{ overflow:hidden }
 body[data-nav-open="true"]{ overflow:hidden }
 
 /* ---------- Main layout ---------- */
+/* NOTE: header is not rendered until after ENTER, so keep this generic */
 main[role="main"]{
-  min-height:calc(100dvh - 96px);
+  min-height:100dvh;
   display:flex;
   flex-direction:column;
 }
@@ -164,6 +165,14 @@ main[role="main"]{
 .hamburger.is-open span:nth-child(2){ opacity:0 }
 .hamburger.is-open span:nth-child(3){ transform:translateY(-8px) rotate(-45deg) }
 
+/* Header logo wrapped in a button (App.tsx) */
+.logo-btn{
+  justify-self:center;
+  border:0;
+  padding:0;
+  background:transparent;
+}
+
 /* ==================================
    SIDEBAR (App.tsx SidebarView)
    NOTE: wallet controls removed in code, but styling retained.
@@ -229,11 +238,6 @@ main[role="main"]{
 
 /* ==================================
    LANDING — ENTRY ONLY + NAV OVERLAY
-   Matches Landing.tsx rewrite:
-   - .landing-blank
-   - .center-logo-btn / .center-logo / .center-logo-hint
-   - .nav-overlay-backdrop / .nav-overlay / .nav-overlay-top / .nav-back / .nav-overlay-body / .nav-pill
-   - .home-shell / .home-shell-top / .home-open-nav / .home-wrap ...
 ================================== */
 .landing-blank{
   min-height:100dvh;
@@ -579,15 +583,10 @@ main[role="main"]{
     animation:none;
   }
 }
-/* Header logo wrapped in a button (App.tsx) */
-.logo-btn{
-  justify-self:center;
-  border:0;
-  padding:0;
-  background:transparent;
-}
 
-/* 5s loading screen (Landing.tsx) */
+/* ==================================
+   5s loading screen (Landing.tsx)
+================================== */
 .loading-screen{
   position:fixed;
   inset:0;

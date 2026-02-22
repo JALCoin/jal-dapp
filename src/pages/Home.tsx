@@ -4,19 +4,31 @@ import { Link, useLocation } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
 
+import LogoPulse from "../components/LogoPulse";
+
 type Action = {
   to: string;
   label: string;
   desc?: string;
   variant?: "primary" | "secondary";
-  icon?: string; // path to /icons/*.svg|png or emoji as fallback
+  icon?: string; // /icons/*.png|svg or emoji fallback
+};
+
+type EngineModule = {
+  key: "token" | "raydium" | "engine" | "inventory";
+  kicker: string;
+  title: string;
+  sub: string;
+  to?: string; // optional route
 };
 
 export default function Home() {
   const [userSymbol, setUserSymbol] = useState<string | null>(null);
   const { connected } = useWallet();
   const location = useLocation();
-  const showInlineTopbar = location.pathname === "/"; // only during landing→home reveal
+
+  // Only show the inline topbar during "/" reveal moments (if you still route Home there).
+  const showInlineTopbar = location.pathname === "/";
 
   useEffect(() => {
     const stored = localStorage.getItem("vaultSymbol");
@@ -34,7 +46,7 @@ export default function Home() {
       label: "Create Your Currency",
       desc: "Mint a new token on SOL with guided steps.",
       variant: "primary",
-      icon: "/icons/bolt.png", // put any small 20–24px icon here (or use "⚡")
+      icon: "/icons/bolt.png",
     },
     {
       to: vaultPath,
@@ -44,25 +56,55 @@ export default function Home() {
       icon: "/icons/vault.png",
     },
     {
-      to: "/learn",
-      label: "Learn / SOL",
-      desc: "Short reads to go from zero to shipping.",
+      to: "/shop",
+      label: "Shop",
+      desc: "Physical + digital goods built by JAL.",
       variant: "secondary",
-      icon: "/icons/book.png",
+      icon: "/icons/shop.png",
     },
     {
       to: "/about",
       label: "About JAL",
-      desc: "Why this exists and where it’s going.",
+      desc: "Founder, system intent, and direction.",
       variant: "secondary",
       icon: "/icons/info.png",
     },
   ];
 
+  const modules: EngineModule[] = [
+    {
+      key: "token",
+      kicker: "JALSOL",
+      title: "Solana token generation",
+      sub: "Create currency + metadata workflow.",
+      to: "/crypto-generator",
+    },
+    {
+      key: "raydium",
+      kicker: "RAYDIUM",
+      title: "Create liquidity pool with $JAL",
+      sub: "JAL/SOL pool overview + verification links.",
+      to: "/raydium",
+    },
+    {
+      key: "engine",
+      kicker: "$JAL~Engine",
+      title: "Read live market (CoinSpot API)",
+      sub: "Sign in (Full / Read-only) • Jeroid deployment • logs.",
+      to: "/engine",
+    },
+    {
+      key: "inventory",
+      kicker: "INVENTORY",
+      title: "Software Inventory",
+      sub: "How-to’s & guides • replicate the system.",
+      to: "/inventory",
+    },
+  ];
+
   return (
     <main className="jal-page fade-in">
-
-      {/* Topbar only visible while still on "/" during reveal */}
+      {/* Optional topbar during reveal */}
       {showInlineTopbar && (
         <div className="jal-topbar">
           <img src="/JALSOL1.gif" alt="JAL/SOL" className="jal-topbar-logo" />
@@ -74,6 +116,7 @@ export default function Home() {
       <div className="jal-header">
         <img src="/JALSOL1.gif" alt="JAL/SOL" className="jal-header-logo" />
       </div>
+
       <div className="jal-divider" aria-hidden="true" />
 
       {/* Status hint */}
@@ -83,24 +126,20 @@ export default function Home() {
 
       <h1 className="jal-title">Choose Your Direction</h1>
 
-      {/* Directive buttons */}
+      {/* Primary action buttons */}
       <nav className="jal-buttons" aria-label="Primary actions">
         {actions.map((a, i) => (
           <Link
-            key={a.label + i}
+            key={`${a.label}-${i}`}
             to={a.to}
             className={`jal-button ${a.variant === "primary" ? "gold" : "secondary"}`}
             aria-label={a.label}
           >
             <span className="jal-btn-inner">
               <span className="jal-btn-icon" aria-hidden="true">
-                {/* If you don’t have icons yet, you can put an emoji like "⚡" directly */}
-                {a.icon?.startsWith("/") ? (
-                  <img src={a.icon} alt="" />
-                ) : (
-                  <span>{a.icon || "•"}</span>
-                )}
+                {a.icon?.startsWith("/") ? <img src={a.icon} alt="" /> : <span>{a.icon || "•"}</span>}
               </span>
+
               <span className="jal-btn-text">
                 <span className="label">{a.label.toUpperCase()}</span>
                 {a.desc && <span className="desc">{a.desc}</span>}
@@ -110,9 +149,36 @@ export default function Home() {
         ))}
       </nav>
 
-      <footer className="site-footer mt-3">
-        © 2025 JAL/SOL • Computed by SOL • 358jal@gmail.com
-      </footer>
+      {/* Embedded Engine Stage window */}
+      <section className="engine-stage card" aria-label="JAL System Console">
+        <div className="engine-stage__head">
+          <div>
+            <h2 className="engine-stage__title">System Console</h2>
+            <span className="engine-stage__sub">Select a module</span>
+          </div>
+        </div>
+
+        <div className="engine-stage__frame">
+          {/* Low-opacity pulsing logo (same vibe as ENTER) */}
+          <LogoPulse className="engine-stage__bg" opacity={0.10} />
+
+          <div className="engine-stage__grid" role="list">
+            {modules.map((m) => (
+              <Link
+                key={m.key}
+                to={m.to ?? "#"}
+                className="engine-tile"
+                role="listitem"
+                aria-label={m.title}
+              >
+                <div className="engine-tile__kicker">{m.kicker}</div>
+                <div className="engine-tile__title">{m.title}</div>
+                <div className="engine-tile__sub">{m.sub}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
