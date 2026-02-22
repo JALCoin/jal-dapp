@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
@@ -52,12 +52,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
   const [params, setParams] = useSearchParams();
 
   const [activePanel, setActivePanel] = useState<Panel>("none");
-  const timerRef = useRef<number | null>(null);
-
-  const reducedMotion = useMemo(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return false;
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  }, []);
 
   /* ---------- Tiles for Hub overlay ---------- */
   const tiles = useMemo<{ key: TileKey; title: string; sub?: string; gif?: string; disabled?: boolean }[]>(
@@ -289,7 +283,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           </button>
         </div>
 
-        {/* Single connect entry point on Home (no duplicates) */}
         {!connected && <ConnectButton />}
       </section>
 
@@ -312,7 +305,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
         >
           <div className="hub-panel-top">
             <h2 className="hub-title">{panelTitle}</h2>
-
             {connected ? (
               <DisconnectButton className="wallet-disconnect-btn" />
             ) : (
@@ -321,7 +313,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           </div>
 
           <div className="hub-panel-body">
-            {/* Back button for sub-panels */}
             {activePanel !== "grid" && (
               <div className="hub-controls">
                 <button type="button" className="button ghost" onClick={() => setActivePanel("grid")}>
@@ -330,7 +321,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
               </div>
             )}
 
-            {/* HUB GRID */}
             {activePanel === "grid" && (
               <div className="hub-stack hub-stack--responsive" role="list">
                 {tiles.map((t) => (
@@ -366,7 +356,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             )}
 
             <div className="hub-content">
-              {/* SHOP */}
               {activePanel === "shop" && (
                 <div className="card">
                   <h3>Shop</h3>
@@ -377,7 +366,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 </div>
               )}
 
-              {/* JAL */}
               {activePanel === "jal" && (
                 connected ? (
                   <div className="in-hub">
@@ -394,7 +382,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 )
               )}
 
-              {/* VAULT */}
               {activePanel === "vault" && (
                 connected ? (
                   <div className="card">
@@ -411,7 +398,6 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
                 )
               )}
 
-              {/* SUPPORT */}
               {activePanel === "support" && (
                 <div className="card">
                   <h3>Support</h3>
