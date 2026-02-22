@@ -25,39 +25,19 @@ function HeaderView({
       <div className="header-inner">
         {/* Left: socials */}
         <div className="social-links" aria-label="Social Links">
-          <a
-            href="https://x.com/JAL358"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="X"
-          >
+          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
             <img src="/icons/X.png" alt="" />
           </a>
-          <a
-            href="https://t.me/jalsolcommute"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Telegram"
-          >
+          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
             <img src="/icons/Telegram.png" alt="" />
           </a>
-          <a
-            href="https://www.tiktok.com/@358jalsol"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="TikTok"
-          >
+          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
             <img src="/icons/TikTok.png" alt="" />
           </a>
         </div>
 
         {/* Center: logo opens NAV overlay */}
-        <button
-          type="button"
-          onClick={onLogo}
-          aria-label="Open navigation"
-          className="logo-btn"
-        >
+        <button type="button" onClick={onLogo} aria-label="Open navigation" className="logo-btn">
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
         </button>
 
@@ -69,9 +49,9 @@ function HeaderView({
           aria-haspopup="true"
           aria-expanded={isOpen}
         >
-          <span></span>
-          <span></span>
-          <span></span>
+          <span />
+          <span />
+          <span />
         </button>
       </div>
     </header>
@@ -79,43 +59,20 @@ function HeaderView({
 }
 
 /* ------------------------ Sidebar ------------------------ */
-function SidebarView({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
-
   return (
     <>
-      <button
-        className="sidebar-overlay"
-        aria-label="Close menu overlay"
-        onClick={onClose}
-      />
+      <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
         <nav>
-          <NavLink
-            to="/home"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
+          <NavLink to="/app/home" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             Home
           </NavLink>
-          <NavLink
-            to="/about"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
+          <NavLink to="/app/about" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             About JAL
           </NavLink>
-          <NavLink
-            to="/shop"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
+          <NavLink to="/app/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
             Shop
           </NavLink>
         </nav>
@@ -124,13 +81,10 @@ function SidebarView({
   );
 }
 
-/* ------------------------ App Root ------------------------ */
+/* ------------------------ App Shell (only for /app/*) ------------------------ */
 function AppShell() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // "Entered" = any route except "/"
-  const entered = location.pathname !== "/";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -147,38 +101,41 @@ function AppShell() {
 
   return (
     <>
-      {entered && (
-        <>
-          <HeaderView
-            onMenu={() => setMenuOpen(true)}
-            onLogo={() => window.dispatchEvent(new CustomEvent("JALSOL:OPEN_NAV"))}
-            isOpen={menuOpen}
-          />
-          <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
-        </>
-      )}
+      <HeaderView
+        onMenu={() => setMenuOpen(true)}
+        onLogo={() => window.dispatchEvent(new CustomEvent("JALSOL:OPEN_NAV"))}
+        isOpen={menuOpen}
+      />
+      <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <main role="main">
         <Routes>
-          {/* Entry only */}
-          <Route path="/" element={<Landing />} />
+          {/* First screen inside app is NAV */}
+          <Route path="nav" element={<Landing initialPanel="nav" />} />
+          <Route path="home" element={<Landing initialPanel="home" />} />
+          <Route path="about" element={<Landing initialPanel="jal" />} />
+          <Route path="shop" element={<Landing initialPanel="shop" />} />
 
-          {/* After-enter pages (still driven by Landing content for now) */}
-          <Route path="/home" element={<Landing initialPanel="home" />} />
-          <Route path="/about" element={<Landing initialPanel="jal" />} />
-          <Route path="/shop" element={<Landing initialPanel="shop" />} />
-
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/app/nav" replace />} />
         </Routes>
       </main>
     </>
   );
 }
 
+/* ------------------------ App Root ------------------------ */
 export default function App() {
   return (
     <BrowserRouter>
-      <AppShell />
+      <Routes>
+        {/* ENTRY ONLY (no header) */}
+        <Route path="/" element={<Landing initialPanel="none" />} />
+
+        {/* APP (header appears only here) */}
+        <Route path="/app/*" element={<AppShell />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }

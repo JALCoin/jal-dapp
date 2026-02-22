@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type Panel = "none" | "nav" | "home" | "jal" | "shop";
-type LandingProps = { initialPanel?: Exclude<Panel, "nav"> };
+type LandingProps = { initialPanel?: Panel };
 
 function NavOverlay({
   onSelect,
@@ -42,7 +42,7 @@ function HomeContent() {
         <h2 className="home-title">jalsol.com</h2>
         <p className="home-lead">
           Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer • Digital Creator.
-          Minimal interface linked to Solana.
+          Minimal interface linked to the Solana ecosystem.
         </p>
         <p className="home-lead">
           $JAL sits in the <strong>JAL/SOL</strong> liquidity pool on Raydium and can be checked on Solscan.
@@ -79,9 +79,7 @@ function HomeContent() {
 
       <section className="card gold">
         <h3>Engine Package</h3>
-        <p>
-          Packaged engine + deployment software for anyone building their own iteration of this system.
-        </p>
+        <p>Packaged engine + deployment software for anyone building their own iteration of this system.</p>
         <div className="engine-controls">
           <button className="button gold" type="button">View</button>
           <button className="button" type="button">Purchase</button>
@@ -93,51 +91,73 @@ function HomeContent() {
 
 export default function Landing({ initialPanel = "none" }: LandingProps) {
   const navigate = useNavigate();
-  const [panel, setPanel] = useState<Panel>(initialPanel);
+  const location = useLocation();
 
-  // 5s loading pulse after ENTER, then show NAV
+  const [panel, setPanel] = useState<Panel>(initialPanel);
   const [loading, setLoading] = useState(false);
 
-  const entered = panel !== "none";
-
-  // allow header-logo to open nav overlay
+  // Keep state aligned with route when inside /app/*
   useEffect(() => {
-    const onOpen = () => setPanel("nav");
+    const path = location.pathname;
+
+    if (path === "/") {
+      setPanel("none");
+      return;
+    }
+
+    if (path.startsWith("/app/")) {
+      const tail = path.replace("/app/", "");
+      if (tail.startsWith("nav")) setPanel("nav");
+      else if (tail.startsWith("home")) setPanel("home");
+      else if (tail.startsWith("about")) setPanel("jal");
+      else if (tail.startsWith("shop")) setPanel("shop");
+    }
+  }, [location.pathname]);
+
+  // Allow header logo to open NAV overlay (only within /app/*)
+  useEffect(() => {
+    const onOpen = () => {
+      if (!location.pathname.startsWith("/app/")) return;
+      setPanel("nav");
+      navigate("/app/nav", { replace: true });
+    };
     window.addEventListener("JALSOL:OPEN_NAV" as any, onOpen);
     return () => window.removeEventListener("JALSOL:OPEN_NAV" as any, onOpen);
-  }, []);
+  }, [navigate, location.pathname]);
 
-  // lock scroll when nav open
+  // Lock scroll when nav open
   useEffect(() => {
     if (panel === "nav") document.body.setAttribute("data-nav-open", "true");
     else document.body.removeAttribute("data-nav-open");
     return () => document.body.removeAttribute("data-nav-open");
   }, [panel]);
 
-  // ESC closes NAV
+  // ESC closes NAV back to home
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && panel === "nav") setPanel("home");
+      if (e.key === "Escape" && panel === "nav") {
+        setPanel("home");
+        navigate("/app/home", { replace: true });
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [panel]);
+  }, [panel, navigate]);
 
+  // ENTER: loader first, then mount app shell + NAV
   const enter = () => {
     setLoading(true);
-    setPanel("home"); // immediately route into entered state (header appears), then nav after load
-    navigate("/home", { replace: true });
-
     window.setTimeout(() => {
       setLoading(false);
+      navigate("/app/nav", { replace: true });
       setPanel("nav");
     }, 5000);
   };
 
   const onNavSelect = (next: Exclude<Panel, "none" | "nav">) => {
-    if (next === "home") navigate("/home", { replace: true });
-    if (next === "jal") navigate("/about", { replace: true });
-    if (next === "shop") navigate("/shop", { replace: true });
+    if (next === "home") navigate("/app/home", { replace: true });
+    if (next === "jal") navigate("/app/about", { replace: true });
+    if (next === "shop") navigate("/app/shop", { replace: true });
     setPanel(next);
   };
 
@@ -151,7 +171,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
             <h2>About JAL</h2>
             <p>
               $JAL is accessible on Raydium (JAL/SOL) and verifiable on Solscan.
-              This app is a minimal interface connected to Solana.
+              jalsol.com is a minimal interface designed to work with the cryptocurrency market.
             </p>
           </section>
         </div>
@@ -164,7 +184,7 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
           <section className="card">
             <h2>Shop</h2>
             <p>
-              Sole trader work: design + creation of physical and digital products sold online.
+              Sole trader activity: design + creation of physical and digital products, sold online.
               jalsol.com is the hub.
             </p>
             <div className="home-links" style={{ marginTop: 10 }}>
@@ -183,36 +203,43 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
     return null;
   }, [panel]);
 
+  // ENTRY ROUTE UI (no header exists because App.tsx doesn't render it on "/")
+  if (location.pathname === "/") {
+    return (
+      <main className={`landing-blank ${loading ? "is-fading" : ""}`} aria-label="JAL/SOL">
+        {!loading && (
+          <button className="center-logo-btn" onClick={enter} aria-label="Enter jalsol.com">
+            <img className="center-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
+            <div className="center-logo-hint">ENTER</div>
+          </button>
+        )}
+
+        {loading && (
+          <div className="loading-screen" role="status" aria-label="Loading" aria-live="polite">
+            <img className="loading-logo" src="/JALSOL1.gif" alt="" />
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  // /app/* UI (header is rendered by AppShell)
   return (
-    <main className={`landing-blank ${loading ? "is-fading" : ""}`} aria-label="JAL/SOL">
-      {/* ENTRY (blank + logo button) */}
-      {!entered && (
-        <button className="center-logo-btn" onClick={enter} aria-label="Enter jalsol.com">
-          <img className="center-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
-          <div className="center-logo-hint">ENTER</div>
-        </button>
-      )}
-
-      {/* 5s LOADING (logo pulse) */}
-      {entered && loading && (
-        <div className="loading-screen" role="status" aria-label="Loading">
-          <img className="loading-logo" src="/JALSOL1.gif" alt="" />
-        </div>
-      )}
-
-      {/* NAV overlay */}
-      {panel === "nav" && !loading && (
+    <main className="landing-blank" aria-label="JAL/SOL">
+      {panel === "nav" && (
         <NavOverlay
           onSelect={onNavSelect}
-          onClose={() => setPanel("home")}
+          onClose={() => {
+            setPanel("home");
+            navigate("/app/home", { replace: true });
+          }}
         />
       )}
 
-      {/* PAGE content */}
-      {entered && !loading && panel !== "nav" && (
+      {panel !== "nav" && (
         <section className="home-shell">
           <div className="home-shell-top">
-            <button className="home-open-nav" type="button" onClick={() => setPanel("nav")}>
+            <button className="home-open-nav" type="button" onClick={() => { setPanel("nav"); navigate("/app/nav", { replace: true }); }}>
               Menu
             </button>
           </div>
