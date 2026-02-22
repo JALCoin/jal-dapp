@@ -5,33 +5,41 @@ import { useNavigate } from "react-router-dom";
 type AuthMode = "full" | "ro";
 
 type EngineActionKey = "token-gen" | "lp-raydium" | "jal-engine" | "inventory";
-type EngineAction = { key: EngineActionKey; title: string; desc: string };
+
+type EngineAction = {
+  key: EngineActionKey;
+  title: string;
+  desc: string;
+};
 
 function safeTrim(v: string) {
   return (v ?? "").trim();
 }
+
 function maskKey(s: string) {
   const v = safeTrim(s);
-  if (!v) return "";
-  if (v.length <= 6) return "******";
+  if (v.length <= 6) return v ? "******" : "";
   return `${v.slice(0, 3)}…${v.slice(-3)}`;
 }
 
 export default function Home() {
   const navigate = useNavigate();
 
-  // Replace with exact URLs when you have them
+  // Replace these with your exact Raydium + Solscan pages when you want
   const links = useMemo(
     () => [
       { label: "Raydium (JAL/SOL)", href: "https://raydium.io/" },
-      { label: "Solscan ($JAL)", href: "https://solscan.io/" },
-      { label: "X: @JAL358", href: "https://x.com/JAL358" },
+      {
+        label: "Solscan ($JAL)",
+        href: "https://solscan.io/token/9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v",
+      },
     ],
     []
   );
 
   /* ---------------- Engine UI state ---------------- */
   const [engineStatus, setEngineStatus] = useState<"idle" | "running" | "stopped">("idle");
+
   const [logs, setLogs] = useState<string[]>([
     "[engine] idle",
     "[executor] disconnected",
@@ -47,29 +55,29 @@ export default function Home() {
       },
       {
         key: "lp-raydium",
-        title: "Liquidity — Raydium (JAL/SOL)",
-        desc: "Pool overview and future LP tooling lives here.",
+        title: "Raydium — JAL/SOL liquidity layer",
+        desc: "Pool overview, LP references, and future tooling lives here.",
       },
       {
         key: "jal-engine",
-        title: "$JAL~Engine — read market + deploy Jeroids",
+        title: "$JAL~Engine — read the market + deploy Jeroids",
         desc: "Sign in with Read Only or Full Access to enable features.",
       },
       {
         key: "inventory",
-        title: "Software Inventory — how-to’s & guides",
-        desc: "Documentation + packaged system for builders who want their own iteration.",
+        title: "Inventory — packaged system + guides",
+        desc: "Docs + sale bundle for builders who want their own iteration.",
       },
     ],
     []
   );
 
-  const pushLog = (line: string) =>
-    setLogs((prev) => [line, ...prev].slice(0, 60));
+  const pushLog = (line: string) => setLogs((prev) => [line, ...prev].slice(0, 60));
 
   /* ---------------- Modal auth state ---------------- */
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("ro");
+
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [authRemember, setAuthRemember] = useState(false);
@@ -109,7 +117,10 @@ export default function Home() {
 
     if (authRemember) {
       try {
-        localStorage.setItem("jal_engine_auth", JSON.stringify({ mode: authMode, key: k, secret: s }));
+        localStorage.setItem(
+          "jal_engine_auth",
+          JSON.stringify({ mode: authMode, key: k, secret: s })
+        );
         pushLog("[auth] saved locally (remember enabled)");
       } catch {
         pushLog("[auth] failed to save locally");
@@ -118,7 +129,7 @@ export default function Home() {
       pushLog("[auth] session-only (not saved)");
     }
 
-    // TODO: wire into your actual engine connector (backend / local executor)
+    // TODO: wire to your actual engine connector later (server / local runner)
     closeAuth();
   };
 
@@ -126,23 +137,24 @@ export default function Home() {
     setEngineStatus("running");
     pushLog("[engine] start requested");
   };
+
   const engineStop = () => {
     setEngineStatus("stopped");
     pushLog("[engine] stop requested");
   };
+
   const engineSettings = () => pushLog("[engine] open settings (coming soon)");
   const engineAnalysis = () => pushLog("[engine] open log analysis (coming soon)");
 
+  const [activeAction, setActiveAction] = useState<EngineActionKey>("jal-engine");
+
   const selectAction = (k: EngineActionKey) => {
-    if (k === "token-gen") pushLog("[hub] token generation selected");
-    if (k === "lp-raydium") pushLog("[hub] raydium LP selected");
-    if (k === "jal-engine") pushLog("[hub] $JAL~Engine selected");
-    if (k === "inventory") pushLog("[hub] inventory selected");
+    setActiveAction(k);
+    pushLog(`[hub] selected: ${k}`);
   };
 
   return (
-    <div className="home container" aria-label="Home">
-      {/* Optional: a local “Menu” button if you want it inside content too */}
+    <main className="home-shell" aria-label="Home">
       <div className="home-shell-top">
         <button
           type="button"
@@ -154,136 +166,122 @@ export default function Home() {
         </button>
       </div>
 
-      {/* =======================
-          TOP SUMMARY (HOME HERO)
-      ======================== */}
-      <section className="home-hero card" aria-label="Overview">
-        <h1 className="home-title">jalsol.com</h1>
+      <div className="home-wrap">
+        {/* ===== Overview card ===== */}
+        <section className="card home-hero" aria-label="Overview">
+          <h1 className="home-title">jalsol.com</h1>
 
-        <p className="home-sub">
-          Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer • Digital Creator.
-          A minimal application linked to Solana.
-        </p>
+          <p className="home-lead">
+            Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer •
+            Digital Creator. Minimal interface linked to the Solana ecosystem.
+          </p>
 
-        <div className="home-links" aria-label="Links">
-          {links.map((l) => (
-            <a key={l.label} className="chip" href={l.href} target="_blank" rel="noreferrer">
-              {l.label}
-            </a>
-          ))}
-        </div>
+          <p className="home-lead">
+            <strong>$JAL</strong> sits in the <strong>JAL/SOL</strong> liquidity pool on Raydium and
+            can be checked on Solscan.
+          </p>
 
-        <div className="home-mini" aria-label="Summary">
-          <div className="mini-row">
-            <div className="mini-label">Liquidity</div>
-            <div className="mini-value">JAL/SOL pool on Raydium</div>
+          <div className="home-links" aria-label="Links">
+            {links.map((l) => (
+              <a key={l.label} className="chip" href={l.href} target="_blank" rel="noreferrer">
+                {l.label}
+              </a>
+            ))}
           </div>
-          <div className="mini-row">
-            <div className="mini-label">Token</div>
-            <div className="mini-value">$JAL — verified on Solscan</div>
+        </section>
+
+        {/* ===== Engine window ===== */}
+        <section className="card engine-window engine-window--hero" aria-label="$JAL~Engine">
+          {/* pulsing logo behind content */}
+          <div className="engine-bg" aria-hidden="true">
+            <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
           </div>
-        </div>
-      </section>
 
-      {/* =======================
-          EMBEDDED WINDOW: ENGINE
-      ======================== */}
-      <section className="home-block card" aria-label="$JAL~Engine">
-        <div className="block-head">
-          <h2>$JAL~Engine</h2>
-          <div className="muted">CEX-connected Jeroid deployment + logs</div>
-        </div>
+          <div className="engine-foreground">
+            <div className="engine-head">
+              <div>
+                <h2 className="engine-title">$JAL~Engine</h2>
+                <div className="engine-sub">CEX connector • Jeroid deployment • logs</div>
+              </div>
 
-        {/* Auth buttons */}
-        <div className="engine-auth-row" aria-label="Engine sign in">
-          <button type="button" className="button" onClick={() => openAuth("ro")}>
-            Sign in (Read Only)
-          </button>
-          <button type="button" className="button gold" onClick={() => openAuth("full")}>
-            Sign in (Full Access)
-          </button>
-        </div>
+              <div className="engine-auth">
+                <button type="button" className="button" onClick={() => openAuth("ro")}>
+                  Sign in (Read Only)
+                </button>
+                <button type="button" className="button gold" onClick={() => openAuth("full")}>
+                  Sign in (Full Access)
+                </button>
+              </div>
+            </div>
 
-        {/* Action selectors */}
-        <div className="engine-select" aria-label="Engine modules">
-          {actions.map((a) => (
-            <button
-              key={a.key}
-              type="button"
-              className="engine-select-row"
-              onClick={() => selectAction(a.key)}
-            >
-              <div className="engine-select-title">{a.title}</div>
-              <div className="engine-select-desc">{a.desc}</div>
+            {/* Selectable modules */}
+            <div className="engine-select" aria-label="Engine modules">
+              {actions.map((a) => (
+                <button
+                  key={a.key}
+                  type="button"
+                  className={`engine-select-row ${activeAction === a.key ? "active" : ""}`}
+                  onClick={() => selectAction(a.key)}
+                >
+                  <div className="engine-select-title">{a.title}</div>
+                  <div className="engine-select-desc">{a.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Controls */}
+            <div className="engine-controls" aria-label="Engine controls">
+              <button
+                type="button"
+                className={`button ${engineStatus === "running" ? "neon" : ""}`}
+                onClick={engineStart}
+              >
+                Start
+              </button>
+              <button type="button" className="button" onClick={engineStop}>
+                Stop
+              </button>
+              <button type="button" className="button" onClick={engineSettings}>
+                Settings
+              </button>
+              <button type="button" className="button" onClick={engineAnalysis}>
+                Log Analysis
+              </button>
+            </div>
+
+            {/* Log */}
+            <div className="engine-log" aria-label="Engine log">
+              <pre>{logs.join("\n")}</pre>
+            </div>
+          </div>
+        </section>
+
+        {/* Packaged system section */}
+        <section className="card gold" aria-label="Packaged system">
+          <h2 className="home-title" style={{ marginBottom: 6 }}>
+            Packaged System
+          </h2>
+          <p className="home-lead" style={{ marginBottom: 0 }}>
+            Packaged engine + deployment software for anyone who wants to build their own iteration
+            of the system inside jalsol.com.
+          </p>
+
+          <div className="engine-controls" style={{ marginTop: 12 }}>
+            <button type="button" className="button gold" onClick={() => pushLog("[bundle] view selected")}>
+              View
             </button>
-          ))}
-        </div>
-
-        {/* Controls */}
-        <div className="engine-controls" aria-label="Engine controls">
-          <button
-            type="button"
-            className={`button ${engineStatus === "running" ? "neon" : ""}`}
-            onClick={engineStart}
-          >
-            Start
-          </button>
-          <button type="button" className="button" onClick={engineStop}>
-            Stop
-          </button>
-          <button type="button" className="button ghost" onClick={engineSettings}>
-            Settings
-          </button>
-          <button type="button" className="button ghost" onClick={engineAnalysis}>
-            Log Analysis
-          </button>
-        </div>
-
-        {/* Engine log */}
-        <div className="engine-log" aria-label="Engine log">
-          <pre>{logs.join("\n")}</pre>
-        </div>
-      </section>
-
-      {/* =======================
-          PACKAGED PRODUCT
-      ======================== */}
-      <section className="home-block card" aria-label="Engine Package">
-        <div className="block-head">
-          <h2>Engine Package</h2>
-          <div className="muted">Sell the deployment system as a product</div>
-        </div>
-
-        <div className="package-grid">
-          <div className="package-card">
-            <div className="package-title">JAL-Engine — Starter</div>
-            <div className="package-copy">Template + setup guide + local dashboard.</div>
-            <button className="button gold" type="button">
-              Coming soon
-            </button>
-          </div>
-
-          <div className="package-card">
-            <div className="package-title">JAL-Engine — Pro</div>
-            <div className="package-copy">Full executor + hardening + deployment workflow.</div>
-            <button className="button gold" type="button">
-              Coming soon
+            <button type="button" className="button" onClick={() => pushLog("[bundle] purchase selected")}>
+              Purchase
             </button>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
-      {/* =======================
-          AUTH MODAL
-      ======================== */}
+      {/* ===== Auth modal ===== */}
       {authOpen && (
         <>
-          <button
-            className="engine-modal-backdrop"
-            aria-label="Close sign-in"
-            onClick={closeAuth}
-          />
-          <section className="engine-modal" role="dialog" aria-modal="true" aria-label="CoinSpot API Sign In">
+          <button className="engine-modal-backdrop" aria-label="Close sign-in" onClick={closeAuth} />
+          <section className="engine-modal" role="dialog" aria-modal="true" aria-label="API Sign In">
             <div className="engine-modal-head">
               <div>
                 <div className="engine-modal-title">CoinSpot API Sign In</div>
@@ -347,12 +345,12 @@ export default function Home() {
               </div>
 
               <p className="engine-modal-note">
-                Tip: Leave “Remember” off to keep it session-only.
+                Tip: leave “Remember” off to keep keys session-only.
               </p>
             </div>
           </section>
         </>
       )}
-    </div>
+    </main>
   );
 }

@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useEffect, useState } from "react";
 import {
   BrowserRouter,
@@ -9,6 +10,7 @@ import {
 } from "react-router-dom";
 
 import Landing from "./pages/Landing";
+import Home from "./pages/Home";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -51,7 +53,7 @@ function HeaderView({
           </a>
         </div>
 
-        {/* Center: logo opens NAV overlay (keeps you inside /app/*) */}
+        {/* Center: logo opens NAV overlay */}
         <button
           type="button"
           onClick={onLogo}
@@ -117,16 +119,63 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
   );
 }
 
+/* ------------------------ Simple pages (inline) ------------------------ */
+function AboutPage() {
+  return (
+    <main className="home-shell" aria-label="About JAL">
+      <div className="home-wrap">
+        <section className="card">
+          <h1 className="home-title">About JAL</h1>
+          <p className="home-lead">
+            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader •
+            Mechanical Metal Engineer • Digital Creator.
+          </p>
+          <p className="home-lead">
+            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong> pool on Raydium
+            and verifiable on Solscan.
+          </p>
+          <div className="home-links">
+            <a className="chip" href="https://raydium.io/" target="_blank" rel="noreferrer">
+              Raydium (JAL/SOL)
+            </a>
+            <a className="chip" href="https://solscan.io/" target="_blank" rel="noreferrer">
+              Solscan ($JAL)
+            </a>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function ShopPage() {
+  return (
+    <main className="home-shell" aria-label="Shop">
+      <div className="home-wrap">
+        <section className="card">
+          <h1 className="home-title">Shop</h1>
+          <p className="home-lead">
+            Sole trader activity: design + creation of physical and digital products, sold online.
+            jalsol.com is the hub.
+          </p>
+          <div className="home-links">
+            <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
+              Etsy Shop
+            </a>
+            <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
+              jalsol.com
+            </a>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 /* ------------------------ App Shell (only for /app/*) ------------------------ */
 function AppShell() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // NAV overlay is handled by Landing.tsx (panel state),
-  // we just fire an event to ask it to open.
-  const openNav = () => {
-    window.dispatchEvent(new CustomEvent("JALSOL:OPEN_NAV"));
-  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -143,20 +192,24 @@ function AppShell() {
 
   return (
     <>
-      <HeaderView onMenu={() => setMenuOpen(true)} onLogo={openNav} isOpen={menuOpen} />
+      <HeaderView
+        onMenu={() => setMenuOpen(true)}
+        onLogo={() => window.dispatchEvent(new CustomEvent("JALSOL:OPEN_NAV"))}
+        isOpen={menuOpen}
+      />
       <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      <main role="main">
-        <Routes>
-          {/* First screen inside app is NAV */}
-          <Route path="nav" element={<Landing initialPanel="nav" />} />
-          <Route path="home" element={<Landing initialPanel="home" />} />
-          <Route path="about" element={<Landing initialPanel="jal" />} />
-          <Route path="shop" element={<Landing initialPanel="shop" />} />
+      <Routes>
+        {/* NAV overlay route */}
+        <Route path="nav" element={<Landing mode="nav" />} />
 
-          <Route path="*" element={<Navigate to="/app/nav" replace />} />
-        </Routes>
-      </main>
+        {/* Real pages */}
+        <Route path="home" element={<Home />} />
+        <Route path="about" element={<AboutPage />} />
+        <Route path="shop" element={<ShopPage />} />
+
+        <Route path="*" element={<Navigate to="/app/nav" replace />} />
+      </Routes>
     </>
   );
 }
@@ -167,7 +220,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* ENTRY ONLY (no header) */}
-        <Route path="/" element={<Landing initialPanel="none" />} />
+        <Route path="/" element={<Landing mode="entry" />} />
 
         {/* APP (header appears only here) */}
         <Route path="/app/*" element={<AppShell />} />

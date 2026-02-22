@@ -1,9 +1,7 @@
 /* ===============================
    JAL/SOL — Global CSS (index.css)
    Aesthetic: neon cyber / premium ATM
-   Rule: layout & visual control lives here (not per-component Tailwind)
    UPDATE: Entry-only landing + NAV overlay + NO footer/tabbar
-   UPDATE 2: Home page layout (Home.tsx) + Engine modal styling
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -73,8 +71,6 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 
 /* Lock page scroll when overlays are visible */
-body[data-wallet-visible="true"]{ overflow:hidden }
-body[data-hub-open="true"]{ overflow:hidden }
 body[data-nav-open="true"]{ overflow:hidden }
 
 /* ---------- Main layout ---------- */
@@ -121,7 +117,7 @@ main[role="main"]{
 }
 .social-links img{ width:18px; height:18px; object-fit:contain }
 
-/* centered GIF logo (acts as nav overlay opener) */
+/* centered GIF logo */
 .logo.header-logo{
   height:clamp(68px,9.5vw,96px);
   filter: drop-shadow(0 0 10px rgba(255,255,255,.7));
@@ -170,7 +166,7 @@ main[role="main"]{
 .hamburger.is-open span:nth-child(3){ transform:translateY(-8px) rotate(-45deg) }
 
 /* ==================================
-   SIDEBAR (App.tsx SidebarView)
+   SIDEBAR
 ================================== */
 .sidebar-overlay{
   position:fixed;
@@ -217,68 +213,7 @@ main[role="main"]{
 }
 
 /* ==================================
-   COMMON COMPONENTS
-================================== */
-.button{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:.85rem 1.05rem;
-  border-radius:var(--r-md);
-  border:1px solid var(--stroke);
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
-}
-.button:hover{ transform: translateY(-1px) }
-.button:active{ transform: translateY(1px) scale(.98); box-shadow:none }
-.button.ghost{ background:transparent }
-.button.neon{ border-color:rgba(17,241,167,.5); box-shadow:var(--glow-green) }
-.button.gold{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
-
-.card{
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
-  border:1px solid var(--stroke);
-  border-radius:var(--r-lg);
-  padding: clamp(1rem, 2.5vw, 1.25rem);
-  box-shadow: 0 10px 30px rgba(0,0,0,.55);
-  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
-}
-.card:hover{
-  border-color:var(--green);
-  box-shadow:var(--glow-green);
-  transform:translateY(-2px);
-}
-.card.gold:hover{ border-color:var(--gold); box-shadow:var(--glow-gold) }
-.card.cyan:hover{ border-color:var(--cyan); box-shadow:var(--glow-cyan) }
-
-.chip{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:.45rem .7rem;
-  border:1px solid var(--stroke);
-  border-radius:999px;
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  font-size:.9rem;
-  opacity:.95;
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-}
-.chip:hover{
-  transform:translateY(-1px);
-  border-color:var(--cyan);
-  box-shadow:var(--glow-cyan);
-}
-
-/* ==================================
-   FORCE REMOVE: Footer + Tabbar (no longer used)
-================================== */
-.tabbar,
-.site-footer{
-  display:none !important;
-}
-
-/* ==================================
-   LANDING — ENTRY ONLY + LOADING
+   LANDING — ENTRY ONLY + NAV OVERLAY
 ================================== */
 .landing-blank{
   min-height:100dvh;
@@ -289,6 +224,10 @@ main[role="main"]{
     radial-gradient(900px 540px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
     var(--bg);
 }
+.landing-blank.is-fading{
+  animation: pageFade var(--t-med) both;
+}
+@keyframes pageFade{ from{ opacity:1 } to{ opacity:.78 } }
 
 /* Center logo button (single CTA) */
 .center-logo-btn{
@@ -325,29 +264,7 @@ main[role="main"]{
   text-shadow: var(--glow-white);
 }
 
-/* 5s loading screen (Landing.tsx) */
-.loading-screen{
-  position:fixed;
-  inset:0;
-  z-index:70;
-  display:grid;
-  place-items:center;
-  background:#000;
-}
-.loading-logo{
-  width:min(440px, 78vw);
-  filter: drop-shadow(0 0 14px rgba(255,255,255,.55));
-  animation: pulseGlow 1.2s ease-in-out infinite;
-}
-@keyframes pulseGlow{
-  0%   { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
-  50%  { transform: scale(1.03); filter: drop-shadow(0 0 18px rgba(244,200,106,.55)); }
-  100% { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
-}
-
-/* ==================================
-   NAV OVERLAY (Landing.tsx)
-================================== */
+/* NAV overlay */
 .nav-overlay-backdrop{
   position:fixed;
   inset:0;
@@ -364,10 +281,7 @@ main[role="main"]{
   grid-template-rows: auto 1fr;
   animation: navFadeIn var(--t-med) both;
 }
-@keyframes navFadeIn{
-  from{ opacity:0 }
-  to{ opacity:1 }
-}
+@keyframes navFadeIn{ from{ opacity:0 } to{ opacity:1 } }
 
 .nav-overlay-top{
   padding: 18px 18px 8px;
@@ -416,7 +330,7 @@ main[role="main"]{
 }
 
 /* ==================================
-   HOME SHELL (inside /app/*)
+   HOME / PAGES
 ================================== */
 .home-shell{
   min-height:100dvh;
@@ -444,13 +358,6 @@ main[role="main"]{
   box-shadow: var(--glow-cyan);
 }
 
-/* Home page (Home.tsx) */
-.home{
-  padding: 6px 0 44px;
-  display:grid;
-  gap:16px;
-}
-
 .home-wrap{
   width:min(100% - 2rem, var(--max-w));
   margin: 0 auto;
@@ -458,62 +365,126 @@ main[role="main"]{
   gap:16px;
 }
 
-/* hero */
-.home-hero .home-title{
-  margin:0 0 8px;
-  font-size: clamp(1.4rem, 3.2vw, 2rem);
-  letter-spacing:.04em;
-}
-.home-sub{
-  margin:0;
-  opacity:.86;
-  max-width:72ch;
-}
-.home-links{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin-top:12px;
-}
-.home-mini{
-  margin-top:12px;
-  display:grid;
-  gap:8px;
-}
-.mini-row{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  padding:10px 12px;
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:14px;
-  background:rgba(0,0,0,.25);
-}
-.mini-label{ opacity:.7; letter-spacing:.02em; }
-.mini-value{ opacity:.95; text-align:right; }
-
-/* block headers */
-.home-block .block-head{
-  display:grid;
-  gap:4px;
-  margin-bottom:12px;
-}
-.muted{ opacity:.75; }
+.home-title{ margin:0 0 8px; letter-spacing:.04em }
+.home-lead{ margin: 0 0 10px; opacity:.92 }
+.home-links{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px }
 
 /* ==================================
-   ENGINE WINDOW (Home.tsx)
+   COMMON
 ================================== */
-.engine-auth-row{
+.button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:.85rem 1.05rem;
+  border-radius:var(--r-md);
+  border:1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+}
+.button:hover{ transform: translateY(-1px) }
+.button:active{ transform: translateY(1px) scale(.98); box-shadow:none }
+.button.ghost{ background:transparent }
+.button.neon{ border-color:rgba(17,241,167,.5); box-shadow:var(--glow-green) }
+.button.gold{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
+
+.card{
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  border:1px solid var(--stroke);
+  border-radius:var(--r-lg);
+  padding: clamp(1rem, 2.5vw, 1.25rem);
+  box-shadow: 0 10px 30px rgba(0,0,0,.55);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+}
+.card:hover{
+  border-color:var(--green);
+  box-shadow:var(--glow-green);
+  transform:translateY(-2px);
+}
+
+/* chips */
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:.45rem .7rem;
+  border:1px solid var(--stroke);
+  border-radius:999px;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  font-size:.9rem;
+  opacity:.95;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.chip:hover{
+  transform:translateY(-1px);
+  border-color:var(--cyan);
+  box-shadow:var(--glow-cyan);
+}
+
+/* ==================================
+   5s loading screen
+================================== */
+.loading-screen{
+  position:fixed;
+  inset:0;
+  z-index:70;
+  display:grid;
+  place-items:center;
+  background:#000;
+}
+.loading-logo{
+  width:min(440px, 78vw);
+  filter: drop-shadow(0 0 14px rgba(255,255,255,.55));
+  animation: pulseGlow 1.2s ease-in-out infinite;
+}
+@keyframes pulseGlow{
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
+  50%  { transform: scale(1.03); filter: drop-shadow(0 0 18px rgba(244,200,106,.55)); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
+}
+
+/* ==================================
+   ENGINE WINDOW — pulsing logo background + selectable modules
+================================== */
+.engine-window{ position:relative; overflow:hidden; }
+.engine-window--hero{ min-height:360px; }
+
+.engine-bg{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  opacity:.12;
+  filter: blur(.2px);
+}
+.engine-bg-logo{
+  width:min(520px, 76vw);
+  animation: pulseGlow 1.2s ease-in-out infinite;
+}
+.engine-foreground{ position:relative; z-index:2; }
+
+.engine-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.engine-title{ margin:0; }
+.engine-sub{ opacity:.75; font-size:.95rem; }
+
+.engine-auth{
   display:flex;
   gap:10px;
   flex-wrap:wrap;
-  justify-content:flex-start;
-  margin-top: 10px;
+  justify-content:flex-end;
 }
+
 .engine-select{
   display:grid;
   gap:10px;
-  margin: 12px 0 14px;
+  margin: 10px 0 14px;
 }
 .engine-select-row{
   text-align:left;
@@ -528,15 +499,13 @@ main[role="main"]{
   border-color: rgba(17,241,167,.55);
   box-shadow: var(--glow-green);
 }
-.engine-select-title{
-  font-weight:800;
-  letter-spacing:.02em;
+.engine-select-row.active{
+  border-color: rgba(244,200,106,.55);
+  box-shadow: var(--glow-gold);
 }
-.engine-select-desc{
-  opacity:.82;
-  margin-top:3px;
-  font-size:.95rem;
-}
+.engine-select-title{ font-weight:700; letter-spacing:.02em; }
+.engine-select-desc{ opacity:.82; margin-top:3px; font-size:.95rem; }
+
 .engine-controls{
   display:flex;
   flex-wrap:wrap;
@@ -548,7 +517,7 @@ main[role="main"]{
   border-radius: var(--r-md);
   background: rgba(0,0,0,.35);
   padding: 12px 12px;
-  max-height: 260px;
+  max-height: 240px;
   overflow:auto;
 }
 .engine-log pre{
@@ -559,9 +528,7 @@ main[role="main"]{
   opacity:.92;
 }
 
-/* ==================================
-   AUTH MODAL (Home.tsx)
-================================== */
+/* ===== Modal (API sign-in) ===== */
 .engine-modal-backdrop{
   position:fixed;
   inset:0;
@@ -570,7 +537,6 @@ main[role="main"]{
   backdrop-filter: blur(2px);
   animation: overlayIn var(--t-slow) both;
 }
-
 .engine-modal{
   position:fixed;
   z-index:81;
@@ -584,7 +550,6 @@ main[role="main"]{
   box-shadow: 0 30px 120px rgba(0,0,0,.85), var(--glow-white);
   overflow:hidden;
 }
-
 .engine-modal-head{
   display:flex;
   align-items:flex-start;
@@ -593,17 +558,8 @@ main[role="main"]{
   padding: 16px 16px 10px;
   border-bottom: 1px solid rgba(255,255,255,.10);
 }
-
-.engine-modal-title{
-  font-weight:900;
-  letter-spacing:.04em;
-}
-.engine-modal-sub{
-  opacity:.78;
-  font-size:.95rem;
-  margin-top:2px;
-}
-
+.engine-modal-title{ font-weight:800; letter-spacing:.04em; }
+.engine-modal-sub{ opacity:.78; font-size:.95rem; margin-top:2px; }
 .engine-modal-close{
   width:40px;
   height:40px;
@@ -617,17 +573,12 @@ main[role="main"]{
   border-color: var(--cyan);
   box-shadow: var(--glow-cyan);
 }
-
 .engine-modal-body{
   padding: 14px 16px 16px;
   display:grid;
   gap:12px;
 }
-
-.engine-field{
-  display:grid;
-  gap:6px;
-}
+.engine-field{ display:grid; gap:6px; }
 .engine-field span{
   opacity:.85;
   font-size:.9rem;
@@ -647,7 +598,6 @@ main[role="main"]{
   border-color: rgba(17,241,167,.55);
   box-shadow: var(--glow-green);
 }
-
 .engine-remember{
   display:flex;
   gap:10px;
@@ -655,51 +605,20 @@ main[role="main"]{
   opacity:.85;
   font-size:.95rem;
 }
-.engine-remember input{
-  width:18px;
-  height:18px;
-}
-
+.engine-remember input{ width:18px; height:18px; }
 .engine-modal-actions{
   display:flex;
   justify-content:flex-end;
   gap:10px;
   margin-top: 4px;
 }
-
 .engine-modal-note{
   opacity:.75;
   font-size:.9rem;
   margin: 2px 0 0;
 }
 
-/* ==================================
-   Wallet Adapter polish (safe to keep)
-================================== */
-.wallet-adapter-modal-wrapper{
-  border-radius: var(--r-lg)!important;
-  border:1px solid var(--stroke-2)!important;
-  background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9))!important;
-  backdrop-filter: blur(var(--blur))!important;
-}
-.wallet-adapter-button{
-  border-radius: var(--r-md)!important;
-  border:1px solid var(--stroke)!important;
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0))!important;
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast)!important;
-}
-.wallet-adapter-button:hover{
-  transform: translateY(-1px)!important;
-  border-color: var(--green)!important;
-  box-shadow: var(--glow-green)!important;
-}
-@media (max-width: 640px){
-  .wallet-adapter-modal-wrapper{ width:92vw!important }
-}
-
-/* ==================================
-   Motion preferences
-================================== */
+/* Motion preferences */
 @media (prefers-reduced-motion: reduce){
   .hamburger span,
   .hamburger,
@@ -712,7 +631,8 @@ main[role="main"]{
   .nav-pill,
   .nav-overlay,
   .nav-overlay-backdrop,
-  .loading-logo{
+  .loading-logo,
+  .engine-bg-logo{
     transition:none;
     animation:none;
   }
