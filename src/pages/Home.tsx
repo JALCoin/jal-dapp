@@ -122,10 +122,7 @@ export default function Home() {
 
     if (authRemember) {
       try {
-        localStorage.setItem(
-          "jal_engine_auth",
-          JSON.stringify({ mode: authMode, key: k, secret: s })
-        );
+        localStorage.setItem("jal_engine_auth", JSON.stringify({ mode: authMode, key: k, secret: s }));
         pushLog("[auth] saved locally (remember enabled)");
       } catch {
         pushLog("[auth] failed to save locally");
@@ -169,17 +166,7 @@ export default function Home() {
 
   return (
     <main className="home-shell" aria-label="Home">
-      <div className="home-shell-top">
-        <button
-          type="button"
-          className="home-open-nav"
-          onClick={() => navigate("/app/nav")}
-          aria-label="Open navigation"
-        >
-          Menu
-        </button>
-      </div>
-
+      {/* NOTE: "Menu" button removed. Header logo opens the NAV overlay. */}
       <div className="home-wrap">
         {/* ===== Overview card (console hero) ===== */}
         <section className="card home-hero machine-surface panel-frame" aria-label="Overview">
@@ -288,7 +275,11 @@ export default function Home() {
             <button type="button" className="button gold" onClick={() => navigate("/app/inventory")}>
               View
             </button>
-            <button type="button" className="button" onClick={() => navigate("/app/inventory/purchase")}>
+            <button
+              type="button"
+              className="button"
+              onClick={() => navigate("/app/inventory/purchase")}
+            >
               Purchase
             </button>
           </div>
@@ -310,7 +301,12 @@ export default function Home() {
                 </div>
               </div>
 
-              <button type="button" className="engine-modal-close" onClick={closeAuth} aria-label="Close">
+              <button
+                type="button"
+                className="engine-modal-close"
+                onClick={closeAuth}
+                aria-label="Close"
+              >
                 ✕
               </button>
             </div>
