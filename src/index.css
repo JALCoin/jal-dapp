@@ -2,6 +2,7 @@
    JAL/SOL — Global CSS (index.css)
    Aesthetic: neon cyber / premium ATM
    UPDATE: Entry-only landing + NAV overlay + NO footer/tabbar
+   REFINEMENT: subtle premium “machine immersion” (micro-grid, scan sheen, inner frame, modules)
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -78,6 +79,68 @@ main[role="main"]{
   min-height:100dvh;
   display:flex;
   flex-direction:column;
+}
+
+/* ==================================
+   PREMIUM MACHINE REFINEMENT (GLOBAL OPT-IN)
+   Use on cards/sections you want to feel like “console bays”
+================================== */
+
+/* Subtle console texture helpers */
+.machine-surface{
+  position: relative;
+  overflow: hidden;
+}
+
+/* micro grid (very subtle) */
+.machine-surface::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.18;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(60% 60% at 50% 25%, #000 0%, rgba(0,0,0,.35) 55%, transparent 85%);
+}
+
+/* scan sheen + gold haze */
+.machine-surface::after{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  pointer-events:none;
+  opacity:.20;
+  background:
+    radial-gradient(900px 380px at 50% 0%, rgba(244,200,106,.12), transparent 60%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,.03),
+      rgba(255,255,255,.03) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  mix-blend-mode: screen;
+}
+
+/* Inner frame = “ATM panel” */
+.panel-frame{
+  position: relative;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.55),
+    inset 0 0 0 1px rgba(255,255,255,.05);
+}
+.panel-frame::before{
+  content:"";
+  position:absolute;
+  inset:10px;
+  border-radius: calc(var(--r-lg) - 10px);
+  border: 1px solid rgba(255,255,255,.07);
+  pointer-events:none;
 }
 
 /* ==================================
@@ -365,9 +428,39 @@ main[role="main"]{
   gap:16px;
 }
 
+/* HOME hero refinement (use with .home-hero class on the first card) */
+.home-hero{
+  padding: clamp(1.1rem, 2.8vw, 1.6rem);
+}
+.home-kicker{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  font-size:.78rem;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.82;
+  margin-bottom:10px;
+}
+.home-kicker::before{
+  content:"";
+  width:10px; height:10px;
+  border-radius:999px;
+  background: rgba(17,241,167,.8);
+  box-shadow: var(--glow-green);
+}
+
 .home-title{ margin:0 0 8px; letter-spacing:.04em }
-.home-lead{ margin: 0 0 10px; opacity:.92 }
+.home-lead{ margin: 0 0 10px; opacity:.92; max-width:78ch }
 .home-links{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px }
+
+/* Packaged System block -> premium gold, restrained (opt-in class) */
+.bundle-card{
+  border-color: rgba(244,200,106,.28) !important;
+  box-shadow: 0 12px 44px rgba(0,0,0,.62), inset 0 0 0 1px rgba(244,200,106,.08);
+}
+.bundle-title{ margin: 0 0 6px; letter-spacing:.04em; }
+.bundle-lead{ margin: 0; opacity:.90; }
 
 /* ==================================
    COMMON
@@ -414,11 +507,12 @@ main[role="main"]{
   font-size:.9rem;
   opacity:.95;
   transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  backdrop-filter: blur(10px); /* refinement */
 }
 .chip:hover{
   transform:translateY(-1px);
-  border-color:var(--cyan);
-  box-shadow:var(--glow-cyan);
+  border-color: rgba(244,200,106,.55);
+  box-shadow: var(--glow-gold);
 }
 
 /* ==================================
@@ -445,8 +539,15 @@ main[role="main"]{
 
 /* ==================================
    ENGINE WINDOW — pulsing logo background + selectable modules
+   REFINEMENT: “console bay” + left module rails
 ================================== */
-.engine-window{ position:relative; overflow:hidden; }
+.engine-window{
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(900px 420px at 50% 0%, rgba(0,240,255,.07), transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+}
 .engine-window--hero{ min-height:360px; }
 
 .engine-bg{
@@ -493,16 +594,39 @@ main[role="main"]{
   border:1px solid rgba(255,255,255,.12);
   background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
   transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  position: relative;            /* refinement */
+  overflow: hidden;              /* refinement */
+}
+
+/* module rail */
+.engine-select-row::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:12%;
+  bottom:12%;
+  width:3px;
+  border-radius:6px;
+  background: linear-gradient(to bottom, rgba(0,240,255,.65), rgba(17,241,167,.55));
+  opacity:.55;
 }
 .engine-select-row:hover{
   transform: translateY(-1px);
   border-color: rgba(17,241,167,.55);
   box-shadow: var(--glow-green);
 }
+.engine-select-row:hover::before{ opacity:.9; }
+
 .engine-select-row.active{
   border-color: rgba(244,200,106,.55);
   box-shadow: var(--glow-gold);
 }
+.engine-select-row.active::before{
+  opacity:1;
+  background: linear-gradient(to bottom, rgba(244,200,106,.95), rgba(255,255,255,.35));
+  box-shadow: var(--glow-gold);
+}
+
 .engine-select-title{ font-weight:700; letter-spacing:.02em; }
 .engine-select-desc{ opacity:.82; margin-top:3px; font-size:.95rem; }
 
@@ -523,9 +647,10 @@ main[role="main"]{
 .engine-log pre{
   margin:0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: .9rem;
-  line-height: 1.4;
-  opacity:.92;
+  font-size: .92rem;             /* refinement */
+  line-height: 1.55;             /* refinement */
+  color: rgba(231,255,247,.92);  /* refinement */
+  opacity: .92;
 }
 
 /* ===== Modal (API sign-in) ===== */

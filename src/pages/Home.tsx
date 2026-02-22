@@ -167,8 +167,10 @@ export default function Home() {
       </div>
 
       <div className="home-wrap">
-        {/* ===== Overview card ===== */}
-        <section className="card home-hero" aria-label="Overview">
+        {/* ===== Overview card (console hero) ===== */}
+        <section className="card home-hero machine-surface panel-frame" aria-label="Overview">
+          <div className="home-kicker">JAL SYSTEM • ONLINE</div>
+
           <h1 className="home-title">jalsol.com</h1>
 
           <p className="home-lead">
@@ -190,8 +192,11 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== Engine window ===== */}
-        <section className="card engine-window engine-window--hero" aria-label="$JAL~Engine">
+        {/* ===== Engine window (console bay) ===== */}
+        <section
+          className="card engine-window engine-window--hero machine-surface panel-frame"
+          aria-label="$JAL~Engine"
+        >
           {/* pulsing logo behind content */}
           <div className="engine-bg" aria-hidden="true">
             <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
@@ -256,21 +261,27 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Packaged system section */}
-        <section className="card gold" aria-label="Packaged system">
-          <h2 className="home-title" style={{ marginBottom: 6 }}>
-            Packaged System
-          </h2>
-          <p className="home-lead" style={{ marginBottom: 0 }}>
+        {/* ===== Packaged system (premium gold, restrained) ===== */}
+        <section className="card bundle-card machine-surface panel-frame" aria-label="Packaged system">
+          <h2 className="bundle-title">Packaged System</h2>
+          <p className="bundle-lead">
             Packaged engine + deployment software for anyone who wants to build their own iteration
             of the system inside jalsol.com.
           </p>
 
-          <div className="engine-controls" style={{ marginTop: 12 }}>
-            <button type="button" className="button gold" onClick={() => pushLog("[bundle] view selected")}>
+          <div className="engine-controls" aria-label="Bundle actions">
+            <button
+              type="button"
+              className="button gold"
+              onClick={() => pushLog("[bundle] view selected")}
+            >
               View
             </button>
-            <button type="button" className="button" onClick={() => pushLog("[bundle] purchase selected")}>
+            <button
+              type="button"
+              className="button"
+              onClick={() => pushLog("[bundle] purchase selected")}
+            >
               Purchase
             </button>
           </div>
@@ -344,9 +355,7 @@ export default function Home() {
                 </button>
               </div>
 
-              <p className="engine-modal-note">
-                Tip: leave “Remember” off to keep keys session-only.
-              </p>
+              <p className="engine-modal-note">Tip: leave “Remember” off to keep keys session-only.</p>
             </div>
           </section>
         </>
