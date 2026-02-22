@@ -3,6 +3,7 @@
    Aesthetic: neon cyber / premium ATM
    Rule: layout & visual control lives here (not per-component Tailwind)
    UPDATE: Entry-only landing + NAV overlay + NO footer/tabbar
+   UPDATE 2: Home page layout (Home.tsx) + Engine modal styling
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -77,7 +78,6 @@ body[data-hub-open="true"]{ overflow:hidden }
 body[data-nav-open="true"]{ overflow:hidden }
 
 /* ---------- Main layout ---------- */
-/* NOTE: header is not rendered until after ENTER, so keep this generic */
 main[role="main"]{
   min-height:100dvh;
   display:flex;
@@ -86,7 +86,6 @@ main[role="main"]{
 
 /* ==================================
    HEADER (App.tsx HeaderView)
-   (You will toggle rendering in App.tsx after ENTER)
 ================================== */
 .site-header{
   position:sticky;
@@ -135,8 +134,13 @@ main[role="main"]{
   filter: drop-shadow(0 0 12px rgba(255,255,255,.9));
 }
 
-/* center text nav disabled (logo-only) */
-.main-nav{ display:none !important; }
+/* logo wrapped in a button */
+.logo-btn{
+  justify-self:center;
+  border:0;
+  padding:0;
+  background:transparent;
+}
 
 /* hamburger (right) */
 .hamburger{
@@ -165,17 +169,8 @@ main[role="main"]{
 .hamburger.is-open span:nth-child(2){ opacity:0 }
 .hamburger.is-open span:nth-child(3){ transform:translateY(-8px) rotate(-45deg) }
 
-/* Header logo wrapped in a button (App.tsx) */
-.logo-btn{
-  justify-self:center;
-  border:0;
-  padding:0;
-  background:transparent;
-}
-
 /* ==================================
    SIDEBAR (App.tsx SidebarView)
-   NOTE: wallet controls removed in code, but styling retained.
 ================================== */
 .sidebar-overlay{
   position:fixed;
@@ -221,23 +216,69 @@ main[role="main"]{
   box-shadow: var(--glow-gold);
 }
 
-/* Disconnect (kept in case used elsewhere) */
-.wallet-disconnect-btn{
-  margin-top:8px;
-  padding:.75rem 1rem;
-  border-radius: var(--r-md);
+/* ==================================
+   COMMON COMPONENTS
+================================== */
+.button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:.85rem 1.05rem;
+  border-radius:var(--r-md);
   border:1px solid var(--stroke);
   background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+}
+.button:hover{ transform: translateY(-1px) }
+.button:active{ transform: translateY(1px) scale(.98); box-shadow:none }
+.button.ghost{ background:transparent }
+.button.neon{ border-color:rgba(17,241,167,.5); box-shadow:var(--glow-green) }
+.button.gold{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
+
+.card{
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  border:1px solid var(--stroke);
+  border-radius:var(--r-lg);
+  padding: clamp(1rem, 2.5vw, 1.25rem);
+  box-shadow: 0 10px 30px rgba(0,0,0,.55);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+}
+.card:hover{
+  border-color:var(--green);
+  box-shadow:var(--glow-green);
+  transform:translateY(-2px);
+}
+.card.gold:hover{ border-color:var(--gold); box-shadow:var(--glow-gold) }
+.card.cyan:hover{ border-color:var(--cyan); box-shadow:var(--glow-cyan) }
+
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:.45rem .7rem;
+  border:1px solid var(--stroke);
+  border-radius:999px;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  font-size:.9rem;
+  opacity:.95;
   transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
-.wallet-disconnect-btn:hover{
-  transform: translateY(-1px);
-  border-color: var(--green);
-  box-shadow: var(--glow-green);
+.chip:hover{
+  transform:translateY(-1px);
+  border-color:var(--cyan);
+  box-shadow:var(--glow-cyan);
 }
 
 /* ==================================
-   LANDING — ENTRY ONLY + NAV OVERLAY
+   FORCE REMOVE: Footer + Tabbar (no longer used)
+================================== */
+.tabbar,
+.site-footer{
+  display:none !important;
+}
+
+/* ==================================
+   LANDING — ENTRY ONLY + LOADING
 ================================== */
 .landing-blank{
   min-height:100dvh;
@@ -247,15 +288,6 @@ main[role="main"]{
   background:
     radial-gradient(900px 540px at 50% -200px, #0e141b 0%, #07090c 55%, #05070a 100%),
     var(--bg);
-}
-
-/* optional fade hook from Landing.tsx: .landing-blank.is-fading */
-.landing-blank.is-fading{
-  animation: pageFade var(--t-med) both;
-}
-@keyframes pageFade{
-  from{ opacity:1 }
-  to{ opacity:.78 }
 }
 
 /* Center logo button (single CTA) */
@@ -293,7 +325,29 @@ main[role="main"]{
   text-shadow: var(--glow-white);
 }
 
-/* NAV overlay */
+/* 5s loading screen (Landing.tsx) */
+.loading-screen{
+  position:fixed;
+  inset:0;
+  z-index:70;
+  display:grid;
+  place-items:center;
+  background:#000;
+}
+.loading-logo{
+  width:min(440px, 78vw);
+  filter: drop-shadow(0 0 14px rgba(255,255,255,.55));
+  animation: pulseGlow 1.2s ease-in-out infinite;
+}
+@keyframes pulseGlow{
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
+  50%  { transform: scale(1.03); filter: drop-shadow(0 0 18px rgba(244,200,106,.55)); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
+}
+
+/* ==================================
+   NAV OVERLAY (Landing.tsx)
+================================== */
 .nav-overlay-backdrop{
   position:fixed;
   inset:0;
@@ -361,7 +415,9 @@ main[role="main"]{
   box-shadow: 0 16px 54px rgba(0,0,0,.66), var(--glow-green);
 }
 
-/* Pages after selecting nav item */
+/* ==================================
+   HOME SHELL (inside /app/*)
+================================== */
 .home-shell{
   min-height:100dvh;
   width:100%;
@@ -388,6 +444,13 @@ main[role="main"]{
   box-shadow: var(--glow-cyan);
 }
 
+/* Home page (Home.tsx) */
+.home{
+  padding: 6px 0 44px;
+  display:grid;
+  gap:16px;
+}
+
 .home-wrap{
   width:min(100% - 2rem, var(--max-w));
   margin: 0 auto;
@@ -395,326 +458,62 @@ main[role="main"]{
   gap:16px;
 }
 
-/* Home blocks (used by Landing.tsx content) */
-.home-title{ margin:0 0 8px; letter-spacing:.04em }
-.home-lead{ margin: 0 0 10px; opacity:.92 }
-.home-links{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px }
-
-/* Engine window */
-.engine-window{ overflow:hidden }
-.engine-head{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom:10px;
+/* hero */
+.home-hero .home-title{
+  margin:0 0 8px;
+  font-size: clamp(1.4rem, 3.2vw, 2rem);
+  letter-spacing:.04em;
 }
-.engine-title{ margin:0 }
-.engine-sub{ opacity:.75; font-size:.95rem }
-.engine-controls{
+.home-sub{
+  margin:0;
+  opacity:.86;
+  max-width:72ch;
+}
+.home-links{
   display:flex;
   flex-wrap:wrap;
   gap:10px;
-  margin: 10px 0 12px;
+  margin-top:12px;
 }
-.engine-log{
-  border:1px solid rgba(255,255,255,.12);
-  border-radius: var(--r-md);
-  background: rgba(0,0,0,.35);
-  padding: 12px 12px;
-  max-height: 240px;
-  overflow:auto;
+.home-mini{
+  margin-top:12px;
+  display:grid;
+  gap:8px;
 }
-.engine-log pre{
-  margin:0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: .9rem;
-  line-height: 1.4;
-  opacity:.92;
-}
-
-/* ==================================
-   HUB PANEL (legacy classes - kept safe)
-================================== */
-.hub-panel{
-  width:min(100% - 2rem, 1100px);
-  margin:16px auto 24px;
-  max-height:min(88dvh, 880px);
+.mini-row{
   display:flex;
-  flex-direction:column;
-  position:relative;
-  overflow:hidden;
-  border:1px solid var(--stroke-2);
-  border-radius:var(--r-lg);
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
-  box-shadow: 0 20px 80px rgba(0,0,0,.7), var(--glow-gold);
-}
-.hub-panel--fit{ width:min(100% - 2rem, 1100px) }
-
-.hub-panel-top{
-  display:flex;
-  align-items:center;
   justify-content:space-between;
   gap:12px;
-  padding:14px 16px;
-  border-bottom:1px solid rgba(255,255,255,.12);
-  background: linear-gradient(180deg, rgba(12,16,22,.45), rgba(12,16,22,0));
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:14px;
+  background:rgba(0,0,0,.25);
 }
-.hub-title{
-  margin:0;
-  font-size:clamp(1.1rem,2vw,1.35rem);
-  text-shadow:0 0 12px rgba(255,255,255,.35);
-}
+.mini-label{ opacity:.7; letter-spacing:.02em; }
+.mini-value{ opacity:.95; text-align:right; }
 
-.hub-panel-body{
-  overflow:auto;
-  overscroll-behavior:contain;
-  padding:18px;
+/* block headers */
+.home-block .block-head{
   display:grid;
-  gap:18px;
-  grid-template-rows:auto 1fr;
+  gap:4px;
+  margin-bottom:12px;
 }
-
-.hub-overlay{
-  position: fixed;
-  inset: 0;
-  z-index: 48;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(2px);
-  animation: overlayIn var(--t-slow) both;
-}
-.hub-panel--overlay{
-  position: fixed;
-  z-index: 49;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 88px;
-  bottom: 74px;
-  width: min(100% - 2rem, 1100px);
-}
-@media (max-width: 640px){
-  .hub-panel--overlay{ top: 72px; bottom: 72px; }
-}
+.muted{ opacity:.75; }
 
 /* ==================================
-   Common components
+   ENGINE WINDOW (Home.tsx)
 ================================== */
-.button{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:.85rem 1.05rem;
-  border-radius:var(--r-md);
-  border:1px solid var(--stroke);
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+.engine-auth-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-start;
+  margin-top: 10px;
 }
-.button:hover{ transform: translateY(-1px) }
-.button:active{ transform: translateY(1px) scale(.98); box-shadow:none }
-.button.ghost{ background:transparent }
-.button.neon{ border-color:rgba(17,241,167,.5); box-shadow:var(--glow-green) }
-.button.gold{ border-color:rgba(244,200,106,.5); box-shadow:var(--glow-gold) }
-
-.card{
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
-  border:1px solid var(--stroke);
-  border-radius:var(--r-lg);
-  padding: clamp(1rem, 2.5vw, 1.25rem);
-  box-shadow: 0 10px 30px rgba(0,0,0,.55);
-  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
-}
-.card:hover{
-  border-color:var(--green);
-  box-shadow:var(--glow-green);
-  transform:translateY(-2px);
-}
-.card.gold:hover{ border-color:var(--gold); box-shadow:var(--glow-gold) }
-.card.cyan:hover{ border-color:var(--cyan); box-shadow:var(--glow-cyan) }
-
-/* ==================================
-   FORCE REMOVE: Footer + Tabbar (no longer used)
-================================== */
-.tabbar,
-.site-footer{
-  display:none !important;
-}
-
-/* ==================================
-   Wallet Adapter polish (safe to keep)
-================================== */
-.wallet-adapter-modal-wrapper{
-  border-radius: var(--r-lg)!important;
-  border:1px solid var(--stroke-2)!important;
-  background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9))!important;
-  backdrop-filter: blur(var(--blur))!important;
-}
-.wallet-adapter-button{
-  border-radius: var(--r-md)!important;
-  border:1px solid var(--stroke)!important;
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0))!important;
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast)!important;
-}
-.wallet-adapter-button:hover{
-  transform: translateY(-1px)!important;
-  border-color: var(--green)!important;
-  box-shadow: var(--glow-green)!important;
-}
-@media (max-width: 640px){
-  .wallet-adapter-modal-wrapper{ width:92vw!important }
-  .landing-wallet{ padding:1rem 1.25rem; font-size:1rem }
-}
-
-/* ==================================
-   Motion preferences
-================================== */
-@media (prefers-reduced-motion: reduce){
-  .hamburger span,
-  .hamburger,
-  .sidebar-nav,
-  .sidebar-overlay,
-  .button,
-  .card,
-  .logo.header-logo,
-  .center-logo-btn,
-  .nav-pill,
-  .nav-overlay,
-  .nav-overlay-backdrop{
-    transition:none;
-    animation:none;
-  }
-}
-
-/* ==================================
-   5s loading screen (Landing.tsx)
-================================== */
-.loading-screen{
-  position:fixed;
-  inset:0;
-  z-index:70;
-  display:grid;
-  place-items:center;
-  background:#000;
-}
-.loading-logo{
-  width:min(440px, 78vw);
-  filter: drop-shadow(0 0 14px rgba(255,255,255,.55));
-  animation: pulseGlow 1.2s ease-in-out infinite;
-}
-@keyframes pulseGlow{
-  0%   { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
-  50%  { transform: scale(1.03); filter: drop-shadow(0 0 18px rgba(244,200,106,.55)); }
-  100% { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
-}
-/* ===============================
-   HOME — upgraded layout blocks
-=================================*/
-.home-hero .home-title{
-  font-size: clamp(1.4rem, 3.2vw, 2rem);
-  letter-spacing: .04em;
-}
-.home-hero .home-lead{
-  margin: 10px 0 0;
-  opacity: .92;
-}
-
-/* ===============================
-   ENGINE WINDOW — pulsing logo background + selectable modules
-=================================*/
-.engine-window--hero{
-  position: relative;
-  overflow: hidden;
-  min-height: 360px;
-}
-
-.engine-loading{
-  position:absolute;
-  inset:0;
-  display:grid;
-  place-items:center;
-  pointer-events:none;
-  opacity: .16; /* low opacity background */
-}
-
-.engine-loading-logo{
-  width: min(520px, 78vw);
-  filter: drop-shadow(0 0 14px rgba(255,255,255,.55));
-  animation: pulseGlow 1.2s ease-in-out infinite;
-}
-
-.engine-foreground{
-  position:relative;
-  z-index:2;
-}
-
 .engine-select{
   display:grid;
   gap:10px;
   margin: 12px 0 14px;
-}
-
-.engine-choice{
-  text-align:left;
-  width:100%;
-  padding: .9rem 1rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.16);
-  background:
-    radial-gradient(700px 180px at 50% 10%, rgba(255,255,255,.05), rgba(255,255,255,0)),
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), opacity var(--t-fast);
-  opacity:.92;
-}
-
-.engine-choice:hover{
-  transform: translateY(-1px);
-  border-color: rgba(17,241,167,.55);
-  box-shadow: var(--glow-green);
-  opacity:1;
-}
-
-.engine-choice.active{
-  border-color: rgba(244,200,106,.55);
-  box-shadow: var(--glow-gold);
-  opacity:1;
-}
-
-.engine-body{
-  margin-top: 6px;
-}
-
-.engine-p{
-  margin: 10px 0 0;
-}
-.engine-dim{
-  opacity:.78;
-}
-/* ===== Engine background logo pulse (inside Home engine window) ===== */
-.engine-window{ position:relative; }
-.engine-bg{
-  position:absolute;
-  inset:0;
-  display:grid;
-  place-items:center;
-  pointer-events:none;
-  opacity:.12;           /* low opacity behind content */
-  filter: blur(.2px);
-}
-.engine-bg-logo{
-  width:min(520px, 76vw);
-  animation: pulseGlow 1.2s ease-in-out infinite;
-}
-
-/* keep content above background */
-.engine-window > *:not(.engine-bg){
-  position:relative;
-  z-index:2;
-}
-
-/* selectors list */
-.engine-select{
-  display:grid;
-  gap:10px;
-  margin: 10px 0 14px;
 }
 .engine-select-row{
   text-align:left;
@@ -730,7 +529,7 @@ main[role="main"]{
   box-shadow: var(--glow-green);
 }
 .engine-select-title{
-  font-weight:700;
+  font-weight:800;
   letter-spacing:.02em;
 }
 .engine-select-desc{
@@ -738,16 +537,31 @@ main[role="main"]{
   margin-top:3px;
   font-size:.95rem;
 }
-
-/* auth buttons in header row */
-.engine-auth{
+.engine-controls{
   display:flex;
-  gap:10px;
   flex-wrap:wrap;
-  justify-content:flex-end;
+  gap:10px;
+  margin: 10px 0 12px;
+}
+.engine-log{
+  border:1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-md);
+  background: rgba(0,0,0,.35);
+  padding: 12px 12px;
+  max-height: 260px;
+  overflow:auto;
+}
+.engine-log pre{
+  margin:0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: .9rem;
+  line-height: 1.4;
+  opacity:.92;
 }
 
-/* ===== Modal (CoinSpot API sign-in) ===== */
+/* ==================================
+   AUTH MODAL (Home.tsx)
+================================== */
 .engine-modal-backdrop{
   position:fixed;
   inset:0;
@@ -781,7 +595,7 @@ main[role="main"]{
 }
 
 .engine-modal-title{
-  font-weight:800;
+  font-weight:900;
   letter-spacing:.04em;
 }
 .engine-modal-sub{
@@ -857,4 +671,49 @@ main[role="main"]{
   opacity:.75;
   font-size:.9rem;
   margin: 2px 0 0;
+}
+
+/* ==================================
+   Wallet Adapter polish (safe to keep)
+================================== */
+.wallet-adapter-modal-wrapper{
+  border-radius: var(--r-lg)!important;
+  border:1px solid var(--stroke-2)!important;
+  background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.9))!important;
+  backdrop-filter: blur(var(--blur))!important;
+}
+.wallet-adapter-button{
+  border-radius: var(--r-md)!important;
+  border:1px solid var(--stroke)!important;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0))!important;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast)!important;
+}
+.wallet-adapter-button:hover{
+  transform: translateY(-1px)!important;
+  border-color: var(--green)!important;
+  box-shadow: var(--glow-green)!important;
+}
+@media (max-width: 640px){
+  .wallet-adapter-modal-wrapper{ width:92vw!important }
+}
+
+/* ==================================
+   Motion preferences
+================================== */
+@media (prefers-reduced-motion: reduce){
+  .hamburger span,
+  .hamburger,
+  .sidebar-nav,
+  .sidebar-overlay,
+  .button,
+  .card,
+  .logo.header-logo,
+  .center-logo-btn,
+  .nav-pill,
+  .nav-overlay,
+  .nav-overlay-backdrop,
+  .loading-logo{
+    transition:none;
+    animation:none;
+  }
 }

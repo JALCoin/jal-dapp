@@ -25,19 +25,39 @@ function HeaderView({
       <div className="header-inner">
         {/* Left: socials */}
         <div className="social-links" aria-label="Social Links">
-          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <a
+            href="https://x.com/JAL358"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="X"
+          >
             <img src="/icons/X.png" alt="" />
           </a>
-          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+          <a
+            href="https://t.me/jalsolcommute"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Telegram"
+          >
             <img src="/icons/Telegram.png" alt="" />
           </a>
-          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+          <a
+            href="https://www.tiktok.com/@358jalsol"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="TikTok"
+          >
             <img src="/icons/TikTok.png" alt="" />
           </a>
         </div>
 
-        {/* Center: logo opens NAV overlay */}
-        <button type="button" onClick={onLogo} aria-label="Open navigation" className="logo-btn">
+        {/* Center: logo opens NAV overlay (keeps you inside /app/*) */}
+        <button
+          type="button"
+          onClick={onLogo}
+          aria-label="Open navigation"
+          className="logo-btn"
+        >
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
         </button>
 
@@ -63,16 +83,32 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
   if (!open) return null;
   return (
     <>
-      <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
+      <button
+        className="sidebar-overlay"
+        aria-label="Close menu overlay"
+        onClick={onClose}
+      />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
         <nav>
-          <NavLink to="/app/home" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+          <NavLink
+            to="/app/home"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
             Home
           </NavLink>
-          <NavLink to="/app/about" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+          <NavLink
+            to="/app/about"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
             About JAL
           </NavLink>
-          <NavLink to="/app/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onClose}>
+          <NavLink
+            to="/app/shop"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
             Shop
           </NavLink>
         </nav>
@@ -85,6 +121,12 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
 function AppShell() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // NAV overlay is handled by Landing.tsx (panel state),
+  // we just fire an event to ask it to open.
+  const openNav = () => {
+    window.dispatchEvent(new CustomEvent("JALSOL:OPEN_NAV"));
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -101,11 +143,7 @@ function AppShell() {
 
   return (
     <>
-      <HeaderView
-        onMenu={() => setMenuOpen(true)}
-        onLogo={() => window.dispatchEvent(new CustomEvent("JALSOL:OPEN_NAV"))}
-        isOpen={menuOpen}
-      />
+      <HeaderView onMenu={() => setMenuOpen(true)} onLogo={openNav} isOpen={menuOpen} />
       <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <main role="main">

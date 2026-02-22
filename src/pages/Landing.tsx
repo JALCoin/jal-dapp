@@ -18,7 +18,12 @@ function NavOverlay({
         aria-label="Close navigation"
         onClick={onClose}
       />
-      <section className="nav-overlay" role="dialog" aria-modal="true" aria-label="Navigation">
+      <section
+        className="nav-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation"
+      >
         <div className="nav-overlay-top">
           <button className="nav-back" type="button" onClick={onClose}>
             Back
@@ -26,9 +31,15 @@ function NavOverlay({
         </div>
 
         <div className="nav-overlay-body">
-          <button className="nav-pill" onClick={() => onSelect("home")}>HOME</button>
-          <button className="nav-pill" onClick={() => onSelect("jal")}>ABOUT JAL</button>
-          <button className="nav-pill" onClick={() => onSelect("shop")}>SHOP</button>
+          <button className="nav-pill" onClick={() => onSelect("home")}>
+            HOME
+          </button>
+          <button className="nav-pill" onClick={() => onSelect("jal")}>
+            ABOUT JAL
+          </button>
+          <button className="nav-pill" onClick={() => onSelect("shop")}>
+            SHOP
+          </button>
         </div>
       </section>
     </>
@@ -41,11 +52,13 @@ function HomeContent() {
       <section className="card">
         <h2 className="home-title">jalsol.com</h2>
         <p className="home-lead">
-          Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer • Digital Creator.
-          Minimal interface linked to the Solana ecosystem.
+          Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical
+          Metal Engineer • Digital Creator. Minimal interface linked to the
+          Solana ecosystem.
         </p>
         <p className="home-lead">
-          $JAL sits in the <strong>JAL/SOL</strong> liquidity pool on Raydium and can be checked on Solscan.
+          $JAL sits in the <strong>JAL/SOL</strong> liquidity pool on Raydium and
+          can be checked on Solscan.
         </p>
         <div className="home-links">
           <a className="chip" href="https://raydium.io/" target="_blank" rel="noreferrer">
@@ -64,10 +77,18 @@ function HomeContent() {
         </div>
 
         <div className="engine-controls">
-          <button className="button gold" type="button">Start</button>
-          <button className="button" type="button">Stop</button>
-          <button className="button ghost" type="button">Settings</button>
-          <button className="button ghost" type="button">Log Analysis</button>
+          <button className="button gold" type="button">
+            Start
+          </button>
+          <button className="button" type="button">
+            Stop
+          </button>
+          <button className="button ghost" type="button">
+            Settings
+          </button>
+          <button className="button ghost" type="button">
+            Log Analysis
+          </button>
         </div>
 
         <div className="engine-log" aria-label="Engine log output">
@@ -79,10 +100,17 @@ function HomeContent() {
 
       <section className="card gold">
         <h3>Engine Package</h3>
-        <p>Packaged engine + deployment software for anyone building their own iteration of this system.</p>
+        <p>
+          Packaged engine + deployment software for anyone building their own
+          iteration of this system.
+        </p>
         <div className="engine-controls">
-          <button className="button gold" type="button">View</button>
-          <button className="button" type="button">Purchase</button>
+          <button className="button gold" type="button">
+            View
+          </button>
+          <button className="button" type="button">
+            Purchase
+          </button>
         </div>
       </section>
     </div>
@@ -239,7 +267,14 @@ export default function Landing({ initialPanel = "none" }: LandingProps) {
       {panel !== "nav" && (
         <section className="home-shell">
           <div className="home-shell-top">
-            <button className="home-open-nav" type="button" onClick={() => { setPanel("nav"); navigate("/app/nav", { replace: true }); }}>
+            <button
+              className="home-open-nav"
+              type="button"
+              onClick={() => {
+                setPanel("nav");
+                navigate("/app/nav", { replace: true });
+              }}
+            >
               Menu
             </button>
           </div>
