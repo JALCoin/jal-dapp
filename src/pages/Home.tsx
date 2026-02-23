@@ -2,8 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-type AuthMode = "full" | "ro";
-
 type MarketRow = {
   coin: string;          // "BTC"
   market: string;        // "BTC/AUD"
@@ -12,16 +10,6 @@ type MarketRow = {
   change24hPct?: number; // optional
   updatedAt?: number;    // epoch ms
 };
-
-function safeTrim(v: string) {
-  return (v ?? "").trim();
-}
-
-function maskKey(s: string) {
-  const v = safeTrim(s);
-  if (v.length <= 6) return v ? "******" : "";
-  return `${v.slice(0, 3)}…${v.slice(-3)}`;
-}
 
 function fmtTime(d: Date) {
   const hh = String(d.getHours()).padStart(2, "0");
@@ -48,6 +36,13 @@ function calcSpreadPct(bid: number, ask: number) {
   return ((ask - bid) / mid) * 100;
 }
 
+function dpForPrice(n: number) {
+  if (!Number.isFinite(n) || n <= 0) return 2;
+  if (n < 0.01) return 8;
+  if (n < 1) return 6;
+  return 2;
+}
+
 export default function Home() {
   const navigate = useNavigate();
 
@@ -71,118 +66,47 @@ export default function Home() {
 
   const networkLabel = "MAINNET";
 
-  /* ---------------- Auth UI (remembered) ---------------- */
-  const [authConnected, setAuthConnected] = useState<null | { mode: AuthMode; masked: string }>(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("jal_engine_auth");
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      const mode: AuthMode = parsed?.mode === "full" ? "full" : "ro";
-      const key = safeTrim(parsed?.key ?? "");
-      const secret = safeTrim(parsed?.secret ?? "");
-      if (!key || !secret) return;
-      setAuthConnected({ mode, masked: maskKey(key) });
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  /* ---------------- Modal auth state ---------------- */
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<AuthMode>("ro");
-  const [apiKey, setApiKey] = useState("");
-  const [apiSecret, setApiSecret] = useState("");
-  const [authRemember, setAuthRemember] = useState(false);
-
-  const openAuth = (mode: AuthMode) => {
-    setAuthMode(mode);
-    setAuthOpen(true);
-  };
-
-  const closeAuth = () => {
-    setAuthOpen(false);
-    setApiKey("");
-    setApiSecret("");
-    setAuthRemember(false);
-  };
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && authOpen) closeAuth();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [authOpen]);
-
-  const handleAuthSubmit = () => {
-    const k = safeTrim(apiKey);
-    const s = safeTrim(apiSecret);
-    if (!k || !s) return;
-
-    const masked = maskKey(k);
-    setAuthConnected({ mode: authMode, masked });
-
-    if (authRemember) {
-      try {
-        localStorage.setItem("jal_engine_auth", JSON.stringify({ mode: authMode, key: k, secret: s }));
-      } catch {
-        // ignore
-      }
-    }
-
-    closeAuth();
-  };
-
-  /* ---------------- Full access arm (2-step) ---------------- */
-  const [armFull, setArmFull] = useState(false);
-  useEffect(() => {
-    if (!armFull) return;
-    const id = window.setTimeout(() => setArmFull(false), 6000);
-    return () => window.clearTimeout(id);
-  }, [armFull]);
-
-  const handleFullAccessClick = () => {
-    if (!armFull) {
-      setArmFull(true);
-      return;
-    }
-    setArmFull(false);
-    openAuth("full");
-  };
-
-  /* ---------------- Market Console (Public CEX snapshot) ---------------- */
+  /* ---------------- Market Console (account-backed snapshot) ----------------
+     Home shows the tradable market snapshot as routed through your server.
+     Visitors do NOT sign in here.
+     Your backend can use YOUR CoinSpot credentials (your existing setup) if needed.
+  ------------------------------------------------------------------------- */
   const [market, setMarket] = useState<MarketRow[]>(() => [
+    { coin: "BONK", market: "BONK/AUD", bid: 0.000034, ask: 0.000035, change24hPct: 5.23, updatedAt: Date.now() },
     { coin: "SOL", market: "SOL/AUD", bid: 122.13, ask: 122.81, change24hPct: 2.41, updatedAt: Date.now() },
     { coin: "BTC", market: "BTC/AUD", bid: 88000, ask: 88250, change24hPct: 1.1, updatedAt: Date.now() },
     { coin: "ETH", market: "ETH/AUD", bid: 4700, ask: 4720, change24hPct: -0.42, updatedAt: Date.now() },
     { coin: "XRP", market: "XRP/AUD", bid: 2.076, ask: 2.083, change24hPct: 0.18, updatedAt: Date.now() },
-    { coin: "BONK", market: "BONK/AUD", bid: 0.000034, ask: 0.000035, change24hPct: 5.23, updatedAt: Date.now() },
   ]);
 
   const [marketLoading, setMarketLoading] = useState(false);
   const [marketError, setMarketError] = useState<string | null>(null);
 
-  // Frontend-only public market fetch (no keys). You can keep ENABLE_FETCH=false until endpoint is ready.
   useEffect(() => {
     let alive = true;
 
     async function poll() {
-      const ENABLE_FETCH = false; // flip true when you wire your endpoint or direct CoinSpot public fetch
+      const ENABLE_FETCH = true; // set false if /api/market isn't wired yet
       if (!ENABLE_FETCH) return;
 
       setMarketLoading(true);
       setMarketError(null);
 
       try {
+        // Expect: MarketRow[] from your backend
         const res = await fetch("/api/market", { method: "GET" });
         if (!res.ok) throw new Error(`market fetch failed: ${res.status}`);
         const data = (await res.json()) as MarketRow[];
+
         if (!alive) return;
 
-        const stamped = (data ?? []).map((r) => ({ ...r, updatedAt: Date.now() }));
-        setMarket(stamped);
+        const stamped = (Array.isArray(data) ? data : []).map((r) => ({
+          ...r,
+          updatedAt: Date.now(),
+        }));
+
+        // Prevent UI blanking on transient failures
+        if (stamped.length > 0) setMarket(stamped);
       } catch (e: any) {
         if (!alive) return;
         setMarketError(e?.message ?? "market fetch error");
@@ -203,7 +127,7 @@ export default function Home() {
   const rankedMarket = useMemo(() => {
     const copy = [...market];
     copy.sort((a, b) => Math.abs(b.change24hPct ?? 0) - Math.abs(a.change24hPct ?? 0));
-    return copy.slice(0, 10);
+    return copy.slice(0, 14);
   }, [market]);
 
   /* ---------------- Jeroid deployment teaser (COMING SOON) ---------------- */
@@ -232,13 +156,8 @@ export default function Home() {
           </div>
 
           <div className="terminal-right">
-            {authConnected ? (
-              <span className={`terminal-auth ${authConnected.mode === "full" ? "is-full" : "is-ro"}`}>
-                AUTH: {authConnected.mode === "full" ? "FULL" : "RO"} ({authConnected.masked})
-              </span>
-            ) : (
-              <span className="terminal-auth is-none">AUTH: NONE</span>
-            )}
+            {/* Visitors do NOT sign in. This is a public console preview. */}
+            <span className="terminal-auth is-ro">MARKET: LIVE</span>
           </div>
         </section>
 
@@ -265,7 +184,12 @@ export default function Home() {
             ))}
           </div>
 
-          {/* No "Start Engine" button on Home (by design). */}
+          <div className="home-primary" aria-label="Note">
+            <div className="home-primary-note">
+              <span>Nothing here is urgent.</span> The system is live and performs immediately — this page is a public
+              console preview of what the engine is watching.
+            </div>
+          </div>
         </section>
 
         {/* ===== $JAL~Engine — Market Console Preview ===== */}
@@ -284,21 +208,15 @@ export default function Home() {
 
               <div className="engine-auth">
                 <div className="engine-auth-col">
-                  <button type="button" className="button" onClick={() => openAuth("ro")}>
-                    Sign in (Read Only)
-                  </button>
-                  <div className="engine-auth-hint">View market + analytics. No orders.</div>
-                </div>
-
-                <div className="engine-auth-col">
                   <button
                     type="button"
-                    className={`button gold ${armFull ? "armed" : ""}`}
-                    onClick={handleFullAccessClick}
+                    className="button"
+                    onClick={() => navigate("/app/engine")}
+                    aria-label="Open engine console"
                   >
-                    {armFull ? "CONFIRM Full Access" : "Sign in (Full Access)"}
+                    Open Console
                   </button>
-                  <div className="engine-auth-hint">Execution capability. Use only on your machine.</div>
+                  <div className="engine-auth-hint">Viewer mode. Deployment actions appear here later.</div>
                 </div>
               </div>
             </div>
@@ -320,17 +238,14 @@ export default function Home() {
                 return (
                   <div key={r.market} className="market-row">
                     <div className="market-coin">
-                      <strong>{r.coin}</strong>{" "}
-                      <span className="market-market">{r.market}</span>
+                      <strong>{r.coin}</strong> <span className="market-market">{r.market}</span>
                     </div>
 
-                    <div className="market-price">{r.bid > 0 ? fmtNum(r.bid, r.bid < 1 ? 6 : 2) : "—"}</div>
-                    <div className="market-price">{r.ask > 0 ? fmtNum(r.ask, r.ask < 1 ? 6 : 2) : "—"}</div>
+                    <div className="market-price">{r.bid > 0 ? fmtNum(r.bid, dpForPrice(r.bid)) : "—"}</div>
+                    <div className="market-price">{r.ask > 0 ? fmtNum(r.ask, dpForPrice(r.ask)) : "—"}</div>
                     <div className="market-price">{typeof spread === "number" ? `${spread.toFixed(2)}%` : "—"}</div>
 
-                    <div className={`market-price ${isPos ? "market-pos" : "market-neg"}`}>
-                      {fmtPct(r.change24hPct)}
-                    </div>
+                    <div className={`market-price ${isPos ? "market-pos" : "market-neg"}`}>{fmtPct(r.change24hPct)}</div>
                   </div>
                 );
               })}
@@ -350,15 +265,23 @@ export default function Home() {
                   <button
                     key={b.id}
                     type="button"
-                    className="jeroid-card"
-                    onClick={() => navigate("/app/engine")}
+                    className="jeroid-card is-soon"
+                    disabled
+                    aria-disabled="true"
                     aria-label={`${b.title} (Coming soon)`}
+                    title="Coming soon"
                   >
                     <div className="jeroid-title">{b.title}</div>
                     <div className="jeroid-desc">{b.desc}</div>
                     <div className="jeroid-soon">COMING SOON</div>
                   </button>
                 ))}
+              </div>
+
+              <div className="jeroid-note">
+                Thank you for supporting <strong>$JAL~Engine</strong>. Supporters will be able to deploy $50 Jeroids
+                into the live harvester (executed via my connected CoinSpot environment). This section is intentionally
+                locked until deployment is ready.
               </div>
             </div>
           </div>
@@ -367,8 +290,10 @@ export default function Home() {
         {/* ===== Packaged system ===== */}
         <section className="card bundle-card machine-surface panel-frame" aria-label="Packaged system">
           <h2 className="bundle-title">SYSTEM MODULE: Packaged Build</h2>
+
           <p className="bundle-lead">
-            Includes engine + deployment + dashboard scaffolding for builders who want their own iteration.
+            Thank you for supporting <strong>$JAL~Engine</strong>. If you want to try the system for yourself, grab the
+            packaged downloadable build below and run it in your own environment.
           </p>
 
           <div className="engine-controls" aria-label="Bundle actions">
@@ -381,61 +306,6 @@ export default function Home() {
           </div>
         </section>
       </div>
-
-      {/* ===== Auth modal ===== */}
-      {authOpen && (
-        <>
-          <button className="engine-modal-backdrop" aria-label="Close sign-in" onClick={closeAuth} />
-          <section className="engine-modal" role="dialog" aria-modal="true" aria-label="API Sign In">
-            <div className="engine-modal-head">
-              <div>
-                <div className="engine-modal-title">CoinSpot API Sign In</div>
-                <div className="engine-modal-sub">
-                  {authMode === "full"
-                    ? "FULL ACCESS — enables deployment actions"
-                    : "READ ONLY — enables market read + analytics"}
-                </div>
-              </div>
-
-              <button type="button" className="engine-modal-close" onClick={closeAuth} aria-label="Close">
-                ✕
-              </button>
-            </div>
-
-            <div className="engine-modal-body">
-              <label className="engine-field">
-                <span>API Key</span>
-                <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoFocus placeholder="paste key" />
-              </label>
-
-              <label className="engine-field">
-                <span>API Secret</span>
-                <input value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} placeholder="paste secret" />
-              </label>
-
-              <label className="engine-remember">
-                <input type="checkbox" checked={authRemember} onChange={(e) => setAuthRemember(e.target.checked)} />
-                <span>Remember on this device (stores in localStorage)</span>
-              </label>
-
-              <div className="engine-modal-actions">
-                <button type="button" className="button" onClick={closeAuth}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className={authMode === "full" ? "button gold" : "button neon"}
-                  onClick={handleAuthSubmit}
-                >
-                  Connect
-                </button>
-              </div>
-
-              <p className="engine-modal-note">Tip: leave “Remember” off to keep keys session-only.</p>
-            </div>
-          </section>
-        </>
-      )}
     </main>
   );
 }
