@@ -12,6 +12,7 @@ import {
 
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
+import Shop from "./pages/Shop"; // ✅ use the real file (removes duplicate inline ShopPage)
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -141,13 +142,22 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           >
             Inventory
           </NavLink>
+
+          {/* ✅ Settings route added */}
+          <NavLink
+            to="/app/settings"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
+            Settings
+          </NavLink>
         </nav>
       </aside>
     </>
   );
 }
 
-/* ------------------------ Simple pages (inline) ------------------------ */
+/* ------------------------ Simple pages (inline stubs) ------------------------ */
 function FeaturePage({ title }: { title: string }) {
   return (
     <main className="home-shell" aria-label={title}>
@@ -189,30 +199,6 @@ function AboutPage() {
   );
 }
 
-function ShopPage() {
-  return (
-    <main className="home-shell" aria-label="Shop">
-      <div className="home-wrap">
-        <section className="card machine-surface panel-frame">
-          <h1 className="home-title">Shop</h1>
-          <p className="home-lead">
-            Sole trader activity: design + creation of physical and digital products, sold online.
-            jalsol.com is the hub.
-          </p>
-          <div className="home-links">
-            <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
-              Etsy Shop
-            </a>
-            <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
-              jalsol.com
-            </a>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
-
 /* ------------------------ App Shell (only for /app/*) ------------------------ */
 function AppShell() {
   const location = useLocation();
@@ -233,7 +219,7 @@ function AppShell() {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Lock scroll when sidebar is open (reuses your CSS: body[data-nav-open="true"]{ overflow:hidden })
+  // Lock scroll when sidebar is open
   useEffect(() => {
     document.body.setAttribute("data-nav-open", menuOpen ? "true" : "false");
     return () => document.body.removeAttribute("data-nav-open");
@@ -242,8 +228,8 @@ function AppShell() {
   return (
     <>
       <HeaderView
-        onMenu={() => setMenuOpen((v) => !v)} // toggle (fix)
-        onLogo={() => navigate("/app/nav")}   // MAIN NAV overlay (fix)
+        onMenu={() => setMenuOpen((v) => !v)} // toggle
+        onLogo={() => navigate("/app/nav")}   // MAIN NAV overlay
         isOpen={menuOpen}
       />
 
@@ -256,7 +242,7 @@ function AppShell() {
         {/* Real pages */}
         <Route path="home" element={<Home />} />
         <Route path="about" element={<AboutPage />} />
-        <Route path="shop" element={<ShopPage />} />
+        <Route path="shop" element={<Shop />} />
 
         {/* Feature pages */}
         <Route path="token" element={<FeaturePage title="Token Generation" />} />
@@ -266,6 +252,9 @@ function AppShell() {
         <Route path="engine/logs" element={<FeaturePage title="$JAL~Engine — Log Analysis" />} />
         <Route path="inventory" element={<FeaturePage title="Inventory / Packaged System" />} />
         <Route path="inventory/purchase" element={<FeaturePage title="Inventory — Purchase" />} />
+
+        {/* ✅ Settings patch you need */}
+        <Route path="settings" element={<FeaturePage title="Settings" />} />
 
         <Route path="*" element={<Navigate to="/app/nav" replace />} />
       </Routes>

@@ -5,6 +5,7 @@
    REFINEMENT: subtle premium “machine immersion”
    FIXES: sidebar stack layout + remove unused Home menu styles
    PATCH: remove collisions + mobile engine header stack + tighter hover
+   ADD: HOME module grid (System Bays)
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -442,9 +443,6 @@ main[role="main"]{
   padding: 18px 0 56px;
 }
 
-/* Menu button styles removed (Home now has no "Menu" button) */
-/* .home-shell-top, .home-open-nav intentionally omitted */
-
 .home-wrap{
   width:min(100% - 2rem, var(--max-w));
   margin: 0 auto;
@@ -573,6 +571,112 @@ main[role="main"]{
 }
 
 .home-primary-note span{ opacity:.92; }
+
+/* ==================================
+   HOME — MODULE GRID (System Bays)
+   (Append-only patch requested)
+================================== */
+.home-modules .home-title{ margin-top: 6px; }
+
+.module-grid{
+  margin-top: 14px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 720px){
+  .module-grid{ grid-template-columns: 1fr; }
+}
+
+.module-card{
+  text-align:left;
+  padding: 14px 14px 12px;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  position: relative;
+  overflow:hidden;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.module-card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.55;
+  background:
+    radial-gradient(520px 180px at 20% 0%, rgba(244,200,106,.10), transparent 60%),
+    radial-gradient(520px 180px at 90% 120%, rgba(0,240,255,.08), transparent 60%);
+}
+
+.module-card:hover{
+  transform: translateY(-1px);
+  border-color: rgba(17,241,167,.55);
+  box-shadow: var(--glow-green);
+}
+
+.module-card.gold:hover{
+  border-color: rgba(244,200,106,.55);
+  box-shadow: var(--glow-gold);
+}
+
+.module-card.cyan:hover{
+  border-color: rgba(0,240,255,.55);
+  box-shadow: var(--glow-cyan);
+}
+
+.module-top{ position:relative; display:grid; gap:4px; }
+
+.module-kicker{
+  font-size: .72rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  opacity: .78;
+}
+
+.module-title{
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+
+.module-summary{
+  position:relative;
+  margin-top: 8px;
+  opacity: .84;
+  line-height: 1.5;
+  max-width: 70ch;
+}
+
+.module-tags{
+  position:relative;
+  margin-top: 10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.module-tag{
+  display:inline-flex;
+  align-items:center;
+  padding: .32rem .5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.22);
+  font-size: .78rem;
+  letter-spacing: .06em;
+  opacity: .88;
+}
+
+.module-cta{
+  position:relative;
+  margin-top: 12px;
+  font-size: .78rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  opacity: .78;
+}
 
 /* ==================================
    COMMON
@@ -1013,6 +1117,7 @@ main[role="main"]{
     animation:none;
   }
 }
+
 /* ==================================
    MARKET CONSOLE (Home — Engine bay)
 ================================== */
@@ -1177,6 +1282,7 @@ main[role="main"]{
   opacity:.85;
   position:relative;
 }
+
 /* ===== JEROID TILE LOCK STATE ===== */
 .jeroid-card.is-soon{
   cursor:not-allowed;
