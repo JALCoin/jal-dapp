@@ -1,4 +1,3 @@
-// src/pages/Home.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -57,7 +56,7 @@ export default function Home() {
     []
   );
 
-  /* ---------------- Terminal header (time + status) ---------------- */
+  /* ---------------- Terminal header (time) ---------------- */
   const [lastUpdate, setLastUpdate] = useState(() => fmtTime(new Date()));
   useEffect(() => {
     const id = window.setInterval(() => setLastUpdate(fmtTime(new Date())), 1000);
@@ -66,47 +65,42 @@ export default function Home() {
 
   const networkLabel = "MAINNET";
 
-  /* ---------------- Market Console (account-backed snapshot) ----------------
-     Home shows the tradable market snapshot as routed through your server.
-     Visitors do NOT sign in here.
-     Your backend can use YOUR CoinSpot credentials (your existing setup) if needed.
-  ------------------------------------------------------------------------- */
+  /* ---------------- Market Console (server-backed snapshot) ---------------- */
   const [market, setMarket] = useState<MarketRow[]>(() => [
-    { coin: "BONK", market: "BONK/AUD", bid: 0.000034, ask: 0.000035, change24hPct: 5.23, updatedAt: Date.now() },
-    { coin: "SOL", market: "SOL/AUD", bid: 122.13, ask: 122.81, change24hPct: 2.41, updatedAt: Date.now() },
-    { coin: "BTC", market: "BTC/AUD", bid: 88000, ask: 88250, change24hPct: 1.1, updatedAt: Date.now() },
-    { coin: "ETH", market: "ETH/AUD", bid: 4700, ask: 4720, change24hPct: -0.42, updatedAt: Date.now() },
-    { coin: "XRP", market: "XRP/AUD", bid: 2.076, ask: 2.083, change24hPct: 0.18, updatedAt: Date.now() },
+    // Safe boot placeholder (overwritten by /api/market)
+    { coin: "SOL", market: "SOL/AUD", bid: 122.13, ask: 122.81, updatedAt: Date.now() },
+    { coin: "BTC", market: "BTC/AUD", bid: 88000, ask: 88250, updatedAt: Date.now() },
+    { coin: "ETH", market: "ETH/AUD", bid: 4700, ask: 4720, updatedAt: Date.now() },
+    { coin: "XRP", market: "XRP/AUD", bid: 2.076, ask: 2.083, updatedAt: Date.now() },
+    { coin: "BONK", market: "BONK/AUD", bid: 0.000034, ask: 0.000035, updatedAt: Date.now() },
   ]);
 
   const [marketLoading, setMarketLoading] = useState(false);
   const [marketError, setMarketError] = useState<string | null>(null);
+  const [lastMarketOkAt, setLastMarketOkAt] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
 
     async function poll() {
-      const ENABLE_FETCH = true; // set false if /api/market isn't wired yet
-      if (!ENABLE_FETCH) return;
-
       setMarketLoading(true);
       setMarketError(null);
 
       try {
-        // Expect: MarketRow[] from your backend
         const res = await fetch("/api/market", { method: "GET" });
         if (!res.ok) throw new Error(`market fetch failed: ${res.status}`);
-        const data = (await res.json()) as MarketRow[];
 
+        const data = (await res.json()) as MarketRow[];
         if (!alive) return;
 
-        const stamped = (Array.isArray(data) ? data : []).map((r) => ({
-          ...r,
-          updatedAt: Date.now(),
-        }));
-
-        // Prevent UI blanking on transient failures
-        if (stamped.length > 0) setMarket(stamped);
+        const rows = Array.isArray(data) ? data : [];
+        if (rows.length > 0) {
+          setMarket(rows);
+          setLastMarketOkAt(Date.now());
+        } else {
+          // Don’t blank UI on empty transient response
+          setMarketError("market returned empty");
+        }
       } catch (e: any) {
         if (!alive) return;
         setMarketError(e?.message ?? "market fetch error");
@@ -129,6 +123,12 @@ export default function Home() {
     copy.sort((a, b) => Math.abs(b.change24hPct ?? 0) - Math.abs(a.change24hPct ?? 0));
     return copy.slice(0, 14);
   }, [market]);
+
+  const marketLiveLabel = marketError
+    ? "MARKET: ERROR"
+    : marketLoading
+      ? "MARKET: UPDATING"
+      : "MARKET: LIVE";
 
   /* ---------------- Jeroid deployment teaser (COMING SOON) ---------------- */
   const jeroidButtons = useMemo(
@@ -156,20 +156,22 @@ export default function Home() {
           </div>
 
           <div className="terminal-right">
-            {/* Visitors do NOT sign in. This is a public console preview. */}
-            <span className="terminal-auth is-ro">MARKET: LIVE</span>
+            <span className={`terminal-auth ${marketError ? "is-none" : "is-ro"}`}>
+              {marketLiveLabel}
+              {lastMarketOkAt ? ` • ${fmtTime(new Date(lastMarketOkAt))}` : ""}
+            </span>
           </div>
         </section>
 
-        {/* ===== Overview (media presence + identity) ===== */}
+        {/* ===== Overview ===== */}
         <section className="card home-hero machine-surface panel-frame" aria-label="Overview">
           <div className="home-kicker">JAL SYSTEM • ONLINE</div>
 
           <h1 className="home-title">jalsol.com</h1>
 
           <p className="home-lead">
-            <strong>Terminal for Solana utility.</strong> Generate tokens, create ATAs, mint accounts, and
-            navigate the market through <strong>$JAL~Engine</strong>.
+            <strong>Terminal for Solana utility.</strong> Generate tokens, create ATAs, mint accounts, and navigate the
+            market through <strong>$JAL~Engine</strong>.
           </p>
 
           <p className="home-lead">
@@ -192,7 +194,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== $JAL~Engine — Market Console Preview ===== */}
+        {/* ===== Engine bay ===== */}
         <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="$JAL~Engine">
           <div className="engine-bg" aria-hidden="true">
             <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
@@ -208,12 +210,7 @@ export default function Home() {
 
               <div className="engine-auth">
                 <div className="engine-auth-col">
-                  <button
-                    type="button"
-                    className="button"
-                    onClick={() => navigate("/app/engine")}
-                    aria-label="Open engine console"
-                  >
+                  <button type="button" className="button" onClick={() => navigate("/app/engine")}>
                     Open Console
                   </button>
                   <div className="engine-auth-hint">Viewer mode. Deployment actions appear here later.</div>
@@ -245,7 +242,9 @@ export default function Home() {
                     <div className="market-price">{r.ask > 0 ? fmtNum(r.ask, dpForPrice(r.ask)) : "—"}</div>
                     <div className="market-price">{typeof spread === "number" ? `${spread.toFixed(2)}%` : "—"}</div>
 
-                    <div className={`market-price ${isPos ? "market-pos" : "market-neg"}`}>{fmtPct(r.change24hPct)}</div>
+                    <div className={`market-price ${isPos ? "market-pos" : "market-neg"}`}>
+                      {fmtPct(r.change24hPct)}
+                    </div>
                   </div>
                 );
               })}
@@ -256,7 +255,7 @@ export default function Home() {
               {marketError ? ` • ${marketError}` : ""}
             </div>
 
-            {/* Jeroid deployment teaser */}
+            {/* Jeroid tiles (locked) */}
             <div className="jeroid-bay" aria-label="Jeroid deployment">
               <div className="jeroid-head">JEROID DEPLOYMENT</div>
 
@@ -268,7 +267,6 @@ export default function Home() {
                     className="jeroid-card is-soon"
                     disabled
                     aria-disabled="true"
-                    aria-label={`${b.title} (Coming soon)`}
                     title="Coming soon"
                   >
                     <div className="jeroid-title">{b.title}</div>
@@ -279,9 +277,9 @@ export default function Home() {
               </div>
 
               <div className="jeroid-note">
-                Thank you for supporting <strong>$JAL~Engine</strong>. Supporters will be able to deploy $50 Jeroids
-                into the live harvester (executed via my connected CoinSpot environment). This section is intentionally
-                locked until deployment is ready.
+                Thank you for supporting <strong>$JAL~Engine</strong>. Supporters will be able to deploy $50 Jeroids into
+                the live harvester (executed via my connected CoinSpot environment). This section is intentionally locked
+                until deployment is ready.
               </div>
             </div>
           </div>
