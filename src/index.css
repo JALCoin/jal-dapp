@@ -4,6 +4,7 @@
    UPDATE: Entry-only landing + NAV overlay + NO footer/tabbar
    REFINEMENT: subtle premium “machine immersion”
    FIXES: sidebar stack layout + remove unused Home menu styles
+   PATCH: remove collisions + mobile engine header stack + tighter hover
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -485,8 +486,93 @@ main[role="main"]{
   box-shadow: 0 12px 44px rgba(0,0,0,.62), inset 0 0 0 1px rgba(244,200,106,.08);
 }
 
+/* keep gold on hover (override global .card:hover) */
+.bundle-card:hover{
+  border-color: rgba(244,200,106,.55) !important;
+  box-shadow: 0 16px 54px rgba(0,0,0,.66), var(--glow-gold) !important;
+  transform: translateY(-1px);
+}
+
 .bundle-title{ margin: 0 0 6px; letter-spacing:.04em; }
 .bundle-lead{ margin: 0; opacity:.90; }
+
+/* ==================================
+   TERMINAL HEADER STRIP (Home)
+================================== */
+.terminal-bar{
+  padding: 12px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  background:
+    radial-gradient(900px 220px at 50% 0%, rgba(0,240,255,.06), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  border-radius: var(--r-lg);
+}
+
+.terminal-left{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.terminal-right{ display:flex; align-items:center; justify-content:flex-end; }
+
+.terminal-sep{ opacity:.35; }
+.terminal-dim{ opacity:.70; font-size:.82rem; letter-spacing:.14em; text-transform:uppercase; }
+.terminal-time{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  opacity:.92;
+}
+
+.terminal-pill{
+  display:inline-flex;
+  align-items:center;
+  padding: .35rem .55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.22);
+  font-size: .82rem;
+  letter-spacing:.10em;
+}
+
+.terminal-pill.ok{
+  border-color: rgba(17,241,167,.38);
+  box-shadow: 0 0 0 1px rgba(17,241,167,.10) inset;
+}
+
+.terminal-auth{
+  font-size: .86rem;
+  opacity:.86;
+  padding: .35rem .55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.22);
+}
+
+.terminal-auth.is-none{ opacity:.65; }
+.terminal-auth.is-ro{ border-color: rgba(0,240,255,.35); }
+.terminal-auth.is-full{
+  border-color: rgba(244,200,106,.45);
+  box-shadow: 0 0 16px rgba(244,200,106,.15);
+  text-shadow: 0 0 10px rgba(244,200,106,.25);
+}
+
+/* ==================================
+   HOME PRIMARY OUTCOME BAY
+================================== */
+.home-primary{
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-width: 520px;
+}
+
+.home-primary-note{
+  opacity:.82;
+  font-size: .95rem;
+}
+
+.home-primary-note span{ opacity:.92; }
 
 /* ==================================
    COMMON
@@ -517,10 +603,11 @@ main[role="main"]{
   transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
 }
 
+/* tighter hover = more “ATM panel” */
 .card:hover{
   border-color:var(--green);
   box-shadow:var(--glow-green);
-  transform:translateY(-2px);
+  transform:translateY(-1px);
 }
 
 /* chips */
@@ -607,7 +694,6 @@ main[role="main"]{
   margin-bottom:10px;
 }
 
-.engine-head-left{ }
 .engine-head-center{ text-align:center; }
 
 .engine-title{ margin:0; }
@@ -619,6 +705,31 @@ main[role="main"]{
   gap:10px;
   flex-wrap:wrap;
   justify-content:flex-end;
+}
+
+/* Mobile: stack engine header + auth into a terminal bay */
+@media (max-width: 720px){
+  .engine-head{
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .engine-head-center{ text-align:left; }
+
+  .engine-auth{
+    justify-self: start;
+    width: 100%;
+    display:grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .engine-auth-col{ align-items: flex-start; }
+
+  .engine-auth-hint{
+    max-width: none;
+    text-align:left;
+  }
 }
 
 /* module list */
@@ -682,6 +793,71 @@ main[role="main"]{
   margin: 10px 0 12px;
 }
 
+/* indicators */
+.engine-indicators{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin: 6px 0 10px;
+}
+
+.indicator{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: .45rem .65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.24);
+  font-size: .86rem;
+  letter-spacing: .06em;
+  opacity:.92;
+}
+
+.indicator span{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  letter-spacing: 0;
+  opacity:.95;
+}
+
+.indicator.ok{
+  border-color: rgba(17,241,167,.38);
+  box-shadow: 0 0 0 1px rgba(17,241,167,.10) inset;
+}
+
+.indicator.warn{
+  border-color: rgba(244,200,106,.30);
+  box-shadow: 0 0 0 1px rgba(244,200,106,.08) inset;
+}
+
+/* AUTH HINTS + ARM STATE */
+.engine-auth-col{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  align-items:flex-end;
+}
+
+.engine-auth-hint{
+  max-width: 220px;
+  text-align:right;
+  font-size: .86rem;
+  opacity:.72;
+  line-height: 1.25;
+}
+
+/* Full Access "armed" confirm */
+.button.gold.armed{
+  animation: armPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes armPulse{
+  0%{ transform: translateY(0); box-shadow: var(--glow-gold); }
+  50%{ transform: translateY(-1px); box-shadow: 0 0 18px rgba(244,200,106,.65), 0 0 34px rgba(244,200,106,.35); }
+  100%{ transform: translateY(0); box-shadow: var(--glow-gold); }
+}
+
+/* Engine log (merged bezel + structure; no duplicate selector) */
 .engine-log{
   border:1px solid rgba(255,255,255,.12);
   border-radius: var(--r-md);
@@ -689,6 +865,10 @@ main[role="main"]{
   padding: 12px 12px;
   max-height: 240px;
   overflow:auto;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 18px 40px rgba(0,0,0,.45);
 }
 
 .engine-log pre{
@@ -698,6 +878,16 @@ main[role="main"]{
   line-height: 1.55;
   color: rgba(231,255,247,.92);
   opacity: .92;
+}
+
+/* Compact (non-active) module rows (optional) */
+.engine-select-row.compact .engine-select-desc.compact{
+  margin-top: 2px;
+  opacity: .68;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ===== Modal (API sign-in) ===== */

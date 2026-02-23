@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 type AuthMode = "full" | "ro";
-
 type EngineActionKey = "token-gen" | "lp-raydium" | "jal-engine" | "inventory";
 
 type EngineAction = {
@@ -23,6 +22,13 @@ function maskKey(s: string) {
   return `${v.slice(0, 3)}…${v.slice(-3)}`;
 }
 
+function fmtTime(d: Date) {
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
 export default function Home() {
   const navigate = useNavigate();
 
@@ -38,14 +44,49 @@ export default function Home() {
     []
   );
 
+  /* ---------------- Terminal header (time + status) ---------------- */
+  const [lastUpdate, setLastUpdate] = useState(() => fmtTime(new Date()));
+  useEffect(() => {
+    const id = window.setInterval(() => setLastUpdate(fmtTime(new Date())), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const networkLabel = "MAINNET"; // keep as constant for now
+
   /* ---------------- Engine UI state ---------------- */
   const [engineStatus, setEngineStatus] = useState<"idle" | "running" | "stopped">("idle");
+  const [executorStatus, setExecutorStatus] = useState<"connected" | "disconnected">("disconnected");
+  const [deployStatus, setDeployStatus] = useState<"awaiting config" | "ready">("awaiting config");
 
   const [logs, setLogs] = useState<string[]>([
     "[engine] idle",
     "[executor] disconnected",
     "[deploy] awaiting config",
   ]);
+
+  const pushLog = (line: string) => setLogs((prev) => [line, ...prev].slice(0, 60));
+
+  // try to hydrate remembered auth (OPTIONAL: only affects UI state)
+  const [authConnected, setAuthConnected] = useState<null | { mode: AuthMode; masked: string }>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("jal_engine_auth");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const mode: AuthMode = parsed?.mode === "full" ? "full" : "ro";
+      const key = safeTrim(parsed?.key ?? "");
+      const secret = safeTrim(parsed?.secret ?? "");
+      if (!key || !secret) return;
+
+      setAuthConnected({ mode, masked: maskKey(key) });
+      setExecutorStatus("connected");
+      pushLog(`[auth] restored (${mode === "full" ? "FULL" : "RO"}): ${maskKey(key)}`);
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const actions: EngineAction[] = useMemo(
     () => [
@@ -56,16 +97,16 @@ export default function Home() {
         route: "/app/token",
       },
       {
-        key: "lp-raydium",
-        title: "Raydium — JAL/SOL liquidity layer",
-        desc: "Pool overview, LP references, and future tooling lives here.",
-        route: "/app/raydium",
-      },
-      {
         key: "jal-engine",
         title: "$JAL~Engine — read the market + deploy Jeroids",
         desc: "Sign in with Read Only or Full Access to enable features.",
         route: "/app/engine",
+      },
+      {
+        key: "lp-raydium",
+        title: "Raydium — JAL/SOL liquidity layer",
+        desc: "Pool overview, LP references, and future tooling lives here.",
+        route: "/app/raydium",
       },
       {
         key: "inventory",
@@ -77,12 +118,9 @@ export default function Home() {
     []
   );
 
-  const pushLog = (line: string) => setLogs((prev) => [line, ...prev].slice(0, 60));
-
   /* ---------------- Modal auth state ---------------- */
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("ro");
-
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [authRemember, setAuthRemember] = useState(false);
@@ -118,7 +156,11 @@ export default function Home() {
     }
 
     const label = authMode === "full" ? "FULL ACCESS" : "READ ONLY";
-    pushLog(`[auth] ${label} connected: ${maskKey(k)}`);
+    const masked = maskKey(k);
+
+    setAuthConnected({ mode: authMode, masked });
+    setExecutorStatus("connected");
+    pushLog(`[auth] ${label} connected: ${masked}`);
 
     if (authRemember) {
       try {
@@ -134,6 +176,25 @@ export default function Home() {
     closeAuth();
   };
 
+  /* ---------------- Full access arm (2-step) ---------------- */
+  const [armFull, setArmFull] = useState(false);
+  useEffect(() => {
+    if (!armFull) return;
+    const id = window.setTimeout(() => setArmFull(false), 6000); // auto-disarm
+    return () => window.clearTimeout(id);
+  }, [armFull]);
+
+  const handleFullAccessClick = () => {
+    if (!armFull) {
+      setArmFull(true);
+      pushLog("[auth] FULL ACCESS arm requested (confirm to proceed)");
+      return;
+    }
+    setArmFull(false);
+    openAuth("full");
+  };
+
+  /* ---------------- Mode selection ---------------- */
   const [activeAction, setActiveAction] = useState<EngineActionKey>("jal-engine");
 
   const goAction = (k: EngineActionKey) => {
@@ -143,8 +204,10 @@ export default function Home() {
     if (a?.route) navigate(a.route);
   };
 
+  /* ---------------- Controls (NAVIGATES) ---------------- */
   const engineStart = () => {
     setEngineStatus("running");
+    setDeployStatus("ready");
     pushLog("[engine] start requested");
     navigate("/app/engine");
   };
@@ -164,10 +227,33 @@ export default function Home() {
     navigate("/app/engine/logs");
   };
 
+  const primaryOutcome = authConnected ? "start" : "signin-ro";
+
   return (
     <main className="home-shell" aria-label="Home">
-      {/* NOTE: "Menu" button removed. Header logo opens the NAV overlay. */}
       <div className="home-wrap">
+        {/* ===== Terminal Header Strip ===== */}
+        <section className="terminal-bar panel-frame machine-surface" aria-label="Terminal status">
+          <div className="terminal-left">
+            <span className="terminal-pill ok">ONLINE</span>
+            <span className="terminal-sep">•</span>
+            <span className="terminal-pill">{networkLabel}</span>
+            <span className="terminal-sep">•</span>
+            <span className="terminal-dim">LAST UPDATE</span>
+            <span className="terminal-time">{lastUpdate}</span>
+          </div>
+
+          <div className="terminal-right">
+            {authConnected ? (
+              <span className={`terminal-auth ${authConnected.mode === "full" ? "is-full" : "is-ro"}`}>
+                AUTH: {authConnected.mode === "full" ? "FULL" : "RO"} ({authConnected.masked})
+              </span>
+            ) : (
+              <span className="terminal-auth is-none">AUTH: NONE</span>
+            )}
+          </div>
+        </section>
+
         {/* ===== Overview card (console hero) ===== */}
         <section className="card home-hero machine-surface panel-frame" aria-label="Overview">
           <div className="home-kicker">JAL SYSTEM • ONLINE</div>
@@ -175,13 +261,12 @@ export default function Home() {
           <h1 className="home-title">jalsol.com</h1>
 
           <p className="home-lead">
-            Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer •
-            Digital Creator. Minimal interface linked to the Solana ecosystem.
+            <strong>Terminal for Solana utility.</strong> Generate tokens, create ATAs, mint accounts, and
+            navigate the market through $JAL~Engine.
           </p>
 
           <p className="home-lead">
-            <strong>$JAL</strong> sits in the <strong>JAL/SOL</strong> liquidity pool on Raydium and
-            can be checked on Solscan.
+            Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer • Digital Creator.
           </p>
 
           <div className="home-links" aria-label="Links">
@@ -191,13 +276,33 @@ export default function Home() {
               </a>
             ))}
           </div>
+
+          {/* Primary outcome bay */}
+          <div className="home-primary" aria-label="Primary action">
+            {primaryOutcome === "signin-ro" ? (
+              <>
+                <button type="button" className="button neon" onClick={() => openAuth("ro")}>
+                  Sign in (Read Only)
+                </button>
+                <div className="home-primary-note">
+                  View balances + market + logs. <span>No orders can be placed.</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <button type="button" className="button gold" onClick={engineStart}>
+                  Start Engine
+                </button>
+                <div className="home-primary-note">
+                  Execution enabled by your auth mode. <span>Use Log Analysis for verification.</span>
+                </div>
+              </>
+            )}
+          </div>
         </section>
 
         {/* ===== Engine window (console bay) ===== */}
-        <section
-          className="card engine-window engine-window--hero machine-surface panel-frame"
-          aria-label="$JAL~Engine"
-        >
+        <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="$JAL~Engine">
           {/* pulsing logo behind content */}
           <div className="engine-bg" aria-hidden="true">
             <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
@@ -212,31 +317,51 @@ export default function Home() {
               </div>
 
               <div className="engine-auth">
-                <button type="button" className="button" onClick={() => openAuth("ro")}>
-                  Sign in (Read Only)
-                </button>
-                <button type="button" className="button gold" onClick={() => openAuth("full")}>
-                  Sign in (Full Access)
-                </button>
+                <div className="engine-auth-col">
+                  <button type="button" className="button" onClick={() => openAuth("ro")}>
+                    Sign in (Read Only)
+                  </button>
+                  <div className="engine-auth-hint">View balances + market + logs. No orders.</div>
+                </div>
+
+                <div className="engine-auth-col">
+                  <button
+                    type="button"
+                    className={`button gold ${armFull ? "armed" : ""}`}
+                    onClick={handleFullAccessClick}
+                  >
+                    {armFull ? "CONFIRM Full Access" : "Sign in (Full Access)"}
+                  </button>
+                  <div className="engine-auth-hint">
+                    Allows order execution. Use only on your machine.
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Selectable modules (NAVIGATES) */}
+            {/* Selectable modules */}
             <div className="engine-select" aria-label="Engine modules">
-              {actions.map((a) => (
-                <button
-                  key={a.key}
-                  type="button"
-                  className={`engine-select-row ${activeAction === a.key ? "active" : ""}`}
-                  onClick={() => goAction(a.key)}
-                >
-                  <div className="engine-select-title">{a.title}</div>
-                  <div className="engine-select-desc">{a.desc}</div>
-                </button>
-              ))}
+              {actions.map((a) => {
+                const isActive = activeAction === a.key;
+                return (
+                  <button
+                    key={a.key}
+                    type="button"
+                    className={`engine-select-row ${isActive ? "active" : "compact"}`}
+                    onClick={() => goAction(a.key)}
+                  >
+                    <div className="engine-select-title">{a.title}</div>
+                    {isActive ? (
+                      <div className="engine-select-desc">{a.desc}</div>
+                    ) : (
+                      <div className="engine-select-desc compact">{a.desc}</div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Controls (NAVIGATES) */}
+            {/* Controls */}
             <div className="engine-controls" aria-label="Engine controls">
               <button
                 type="button"
@@ -256,6 +381,19 @@ export default function Home() {
               </button>
             </div>
 
+            {/* Heartbeat indicators */}
+            <div className="engine-indicators" aria-label="System indicators">
+              <div className={`indicator ${engineStatus === "running" ? "ok" : ""}`}>
+                ENGINE: <span>{engineStatus}</span>
+              </div>
+              <div className={`indicator ${executorStatus === "connected" ? "ok" : "warn"}`}>
+                EXECUTOR: <span>{executorStatus}</span>
+              </div>
+              <div className={`indicator ${deployStatus === "ready" ? "ok" : "warn"}`}>
+                DEPLOY: <span>{deployStatus}</span>
+              </div>
+            </div>
+
             {/* Log */}
             <div className="engine-log" aria-label="Engine log">
               <pre>{logs.join("\n")}</pre>
@@ -263,23 +401,18 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== Packaged system (NAVIGATES) ===== */}
+        {/* ===== Packaged system ===== */}
         <section className="card bundle-card machine-surface panel-frame" aria-label="Packaged system">
-          <h2 className="bundle-title">Packaged System</h2>
+          <h2 className="bundle-title">SYSTEM MODULE: Packaged Build</h2>
           <p className="bundle-lead">
-            Packaged engine + deployment software for anyone who wants to build their own iteration
-            of the system inside jalsol.com.
+            Includes engine + deployment + dashboard scaffolding for builders who want their own iteration.
           </p>
 
           <div className="engine-controls" aria-label="Bundle actions">
             <button type="button" className="button gold" onClick={() => navigate("/app/inventory")}>
               View
             </button>
-            <button
-              type="button"
-              className="button"
-              onClick={() => navigate("/app/inventory/purchase")}
-            >
+            <button type="button" className="button" onClick={() => navigate("/app/inventory/purchase")}>
               Purchase
             </button>
           </div>
@@ -301,12 +434,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="engine-modal-close"
-                onClick={closeAuth}
-                aria-label="Close"
-              >
+              <button type="button" className="engine-modal-close" onClick={closeAuth} aria-label="Close">
                 ✕
               </button>
             </div>
@@ -314,29 +442,16 @@ export default function Home() {
             <div className="engine-modal-body">
               <label className="engine-field">
                 <span>API Key</span>
-                <input
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  autoFocus
-                  placeholder="paste key"
-                />
+                <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoFocus placeholder="paste key" />
               </label>
 
               <label className="engine-field">
                 <span>API Secret</span>
-                <input
-                  value={apiSecret}
-                  onChange={(e) => setApiSecret(e.target.value)}
-                  placeholder="paste secret"
-                />
+                <input value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} placeholder="paste secret" />
               </label>
 
               <label className="engine-remember">
-                <input
-                  type="checkbox"
-                  checked={authRemember}
-                  onChange={(e) => setAuthRemember(e.target.checked)}
-                />
+                <input type="checkbox" checked={authRemember} onChange={(e) => setAuthRemember(e.target.checked)} />
                 <span>Remember on this device (stores in localStorage)</span>
               </label>
 
