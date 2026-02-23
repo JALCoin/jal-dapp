@@ -3,13 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 type AuthMode = "full" | "ro";
-type EngineActionKey = "token-gen" | "lp-raydium" | "jal-engine" | "inventory";
 
-type EngineAction = {
-  key: EngineActionKey;
-  title: string;
-  desc: string;
-  route: string;
+type MarketRow = {
+  coin: string;          // "BTC"
+  market: string;        // "BTC/AUD"
+  bid: number;
+  ask: number;
+  change24hPct?: number; // optional
+  updatedAt?: number;    // epoch ms
 };
 
 function safeTrim(v: string) {
@@ -29,10 +30,27 @@ function fmtTime(d: Date) {
   return `${hh}:${mm}:${ss}`;
 }
 
+function fmtNum(n: number, dp = 2) {
+  if (!Number.isFinite(n)) return "—";
+  return n.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
+}
+
+function fmtPct(n?: number) {
+  if (typeof n !== "number" || !Number.isFinite(n)) return "—";
+  const s = n >= 0 ? `+${n.toFixed(2)}` : n.toFixed(2);
+  return `${s}%`;
+}
+
+function calcSpreadPct(bid: number, ask: number) {
+  if (!(bid > 0) || !(ask > 0)) return undefined;
+  const mid = (bid + ask) / 2;
+  if (!(mid > 0)) return undefined;
+  return ((ask - bid) / mid) * 100;
+}
+
 export default function Home() {
   const navigate = useNavigate();
 
-  // Replace these with your exact Raydium + Solscan pages when you want
   const links = useMemo(
     () => [
       { label: "Raydium (JAL/SOL)", href: "https://raydium.io/" },
@@ -51,22 +69,9 @@ export default function Home() {
     return () => window.clearInterval(id);
   }, []);
 
-  const networkLabel = "MAINNET"; // keep as constant for now
+  const networkLabel = "MAINNET";
 
-  /* ---------------- Engine UI state ---------------- */
-  const [engineStatus, setEngineStatus] = useState<"idle" | "running" | "stopped">("idle");
-  const [executorStatus, setExecutorStatus] = useState<"connected" | "disconnected">("disconnected");
-  const [deployStatus, setDeployStatus] = useState<"awaiting config" | "ready">("awaiting config");
-
-  const [logs, setLogs] = useState<string[]>([
-    "[engine] idle",
-    "[executor] disconnected",
-    "[deploy] awaiting config",
-  ]);
-
-  const pushLog = (line: string) => setLogs((prev) => [line, ...prev].slice(0, 60));
-
-  // try to hydrate remembered auth (OPTIONAL: only affects UI state)
+  /* ---------------- Auth UI (remembered) ---------------- */
   const [authConnected, setAuthConnected] = useState<null | { mode: AuthMode; masked: string }>(null);
 
   useEffect(() => {
@@ -78,45 +83,11 @@ export default function Home() {
       const key = safeTrim(parsed?.key ?? "");
       const secret = safeTrim(parsed?.secret ?? "");
       if (!key || !secret) return;
-
       setAuthConnected({ mode, masked: maskKey(key) });
-      setExecutorStatus("connected");
-      pushLog(`[auth] restored (${mode === "full" ? "FULL" : "RO"}): ${maskKey(key)}`);
     } catch {
       // ignore
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const actions: EngineAction[] = useMemo(
-    () => [
-      {
-        key: "token-gen",
-        title: "JALSOL — Solana token generation",
-        desc: "Create SPL tokens and utilities that plug into the ecosystem.",
-        route: "/app/token",
-      },
-      {
-        key: "jal-engine",
-        title: "$JAL~Engine — read the market + deploy Jeroids",
-        desc: "Sign in with Read Only or Full Access to enable features.",
-        route: "/app/engine",
-      },
-      {
-        key: "lp-raydium",
-        title: "Raydium — JAL/SOL liquidity layer",
-        desc: "Pool overview, LP references, and future tooling lives here.",
-        route: "/app/raydium",
-      },
-      {
-        key: "inventory",
-        title: "Inventory — packaged system + guides",
-        desc: "Docs + sale bundle for builders who want their own iteration.",
-        route: "/app/inventory",
-      },
-    ],
-    []
-  );
 
   /* ---------------- Modal auth state ---------------- */
   const [authOpen, setAuthOpen] = useState(false);
@@ -137,7 +108,6 @@ export default function Home() {
     setAuthRemember(false);
   };
 
-  // ESC closes modal
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && authOpen) closeAuth();
@@ -149,28 +119,17 @@ export default function Home() {
   const handleAuthSubmit = () => {
     const k = safeTrim(apiKey);
     const s = safeTrim(apiSecret);
+    if (!k || !s) return;
 
-    if (!k || !s) {
-      pushLog("[auth] missing key/secret");
-      return;
-    }
-
-    const label = authMode === "full" ? "FULL ACCESS" : "READ ONLY";
     const masked = maskKey(k);
-
     setAuthConnected({ mode: authMode, masked });
-    setExecutorStatus("connected");
-    pushLog(`[auth] ${label} connected: ${masked}`);
 
     if (authRemember) {
       try {
         localStorage.setItem("jal_engine_auth", JSON.stringify({ mode: authMode, key: k, secret: s }));
-        pushLog("[auth] saved locally (remember enabled)");
       } catch {
-        pushLog("[auth] failed to save locally");
+        // ignore
       }
-    } else {
-      pushLog("[auth] session-only (not saved)");
     }
 
     closeAuth();
@@ -180,54 +139,83 @@ export default function Home() {
   const [armFull, setArmFull] = useState(false);
   useEffect(() => {
     if (!armFull) return;
-    const id = window.setTimeout(() => setArmFull(false), 6000); // auto-disarm
+    const id = window.setTimeout(() => setArmFull(false), 6000);
     return () => window.clearTimeout(id);
   }, [armFull]);
 
   const handleFullAccessClick = () => {
     if (!armFull) {
       setArmFull(true);
-      pushLog("[auth] FULL ACCESS arm requested (confirm to proceed)");
       return;
     }
     setArmFull(false);
     openAuth("full");
   };
 
-  /* ---------------- Mode selection ---------------- */
-  const [activeAction, setActiveAction] = useState<EngineActionKey>("jal-engine");
+  /* ---------------- Market Console (Public CEX snapshot) ---------------- */
+  const [market, setMarket] = useState<MarketRow[]>(() => [
+    { coin: "SOL", market: "SOL/AUD", bid: 122.13, ask: 122.81, change24hPct: 2.41, updatedAt: Date.now() },
+    { coin: "BTC", market: "BTC/AUD", bid: 88000, ask: 88250, change24hPct: 1.1, updatedAt: Date.now() },
+    { coin: "ETH", market: "ETH/AUD", bid: 4700, ask: 4720, change24hPct: -0.42, updatedAt: Date.now() },
+    { coin: "XRP", market: "XRP/AUD", bid: 2.076, ask: 2.083, change24hPct: 0.18, updatedAt: Date.now() },
+    { coin: "BONK", market: "BONK/AUD", bid: 0.000034, ask: 0.000035, change24hPct: 5.23, updatedAt: Date.now() },
+  ]);
 
-  const goAction = (k: EngineActionKey) => {
-    const a = actions.find((x) => x.key === k);
-    setActiveAction(k);
-    pushLog(`[hub] selected: ${k}`);
-    if (a?.route) navigate(a.route);
-  };
+  const [marketLoading, setMarketLoading] = useState(false);
+  const [marketError, setMarketError] = useState<string | null>(null);
 
-  /* ---------------- Controls (NAVIGATES) ---------------- */
-  const engineStart = () => {
-    setEngineStatus("running");
-    setDeployStatus("ready");
-    pushLog("[engine] start requested");
-    navigate("/app/engine");
-  };
+  // Frontend-only public market fetch (no keys). You can keep ENABLE_FETCH=false until endpoint is ready.
+  useEffect(() => {
+    let alive = true;
 
-  const engineStop = () => {
-    setEngineStatus("stopped");
-    pushLog("[engine] stop requested");
-  };
+    async function poll() {
+      const ENABLE_FETCH = false; // flip true when you wire your endpoint or direct CoinSpot public fetch
+      if (!ENABLE_FETCH) return;
 
-  const engineSettings = () => {
-    pushLog("[engine] settings opened");
-    navigate("/app/engine/settings");
-  };
+      setMarketLoading(true);
+      setMarketError(null);
 
-  const engineAnalysis = () => {
-    pushLog("[engine] log analysis opened");
-    navigate("/app/engine/logs");
-  };
+      try {
+        const res = await fetch("/api/market", { method: "GET" });
+        if (!res.ok) throw new Error(`market fetch failed: ${res.status}`);
+        const data = (await res.json()) as MarketRow[];
+        if (!alive) return;
 
-  const primaryOutcome = authConnected ? "start" : "signin-ro";
+        const stamped = (data ?? []).map((r) => ({ ...r, updatedAt: Date.now() }));
+        setMarket(stamped);
+      } catch (e: any) {
+        if (!alive) return;
+        setMarketError(e?.message ?? "market fetch error");
+      } finally {
+        if (!alive) return;
+        setMarketLoading(false);
+      }
+    }
+
+    poll();
+    const id = window.setInterval(poll, 8000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const rankedMarket = useMemo(() => {
+    const copy = [...market];
+    copy.sort((a, b) => Math.abs(b.change24hPct ?? 0) - Math.abs(a.change24hPct ?? 0));
+    return copy.slice(0, 10);
+  }, [market]);
+
+  /* ---------------- Jeroid deployment teaser (COMING SOON) ---------------- */
+  const jeroidButtons = useMemo(
+    () => [
+      { id: "jr-lvl1", title: "Jeroid LVL1", desc: "$50 deployment unit • baseline hold" },
+      { id: "jr-lvl2", title: "Jeroid LVL2", desc: "$50 deployment unit • tighter rules" },
+      { id: "jr-lvl3", title: "Jeroid LVL3", desc: "$50 deployment unit • aggressive trail" },
+      { id: "jr-lvl4", title: "Jeroid LVL4", desc: "Exit discipline • trailing lock" },
+    ],
+    []
+  );
 
   return (
     <main className="home-shell" aria-label="Home">
@@ -254,7 +242,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== Overview card (console hero) ===== */}
+        {/* ===== Overview (media presence + identity) ===== */}
         <section className="card home-hero machine-surface panel-frame" aria-label="Overview">
           <div className="home-kicker">JAL SYSTEM • ONLINE</div>
 
@@ -262,7 +250,7 @@ export default function Home() {
 
           <p className="home-lead">
             <strong>Terminal for Solana utility.</strong> Generate tokens, create ATAs, mint accounts, and
-            navigate the market through $JAL~Engine.
+            navigate the market through <strong>$JAL~Engine</strong>.
           </p>
 
           <p className="home-lead">
@@ -277,33 +265,11 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Primary outcome bay */}
-          <div className="home-primary" aria-label="Primary action">
-            {primaryOutcome === "signin-ro" ? (
-              <>
-                <button type="button" className="button neon" onClick={() => openAuth("ro")}>
-                  Sign in (Read Only)
-                </button>
-                <div className="home-primary-note">
-                  View balances + market + logs. <span>No orders can be placed.</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <button type="button" className="button gold" onClick={engineStart}>
-                  Start Engine
-                </button>
-                <div className="home-primary-note">
-                  Execution enabled by your auth mode. <span>Use Log Analysis for verification.</span>
-                </div>
-              </>
-            )}
-          </div>
+          {/* No "Start Engine" button on Home (by design). */}
         </section>
 
-        {/* ===== Engine window (console bay) ===== */}
+        {/* ===== $JAL~Engine — Market Console Preview ===== */}
         <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="$JAL~Engine">
-          {/* pulsing logo behind content */}
           <div className="engine-bg" aria-hidden="true">
             <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
           </div>
@@ -313,7 +279,7 @@ export default function Home() {
               <div className="engine-head-left" aria-hidden="true" />
               <div className="engine-head-center">
                 <h2 className="engine-title">$JAL~Engine</h2>
-                <div className="engine-sub">CEX connector • Jeroid deployment • logs</div>
+                <div className="engine-sub">Live market interface • structured deployment</div>
               </div>
 
               <div className="engine-auth">
@@ -321,7 +287,7 @@ export default function Home() {
                   <button type="button" className="button" onClick={() => openAuth("ro")}>
                     Sign in (Read Only)
                   </button>
-                  <div className="engine-auth-hint">View balances + market + logs. No orders.</div>
+                  <div className="engine-auth-hint">View market + analytics. No orders.</div>
                 </div>
 
                 <div className="engine-auth-col">
@@ -332,71 +298,68 @@ export default function Home() {
                   >
                     {armFull ? "CONFIRM Full Access" : "Sign in (Full Access)"}
                   </button>
-                  <div className="engine-auth-hint">
-                    Allows order execution. Use only on your machine.
-                  </div>
+                  <div className="engine-auth-hint">Execution capability. Use only on your machine.</div>
                 </div>
               </div>
             </div>
 
-            {/* Selectable modules */}
-            <div className="engine-select" aria-label="Engine modules">
-              {actions.map((a) => {
-                const isActive = activeAction === a.key;
+            {/* Market console */}
+            <div className="market-console" aria-label="Tradable market">
+              <div className="market-head">
+                <div>COIN</div>
+                <div className="market-price">BID</div>
+                <div className="market-price">ASK</div>
+                <div className="market-price">SPREAD</div>
+                <div className="market-price">24H</div>
+              </div>
+
+              {rankedMarket.map((r) => {
+                const spread = calcSpreadPct(r.bid, r.ask);
+                const isPos = (r.change24hPct ?? 0) >= 0;
+
                 return (
-                  <button
-                    key={a.key}
-                    type="button"
-                    className={`engine-select-row ${isActive ? "active" : "compact"}`}
-                    onClick={() => goAction(a.key)}
-                  >
-                    <div className="engine-select-title">{a.title}</div>
-                    {isActive ? (
-                      <div className="engine-select-desc">{a.desc}</div>
-                    ) : (
-                      <div className="engine-select-desc compact">{a.desc}</div>
-                    )}
-                  </button>
+                  <div key={r.market} className="market-row">
+                    <div className="market-coin">
+                      <strong>{r.coin}</strong>{" "}
+                      <span className="market-market">{r.market}</span>
+                    </div>
+
+                    <div className="market-price">{r.bid > 0 ? fmtNum(r.bid, r.bid < 1 ? 6 : 2) : "—"}</div>
+                    <div className="market-price">{r.ask > 0 ? fmtNum(r.ask, r.ask < 1 ? 6 : 2) : "—"}</div>
+                    <div className="market-price">{typeof spread === "number" ? `${spread.toFixed(2)}%` : "—"}</div>
+
+                    <div className={`market-price ${isPos ? "market-pos" : "market-neg"}`}>
+                      {fmtPct(r.change24hPct)}
+                    </div>
+                  </div>
                 );
               })}
             </div>
 
-            {/* Controls */}
-            <div className="engine-controls" aria-label="Engine controls">
-              <button
-                type="button"
-                className={`button ${engineStatus === "running" ? "neon" : ""}`}
-                onClick={engineStart}
-              >
-                Start
-              </button>
-              <button type="button" className="button" onClick={engineStop}>
-                Stop
-              </button>
-              <button type="button" className="button" onClick={engineSettings}>
-                Settings
-              </button>
-              <button type="button" className="button" onClick={engineAnalysis}>
-                Log Analysis
-              </button>
+            <div className="market-foot">
+              {marketLoading ? "Market: updating…" : "Market: live snapshot"}
+              {marketError ? ` • ${marketError}` : ""}
             </div>
 
-            {/* Heartbeat indicators */}
-            <div className="engine-indicators" aria-label="System indicators">
-              <div className={`indicator ${engineStatus === "running" ? "ok" : ""}`}>
-                ENGINE: <span>{engineStatus}</span>
-              </div>
-              <div className={`indicator ${executorStatus === "connected" ? "ok" : "warn"}`}>
-                EXECUTOR: <span>{executorStatus}</span>
-              </div>
-              <div className={`indicator ${deployStatus === "ready" ? "ok" : "warn"}`}>
-                DEPLOY: <span>{deployStatus}</span>
-              </div>
-            </div>
+            {/* Jeroid deployment teaser */}
+            <div className="jeroid-bay" aria-label="Jeroid deployment">
+              <div className="jeroid-head">JEROID DEPLOYMENT</div>
 
-            {/* Log */}
-            <div className="engine-log" aria-label="Engine log">
-              <pre>{logs.join("\n")}</pre>
+              <div className="jeroid-grid">
+                {jeroidButtons.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    className="jeroid-card"
+                    onClick={() => navigate("/app/engine")}
+                    aria-label={`${b.title} (Coming soon)`}
+                  >
+                    <div className="jeroid-title">{b.title}</div>
+                    <div className="jeroid-desc">{b.desc}</div>
+                    <div className="jeroid-soon">COMING SOON</div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>

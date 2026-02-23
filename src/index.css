@@ -1013,3 +1013,167 @@ main[role="main"]{
     animation:none;
   }
 }
+/* ==================================
+   MARKET CONSOLE (Home — Engine bay)
+================================== */
+.market-console{
+  margin-top: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-md);
+  background: rgba(0,0,0,.28);
+  overflow: hidden;
+}
+
+.market-head,
+.market-row{
+  display: grid;
+  grid-template-columns: 1.6fr .9fr .9fr .9fr .7fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+}
+
+.market-head{
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01));
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  font-size: .78rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  opacity: .82;
+}
+
+.market-row{
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+.market-row:hover{
+  background: rgba(255,255,255,.03);
+}
+
+.market-coin{
+  display:flex;
+  gap:10px;
+  align-items:baseline;
+  flex-wrap:wrap;
+}
+
+.market-market{
+  opacity:.60;
+  font-size:.9rem;
+}
+
+.market-price{
+  text-align:right;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: .92rem;
+  opacity:.94;
+}
+
+.market-pos{ color: rgba(17,241,167,.95); text-shadow: 0 0 10px rgba(17,241,167,.18); }
+.market-neg{ color: rgba(255,120,120,.95); text-shadow: 0 0 10px rgba(255,120,120,.14); }
+
+.market-foot{
+  margin-top: 10px;
+  opacity: .75;
+  font-size: .9rem;
+}
+
+/* Mobile: collapse market columns */
+@media (max-width: 720px){
+  .market-head,
+  .market-row{
+    grid-template-columns: 1.5fr 1fr 1fr;
+  }
+  .market-head div:nth-child(4),
+  .market-head div:nth-child(5),
+  .market-row div:nth-child(4),
+  .market-row div:nth-child(5){
+    display:none;
+  }
+  .market-price{ font-size: .9rem; }
+}
+
+/* ==================================
+   JEROID BAY (Coming soon tiles)
+================================== */
+.jeroid-bay{
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.jeroid-head{
+  font-size: .78rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  opacity: .78;
+  margin-bottom: 10px;
+}
+
+.jeroid-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 720px){
+  .jeroid-grid{ grid-template-columns: 1fr; }
+}
+
+.jeroid-card{
+  text-align:left;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  position: relative;
+  overflow:hidden;
+  opacity: .92;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.jeroid-card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(520px 180px at 20% 0%, rgba(244,200,106,.10), transparent 60%),
+    radial-gradient(520px 180px at 90% 120%, rgba(0,240,255,.08), transparent 60%);
+  opacity:.55;
+  pointer-events:none;
+}
+
+.jeroid-card:hover{
+  transform: translateY(-1px);
+  border-color: rgba(244,200,106,.45);
+  box-shadow: 0 16px 54px rgba(0,0,0,.66), var(--glow-gold);
+}
+
+.jeroid-title{
+  font-weight: 800;
+  letter-spacing: .02em;
+  position:relative;
+}
+
+.jeroid-desc{
+  opacity:.78;
+  margin-top: 4px;
+  font-size: .95rem;
+  position:relative;
+}
+
+.jeroid-soon{
+  margin-top: 10px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: .35rem .55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.24);
+  font-size: .78rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  opacity:.85;
+  position:relative;
+}
