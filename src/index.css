@@ -1303,3 +1303,195 @@ main[role="main"]{
   line-height: 1.55;
   max-width: 78ch;
 }
+/* ==================================
+   HOME — TOP STRIP TIGHTENING
+================================== */
+.home-topbar{
+  margin-top: 2px;          /* pulls it closer to header */
+}
+
+/* Keep pills readable on narrow widths */
+.home-topbar .terminal-left{
+  gap: 8px;
+}
+@media (max-width: 720px){
+  .home-topbar{
+    padding: 10px 12px;
+  }
+  .home-topbar .terminal-right{
+    display:none; /* optional: remove right badge on tiny screens */
+  }
+}
+
+/* ==================================
+   HOME — MODULE STAGE (NO OUTER CONTAINER CARD)
+   Full-width stacked bays + looping logo backdrop
+================================== */
+.module-stage{
+  position: relative;
+  overflow: hidden;
+  padding: 18px 0 4px;
+}
+
+/* subtle separator from hero */
+.module-stage::before{
+  content:"";
+  position:absolute;
+  left:0; right:0; top:0;
+  height:1px;
+  background: rgba(255,255,255,.08);
+  opacity:.7;
+}
+
+.module-bg{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  opacity:.09;           /* low opacity immersion */
+  filter: blur(.25px);
+}
+
+.module-bg-logo{
+  width: min(720px, 86vw);
+  animation: pulseGlow 1.2s ease-in-out infinite; /* uses your existing keyframes */
+}
+
+.module-foreground{
+  position: relative;
+  z-index: 2;
+}
+
+.module-head{
+  padding: 0 0 10px;
+}
+
+.module-head-title{
+  margin: 6px 0 6px;
+  letter-spacing: .02em;
+}
+
+.module-head-sub{
+  margin: 0;
+  opacity: .78;
+  max-width: 78ch;
+}
+
+/* Stack full-width rows */
+.module-stack{
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* Full width bay row */
+.module-row{
+  width: 100%;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+
+  padding: 14px 14px;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  box-shadow: 0 10px 30px rgba(0,0,0,.55);
+
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+/* internal sheen */
+.module-row::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.45;
+  background:
+    radial-gradient(520px 180px at 18% 0%, rgba(244,200,106,.08), transparent 60%),
+    radial-gradient(520px 180px at 92% 120%, rgba(0,240,255,.07), transparent 60%);
+}
+
+/* hover */
+.module-row:hover{
+  transform: translateY(-1px);
+  border-color: rgba(17,241,167,.55);
+  box-shadow: var(--glow-green);
+}
+
+.module-row-main{ position: relative; z-index: 2; }
+.module-row-cta{
+  position: relative;
+  z-index: 2;
+  font-size: .78rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  opacity: .78;
+  padding-left: 10px;
+  white-space: nowrap;
+}
+
+/* Tone variants (optional) */
+.module-row.tone-gold:hover{
+  border-color: rgba(244,200,106,.55);
+  box-shadow: var(--glow-gold);
+}
+.module-row.tone-cyan:hover{
+  border-color: rgba(0,240,255,.55);
+  box-shadow: var(--glow-cyan);
+}
+.module-row.tone-green:hover{
+  border-color: rgba(17,241,167,.55);
+  box-shadow: var(--glow-green);
+}
+
+/* Typography inside */
+.module-name{
+  font-weight: 900;
+  letter-spacing: .02em;
+  margin-top: 2px;
+}
+
+.module-desc{
+  margin-top: 6px;
+  opacity: .84;
+  line-height: 1.5;
+  max-width: 92ch;
+}
+
+/* Tags reuse your style but slightly tighter */
+.module-tags{
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.module-tag{
+  display:inline-flex;
+  align-items:center;
+  padding: .32rem .5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.22);
+  font-size: .78rem;
+  letter-spacing: .06em;
+  opacity: .88;
+}
+
+/* Mobile: CTA drops under content */
+@media (max-width: 720px){
+  .module-row{
+    grid-template-columns: 1fr;
+  }
+  .module-row-cta{
+    padding-left: 0;
+    margin-top: 10px;
+    justify-self: start;
+  }
+}

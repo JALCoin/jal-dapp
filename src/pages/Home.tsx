@@ -9,20 +9,18 @@ function fmtTime(d: Date) {
   return `${hh}:${mm}:${ss}`;
 }
 
-type ModuleCard = {
-  id: string;
+type ModuleDef = {
+  kicker: string;
   title: string;
-  kicker?: string;
-  summary: string;
-  to: string; // internal route
-  tags?: string[];
-  tone?: "green" | "gold" | "cyan";
+  desc: string;
+  tags: string[];
+  tone?: "gold" | "cyan" | "green";
+  onOpen: () => void;
 };
 
 export default function Home() {
   const navigate = useNavigate();
 
-  /* ---------------- Terminal header (time) ---------------- */
   const [now, setNow] = useState(() => fmtTime(new Date()));
   useEffect(() => {
     const id = window.setInterval(() => setNow(fmtTime(new Date())), 1000);
@@ -31,10 +29,7 @@ export default function Home() {
 
   const networkLabel = "MAINNET";
 
-  // If you later wire /api/health (optional), this can become real status.
-  const [statusText] = useState("ONLINE");
-
-  const externalLinks = useMemo(
+  const links = useMemo(
     () => [
       { label: "Raydium (JAL/SOL)", href: "https://raydium.io/" },
       {
@@ -47,67 +42,58 @@ export default function Home() {
     []
   );
 
-  /* ---------------- Modules (HOME = routing dashboard) ---------------- */
-  const modules = useMemo<ModuleCard[]>(
+  const modules = useMemo<ModuleDef[]>(
     () => [
       {
-        id: "jalsol",
-        title: "JALSOL",
         kicker: "DISCOVER",
-        summary:
-          "Entrance into token generation and webapp creation — the on-ramp into the cryptocurrency market through JALSOL utility.",
-        to: "/app/token",
+        title: "JALSOL",
+        desc:
+          "Entrance into token generation and webapp creation — the on-ramp into the market through JALSOL utility.",
         tags: ["Token Generation", "ATA", "Minting", "Utility"],
         tone: "green",
+        onOpen: () => navigate("/app/token"),
       },
       {
-        id: "engine",
-        title: "$JAL~Engine",
         kicker: "LIVE CONSOLE",
-        summary: "Live market interface. Structured Jeroid deployment.",
-        to: "/app/engine",
+        title: "$JAL~Engine",
+        desc: "Live market interface. Structured Jeroid deployment.",
         tags: ["Market Snapshot", "Indicators", "Deploy Jeroids", "Execution Logs"],
         tone: "cyan",
+        onOpen: () => navigate("/app/engine"),
       },
       {
-        id: "shop",
-        title: "Shop",
         kicker: "CRAFT + DIGITAL",
-        summary: "Physical + digital products — the hub for online sales and releases.",
-        to: "/app/shop",
+        title: "Shop",
+        desc: "Physical + digital products — the hub for online sales and releases.",
         tags: ["Etsy", "Relics", "Digital Items"],
-        tone: "gold",
+        onOpen: () => navigate("/app/shop"),
       },
       {
-        id: "inventory",
-        title: "Inventory",
         kicker: "PACKAGED BUILD",
-        summary:
-          "Your downloadable system modules — packaged builds, purchase access, and inventory browsing.",
-        to: "/app/inventory",
+        title: "Inventory",
+        desc: "Downloadable system modules — packaged builds, purchase access, and inventory browsing.",
         tags: ["View", "Purchase", "Downloads"],
         tone: "gold",
+        onOpen: () => navigate("/app/inventory"),
       },
       {
-        id: "settings",
-        title: "Settings",
         kicker: "CONFIG LAYER",
-        summary: "API keys, preferences, environment configuration.",
-        to: "/app/settings",
+        title: "Settings",
+        desc: "API keys, preferences, environment configuration.",
         tags: ["CoinSpot API", "RO/Full", "Session", "Risk Params (future)"],
-        tone: "green",
+        onOpen: () => navigate("/app/engine/settings"),
       },
     ],
-    []
+    [navigate]
   );
 
   return (
     <main className="home-shell" aria-label="Home">
       <div className="home-wrap">
-        {/* ===== Terminal Header Strip ===== */}
-        <section className="terminal-bar panel-frame machine-surface" aria-label="Terminal status">
+        {/* ===== Top status strip (tightened) ===== */}
+        <section className="terminal-bar panel-frame machine-surface home-topbar" aria-label="Terminal status">
           <div className="terminal-left">
-            <span className="terminal-pill ok">{statusText}</span>
+            <span className="terminal-pill ok">ONLINE</span>
             <span className="terminal-sep">•</span>
             <span className="terminal-pill">{networkLabel}</span>
             <span className="terminal-sep">•</span>
@@ -120,8 +106,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== Identity / Overview ===== */}
-        <section className="card home-hero machine-surface panel-frame" aria-label="Overview">
+        {/* ===== JAL SYSTEM hero ===== */}
+        <section className="card home-hero machine-surface panel-frame" aria-label="JAL System">
           <div className="home-kicker">JAL SYSTEM • ONLINE</div>
 
           <h1 className="home-title">jalsol.com</h1>
@@ -136,7 +122,7 @@ export default function Home() {
           </p>
 
           <div className="home-links" aria-label="Links">
-            {externalLinks.map((l) => (
+            {links.map((l) => (
               <a key={l.label} className="chip" href={l.href} target="_blank" rel="noreferrer">
                 {l.label}
               </a>
@@ -151,70 +137,49 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== Module Containers (ordered) ===== */}
-        <section className="card machine-surface panel-frame home-modules" aria-label="JALSOL modules">
-          <div className="home-kicker">MODULES</div>
-          <h2 className="home-title">System Bays</h2>
-          <p className="home-lead">
-            Choose a bay. Each bay is a container with a single purpose and a direct path.
-          </p>
+        {/* ===== MODULE BAYS (NO container card; full-width rows) ===== */}
+        <section className="module-stage machine-surface" aria-label="Modules">
+          {/* looping low-opacity logo behind bays */}
+          <div className="module-bg" aria-hidden="true">
+            <img className="module-bg-logo" src="/JALSOL1.gif" alt="" />
+          </div>
 
-          <div className="module-grid" role="list" aria-label="Module list">
-            {modules.map((m) => {
-              const toneClass =
-                m.tone === "gold" ? "module-card gold" : m.tone === "cyan" ? "module-card cyan" : "module-card green";
+          <div className="module-foreground">
+            <div className="module-head">
+              <div className="home-kicker">MODULES</div>
+              <h2 className="module-head-title">System Bays</h2>
+              <p className="module-head-sub">Choose a bay. Each bay is a container with a single purpose and a direct path.</p>
+            </div>
 
-              return (
+            <div className="module-stack" role="list">
+              {modules.map((m) => (
                 <button
-                  key={m.id}
+                  key={m.title}
                   type="button"
-                  className={toneClass}
+                  className={`module-row panel-frame ${m.tone ? `tone-${m.tone}` : ""}`}
+                  onClick={m.onOpen}
                   role="listitem"
-                  onClick={() => navigate(m.to)}
-                  aria-label={`Open ${m.title}`}
                 >
-                  <div className="module-top">
-                    <div className="module-kicker">{m.kicker ?? "MODULE"}</div>
-                    <div className="module-title">{m.title}</div>
-                  </div>
+                  <div className="module-row-main">
+                    <div className="module-kicker">{m.kicker}</div>
+                    <div className="module-name">{m.title}</div>
+                    <div className="module-desc">{m.desc}</div>
 
-                  <div className="module-summary">{m.summary}</div>
-
-                  {m.tags?.length ? (
-                    <div className="module-tags" aria-hidden="true">
-                      {m.tags.slice(0, 4).map((t) => (
+                    <div className="module-tags" aria-label={`${m.title} tags`}>
+                      {m.tags.map((t) => (
                         <span key={t} className="module-tag">
                           {t}
                         </span>
                       ))}
                     </div>
-                  ) : null}
+                  </div>
 
-                  <div className="module-cta" aria-hidden="true">
+                  <div className="module-row-cta" aria-hidden="true">
                     OPEN →
                   </div>
                 </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ===== Optional: “Packaged build” callout stays (but now it’s redundant with Inventory) ===== */}
-        <section className="card bundle-card machine-surface panel-frame" aria-label="Packaged system">
-          <h2 className="bundle-title">SYSTEM MODULE: Packaged Build</h2>
-
-          <p className="bundle-lead">
-            If you want to try the system for yourself, Inventory holds the packaged downloadable build and purchase
-            access.
-          </p>
-
-          <div className="engine-controls" aria-label="Bundle actions">
-            <button type="button" className="button gold" onClick={() => navigate("/app/inventory")}>
-              Open Inventory
-            </button>
-            <button type="button" className="button" onClick={() => navigate("/app/inventory/purchase")}>
-              Purchase
-            </button>
+              ))}
+            </div>
           </div>
         </section>
       </div>
