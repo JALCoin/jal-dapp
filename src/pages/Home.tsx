@@ -9,15 +9,6 @@ function fmtTime(d: Date) {
   return `${hh}:${mm}:${ss}`;
 }
 
-type ModuleDef = {
-  kicker: string;
-  title: string;
-  desc: string;
-  tags: string[];
-  tone?: "gold" | "cyan" | "green";
-  onOpen: () => void;
-};
-
 export default function Home() {
   const navigate = useNavigate();
 
@@ -42,15 +33,14 @@ export default function Home() {
     []
   );
 
-  const modules = useMemo<ModuleDef[]>(
+  const modules = useMemo(
     () => [
       {
         kicker: "DISCOVER",
         title: "JALSOL",
         desc:
-          "Entrance into token generation and webapp creation — the on-ramp into the market through JALSOL utility.",
+          "Entrance into token generation and webapp creation — the on-ramp into the cryptocurrency market through JALSOL utility.",
         tags: ["Token Generation", "ATA", "Minting", "Utility"],
-        tone: "green",
         onOpen: () => navigate("/app/token"),
       },
       {
@@ -58,7 +48,6 @@ export default function Home() {
         title: "$JAL~Engine",
         desc: "Live market interface. Structured Jeroid deployment.",
         tags: ["Market Snapshot", "Indicators", "Deploy Jeroids", "Execution Logs"],
-        tone: "cyan",
         onOpen: () => navigate("/app/engine"),
       },
       {
@@ -71,9 +60,8 @@ export default function Home() {
       {
         kicker: "PACKAGED BUILD",
         title: "Inventory",
-        desc: "Downloadable system modules — packaged builds, purchase access, and inventory browsing.",
+        desc: "Your downloadable system modules — packaged builds, purchase access, and inventory browsing.",
         tags: ["View", "Purchase", "Downloads"],
-        tone: "gold",
         onOpen: () => navigate("/app/inventory"),
       },
       {
@@ -81,7 +69,7 @@ export default function Home() {
         title: "Settings",
         desc: "API keys, preferences, environment configuration.",
         tags: ["CoinSpot API", "RO/Full", "Session", "Risk Params (future)"],
-        onOpen: () => navigate("/app/engine/settings"),
+        onOpen: () => navigate("/app/settings"),
       },
     ],
     [navigate]
@@ -90,7 +78,7 @@ export default function Home() {
   return (
     <main className="home-shell" aria-label="Home">
       <div className="home-wrap">
-        {/* ===== Top status strip (tightened) ===== */}
+        {/* ===== Top status strip ===== */}
         <section className="terminal-bar panel-frame machine-surface home-topbar" aria-label="Terminal status">
           <div className="terminal-left">
             <span className="terminal-pill ok">ONLINE</span>
@@ -137,46 +125,38 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== MODULE BAYS (NO container card; full-width rows) ===== */}
-        <section className="module-stage machine-surface" aria-label="Modules">
+        {/* ===== MODULE STACK (no extra header text) ===== */}
+        <section className="card module-window machine-surface panel-frame" aria-label="Modules">
           {/* looping low-opacity logo behind bays */}
           <div className="module-bg" aria-hidden="true">
             <img className="module-bg-logo" src="/JALSOL1.gif" alt="" />
           </div>
 
           <div className="module-foreground">
-            <div className="module-head">
-              <div className="home-kicker">MODULES</div>
-              <h2 className="module-head-title">System Bays</h2>
-              <p className="module-head-sub">Choose a bay. Each bay is a container with a single purpose and a direct path.</p>
-            </div>
-
-            <div className="module-stack" role="list">
+            <div className="module-stack" role="list" aria-label="System modules">
               {modules.map((m) => (
                 <button
                   key={m.title}
                   type="button"
-                  className={`module-row panel-frame ${m.tone ? `tone-${m.tone}` : ""}`}
+                  className="module-card"
                   onClick={m.onOpen}
                   role="listitem"
                 >
-                  <div className="module-row-main">
+                  <div className="module-card-top">
                     <div className="module-kicker">{m.kicker}</div>
                     <div className="module-name">{m.title}</div>
                     <div className="module-desc">{m.desc}</div>
-
-                    <div className="module-tags" aria-label={`${m.title} tags`}>
-                      {m.tags.map((t) => (
-                        <span key={t} className="module-tag">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
                   </div>
 
-                  <div className="module-row-cta" aria-hidden="true">
-                    OPEN →
+                  <div className="module-tags" aria-label={`${m.title} tags`}>
+                    {m.tags.map((t) => (
+                      <span key={t} className="module-tag">
+                        {t}
+                      </span>
+                    ))}
                   </div>
+
+                  <div className="module-open">OPEN →</div>
                 </button>
               ))}
             </div>

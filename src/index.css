@@ -679,6 +679,78 @@ main[role="main"]{
 }
 
 /* ==================================
+   HOME — MODULE WINDOW (stack + low opacity animated logo)
+================================== */
+.home-topbar{
+  margin-top: 6px;
+}
+
+.module-window{
+  position: relative;
+  overflow: hidden;
+  padding: 14px; /* tighter, “finished” */
+  background:
+    radial-gradient(900px 420px at 50% 0%, rgba(0,240,255,.06), transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+}
+
+.module-bg{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  opacity:.08;               /* LOW opacity, premium */
+  filter: blur(.15px);
+}
+
+.module-bg-logo{
+  width:min(720px, 88vw);
+  animation: pulseGlow 1.2s ease-in-out infinite; /* reuses your keyframes */
+}
+
+.module-foreground{
+  position:relative;
+  z-index:2;
+}
+
+/* Full-width stack (no grid container needed) */
+.module-stack{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+/* Card internals for the stack version */
+.module-card-top{
+  position:relative;
+  display:grid;
+  gap:4px;
+}
+
+.module-name{
+  font-weight: 900;
+  letter-spacing: .02em;
+  font-size: 1.12rem;
+}
+
+.module-desc{
+  opacity:.84;
+  margin-top: 6px;
+  line-height: 1.5;
+  max-width: 80ch;
+}
+
+.module-open{
+  position:relative;
+  margin-top: 12px;
+  font-size: .78rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  opacity: .78;
+}
+
+/* ==================================
    COMMON
 ================================== */
 .button{
