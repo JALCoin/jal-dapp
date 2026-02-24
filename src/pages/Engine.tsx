@@ -58,7 +58,7 @@ type SlotCard = {
   tier: SlotTier;
   amountAud: number;
   title: string; // keep identical naming
-  bullets: string[]; // identical behavior bullets
+  bullets: string[];
 };
 
 const SLOT_BULLETS = [
@@ -83,6 +83,8 @@ export default function Engine() {
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("spread");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const timerRef = useRef<number | null>(null);
 
@@ -300,10 +302,6 @@ export default function Engine() {
               })}
             </div>
 
-            <div className="market-foot">
-              {snap?.err ? `Service note: ${snap.err}` : "Public feed only. Trading + Jeroids will be layered next."}
-            </div>
-
             {/* ---------------- Jeroid Slots (Support Donations) ---------------- */}
             <div
               style={{
@@ -335,7 +333,6 @@ export default function Engine() {
                 </div>
               </div>
 
-              {/* Responsive: 2 columns desktop, 1 column on mobile */}
               <div
                 style={{
                   marginTop: 14,
@@ -362,7 +359,7 @@ export default function Engine() {
                         ${c.amountAud} <span style={{ fontSize: 12, opacity: 0.8 }}>AUD</span>
                       </div>
                       <div style={{ fontSize: 12, opacity: 0.75, textTransform: "uppercase", letterSpacing: ".12em" }}>
-                        {c.title}
+                        {c.title.toUpperCase()}
                       </div>
                     </div>
 
@@ -395,6 +392,75 @@ export default function Engine() {
                 ))}
               </div>
 
+              {/* ---------------- About Dropdown ---------------- */}
+              <div style={{ marginTop: 16 }} aria-label="About $JAL~Engine + Jeroids">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => setAboutOpen((v) => !v)}
+                  aria-expanded={aboutOpen}
+                  aria-controls="engine-about"
+                  style={{ width: "100%", justifyContent: "space-between" as any }}
+                >
+                  <span>About $JAL~Engine + Jeroids</span>
+                  <span style={{ opacity: 0.8 }}>{aboutOpen ? "—" : "+"}</span>
+                </button>
+
+                {aboutOpen ? (
+                  <div
+                    id="engine-about"
+                    className="card machine-surface panel-frame"
+                    style={{
+                      marginTop: 10,
+                      padding: 16,
+                      borderRadius: 18,
+                      background: "rgba(0,0,0,.22)",
+                      border: "1px solid rgba(255,255,255,.12)",
+                      lineHeight: 1.6,
+                      opacity: 0.95,
+                    }}
+                  >
+                    <div style={{ fontWeight: 900, marginBottom: 8 }}>$JAL~Engine — what you’re looking at</div>
+
+                    <p style={{ margin: "8px 0" }}>
+                      $JAL~Engine is a public machine exhibit: a live market window backed by a deterministic service layer.
+                      It mirrors the tradable surface available on the operator’s centralized exchange (CoinSpot) and presents
+                      it as a readable execution environment.
+                    </p>
+
+                    <p style={{ margin: "8px 0" }}>
+                      The table above is sourced from CoinSpot’s public <em>latest</em> endpoint (bid/ask). Only symbols with
+                      valid bid + ask are displayed. This keeps the input surface clean, tradable, and restart-safe.
+                    </p>
+
+                    <div style={{ fontWeight: 800, marginTop: 10 }}>Jeroids — what a “slot” means</div>
+                    <p style={{ margin: "8px 0" }}>
+                      A Jeroid Slot is a fixed support unit that (when enabled) creates a public slot ID and a matching log
+                      reference. Slot sizes vary ($50 / $75 / $150 / $200 AUD), but the harvester logic is the same — only the
+                      unit size changes.
+                    </p>
+
+                    <p style={{ margin: "8px 0" }}>
+                      These slots are <strong>system support donations</strong> for proof-of-concept visibility. They are not an
+                      investment product and they do not create profit rights, ownership, equity, or trading access.
+                    </p>
+
+                    <div style={{ fontWeight: 800, marginTop: 10 }}>How the harvester layer will operate (future)</div>
+                    <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+                      <li>Observe live tradable markets → build a deterministic snapshot.</li>
+                      <li>Evaluate under fixed system rules → authorize or reject actions.</li>
+                      <li>Execute from the operator account only → write public logs for transparency.</li>
+                      <li>Persist state so the machine remains coherent across restarts.</li>
+                    </ul>
+
+                    <p style={{ margin: "10px 0 0", opacity: 0.9 }}>
+                      When slots activate, the system will still carry explicit risk: loss is possible, and there are no
+                      guaranteed outcomes.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
               <div style={{ marginTop: 14, opacity: 0.75, fontSize: 13 }}>
                 This is a public machine exhibit. The market window above reflects the tradable surface the engine evaluates.
               </div>
@@ -403,8 +469,7 @@ export default function Engine() {
         </section>
       </div>
 
-      {/* Tiny mobile helper without touching index.css:
-          If you want it purely in index.css, move this media rule there and delete this block. */}
+      {/* mobile grid collapse helper */}
       <style>{`
         @media (max-width: 740px){
           .jeroid-grid{ grid-template-columns: 1fr !important; }
