@@ -51,7 +51,21 @@ function feedLabel(feed: Feed) {
   return "ALL";
 }
 
-/** Slots are identical harvesters; only unit size differs. */
+function clamp01(x: number) {
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(1, x));
+}
+
+function msToCountdown(ms: number) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const hh = Math.floor(s / 3600);
+  const mm = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const pad = (x: number) => String(x).padStart(2, "0");
+  return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+}
+
+// ---------------- System Support Slots (static cards) ----------------
 type SlotTier = "JEROID_50" | "JEROID_75" | "JEROID_150" | "JEROID_200";
 
 type SlotCard = {
@@ -74,9 +88,7 @@ const SLOT_CARDS: SlotCard[] = [
   { tier: "JEROID_200", amountAud: 200, title: "System Slot", bullets: SLOT_BULLETS },
 ];
 
-// ---------------- Baseline countdown (client-only, pre-backend) ----------------
-// We latch the baseline start time on first successful market snapshot and store in localStorage.
-// When you move to Railway + backend state, you can relocate this to the service.
+// ---------------- Baseline + issuance countdown (client-only pre-backend) ----------------
 const BASELINE_STORAGE_KEY = "jal_engine_baseline_start_at_ms";
 const BASELINE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -99,13 +111,126 @@ function writeBaselineStartAt(ms: number) {
   }
 }
 
-function msToCountdown(ms: number) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const hh = Math.floor(s / 3600);
-  const mm = Math.floor((s % 3600) / 60);
-  const ss = s % 60;
-  const pad = (x: number) => String(x).padStart(2, "0");
-  return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+// ---------------- Ledger tracking (UI-first; backend later) ----------------
+type EngineMode = "OBSERVE" | "ARMED" | "EXECUTING" | "COOLDOWN";
+
+type SlotState =
+  | "QUEUED"
+  | "TRACKING"
+  | "HOLDING"
+  | "LVL1_LOCK"
+  | "LVL2_LOCK"
+  | "LVL3_LOCK"
+  | "LVL4_TRAIL"
+  | "EXITED";
+
+type SlotRow = {
+  id: string; // public slot id (JRD-00023)
+  unitAud: number; // 50/75/150/200
+  state: SlotState;
+  coin: string | null; // e.g. XRP
+  entryMid: number | null;
+  nowMid: number | null;
+  netPct: number | null; // ratio
+  level: 0 | 1 | 2 | 3 | 4;
+  lockPct: number | null; // ratio
+  createdAt: number; // ms
+  updatedAt: number; // ms
+};
+
+type SlotEvent = {
+  id: string; // event id
+  at: number; // ms
+  kind:
+    | "BASELINE_CAPTURE"
+    | "RANK"
+    | "SLOT_QUEUED"
+    | "SLOT_DEPLOYED"
+    | "LVL_REACHED"
+    | "LOCK_UPDATED"
+    | "EXIT_TRIGGER"
+    | "NOTE";
+  msg: string;
+  slotId?: string;
+  coin?: string;
+};
+
+type HarvestStatus = {
+  mode: EngineMode;
+  baselineStartAt: number | null;
+  baselineReadyAt: number | null;
+  nextDeployAt: number | null;
+  lastAction: string | null;
+  slotsActive: number;
+  slotsTotal: number;
+};
+
+const LEDGER_SLOTS_KEY = "jal_engine_slots_ledger_v1";
+const LEDGER_EVENTS_KEY = "jal_engine_events_v1";
+
+// Minimal mock ledger: keeps UI alive before backend exists.
+function readSlotsLedger(): SlotRow[] {
+  try {
+    const raw = localStorage.getItem(LEDGER_SLOTS_KEY);
+    if (!raw) return [];
+    const j = JSON.parse(raw);
+    return Array.isArray(j) ? (j as SlotRow[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSlotsLedger(rows: SlotRow[]) {
+  try {
+    localStorage.setItem(LEDGER_SLOTS_KEY, JSON.stringify(rows));
+  } catch {
+    // ignore
+  }
+}
+
+function readEventsLedger(): SlotEvent[] {
+  try {
+    const raw = localStorage.getItem(LEDGER_EVENTS_KEY);
+    if (!raw) return [];
+    const j = JSON.parse(raw);
+    return Array.isArray(j) ? (j as SlotEvent[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeEventsLedger(ev: SlotEvent[]) {
+  try {
+    localStorage.setItem(LEDGER_EVENTS_KEY, JSON.stringify(ev));
+  } catch {
+    // ignore
+  }
+}
+
+function ageLabel(msSince: number) {
+  const s = Math.max(0, Math.floor(msSince / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h <= 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+
+function fmtEventTime(atMs: number) {
+  const d = new Date(atMs);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+async function tryFetchJson<T>(url: string, signal?: AbortSignal): Promise<T | null> {
+  try {
+    const r = await fetch(url, { method: "GET", signal });
+    if (!r.ok) return null;
+    return (await r.json()) as T;
+  } catch {
+    return null;
+  }
 }
 
 export default function Engine() {
@@ -126,6 +251,11 @@ export default function Engine() {
   const [baselineStartAt, setBaselineStartAt] = useState<number | null>(() => readBaselineStartAt());
   const [nowMs, setNowMs] = useState(() => Date.now());
 
+  // Ledger (UI-first)
+  const [slotRows, setSlotRows] = useState<SlotRow[]>(() => readSlotsLedger());
+  const [events, setEvents] = useState<SlotEvent[]>(() => readEventsLedger());
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+
   async function fetchRows(signal?: AbortSignal) {
     const r = await fetch(`${BASE}/api/market/${feed}`, { method: "GET", signal });
     if (!r.ok) throw new Error(`market/${feed} HTTP ${r.status}`);
@@ -139,26 +269,47 @@ export default function Engine() {
     return (await r.json()) as Snapshot;
   }
 
+  // Tick: market + snapshot + (optional) harvest endpoints later
   useEffect(() => {
     const ctrl = new AbortController();
 
     const tick = async () => {
       try {
         setErr(null);
+
         const [list, s] = await Promise.all([fetchRows(ctrl.signal), fetchSnap(ctrl.signal)]);
         setRows(list);
         setSnap(s);
 
         // Latch baseline start time on first successful snapshot.
-        // We use s.lastOkAt if present, otherwise Date.now().
         if (s?.ok) {
           const existing = baselineStartAt ?? readBaselineStartAt();
           if (!existing) {
             const startAt = Number.isFinite(s.lastOkAt) && s.lastOkAt > 0 ? s.lastOkAt : Date.now();
             writeBaselineStartAt(startAt);
             setBaselineStartAt(startAt);
+
+            // Optional: seed a clean baseline event once.
+            const ev = readEventsLedger();
+            if (!ev.some((e) => e.kind === "BASELINE_CAPTURE")) {
+              const seeded: SlotEvent = {
+                id: `EVT-${startAt}`,
+                at: startAt,
+                kind: "BASELINE_CAPTURE",
+                msg: "BASELINE_CAPTURE OK (24h measurement window started)",
+              };
+              const next = [seeded, ...ev].slice(0, 200);
+              writeEventsLedger(next);
+              setEvents(next);
+            }
           }
         }
+
+        // If backend endpoints exist later, you can switch these on:
+        // GET /api/harvest/status, /api/harvest/slots, /api/harvest/events
+        // For now: keep localStorage ledger as the display source.
+        setSlotRows(readSlotsLedger());
+        setEvents(readEventsLedger());
       } catch (e: any) {
         setErr(e?.message ?? String(e));
       }
@@ -181,15 +332,50 @@ export default function Engine() {
     return () => window.clearInterval(t);
   }, []);
 
+  // Derived: baseline + next deploy
   const baselineReadyAt = baselineStartAt ? baselineStartAt + BASELINE_WINDOW_MS : null;
   const baselineRemainingMs = baselineReadyAt ? Math.max(0, baselineReadyAt - nowMs) : null;
   const baselineIsReady = baselineRemainingMs !== null ? baselineRemainingMs <= 0 : false;
+
+  // Issuance/deploy schedule: once baseline is ready, next deploy at baselineReadyAt, then every 24h.
+  const nextDeployAt = useMemo(() => {
+    if (!baselineReadyAt) return null;
+    if (!baselineIsReady) return baselineReadyAt;
+    const elapsed = Math.max(0, nowMs - baselineReadyAt);
+    const k = Math.floor(elapsed / BASELINE_WINDOW_MS) + 1;
+    return baselineReadyAt + k * BASELINE_WINDOW_MS;
+  }, [baselineReadyAt, baselineIsReady, nowMs]);
+
+  const nextDeployRemainingMs = nextDeployAt ? Math.max(0, nextDeployAt - nowMs) : null;
 
   const baselineLabel = (() => {
     if (!baselineStartAt) return "PENDING";
     if (baselineIsReady) return "READY";
     return msToCountdown(baselineRemainingMs ?? 0);
   })();
+
+  const nextDeployLabel = (() => {
+    if (!baselineStartAt) return "PENDING";
+    if (!nextDeployAt) return "PENDING";
+    return msToCountdown(nextDeployRemainingMs ?? 0);
+  })();
+
+  // Engine mode (UI-only heuristic until backend provides authoritative mode)
+  const engineMode: EngineMode = (() => {
+    if (!snap?.ok) return "OBSERVE";
+    if (!baselineStartAt) return "OBSERVE";
+    if (!baselineIsReady) return "OBSERVE";
+    // If any slot is in an active non-exited state, call it ARMED (for now)
+    const active = slotRows.some((s) => s.state !== "EXITED");
+    return active ? "ARMED" : "ARMED";
+  })();
+
+  const coinsCount =
+    feed === "all"
+      ? snap?.counts?.all ?? rows.length
+      : feed === "aud"
+        ? snap?.counts?.aud ?? rows.length
+        : snap?.counts?.watch ?? rows.length;
 
   const filtered = useMemo(() => {
     const q = query.trim().toUpperCase();
@@ -218,12 +404,52 @@ export default function Engine() {
     });
   }, [rows, query, sortKey, sortDir]);
 
-  const coinsCount =
-    feed === "all"
-      ? snap?.counts?.all ?? rows.length
-      : feed === "aud"
-        ? snap?.counts?.aud ?? rows.length
-        : snap?.counts?.watch ?? rows.length;
+  // Telemetry panel (best-effort with only current snapshot)
+  // Until you have a 24h series, treat this as "preview signals" not truth.
+  const telemetry = useMemo(() => {
+    if (!filtered.length) return null;
+
+    // Score: prefer (a) reasonable spread (lower is better), (b) not ultra-stable, (c) not dust extremes.
+    // This is intentionally conservative until backend/series exists.
+    const scored = filtered.map((r) => {
+      const mid = r.mid ?? (r.bid + r.ask) / 2;
+      const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
+      const spreadScore = 1 - clamp01(spread / 0.02); // 0..2% spread band
+      const priceScore = mid > 0 ? clamp01(1 / (1 + Math.abs(Math.log10(mid + 1e-9)))) : 0.5; // soft
+      const score = 0.8 * spreadScore + 0.2 * priceScore;
+      return { r, mid, spread, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    const top = scored[0];
+    return {
+      coin: top.r.coin,
+      market: top.r.market ?? `${top.r.coin}/AUD`,
+      mid: top.mid,
+      spread: top.spread,
+      score: top.score,
+    };
+  }, [filtered]);
+
+  // Ledger-derived quick stats
+  const slotsActive = slotRows.filter((s) => s.state !== "EXITED").length;
+  const slotsTotal = slotRows.length;
+
+  const lastAction = useMemo(() => {
+    const e = events[0];
+    if (!e) return null;
+    return `${e.kind} ${e.slotId ? e.slotId : ""} ${e.coin ? e.coin : ""} ${fmtEventTime(e.at)}`.replace(/\s+/g, " ").trim();
+  }, [events]);
+
+  const selectedSlot = useMemo(() => {
+    if (!selectedSlotId) return null;
+    return slotRows.find((s) => s.id === selectedSlotId) ?? null;
+  }, [selectedSlotId, slotRows]);
+
+  const selectedSlotEvents = useMemo(() => {
+    if (!selectedSlotId) return [];
+    return events.filter((e) => e.slotId === selectedSlotId).slice(0, 60);
+  }, [events, selectedSlotId]);
 
   return (
     <main className="home-shell" aria-label="$JAL~Engine">
@@ -234,6 +460,7 @@ export default function Engine() {
           </div>
 
           <div className="engine-foreground">
+            {/* ---------------- Header / Status Strip ---------------- */}
             <div className="engine-head">
               <div />
               <div className="engine-head-center">
@@ -259,9 +486,26 @@ export default function Engine() {
                 <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Baseline measurement window (24h)">
                   BASELINE <span>{baselineLabel}</span>
                 </span>
+
+                <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Countdown to next daily issuance">
+                  NEXT DEPLOY <span>{nextDeployLabel}</span>
+                </span>
+
+                <span className="indicator" title="Slots currently visible to the system ledger">
+                  SLOTS <span>{slotsActive}/{Math.max(slotsTotal, 0)}</span>
+                </span>
+
+                <span className={`indicator ${engineMode === "ARMED" ? "ok" : "warn"}`} title="Engine state (UI preview)">
+                  MODE <span>{engineMode}</span>
+                </span>
+
+                <span className="indicator" title="Most recent ledger event (UI preview)">
+                  LAST <span>{lastAction ? lastAction.slice(-8) : "—"}</span>
+                </span>
               </div>
             </div>
 
+            {/* ---------------- Controls ---------------- */}
             <div className="engine-controls" aria-label="Controls">
               <button
                 type="button"
@@ -344,6 +588,7 @@ export default function Engine() {
               </div>
             ) : null}
 
+            {/* ---------------- Market Table ---------------- */}
             <div className="market-console" aria-label="Market table">
               <div className="market-head">
                 <div>Coin</div>
@@ -370,6 +615,53 @@ export default function Engine() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* ---------------- Coin Telemetry (Why this coin?) ---------------- */}
+            <div
+              className="card machine-surface panel-frame"
+              style={{
+                marginTop: 14,
+                padding: 14,
+                borderRadius: 18,
+                background: "rgba(0,0,0,.22)",
+                border: "1px solid rgba(255,255,255,.12)",
+              }}
+              aria-label="Market Selection Telemetry"
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.9 }}>
+                  Market Selection Telemetry
+                </div>
+                <div style={{ opacity: 0.75, fontSize: 13 }}>Preview signals (series-based metrics come with backend)</div>
+              </div>
+
+              {telemetry ? (
+                <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+                  <div style={{ opacity: 0.9 }}>
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>Selected coin</div>
+                    <div style={{ fontWeight: 900 }}>{telemetry.coin}</div>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>{telemetry.market}</div>
+                  </div>
+
+                  <div style={{ opacity: 0.9 }}>
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>Mid</div>
+                    <div style={{ fontWeight: 900 }}>{fmt(telemetry.mid)}</div>
+                  </div>
+
+                  <div style={{ opacity: 0.9 }}>
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>Spread</div>
+                    <div style={{ fontWeight: 900 }}>{pctRatio(telemetry.spread)}</div>
+                  </div>
+
+                  <div style={{ opacity: 0.9 }}>
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>Rank score</div>
+                    <div style={{ fontWeight: 900 }}>{telemetry.score.toFixed(3)}</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: 10, opacity: 0.75 }}>Telemetry pending (no rows).</div>
+              )}
             </div>
 
             {/* ---------------- System Support Slots ---------------- */}
@@ -402,7 +694,8 @@ export default function Engine() {
                   </div>
 
                   <div style={{ marginTop: 10, opacity: 0.8, fontSize: 13 }}>
-                    Baseline building: <strong>{baselineLabel}</strong> (24h measurement window)
+                    Baseline building: <strong>{baselineLabel}</strong> (24h measurement window) • Next deploy:{" "}
+                    <strong>{nextDeployLabel}</strong>
                   </div>
                 </div>
 
@@ -411,6 +704,7 @@ export default function Engine() {
                 </div>
               </div>
 
+              {/* Slot Cards */}
               <div
                 style={{
                   marginTop: 14,
@@ -470,6 +764,116 @@ export default function Engine() {
                 ))}
               </div>
 
+              {/* ---------------- Jeroid Slots Ledger (neat tracking) ---------------- */}
+              <div
+                className="card machine-surface panel-frame"
+                style={{
+                  marginTop: 14,
+                  padding: 14,
+                  borderRadius: 18,
+                  background: "rgba(0,0,0,.22)",
+                  border: "1px solid rgba(255,255,255,.12)",
+                }}
+                aria-label="Slots Ledger"
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.9 }}>
+                      Slots Ledger
+                    </div>
+                    <div style={{ marginTop: 6, opacity: 0.8, fontSize: 13 }}>
+                      Read-only machine ledger. Backend will populate these rows when Railway is live.
+                    </div>
+                  </div>
+
+                  <div style={{ opacity: 0.8, fontSize: 13 }}>
+                    Active: <strong>{slotsActive}</strong> • Total: <strong>{slotsTotal}</strong>
+                  </div>
+                </div>
+
+                <div className="ledger-table" style={{ marginTop: 12 }}>
+                  <div className="ledger-head">
+                    <div>Slot ID</div>
+                    <div>Unit</div>
+                    <div>State</div>
+                    <div>Coin</div>
+                    <div className="num">Entry</div>
+                    <div className="num">Now</div>
+                    <div className="num">Net</div>
+                    <div>Level</div>
+                    <div className="num">Lock</div>
+                    <div>Age</div>
+                    <div className="num">Log</div>
+                  </div>
+
+                  {slotRows.length ? (
+                    slotRows.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="ledger-row"
+                        onClick={() => setSelectedSlotId(s.id)}
+                        title="Open slot details"
+                      >
+                        <div style={{ fontWeight: 900 }}>{s.id}</div>
+                        <div>${s.unitAud}</div>
+                        <div>{s.state}</div>
+                        <div>{s.coin ?? "—"}</div>
+                        <div className="num">{s.entryMid != null ? fmt(s.entryMid) : "—"}</div>
+                        <div className="num">{s.nowMid != null ? fmt(s.nowMid) : "—"}</div>
+                        <div className="num">{s.netPct != null ? pctRatio(s.netPct) : "—"}</div>
+                        <div>{s.level ? `LVL${s.level}` : "—"}</div>
+                        <div className="num">{s.lockPct != null ? pctRatio(s.lockPct) : "—"}</div>
+                        <div>{ageLabel(nowMs - s.createdAt)}</div>
+                        <div className="num" style={{ opacity: 0.9 }}>
+                          View
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div style={{ padding: 12, opacity: 0.75 }}>
+                      No slots in ledger yet. (This will populate once the backend harvester is live.)
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ---------------- Public Event Log ---------------- */}
+              <div
+                className="card machine-surface panel-frame"
+                style={{
+                  marginTop: 14,
+                  padding: 14,
+                  borderRadius: 18,
+                  background: "rgba(0,0,0,.22)",
+                  border: "1px solid rgba(255,255,255,.12)",
+                }}
+                aria-label="Public Event Log"
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.9 }}>
+                    Public Event Log
+                  </div>
+                  <div style={{ opacity: 0.75, fontSize: 13 }}>Append-only preview (no keys / no balances)</div>
+                </div>
+
+                <div className="event-log" style={{ marginTop: 10 }}>
+                  {events.length ? (
+                    events.slice(0, 20).map((e) => (
+                      <div className="event-row" key={e.id}>
+                        <div className="event-time">{fmtEventTime(e.at)}</div>
+                        <div className="event-msg">
+                          <span style={{ opacity: 0.9, fontWeight: 800 }}>{e.kind}</span>{" "}
+                          <span style={{ opacity: 0.9 }}>{e.msg}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: 10, opacity: 0.75 }}>No events yet.</div>
+                  )}
+                </div>
+              </div>
+
               {/* ---------------- About Dropdown ---------------- */}
               <div style={{ marginTop: 16 }} aria-label="About $JAL~Engine + Jeroids">
                 <button
@@ -513,22 +917,15 @@ export default function Engine() {
 
                     <div style={{ fontWeight: 800, marginTop: 10 }}>Baseline initialization</div>
                     <p style={{ margin: "8px 0" }}>
-                      The engine begins in observation mode to build baseline measurements (rolling peak, drawdown, spread,
-                      momentum) before any deployments can occur. The baseline window is 24 hours from first successful data
-                      capture.
+                      The engine begins in observation mode to build baseline measurements before any deployments can occur.
+                      Baseline window: 24 hours from first successful data capture.
                     </p>
 
-                    <div style={{ fontWeight: 800, marginTop: 10 }}>Jeroids — what a “slot” means</div>
+                    <div style={{ fontWeight: 800, marginTop: 10 }}>Tracking (public ledger)</div>
                     <p style={{ margin: "8px 0" }}>
-                      A System Support Slot is a fixed support unit that (when enabled) creates a public slot ID and a matching
-                      log reference. Slot sizes vary ($50 / $75 / $150 / $200 AUD), but the harvester logic is identical — only
-                      the unit size changes.
-                    </p>
-
-                    <p style={{ margin: "8px 0" }}>
-                      These slots are <strong>public support donations</strong> for proof-of-concept visibility. They are not
-                      an investment product and they do not create profit rights, ownership, equity, ownership, or trading
-                      access.
+                      Deployments and harvesting are tracked as a read-only machine ledger: a status strip, a slots table, and
+                      an append-only event log. This keeps the system inspectable without exposing keys, balances, or internal
+                      controls.
                     </p>
 
                     <div style={{ fontWeight: 800, marginTop: 10 }}>How the harvester layer will operate (future)</div>
@@ -555,10 +952,184 @@ export default function Engine() {
         </section>
       </div>
 
-      {/* mobile grid collapse helper */}
+      {/* ---------------- Slot Details Drawer (UI-only) ---------------- */}
+      {selectedSlot ? (
+        <div className="slot-drawer-backdrop" role="dialog" aria-modal="true" aria-label="Slot Details">
+          <div className="slot-drawer card machine-surface panel-frame">
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 16 }}>{selectedSlot.id}</div>
+                <div style={{ opacity: 0.75, fontSize: 13 }}>
+                  Unit ${selectedSlot.unitAud} • {selectedSlot.state} • {selectedSlot.coin ?? "—"}
+                </div>
+              </div>
+
+              <button type="button" className="button ghost" onClick={() => setSelectedSlotId(null)}>
+                Close
+              </button>
+            </div>
+
+            <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Entry</div>
+                <div style={{ fontWeight: 900 }}>{selectedSlot.entryMid != null ? fmt(selectedSlot.entryMid) : "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Now</div>
+                <div style={{ fontWeight: 900 }}>{selectedSlot.nowMid != null ? fmt(selectedSlot.nowMid) : "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Harvester Net</div>
+                <div style={{ fontWeight: 900 }}>{selectedSlot.netPct != null ? pctRatio(selectedSlot.netPct) : "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Level</div>
+                <div style={{ fontWeight: 900 }}>{selectedSlot.level ? `LVL${selectedSlot.level}` : "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Lock</div>
+                <div style={{ fontWeight: 900 }}>{selectedSlot.lockPct != null ? pctRatio(selectedSlot.lockPct) : "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Age</div>
+                <div style={{ fontWeight: 900 }}>{ageLabel(nowMs - selectedSlot.createdAt)}</div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 14, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.9 }}>
+              Timeline
+            </div>
+
+            <div className="event-log" style={{ marginTop: 10 }}>
+              {selectedSlotEvents.length ? (
+                selectedSlotEvents.map((e) => (
+                  <div className="event-row" key={e.id}>
+                    <div className="event-time">{fmtEventTime(e.at)}</div>
+                    <div className="event-msg">
+                      <span style={{ opacity: 0.9, fontWeight: 800 }}>{e.kind}</span>{" "}
+                      <span style={{ opacity: 0.9 }}>{e.msg}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: 10, opacity: 0.75 }}>No slot events yet.</div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 14, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.9 }}>
+              Rules Snapshot (frozen per slot)
+            </div>
+
+            <div style={{ marginTop: 10, opacity: 0.85, lineHeight: 1.55, fontSize: 13 }}>
+              <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
+              <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
+              <div>LVL4 may enable a 24h timer to capture late gains.</div>
+              <div style={{ marginTop: 8, opacity: 0.75 }}>
+                (Backend will attach the exact friction/spread assumptions + entry band parameters here.)
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ---------------- Minimal CSS helpers ---------------- */}
       <style>{`
         @media (max-width: 740px){
           .jeroid-grid{ grid-template-columns: 1fr !important; }
+        }
+
+        /* Ledger table (button rows so it feels clickable) */
+        .ledger-table{
+          border: 1px solid rgba(255,255,255,.10);
+          border-radius: 14px;
+          overflow: hidden;
+          background: rgba(0,0,0,.18);
+        }
+        .ledger-head{
+          display:grid;
+          grid-template-columns: 1.1fr .6fr 1fr .6fr .8fr .8fr .7fr .7fr .7fr .7fr .5fr;
+          gap: 10px;
+          padding: 10px 12px;
+          font-size: 12px;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+          opacity: .8;
+          border-bottom: 1px solid rgba(255,255,255,.10);
+        }
+        .ledger-row{
+          width: 100%;
+          text-align: left;
+          display:grid;
+          grid-template-columns: 1.1fr .6fr 1fr .6fr .8fr .8fr .7fr .7fr .7fr .7fr .5fr;
+          gap: 10px;
+          padding: 10px 12px;
+          border: 0;
+          background: transparent;
+          color: inherit;
+          cursor: pointer;
+          border-bottom: 1px solid rgba(255,255,255,.06);
+        }
+        .ledger-row:hover{
+          background: rgba(255,255,255,.04);
+        }
+        .ledger-row .num, .ledger-head .num{
+          text-align: right;
+        }
+
+        @media (max-width: 900px){
+          /* On smaller screens, hide a few columns to keep it readable */
+          .ledger-head, .ledger-row{
+            grid-template-columns: 1.2fr .7fr 1fr .7fr .9fr .9fr .8fr;
+          }
+          .ledger-head > :nth-child(9),
+          .ledger-head > :nth-child(10),
+          .ledger-head > :nth-child(11),
+          .ledger-row > :nth-child(9),
+          .ledger-row > :nth-child(10),
+          .ledger-row > :nth-child(11){
+            display:none;
+          }
+        }
+
+        /* Event log */
+        .event-log{
+          border: 1px solid rgba(255,255,255,.10);
+          border-radius: 14px;
+          overflow: hidden;
+          background: rgba(0,0,0,.18);
+        }
+        .event-row{
+          display:flex;
+          gap: 12px;
+          padding: 10px 12px;
+          border-bottom: 1px solid rgba(255,255,255,.06);
+          align-items: baseline;
+        }
+        .event-time{
+          width: 70px;
+          opacity: .75;
+          font-variant-numeric: tabular-nums;
+        }
+        .event-msg{
+          flex: 1;
+        }
+
+        /* Slot drawer */
+        .slot-drawer-backdrop{
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,.55);
+          backdrop-filter: blur(6px);
+          display: flex;
+          justify-content: flex-end;
+          z-index: 9999;
+        }
+        .slot-drawer{
+          width: min(520px, 92vw);
+          height: 100%;
+          padding: 14px;
+          border-radius: 0;
+          overflow: auto;
         }
       `}</style>
     </main>
