@@ -74,6 +74,40 @@ const SLOT_CARDS: SlotCard[] = [
   { tier: "JEROID_200", amountAud: 200, title: "System Slot", bullets: SLOT_BULLETS },
 ];
 
+// ---------------- Baseline countdown (client-only, pre-backend) ----------------
+// We latch the baseline start time on first successful market snapshot and store in localStorage.
+// When you move to Railway + backend state, you can relocate this to the service.
+const BASELINE_STORAGE_KEY = "jal_engine_baseline_start_at_ms";
+const BASELINE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function readBaselineStartAt(): number | null {
+  try {
+    const raw = localStorage.getItem(BASELINE_STORAGE_KEY);
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeBaselineStartAt(ms: number) {
+  try {
+    localStorage.setItem(BASELINE_STORAGE_KEY, String(ms));
+  } catch {
+    // ignore (private mode / blocked storage)
+  }
+}
+
+function msToCountdown(ms: number) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const hh = Math.floor(s / 3600);
+  const mm = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const pad = (x: number) => String(x).padStart(2, "0");
+  return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+}
+
 export default function Engine() {
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
@@ -87,6 +121,10 @@ export default function Engine() {
   const [aboutOpen, setAboutOpen] = useState(false);
 
   const timerRef = useRef<number | null>(null);
+
+  // Baseline latch + clock (client-only)
+  const [baselineStartAt, setBaselineStartAt] = useState<number | null>(() => readBaselineStartAt());
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   async function fetchRows(signal?: AbortSignal) {
     const r = await fetch(`${BASE}/api/market/${feed}`, { method: "GET", signal });
@@ -110,6 +148,17 @@ export default function Engine() {
         const [list, s] = await Promise.all([fetchRows(ctrl.signal), fetchSnap(ctrl.signal)]);
         setRows(list);
         setSnap(s);
+
+        // Latch baseline start time on first successful snapshot.
+        // We use s.lastOkAt if present, otherwise Date.now().
+        if (s?.ok) {
+          const existing = baselineStartAt ?? readBaselineStartAt();
+          if (!existing) {
+            const startAt = Number.isFinite(s.lastOkAt) && s.lastOkAt > 0 ? s.lastOkAt : Date.now();
+            writeBaselineStartAt(startAt);
+            setBaselineStartAt(startAt);
+          }
+        }
       } catch (e: any) {
         setErr(e?.message ?? String(e));
       }
@@ -123,7 +172,24 @@ export default function Engine() {
       if (timerRef.current) window.clearInterval(timerRef.current);
       timerRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feed]);
+
+  // Live clock for countdown UI
+  useEffect(() => {
+    const t = window.setInterval(() => setNowMs(Date.now()), 500);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const baselineReadyAt = baselineStartAt ? baselineStartAt + BASELINE_WINDOW_MS : null;
+  const baselineRemainingMs = baselineReadyAt ? Math.max(0, baselineReadyAt - nowMs) : null;
+  const baselineIsReady = baselineRemainingMs !== null ? baselineRemainingMs <= 0 : false;
+
+  const baselineLabel = (() => {
+    if (!baselineStartAt) return "PENDING";
+    if (baselineIsReady) return "READY";
+    return msToCountdown(baselineRemainingMs ?? 0);
+  })();
 
   const filtered = useMemo(() => {
     const q = query.trim().toUpperCase();
@@ -188,6 +254,13 @@ export default function Engine() {
 
                 <span className="indicator">
                   UPDATED <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
+                </span>
+
+                <span
+                  className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
+                  title="Baseline measurement window (24h)"
+                >
+                  BASELINE <span>{baselineLabel}</span>
                 </span>
               </div>
             </div>
@@ -330,6 +403,10 @@ export default function Engine() {
                   <div style={{ marginTop: 8, opacity: 0.85 }}>
                     All slots execute under identical deterministic harvester rules. Only unit size varies.
                   </div>
+
+                  <div style={{ marginTop: 10, opacity: 0.8, fontSize: 13 }}>
+                    Baseline building: <strong>{baselineLabel}</strong> (24h measurement window)
+                  </div>
                 </div>
 
                 <div style={{ alignSelf: "flex-start", opacity: 0.8, fontSize: 13 }}>
@@ -384,7 +461,7 @@ export default function Engine() {
                         opacity: 0.65,
                         cursor: "not-allowed",
                       }}
-                      title="Slots activate soon"
+                      title="Funding rail not yet active"
                     >
                       Deploy (Soon)
                     </button>
@@ -437,6 +514,13 @@ export default function Engine() {
                       valid bid + ask are displayed. This keeps the input surface clean, tradable, and restart-safe.
                     </p>
 
+                    <div style={{ fontWeight: 800, marginTop: 10 }}>Baseline initialization</div>
+                    <p style={{ margin: "8px 0" }}>
+                      The engine begins in observation mode to build baseline measurements (rolling peak, drawdown, spread,
+                      momentum) before any deployments can occur. The baseline window is 24 hours from first successful data
+                      capture.
+                    </p>
+
                     <div style={{ fontWeight: 800, marginTop: 10 }}>Jeroids — what a “slot” means</div>
                     <p style={{ margin: "8px 0" }}>
                       A System Support Slot is a fixed support unit that (when enabled) creates a public slot ID and a matching
@@ -446,7 +530,8 @@ export default function Engine() {
 
                     <p style={{ margin: "8px 0" }}>
                       These slots are <strong>public support donations</strong> for proof-of-concept visibility. They are not
-                      an investment product and they do not create profit rights, ownership, equity, or trading access.
+                      an investment product and they do not create profit rights, ownership, equity, ownership, or trading
+                      access.
                     </p>
 
                     <div style={{ fontWeight: 800, marginTop: 10 }}>How the harvester layer will operate (future)</div>
