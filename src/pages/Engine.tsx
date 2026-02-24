@@ -57,7 +57,7 @@ type SlotTier = "JEROID_50" | "JEROID_75" | "JEROID_150" | "JEROID_200";
 type SlotCard = {
   tier: SlotTier;
   amountAud: number;
-  title: string; // keep identical naming
+  title: string;
   bullets: string[];
 };
 
@@ -68,10 +68,10 @@ const SLOT_BULLETS = [
 ];
 
 const SLOT_CARDS: SlotCard[] = [
-  { tier: "JEROID_50", amountAud: 50, title: "Jeroid Slot", bullets: SLOT_BULLETS },
-  { tier: "JEROID_75", amountAud: 75, title: "Jeroid Slot", bullets: SLOT_BULLETS },
-  { tier: "JEROID_150", amountAud: 150, title: "Jeroid Slot", bullets: SLOT_BULLETS },
-  { tier: "JEROID_200", amountAud: 200, title: "Jeroid Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_50", amountAud: 50, title: "System Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_75", amountAud: 75, title: "System Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_150", amountAud: 150, title: "System Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_200", amountAud: 200, title: "System Slot", bullets: SLOT_BULLETS },
 ];
 
 export default function Engine() {
@@ -302,29 +302,33 @@ export default function Engine() {
               })}
             </div>
 
-            {/* ---------------- Jeroid Slots (Support Donations) ---------------- */}
+            {/* ---------------- System Support Slots ---------------- */}
             <div
               style={{
                 marginTop: 18,
                 paddingTop: 14,
                 borderTop: "1px solid rgba(255,255,255,.10)",
               }}
-              aria-label="Jeroid Slots"
+              aria-label="System Support Slots"
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.9 }}>
-                    Jeroid Slots
+                    System Support Slots
                   </div>
 
                   <div style={{ marginTop: 8, opacity: 0.9, lineHeight: 1.5 }}>
-                    These units function as public support donations for the JAL software system.
+                    These slots are <strong>public support donations</strong> for the JAL software system.
                     <br />
-                    They are displayed as deployment slots for proof-of-concept and transparency.
+                    They are displayed as deployment slots for proof-of-concept transparency.
                     <br />
-                    They do <strong>not</strong> entitle the supporter to profits, returns, equity, ownership, or trading access.
+                    They <strong>do not</strong> create profits, returns, equity, ownership, or trading access.
                     <br />
                     <strong>Slots activate soon.</strong>
+                  </div>
+
+                  <div style={{ marginTop: 8, opacity: 0.85 }}>
+                    All slots execute under identical deterministic harvester rules. Only unit size varies.
                   </div>
                 </div>
 
@@ -352,7 +356,7 @@ export default function Engine() {
                       background: "rgba(0,0,0,.28)",
                       border: "1px solid rgba(255,255,255,.12)",
                     }}
-                    aria-label={`Jeroid slot ${c.amountAud}`}
+                    aria-label={`System support slot ${c.amountAud}`}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                       <div style={{ fontSize: 18, fontWeight: 900 }}>
@@ -386,7 +390,7 @@ export default function Engine() {
                     </button>
 
                     <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
-                      Slots activate soon — this bay is visible for system inspection.
+                      Funding rail not yet active — slot visible for inspection.
                     </div>
                   </div>
                 ))}
@@ -435,14 +439,14 @@ export default function Engine() {
 
                     <div style={{ fontWeight: 800, marginTop: 10 }}>Jeroids — what a “slot” means</div>
                     <p style={{ margin: "8px 0" }}>
-                      A Jeroid Slot is a fixed support unit that (when enabled) creates a public slot ID and a matching log
-                      reference. Slot sizes vary ($50 / $75 / $150 / $200 AUD), but the harvester logic is the same — only the
-                      unit size changes.
+                      A System Support Slot is a fixed support unit that (when enabled) creates a public slot ID and a matching
+                      log reference. Slot sizes vary ($50 / $75 / $150 / $200 AUD), but the harvester logic is identical — only
+                      the unit size changes.
                     </p>
 
                     <p style={{ margin: "8px 0" }}>
-                      These slots are <strong>system support donations</strong> for proof-of-concept visibility. They are not an
-                      investment product and they do not create profit rights, ownership, equity, or trading access.
+                      These slots are <strong>public support donations</strong> for proof-of-concept visibility. They are not
+                      an investment product and they do not create profit rights, ownership, equity, or trading access.
                     </p>
 
                     <div style={{ fontWeight: 800, marginTop: 10 }}>How the harvester layer will operate (future)</div>
