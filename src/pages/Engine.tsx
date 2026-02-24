@@ -107,7 +107,7 @@ function writeBaselineStartAt(ms: number) {
   try {
     localStorage.setItem(BASELINE_STORAGE_KEY, String(ms));
   } catch {
-    // ignore (private mode / blocked storage)
+    // ignore
   }
 }
 
@@ -155,20 +155,9 @@ type SlotEvent = {
   coin?: string;
 };
 
-type HarvestStatus = {
-  mode: EngineMode;
-  baselineStartAt: number | null;
-  baselineReadyAt: number | null;
-  nextDeployAt: number | null;
-  lastAction: string | null;
-  slotsActive: number;
-  slotsTotal: number;
-};
-
 const LEDGER_SLOTS_KEY = "jal_engine_slots_ledger_v1";
 const LEDGER_EVENTS_KEY = "jal_engine_events_v1";
 
-// Minimal mock ledger: keeps UI alive before backend exists.
 function readSlotsLedger(): SlotRow[] {
   try {
     const raw = localStorage.getItem(LEDGER_SLOTS_KEY);
@@ -177,14 +166,6 @@ function readSlotsLedger(): SlotRow[] {
     return Array.isArray(j) ? (j as SlotRow[]) : [];
   } catch {
     return [];
-  }
-}
-
-function writeSlotsLedger(rows: SlotRow[]) {
-  try {
-    localStorage.setItem(LEDGER_SLOTS_KEY, JSON.stringify(rows));
-  } catch {
-    // ignore
   }
 }
 
@@ -223,16 +204,6 @@ function fmtEventTime(atMs: number) {
   return `${hh}:${mm}:${ss}`;
 }
 
-async function tryFetchJson<T>(url: string, signal?: AbortSignal): Promise<T | null> {
-  try {
-    const r = await fetch(url, { method: "GET", signal });
-    if (!r.ok) return null;
-    return (await r.json()) as T;
-  } catch {
-    return null;
-  }
-}
-
 export default function Engine() {
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
@@ -269,7 +240,6 @@ export default function Engine() {
     return (await r.json()) as Snapshot;
   }
 
-  // Tick: market + snapshot + (optional) harvest endpoints later
   useEffect(() => {
     const ctrl = new AbortController();
 
@@ -289,7 +259,7 @@ export default function Engine() {
             writeBaselineStartAt(startAt);
             setBaselineStartAt(startAt);
 
-            // Optional: seed a clean baseline event once.
+            // Seed baseline event once (public log)
             const ev = readEventsLedger();
             if (!ev.some((e) => e.kind === "BASELINE_CAPTURE")) {
               const seeded: SlotEvent = {
@@ -305,9 +275,7 @@ export default function Engine() {
           }
         }
 
-        // If backend endpoints exist later, you can switch these on:
-        // GET /api/harvest/status, /api/harvest/slots, /api/harvest/events
-        // For now: keep localStorage ledger as the display source.
+        // UI ledger source (until backend exists)
         setSlotRows(readSlotsLedger());
         setEvents(readEventsLedger());
       } catch (e: any) {
@@ -326,18 +294,15 @@ export default function Engine() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feed]);
 
-  // Live clock for countdown UI
   useEffect(() => {
     const t = window.setInterval(() => setNowMs(Date.now()), 500);
     return () => window.clearInterval(t);
   }, []);
 
-  // Derived: baseline + next deploy
   const baselineReadyAt = baselineStartAt ? baselineStartAt + BASELINE_WINDOW_MS : null;
   const baselineRemainingMs = baselineReadyAt ? Math.max(0, baselineReadyAt - nowMs) : null;
   const baselineIsReady = baselineRemainingMs !== null ? baselineRemainingMs <= 0 : false;
 
-  // Issuance/deploy schedule: once baseline is ready, next deploy at baselineReadyAt, then every 24h.
   const nextDeployAt = useMemo(() => {
     if (!baselineReadyAt) return null;
     if (!baselineIsReady) return baselineReadyAt;
@@ -359,23 +324,6 @@ export default function Engine() {
     if (!nextDeployAt) return "PENDING";
     return msToCountdown(nextDeployRemainingMs ?? 0);
   })();
-
-  // Engine mode (UI-only heuristic until backend provides authoritative mode)
-  const engineMode: EngineMode = (() => {
-    if (!snap?.ok) return "OBSERVE";
-    if (!baselineStartAt) return "OBSERVE";
-    if (!baselineIsReady) return "OBSERVE";
-    // If any slot is in an active non-exited state, call it ARMED (for now)
-    const active = slotRows.some((s) => s.state !== "EXITED");
-    return active ? "ARMED" : "ARMED";
-  })();
-
-  const coinsCount =
-    feed === "all"
-      ? snap?.counts?.all ?? rows.length
-      : feed === "aud"
-        ? snap?.counts?.aud ?? rows.length
-        : snap?.counts?.watch ?? rows.length;
 
   const filtered = useMemo(() => {
     const q = query.trim().toUpperCase();
@@ -404,24 +352,29 @@ export default function Engine() {
     });
   }, [rows, query, sortKey, sortDir]);
 
-  // Telemetry panel (best-effort with only current snapshot)
-  // Until you have a 24h series, treat this as "preview signals" not truth.
+  const coinsCount =
+    feed === "all"
+      ? snap?.counts?.all ?? rows.length
+      : feed === "aud"
+        ? snap?.counts?.aud ?? rows.length
+        : snap?.counts?.watch ?? rows.length;
+
   const telemetry = useMemo(() => {
     if (!filtered.length) return null;
 
-    // Score: prefer (a) reasonable spread (lower is better), (b) not ultra-stable, (c) not dust extremes.
-    // This is intentionally conservative until backend/series exists.
     const scored = filtered.map((r) => {
       const mid = r.mid ?? (r.bid + r.ask) / 2;
       const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
-      const spreadScore = 1 - clamp01(spread / 0.02); // 0..2% spread band
-      const priceScore = mid > 0 ? clamp01(1 / (1 + Math.abs(Math.log10(mid + 1e-9)))) : 0.5; // soft
+      const spreadScore = 1 - clamp01(spread / 0.02); // 0..2% band
+      const priceScore =
+        mid > 0 ? clamp01(1 / (1 + Math.abs(Math.log10(mid + 1e-9)))) : 0.5;
       const score = 0.8 * spreadScore + 0.2 * priceScore;
       return { r, mid, spread, score };
     });
 
     scored.sort((a, b) => b.score - a.score);
     const top = scored[0];
+
     return {
       coin: top.r.coin,
       market: top.r.market ?? `${top.r.coin}/AUD`,
@@ -431,14 +384,22 @@ export default function Engine() {
     };
   }, [filtered]);
 
-  // Ledger-derived quick stats
   const slotsActive = slotRows.filter((s) => s.state !== "EXITED").length;
   const slotsTotal = slotRows.length;
+
+  const engineMode: EngineMode = (() => {
+    if (!snap?.ok) return "OBSERVE";
+    if (!baselineStartAt) return "OBSERVE";
+    if (!baselineIsReady) return "OBSERVE";
+    return "ARMED";
+  })();
 
   const lastAction = useMemo(() => {
     const e = events[0];
     if (!e) return null;
-    return `${e.kind} ${e.slotId ? e.slotId : ""} ${e.coin ? e.coin : ""} ${fmtEventTime(e.at)}`.replace(/\s+/g, " ").trim();
+    return `${e.kind} ${e.slotId ? e.slotId : ""} ${e.coin ? e.coin : ""} ${fmtEventTime(e.at)}`
+      .replace(/\s+/g, " ")
+      .trim();
   }, [events]);
 
   const selectedSlot = useMemo(() => {
@@ -460,7 +421,6 @@ export default function Engine() {
           </div>
 
           <div className="engine-foreground">
-            {/* ---------------- Header / Status Strip ---------------- */}
             <div className="engine-head">
               <div />
               <div className="engine-head-center">
@@ -505,7 +465,6 @@ export default function Engine() {
               </div>
             </div>
 
-            {/* ---------------- Controls ---------------- */}
             <div className="engine-controls" aria-label="Controls">
               <button
                 type="button"
@@ -588,7 +547,6 @@ export default function Engine() {
               </div>
             ) : null}
 
-            {/* ---------------- Market Table ---------------- */}
             <div className="market-console" aria-label="Market table">
               <div className="market-head">
                 <div>Coin</div>
@@ -617,7 +575,6 @@ export default function Engine() {
               })}
             </div>
 
-            {/* ---------------- Coin Telemetry (Why this coin?) ---------------- */}
             <div
               className="card machine-surface panel-frame"
               style={{
@@ -694,8 +651,7 @@ export default function Engine() {
                   </div>
 
                   <div style={{ marginTop: 10, opacity: 0.8, fontSize: 13 }}>
-                    Baseline building: <strong>{baselineLabel}</strong> (24h measurement window) • Next deploy:{" "}
-                    <strong>{nextDeployLabel}</strong>
+                    Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy: <strong>{nextDeployLabel}</strong>
                   </div>
                 </div>
 
@@ -704,7 +660,6 @@ export default function Engine() {
                 </div>
               </div>
 
-              {/* Slot Cards */}
               <div
                 style={{
                   marginTop: 14,
@@ -764,7 +719,7 @@ export default function Engine() {
                 ))}
               </div>
 
-              {/* ---------------- Jeroid Slots Ledger (neat tracking) ---------------- */}
+              {/* ---------------- Slots Ledger ---------------- */}
               <div
                 className="card machine-surface panel-frame"
                 style={{
@@ -782,7 +737,7 @@ export default function Engine() {
                       Slots Ledger
                     </div>
                     <div style={{ marginTop: 6, opacity: 0.8, fontSize: 13 }}>
-                      Read-only machine ledger. Backend will populate these rows when Railway is live.
+                      Read-only machine ledger. Backend will populate these rows when the harvester is live.
                     </div>
                   </div>
 
@@ -906,8 +861,8 @@ export default function Engine() {
 
                     <p style={{ margin: "8px 0" }}>
                       $JAL~Engine is a public machine exhibit: a live market window backed by a deterministic service layer.
-                      It mirrors the tradable surface available on the operator’s centralized exchange (CoinSpot) and presents
-                      it as a readable execution environment.
+                      It mirrors the tradable surface available on the operator’s exchange (CoinSpot) and presents it as a
+                      readable execution environment.
                     </p>
 
                     <p style={{ margin: "8px 0" }}>
@@ -1032,13 +987,11 @@ export default function Engine() {
         </div>
       ) : null}
 
-      {/* ---------------- Minimal CSS helpers ---------------- */}
       <style>{`
         @media (max-width: 740px){
           .jeroid-grid{ grid-template-columns: 1fr !important; }
         }
 
-        /* Ledger table (button rows so it feels clickable) */
         .ledger-table{
           border: 1px solid rgba(255,255,255,.10);
           border-radius: 14px;
@@ -1069,15 +1022,10 @@ export default function Engine() {
           cursor: pointer;
           border-bottom: 1px solid rgba(255,255,255,.06);
         }
-        .ledger-row:hover{
-          background: rgba(255,255,255,.04);
-        }
-        .ledger-row .num, .ledger-head .num{
-          text-align: right;
-        }
+        .ledger-row:hover{ background: rgba(255,255,255,.04); }
+        .ledger-row .num, .ledger-head .num{ text-align: right; }
 
         @media (max-width: 900px){
-          /* On smaller screens, hide a few columns to keep it readable */
           .ledger-head, .ledger-row{
             grid-template-columns: 1.2fr .7fr 1fr .7fr .9fr .9fr .8fr;
           }
@@ -1086,12 +1034,9 @@ export default function Engine() {
           .ledger-head > :nth-child(11),
           .ledger-row > :nth-child(9),
           .ledger-row > :nth-child(10),
-          .ledger-row > :nth-child(11){
-            display:none;
-          }
+          .ledger-row > :nth-child(11){ display:none; }
         }
 
-        /* Event log */
         .event-log{
           border: 1px solid rgba(255,255,255,.10);
           border-radius: 14px;
@@ -1110,11 +1055,8 @@ export default function Engine() {
           opacity: .75;
           font-variant-numeric: tabular-nums;
         }
-        .event-msg{
-          flex: 1;
-        }
+        .event-msg{ flex: 1; }
 
-        /* Slot drawer */
         .slot-drawer-backdrop{
           position: fixed;
           inset: 0;
