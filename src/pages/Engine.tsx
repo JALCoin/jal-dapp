@@ -256,10 +256,7 @@ export default function Engine() {
                   UPDATED <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
                 </span>
 
-                <span
-                  className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
-                  title="Baseline measurement window (24h)"
-                >
+                <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Baseline measurement window (24h)">
                   BASELINE <span>{baselineLabel}</span>
                 </span>
               </div>
