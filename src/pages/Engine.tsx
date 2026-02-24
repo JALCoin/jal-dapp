@@ -51,12 +51,64 @@ function feedLabel(feed: Feed) {
   return "ALL";
 }
 
+type SlotTier = "BASE_50" | "EXT_75" | "DUAL_150" | "ADV_200";
+
+type SlotCard = {
+  tier: SlotTier;
+  amountAud: number;
+  title: string;
+  bullets: string[];
+};
+
+const SLOT_CARDS: SlotCard[] = [
+  {
+    tier: "BASE_50",
+    amountAud: 50,
+    title: "Base Slot",
+    bullets: [
+      "1 unit = 1 public slot ID (when enabled)",
+      "Queued for deterministic evaluation",
+      "Executed live under system rules",
+    ],
+  },
+  {
+    tier: "EXT_75",
+    amountAud: 75,
+    title: "Extended Slot",
+    bullets: [
+      "1 unit = 1 public slot ID (when enabled)",
+      "Extended allocation weight",
+      "Executed live under system rules",
+    ],
+  },
+  {
+    tier: "DUAL_150",
+    amountAud: 150,
+    title: "Dual Slot",
+    bullets: [
+      "1 unit = 1 public slot ID (when enabled)",
+      "Dual-path evaluation surface",
+      "Executed live under system rules",
+    ],
+  },
+  {
+    tier: "ADV_200",
+    amountAud: 200,
+    title: "Advanced Slot",
+    bullets: [
+      "1 unit = 1 public slot ID (when enabled)",
+      "Highest exposure class",
+      "Executed live under system rules",
+    ],
+  },
+];
+
 export default function Engine() {
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const [feed, setFeed] = useState<Feed>("all"); // change to "aud" if you want AUD default
+  const [feed, setFeed] = useState<Feed>("all"); // change to "aud" if preferred
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("spread");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -128,13 +180,16 @@ export default function Engine() {
   }, [rows, query, sortKey, sortDir]);
 
   const coinsCount =
-    feed === "all" ? (snap?.counts?.all ?? rows.length) :
-    feed === "aud" ? (snap?.counts?.aud ?? rows.length) :
-    (snap?.counts?.watch ?? rows.length);
+    feed === "all"
+      ? snap?.counts?.all ?? rows.length
+      : feed === "aud"
+        ? snap?.counts?.aud ?? rows.length
+        : snap?.counts?.watch ?? rows.length;
 
   return (
     <main className="home-shell" aria-label="$JAL~Engine">
       <div className="home-wrap">
+        {/* ---------------- Market Window ---------------- */}
         <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="Engine">
           <div className="engine-bg" aria-hidden="true">
             <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
@@ -279,6 +334,99 @@ export default function Engine() {
 
             <div className="market-foot">
               {snap?.err ? `Service note: ${snap.err}` : "Public feed only. Trading + Jeroids will be layered next."}
+            </div>
+
+            {/* ---------------- Deployment Bays ---------------- */}
+            <div
+              style={{
+                marginTop: 18,
+                paddingTop: 14,
+                borderTop: "1px solid rgba(255,255,255,.10)",
+              }}
+              aria-label="Jeroid Harvester Deployments"
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.9 }}>
+                    Jeroid Harvester Deployments
+                  </div>
+                  <div style={{ marginTop: 6, opacity: 0.85 }}>
+                    Structured support units that create a public deployment slot.{" "}
+                    <strong>Slots activate soon.</strong>
+                  </div>
+                  <div style={{ marginTop: 6, opacity: 0.75, fontSize: 13 }}>
+                    Executed from the operator account (CoinSpot) under system rules. Loss is possible. No guaranteed
+                    returns.
+                  </div>
+                </div>
+
+                <div style={{ alignSelf: "flex-start", opacity: 0.8, fontSize: 13 }}>
+                  1 unit = 1 slot • Public slot ID + log reference (when enabled)
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: 14,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: 14,
+                }}
+              >
+                {SLOT_CARDS.map((c) => (
+                  <div
+                    key={c.tier}
+                    className="card machine-surface panel-frame"
+                    style={{
+                      padding: 16,
+                      borderRadius: 18,
+                      background: "rgba(0,0,0,.28)",
+                      border: "1px solid rgba(255,255,255,.12)",
+                    }}
+                    aria-label={`Deployment slot ${c.amountAud}`}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                      <div style={{ fontSize: 18, fontWeight: 900 }}>
+                        ${c.amountAud} <span style={{ fontSize: 12, opacity: 0.8 }}>AUD</span>
+                      </div>
+                      <div style={{ fontSize: 12, opacity: 0.75, textTransform: "uppercase", letterSpacing: ".12em" }}>
+                        {c.title}
+                      </div>
+                    </div>
+
+                    <ul style={{ marginTop: 10, opacity: 0.9, paddingLeft: 18, lineHeight: 1.55 }}>
+                      {c.bullets.map((b) => (
+                        <li key={b}>{b}</li>
+                      ))}
+                    </ul>
+
+                    <button
+                      type="button"
+                      className="button"
+                      disabled
+                      aria-disabled="true"
+                      style={{
+                        width: "100%",
+                        marginTop: 12,
+                        opacity: 0.65,
+                        cursor: "not-allowed",
+                      }}
+                      title="Slots activate soon"
+                    >
+                      Deploy (Soon)
+                    </button>
+
+                    <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
+                      Slots activate soon — this bay is visible for system inspection.
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: 14, opacity: 0.75, fontSize: 13 }}>
+                This is a public machine exhibit. The market window above reflects the tradable surface the engine
+                evaluates.
+              </div>
             </div>
           </div>
         </section>
