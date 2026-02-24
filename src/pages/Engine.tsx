@@ -1,271 +1,284 @@
 // src/pages/Engine.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type MarketRow = {
-  coin: string; // "BTC"
-  market: string; // "BTC/AUD"
+  ts: number;
+  iso: string;
+  coin: string; // "BTC" or "BTC_USDT"
+  market?: string; // "BTC/AUD" or "BTC/USDT"
   bid: number;
   ask: number;
-  change24hPct?: number; // optional
-  updatedAt?: number; // epoch ms
+  last?: number | null;
+  mid?: number | null;
+  spreadAbs?: number | null;
+  spreadPct?: number | null; // ratio (e.g. 0.0021)
 };
 
-function fmtTime(d: Date) {
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
-}
+type Snapshot = {
+  ok: boolean;
+  lastOkAt: number;
+  lastOkIso: string | null;
+  err: string | null;
+  counts: { all: number; aud: number; watch: number };
+  watch: string[];
+  pollMs?: number;
+  url?: string;
+};
 
-function fmtNum(n: number, dp = 2) {
+const BASE =
+  (import.meta as any).env?.VITE_ENGINE_SERVICE_URL?.replace(/\/+$/, "") ||
+  "http://localhost:8787";
+
+type SortKey = "spread" | "coin" | "mid";
+type SortDir = "asc" | "desc";
+type Feed = "all" | "aud" | "watch";
+
+function fmt(n: number) {
   if (!Number.isFinite(n)) return "—";
-  return n.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (n >= 1) return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  return n.toLocaleString(undefined, { maximumFractionDigits: 10 });
 }
 
-function fmtPct(n?: number) {
-  if (typeof n !== "number" || !Number.isFinite(n)) return "—";
-  const s = n >= 0 ? `+${n.toFixed(2)}` : n.toFixed(2);
-  return `${s}%`;
+function pctRatio(r: number | null | undefined) {
+  if (r == null || !Number.isFinite(r)) return "—";
+  return `${(r * 100).toFixed(3)}%`;
 }
 
-function calcSpreadPct(bid: number, ask: number) {
-  if (!(bid > 0) || !(ask > 0)) return undefined;
-  const mid = (bid + ask) / 2;
-  if (!(mid > 0)) return undefined;
-  return ((ask - bid) / mid) * 100;
+function feedLabel(feed: Feed) {
+  if (feed === "aud") return "AUD";
+  if (feed === "watch") return "WATCH";
+  return "ALL";
 }
-
-function dpForPrice(n: number) {
-  if (!Number.isFinite(n) || n <= 0) return 2;
-  if (n < 0.01) return 8;
-  if (n < 1) return 6;
-  return 2;
-}
-
-type SortMode = "VOL" | "SPREAD" | "ALPHA";
 
 export default function Engine() {
-  const networkLabel = "MAINNET";
+  const [rows, setRows] = useState<MarketRow[]>([]);
+  const [snap, setSnap] = useState<Snapshot | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
-  /* ---------------- Terminal header (time) ---------------- */
-  const [now, setNow] = useState(() => fmtTime(new Date()));
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(fmtTime(new Date())), 1000);
-    return () => window.clearInterval(id);
-  }, []);
+  const [feed, setFeed] = useState<Feed>("all"); // change to "aud" if you want AUD default
+  const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("spread");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  /* ---------------- Market (server-backed snapshot) ---------------- */
-  const [market, setMarket] = useState<MarketRow[]>(() => [
-    // safe boot placeholder (overwritten by /api/market)
-    { coin: "SOL", market: "SOL/AUD", bid: 122.13, ask: 122.81, updatedAt: Date.now() },
-    { coin: "BTC", market: "BTC/AUD", bid: 88000, ask: 88250, updatedAt: Date.now() },
-    { coin: "ETH", market: "ETH/AUD", bid: 4700, ask: 4720, updatedAt: Date.now() },
-    { coin: "XRP", market: "XRP/AUD", bid: 2.076, ask: 2.083, updatedAt: Date.now() },
-    { coin: "BONK", market: "BONK/AUD", bid: 0.000034, ask: 0.000035, updatedAt: Date.now() },
-  ]);
+  const timerRef = useRef<number | null>(null);
 
-  const [marketLoading, setMarketLoading] = useState(false);
-  const [marketError, setMarketError] = useState<string | null>(null);
-  const [lastMarketOkAt, setLastMarketOkAt] = useState<number | null>(null);
+  async function fetchRows(signal?: AbortSignal) {
+    const r = await fetch(`${BASE}/api/market/${feed}`, { method: "GET", signal });
+    if (!r.ok) throw new Error(`market/${feed} HTTP ${r.status}`);
+    const j = await r.json();
+    return Array.isArray(j?.rows) ? (j.rows as MarketRow[]) : [];
+  }
 
-  // UI controls
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<SortMode>("VOL");
-  const [limit, setLimit] = useState(40);
+  async function fetchSnap(signal?: AbortSignal) {
+    const r = await fetch(`${BASE}/api/market/snapshot`, { method: "GET", signal });
+    if (!r.ok) throw new Error(`market/snapshot HTTP ${r.status}`);
+    return (await r.json()) as Snapshot;
+  }
 
   useEffect(() => {
-    let alive = true;
+    const ctrl = new AbortController();
 
-    async function poll() {
-      setMarketLoading(true);
-      setMarketError(null);
-
+    const tick = async () => {
       try {
-        const res = await fetch("/api/market", { method: "GET" });
-        if (!res.ok) throw new Error(`market fetch failed: ${res.status}`);
-
-        const data = (await res.json()) as MarketRow[];
-        if (!alive) return;
-
-        const rows = Array.isArray(data) ? data : [];
-        if (rows.length > 0) {
-          setMarket(rows);
-          setLastMarketOkAt(Date.now());
-        } else {
-          setMarketError("market returned empty");
-        }
+        setErr(null);
+        const [list, s] = await Promise.all([fetchRows(ctrl.signal), fetchSnap(ctrl.signal)]);
+        setRows(list);
+        setSnap(s);
       } catch (e: any) {
-        if (!alive) return;
-        setMarketError(e?.message ?? "market fetch error");
-      } finally {
-        if (!alive) return;
-        setMarketLoading(false);
+        setErr(e?.message ?? String(e));
       }
-    }
-
-    poll();
-    const id = window.setInterval(poll, 8000);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
     };
-  }, []);
 
-  const marketLiveLabel = marketError ? "MARKET: ERROR" : marketLoading ? "MARKET: UPDATING" : "MARKET: LIVE";
+    tick();
+    timerRef.current = window.setInterval(tick, 2500);
 
-  const filteredSorted = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    let rows = [...market];
+    return () => {
+      ctrl.abort();
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [feed]);
 
-    if (needle) {
-      rows = rows.filter((r) => {
-        const a = (r.coin ?? "").toLowerCase();
-        const b = (r.market ?? "").toLowerCase();
-        return a.includes(needle) || b.includes(needle);
+  const filtered = useMemo(() => {
+    const q = query.trim().toUpperCase();
+    let list = rows;
+
+    if (q) {
+      list = list.filter((r) => {
+        const m = (r.market ?? `${r.coin}/AUD`).toUpperCase();
+        return r.coin.toUpperCase().includes(q) || m.includes(q);
       });
     }
 
-    rows.sort((a, b) => {
-      if (sort === "ALPHA") return (a.coin || "").localeCompare(b.coin || "");
-      if (sort === "SPREAD") {
-        const sa = calcSpreadPct(a.bid, a.ask) ?? -1;
-        const sb = calcSpreadPct(b.bid, b.ask) ?? -1;
-        return sb - sa; // biggest spread first
-      }
-      // VOL default: abs 24h change
-      const va = Math.abs(a.change24hPct ?? 0);
-      const vb = Math.abs(b.change24hPct ?? 0);
-      return vb - va;
-    });
+    const dir = sortDir === "asc" ? 1 : -1;
 
-    return rows.slice(0, Math.max(8, Math.min(200, limit)));
-  }, [market, q, sort, limit]);
+    const getNum = (r: MarketRow) => {
+      const mid = r.mid ?? (r.bid + r.ask) / 2;
+      const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
+      if (sortKey === "mid") return mid;
+      if (sortKey === "spread") return spread;
+      return 0;
+    };
+
+    return [...list].sort((a, b) => {
+      if (sortKey === "coin") return a.coin.localeCompare(b.coin) * dir;
+      return (getNum(a) - getNum(b)) * dir;
+    });
+  }, [rows, query, sortKey, sortDir]);
+
+  const coinsCount =
+    feed === "all" ? (snap?.counts?.all ?? rows.length) :
+    feed === "aud" ? (snap?.counts?.aud ?? rows.length) :
+    (snap?.counts?.watch ?? rows.length);
 
   return (
     <main className="home-shell" aria-label="$JAL~Engine">
       <div className="home-wrap">
-        {/* ===== Top status strip ===== */}
-        <section className="terminal-bar panel-frame machine-surface" aria-label="Engine status">
-          <div className="terminal-left">
-            <span className="terminal-pill ok">ONLINE</span>
-            <span className="terminal-sep">•</span>
-            <span className="terminal-pill">{networkLabel}</span>
-            <span className="terminal-sep">•</span>
-            <span className="terminal-dim">TIME</span>
-            <span className="terminal-time">{now}</span>
-          </div>
-
-          <div className="terminal-right">
-            <span className={`terminal-auth ${marketError ? "is-none" : "is-ro"}`}>
-              {marketLiveLabel}
-              {lastMarketOkAt ? ` • ${fmtTime(new Date(lastMarketOkAt))}` : ""}
-            </span>
-          </div>
-        </section>
-
-        {/* ===== Engine window ===== */}
-        <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="Market console">
-          {/* low-opacity looping logo behind */}
+        <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="Engine">
           <div className="engine-bg" aria-hidden="true">
             <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
           </div>
 
           <div className="engine-foreground">
             <div className="engine-head">
-              <div className="engine-head-left" aria-hidden="true" />
+              <div />
               <div className="engine-head-center">
                 <h1 className="engine-title">$JAL~Engine</h1>
-                <div className="engine-sub">Real-time tradable market console (CEX-backed)</div>
+                <div className="engine-sub">
+                  Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
+                </div>
               </div>
 
               <div className="engine-auth">
-                <div className="engine-auth-col">
-                  <button type="button" className="button gold" disabled aria-disabled="true" title="Coming soon">
-                    Deploy Jeroids (soon)
-                  </button>
-                  <div className="engine-auth-hint">Viewer mode. Execution unlocks when deployment is ready.</div>
-                </div>
+                <span className={`indicator ${snap?.ok ? "ok" : "warn"}`}>
+                  STATUS <span>{snap?.ok ? "ONLINE" : "WAITING"}</span>
+                </span>
+
+                <span className="indicator">
+                  COINS <span>{coinsCount}</span>
+                </span>
+
+                <span className="indicator">
+                  UPDATED <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
+                </span>
               </div>
             </div>
 
-            {/* ===== Controls ===== */}
-            <div className="engine-controls" aria-label="Market controls">
-              <label className="chip" style={{ gap: 10 }}>
-                <span style={{ opacity: 0.75 }}>SEARCH</span>
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="BTC, SOL/AUD…"
-                  aria-label="Search market"
-                  style={{
-                    width: 220,
-                    background: "transparent",
-                    border: "none",
-                    outline: "none",
-                    color: "inherit",
-                  }}
-                />
-              </label>
-
-              <button type="button" className={`button ${sort === "VOL" ? "neon" : ""}`} onClick={() => setSort("VOL")}>
-                Sort: 24H Move
+            <div className="engine-controls" aria-label="Controls">
+              {/* Feed */}
+              <button
+                type="button"
+                className={`button ghost ${feed === "all" ? "active" : ""}`}
+                onClick={() => setFeed("all")}
+              >
+                Feed: All
               </button>
 
               <button
                 type="button"
-                className={`button ${sort === "SPREAD" ? "neon" : ""}`}
-                onClick={() => setSort("SPREAD")}
+                className={`button ghost ${feed === "aud" ? "active" : ""}`}
+                onClick={() => setFeed("aud")}
+              >
+                Feed: AUD
+              </button>
+
+              <button
+                type="button"
+                className={`button ghost ${feed === "watch" ? "active" : ""}`}
+                onClick={() => setFeed("watch")}
+              >
+                Feed: Watch
+              </button>
+
+              {/* Sort */}
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => {
+                  setSortKey("spread");
+                  setSortDir("desc");
+                }}
               >
                 Sort: Spread
               </button>
 
               <button
                 type="button"
-                className={`button ${sort === "ALPHA" ? "neon" : ""}`}
-                onClick={() => setSort("ALPHA")}
+                className="button ghost"
+                onClick={() => {
+                  setSortKey("coin");
+                  setSortDir("asc");
+                }}
               >
                 Sort: A→Z
               </button>
 
-              <button type="button" className="button ghost" onClick={() => setLimit((v) => (v === 40 ? 80 : 40))}>
-                Rows: {limit}
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => {
+                  setSortKey("mid");
+                  setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                }}
+              >
+                Sort: Price
               </button>
+
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Filter (e.g. BTC, SOL, XRP)…"
+                style={{
+                  flex: "1",
+                  minWidth: 220,
+                  padding: "12px 12px",
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,.14)",
+                  background: "rgba(0,0,0,.35)",
+                  color: "var(--text)",
+                  outline: "none",
+                }}
+                aria-label="Filter coins"
+              />
             </div>
 
-            {/* ===== Market console ===== */}
-            <div className="market-console" aria-label="Tradable market">
+            {err ? (
+              <div className="engine-log" role="status" aria-label="Errors">
+                <pre>{err}</pre>
+              </div>
+            ) : null}
+
+            <div className="market-console" aria-label="Market table">
               <div className="market-head">
-                <div>COIN</div>
-                <div className="market-price">BID</div>
-                <div className="market-price">ASK</div>
-                <div className="market-price">SPREAD</div>
-                <div className="market-price">24H</div>
+                <div>Coin</div>
+                <div className="market-price">Bid</div>
+                <div className="market-price">Ask</div>
+                <div className="market-price">Mid</div>
+                <div className="market-price">Spread</div>
               </div>
 
-              {filteredSorted.map((r) => {
-                const spread = calcSpreadPct(r.bid, r.ask);
-                const isPos = (r.change24hPct ?? 0) >= 0;
-
+              {filtered.map((r) => {
+                const mid = r.mid ?? (r.bid + r.ask) / 2;
+                const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
                 return (
-                  <div key={r.market} className="market-row">
+                  <div className="market-row" key={r.market ?? r.coin}>
                     <div className="market-coin">
-                      <strong>{r.coin}</strong> <span className="market-market">{r.market}</span>
+                      <strong>{r.coin}</strong>
+                      <span className="market-market">{r.market ?? `${r.coin}/AUD`}</span>
                     </div>
 
-                    <div className="market-price">{r.bid > 0 ? fmtNum(r.bid, dpForPrice(r.bid)) : "—"}</div>
-                    <div className="market-price">{r.ask > 0 ? fmtNum(r.ask, dpForPrice(r.ask)) : "—"}</div>
-                    <div className="market-price">{typeof spread === "number" ? `${spread.toFixed(2)}%` : "—"}</div>
-
-                    <div className={`market-price ${isPos ? "market-pos" : "market-neg"}`}>{fmtPct(r.change24hPct)}</div>
+                    <div className="market-price">{fmt(r.bid)}</div>
+                    <div className="market-price">{fmt(r.ask)}</div>
+                    <div className="market-price">{fmt(mid)}</div>
+                    <div className="market-price">{pctRatio(spread)}</div>
                   </div>
                 );
               })}
             </div>
 
             <div className="market-foot">
-              {marketLoading ? "Market: updating…" : "Market: live snapshot"}
-              {marketError ? ` • ${marketError}` : ""}
-              {!marketError && filteredSorted.length === 0 ? " • no matches" : ""}
+              {snap?.err ? `Service note: ${snap.err}` : "Public feed only. Trading + Jeroids will be layered next."}
             </div>
           </div>
         </section>

@@ -1,26 +1,21 @@
-// /api/market.ts
-// Public market snapshot for Home page (no visitor keys).
-// Uses CoinSpot public v2 latest prices.
-// Returns MarketRow[].
-
+// /api/market.ts (Vercel / serverless)
+// Curated watchlist for Home page (small + fast).
 type MarketRow = {
-  coin: string;          // "BTC"
-  market: string;        // "BTC/AUD"
+  coin: string;
+  market: string;
   bid: number;
   ask: number;
-  change24hPct?: number; // optional (not provided by /latest)
-  updatedAt?: number;    // epoch ms (server-stamped)
+  updatedAt?: number;
 };
 
 const PUB = "https://www.coinspot.com.au/pubapi/v2";
 
-// Curated watchlist for Home (add/remove freely)
 const WATCH: Array<{ coin: string; quote: "AUD" }> = [
   { coin: "BONK", quote: "AUD" },
-  { coin: "SOL",  quote: "AUD" },
-  { coin: "BTC",  quote: "AUD" },
-  { coin: "ETH",  quote: "AUD" },
-  { coin: "XRP",  quote: "AUD" },
+  { coin: "SOL", quote: "AUD" },
+  { coin: "BTC", quote: "AUD" },
+  { coin: "ETH", quote: "AUD" },
+  { coin: "XRP", quote: "AUD" },
   { coin: "USDT", quote: "AUD" },
 ];
 
@@ -38,10 +33,15 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const r = await fetch(`${PUB}/latest`, { method: "GET" });
+    const r = await fetch(`${PUB}/latest`, {
+      method: "GET",
+      headers: { accept: "application/json", "cache-control": "no-cache" },
+    });
+
     if (!r.ok) throw new Error(`CoinSpot latest failed: ${r.status}`);
     const j = await r.json();
 
+    // IMPORTANT: CoinSpot keys are lowercase (btc, sol, xrp...)
     const prices = j?.prices ?? {};
     const now = Date.now();
 
@@ -49,11 +49,12 @@ export default async function handler(req: any, res: any) {
 
     for (const w of WATCH) {
       const coin = w.coin.toUpperCase();
-      const p = prices?.[coin];
+      const key = coin.toLowerCase();
+      const p = prices?.[key];
+
       const bid = toNum(p?.bid);
       const ask = toNum(p?.ask);
 
-      // If no bid/ask, skip (not usable for snapshot)
       if (!Number.isFinite(bid) || !Number.isFinite(ask)) continue;
 
       out.push({
@@ -65,7 +66,6 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Light caching: feels live + avoids hammering
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Cache-Control", "public, s-maxage=3, stale-while-revalidate=10");
