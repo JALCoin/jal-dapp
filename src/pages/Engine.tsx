@@ -51,56 +51,27 @@ function feedLabel(feed: Feed) {
   return "ALL";
 }
 
-type SlotTier = "BASE_50" | "EXT_75" | "DUAL_150" | "ADV_200";
+/** Slots are identical harvesters; only unit size differs. */
+type SlotTier = "JEROID_50" | "JEROID_75" | "JEROID_150" | "JEROID_200";
 
 type SlotCard = {
   tier: SlotTier;
   amountAud: number;
-  title: string;
-  bullets: string[];
+  title: string; // keep identical naming
+  bullets: string[]; // identical behavior bullets
 };
 
+const SLOT_BULLETS = [
+  "1 unit = 1 public slot ID (when enabled)",
+  "Executes under the same deterministic harvester rules",
+  "Identical system logic across all slots",
+];
+
 const SLOT_CARDS: SlotCard[] = [
-  {
-    tier: "BASE_50",
-    amountAud: 50,
-    title: "Base Slot",
-    bullets: [
-      "1 unit = 1 public slot ID (when enabled)",
-      "Queued for deterministic evaluation",
-      "Executed live under system rules",
-    ],
-  },
-  {
-    tier: "EXT_75",
-    amountAud: 75,
-    title: "Extended Slot",
-    bullets: [
-      "1 unit = 1 public slot ID (when enabled)",
-      "Extended allocation weight",
-      "Executed live under system rules",
-    ],
-  },
-  {
-    tier: "DUAL_150",
-    amountAud: 150,
-    title: "Dual Slot",
-    bullets: [
-      "1 unit = 1 public slot ID (when enabled)",
-      "Dual-path evaluation surface",
-      "Executed live under system rules",
-    ],
-  },
-  {
-    tier: "ADV_200",
-    amountAud: 200,
-    title: "Advanced Slot",
-    bullets: [
-      "1 unit = 1 public slot ID (when enabled)",
-      "Highest exposure class",
-      "Executed live under system rules",
-    ],
-  },
+  { tier: "JEROID_50", amountAud: 50, title: "Jeroid Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_75", amountAud: 75, title: "Jeroid Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_150", amountAud: 150, title: "Jeroid Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_200", amountAud: 200, title: "Jeroid Slot", bullets: SLOT_BULLETS },
 ];
 
 export default function Engine() {
@@ -108,7 +79,7 @@ export default function Engine() {
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const [feed, setFeed] = useState<Feed>("all"); // change to "aud" if preferred
+  const [feed, setFeed] = useState<Feed>("all");
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("spread");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -189,7 +160,6 @@ export default function Engine() {
   return (
     <main className="home-shell" aria-label="$JAL~Engine">
       <div className="home-wrap">
-        {/* ---------------- Market Window ---------------- */}
         <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="Engine">
           <div className="engine-bg" aria-hidden="true">
             <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
@@ -221,7 +191,6 @@ export default function Engine() {
             </div>
 
             <div className="engine-controls" aria-label="Controls">
-              {/* Feed */}
               <button
                 type="button"
                 className={`button ghost ${feed === "all" ? "active" : ""}`}
@@ -246,7 +215,6 @@ export default function Engine() {
                 Feed: Watch
               </button>
 
-              {/* Sort */}
               <button
                 type="button"
                 className="button ghost"
@@ -336,27 +304,29 @@ export default function Engine() {
               {snap?.err ? `Service note: ${snap.err}` : "Public feed only. Trading + Jeroids will be layered next."}
             </div>
 
-            {/* ---------------- Deployment Bays ---------------- */}
+            {/* ---------------- Jeroid Slots (Support Donations) ---------------- */}
             <div
               style={{
                 marginTop: 18,
                 paddingTop: 14,
                 borderTop: "1px solid rgba(255,255,255,.10)",
               }}
-              aria-label="Jeroid Harvester Deployments"
+              aria-label="Jeroid Slots"
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.9 }}>
-                    Jeroid Harvester Deployments
+                    Jeroid Slots
                   </div>
-                  <div style={{ marginTop: 6, opacity: 0.85 }}>
-                    Structured support units that create a public deployment slot.{" "}
+
+                  <div style={{ marginTop: 8, opacity: 0.9, lineHeight: 1.5 }}>
+                    These units function as public support donations for the JAL software system.
+                    <br />
+                    They are displayed as deployment slots for proof-of-concept and transparency.
+                    <br />
+                    They do <strong>not</strong> entitle the supporter to profits, returns, equity, ownership, or trading access.
+                    <br />
                     <strong>Slots activate soon.</strong>
-                  </div>
-                  <div style={{ marginTop: 6, opacity: 0.75, fontSize: 13 }}>
-                    Executed from the operator account (CoinSpot) under system rules. Loss is possible. No guaranteed
-                    returns.
                   </div>
                 </div>
 
@@ -365,6 +335,7 @@ export default function Engine() {
                 </div>
               </div>
 
+              {/* Responsive: 2 columns desktop, 1 column on mobile */}
               <div
                 style={{
                   marginTop: 14,
@@ -372,6 +343,7 @@ export default function Engine() {
                   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                   gap: 14,
                 }}
+                className="jeroid-grid"
               >
                 {SLOT_CARDS.map((c) => (
                   <div
@@ -383,7 +355,7 @@ export default function Engine() {
                       background: "rgba(0,0,0,.28)",
                       border: "1px solid rgba(255,255,255,.12)",
                     }}
-                    aria-label={`Deployment slot ${c.amountAud}`}
+                    aria-label={`Jeroid slot ${c.amountAud}`}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                       <div style={{ fontSize: 18, fontWeight: 900 }}>
@@ -424,13 +396,20 @@ export default function Engine() {
               </div>
 
               <div style={{ marginTop: 14, opacity: 0.75, fontSize: 13 }}>
-                This is a public machine exhibit. The market window above reflects the tradable surface the engine
-                evaluates.
+                This is a public machine exhibit. The market window above reflects the tradable surface the engine evaluates.
               </div>
             </div>
           </div>
         </section>
       </div>
+
+      {/* Tiny mobile helper without touching index.css:
+          If you want it purely in index.css, move this media rule there and delete this block. */}
+      <style>{`
+        @media (max-width: 740px){
+          .jeroid-grid{ grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </main>
   );
 }
