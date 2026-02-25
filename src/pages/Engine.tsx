@@ -4,14 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 type MarketRow = {
   ts: number;
   iso: string;
-  coin: string; // "BTC" or "BTC_USDT"
-  market?: string; // "BTC/AUD" or "BTC/USDT"
+  coin: string;
+  market?: string;
   bid: number;
   ask: number;
   last?: number | null;
   mid?: number | null;
   spreadAbs?: number | null;
-  spreadPct?: number | null; // ratio (e.g. 0.0021)
+  spreadPct?: number | null; // ratio
 };
 
 type Snapshot = {
@@ -84,31 +84,9 @@ const SLOT_CARDS: SlotCard[] = [
   { tier: "JEROID_200", amountAud: 200, title: "System Slot", bullets: SLOT_BULLETS },
 ];
 
-// ---------------- Baseline + issuance countdown (client-only) ----------------
-const BASELINE_STORAGE_KEY = "jal_engine_baseline_start_at_ms";
-const BASELINE_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-function readBaselineStartAt(): number | null {
-  try {
-    const raw = localStorage.getItem(BASELINE_STORAGE_KEY);
-    if (!raw) return null;
-    const n = Number(raw);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeBaselineStartAt(ms: number) {
-  try {
-    localStorage.setItem(BASELINE_STORAGE_KEY, String(ms));
-  } catch {
-    // ignore
-  }
-}
-
 // ---------------- Public Ledger (backend-sourced) ----------------
 type EngineMode = "OBSERVE" | "ARMED" | "EXECUTING" | "COOLDOWN";
+type ExecutionMode = "SIM" | "LIVE";
 
 type SlotState =
   | "QUEUED"
@@ -121,22 +99,25 @@ type SlotState =
   | "EXITED";
 
 type SlotRow = {
-  id: string; // public slot id (JRD-00023)
-  unitAud: number; // 50/75/150/200
+  id: string;
+  unitAud: number;
   state: SlotState;
-  coin: string | null; // e.g. XRP
+  coin: string | null;
   entryMid: number | null;
   nowMid: number | null;
   netPct: number | null; // ratio
   level: 0 | 1 | 2 | 3 | 4;
   lockPct: number | null; // ratio
-  createdAt: number; // ms
-  updatedAt: number; // ms
+  createdAt: number;
+  updatedAt: number;
+
+  // Optional (future backend fields; safe if absent)
+  source?: ExecutionMode; // SIM | LIVE
 };
 
 type SlotEvent = {
-  id: string; // event id
-  at: number; // ms
+  id: string;
+  at: number;
   iso?: string;
   kind:
     | "BASELINE_CAPTURE"
@@ -150,6 +131,33 @@ type SlotEvent = {
   msg: string;
   slotId?: string;
   coin?: string;
+};
+
+type HarvesterPending = {
+  phase?: string; // IDLE | DETECT | SELLING | BUYING | DONE ...
+  packageId?: string | null;
+  solDelta?: number | null;
+  lastSolAvailable?: number;
+  lastTickAt?: number;
+  lastErr?: string | null;
+};
+
+type PublicMetaResponse = {
+  ok: boolean;
+  ts: number;
+
+  engineMode?: EngineMode; // backend truth
+  executionMode?: ExecutionMode; // SIM|LIVE backend truth
+
+  baselineStartAt?: number | null; // backend truth
+  baselineReadyAt?: number | null; // optional
+
+  harvester?: {
+    running?: boolean;
+    pending?: HarvesterPending | null;
+  };
+
+  writeEnabled?: boolean;
 };
 
 function ageLabel(msSince: number) {
@@ -186,6 +194,13 @@ function pickBase(): string {
 type PublicEventsResponse = { ok: boolean; ts: number; rows: SlotEvent[] };
 type PublicSlotsResponse = { ok: boolean; ts: number; rows: SlotRow[] };
 
+function safeUpper(s: any) {
+  return typeof s === "string" ? s.toUpperCase() : "";
+}
+
+// UI-only exclusions for preview telemetry (prevents stablecoins "winning" the preview)
+const PREVIEW_EXCLUDE = new Set(["USDT", "USDC", "DAI", "TUSD", "USDP", "FDUSD", "EURT"]);
+
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
   const engineHostLabel = useMemo(() => {
@@ -199,6 +214,7 @@ export default function Engine() {
 
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
+  const [meta, setMeta] = useState<PublicMetaResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const [feed, setFeed] = useState<Feed>("all");
@@ -207,11 +223,8 @@ export default function Engine() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const [aboutOpen, setAboutOpen] = useState(false);
-
   const timerRef = useRef<number | null>(null);
 
-  // Baseline latch + clock (client-only)
-  const [baselineStartAt, setBaselineStartAt] = useState<number | null>(() => readBaselineStartAt());
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   // Ledger (PUBLIC, backend)
@@ -232,12 +245,20 @@ export default function Engine() {
     return (await r.json()) as Snapshot;
   }
 
+  async function fetchMeta(signal?: AbortSignal) {
+    // Optional endpoint; UI degrades gracefully if missing.
+    const r = await fetch(`${BASE}/api/public/meta`, { method: "GET", signal });
+    if (!r.ok) return null;
+    const j = (await r.json()) as Partial<PublicMetaResponse>;
+    if (!j || (j as any).ok === false) return null;
+    return j as PublicMetaResponse;
+  }
+
   async function fetchPublicEvents(signal?: AbortSignal) {
     const r = await fetch(`${BASE}/api/public/events?limit=200`, { method: "GET", signal });
     if (!r.ok) throw new Error(`public/events HTTP ${r.status}`);
     const j = (await r.json()) as Partial<PublicEventsResponse>;
     const list = Array.isArray(j?.rows) ? (j!.rows as SlotEvent[]) : [];
-    // newest-first display; backend may already be newest-first, but we enforce
     list.sort((a, b) => (b.at || 0) - (a.at || 0));
     return list;
   }
@@ -247,7 +268,6 @@ export default function Engine() {
     if (!r.ok) throw new Error(`public/slots HTTP ${r.status}`);
     const j = (await r.json()) as Partial<PublicSlotsResponse>;
     const list = Array.isArray(j?.rows) ? (j!.rows as SlotRow[]) : [];
-    // stable sort by id
     list.sort((a, b) => String(a.id).localeCompare(String(b.id)));
     return list;
   }
@@ -259,27 +279,19 @@ export default function Engine() {
       try {
         setErr(null);
 
-        const [list, s, pubEv, pubSlots] = await Promise.all([
+        const [list, s, pubEv, pubSlots, m] = await Promise.all([
           fetchRows(ctrl.signal),
           fetchSnap(ctrl.signal),
           fetchPublicEvents(ctrl.signal),
           fetchPublicSlots(ctrl.signal),
+          fetchMeta(ctrl.signal),
         ]);
 
         setRows(list);
         setSnap(s);
         setEvents(pubEv);
         setSlotRows(pubSlots);
-
-        // Latch baseline start time on first successful snapshot (client-only for countdown)
-        if (s?.ok) {
-          const existing = baselineStartAt ?? readBaselineStartAt();
-          if (!existing) {
-            const startAt = Number.isFinite(s.lastOkAt) && s.lastOkAt > 0 ? s.lastOkAt : Date.now();
-            writeBaselineStartAt(startAt);
-            setBaselineStartAt(startAt);
-          }
-        }
+        if (m) setMeta(m);
       } catch (e: any) {
         const msg = e?.message ?? String(e);
         setErr(`${msg}\nENGINE_BASE: ${BASE}`);
@@ -302,6 +314,10 @@ export default function Engine() {
     return () => window.clearInterval(t);
   }, []);
 
+  // ---------------- Baseline + issuance countdown (BACKEND preferred) ----------------
+  const baselineStartAt = meta?.baselineStartAt ?? null;
+
+  const BASELINE_WINDOW_MS = 24 * 60 * 60 * 1000;
   const baselineReadyAt = baselineStartAt ? baselineStartAt + BASELINE_WINDOW_MS : null;
   const baselineRemainingMs = baselineReadyAt ? Math.max(0, baselineReadyAt - nowMs) : null;
   const baselineIsReady = baselineRemainingMs !== null ? baselineRemainingMs <= 0 : false;
@@ -317,17 +333,18 @@ export default function Engine() {
   const nextDeployRemainingMs = nextDeployAt ? Math.max(0, nextDeployAt - nowMs) : null;
 
   const baselineLabel = (() => {
-    if (!baselineStartAt) return "PENDING";
+    if (!baselineStartAt) return "BACKEND PENDING";
     if (baselineIsReady) return "READY";
     return msToCountdown(baselineRemainingMs ?? 0);
   })();
 
   const nextDeployLabel = (() => {
-    if (!baselineStartAt) return "PENDING";
-    if (!nextDeployAt) return "PENDING";
+    if (!baselineStartAt) return "BACKEND PENDING";
+    if (!nextDeployAt) return "BACKEND PENDING";
     return msToCountdown(nextDeployRemainingMs ?? 0);
   })();
 
+  // ---------------- Market filtering/sorting ----------------
   const filtered = useMemo(() => {
     const q = query.trim().toUpperCase();
     let list = rows;
@@ -362,17 +379,22 @@ export default function Engine() {
         ? snap?.counts?.aud ?? rows.length
         : snap?.counts?.watch ?? rows.length;
 
+  // ---------------- Telemetry (UI preview only; backend ranking will supersede) ----------------
   const telemetry = useMemo(() => {
     if (!filtered.length) return null;
 
-    const scored = filtered.map((r) => {
-      const mid = r.mid ?? (r.bid + r.ask) / 2;
-      const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
-      const spreadScore = 1 - clamp01(spread / 0.02); // 0..2% band
-      const priceScore = mid > 0 ? clamp01(1 / (1 + Math.abs(Math.log10(mid + 1e-9)))) : 0.5;
-      const score = 0.8 * spreadScore + 0.2 * priceScore;
-      return { r, mid, spread, score };
-    });
+    const scored = filtered
+      .filter((r) => !PREVIEW_EXCLUDE.has(safeUpper(r.coin)))
+      .map((r) => {
+        const mid = r.mid ?? (r.bid + r.ask) / 2;
+        const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
+        const spreadScore = 1 - clamp01(spread / 0.02); // 0..2% band
+        const priceScore = mid > 0 ? clamp01(1 / (1 + Math.abs(Math.log10(mid + 1e-9)))) : 0.5;
+        const score = 0.8 * spreadScore + 0.2 * priceScore;
+        return { r, mid, spread, score };
+      });
+
+    if (!scored.length) return null;
 
     scored.sort((a, b) => b.score - a.score);
     const top = scored[0];
@@ -386,15 +408,19 @@ export default function Engine() {
     };
   }, [filtered]);
 
+  // ---------------- Ledger derived ----------------
   const slotsActive = slotRows.filter((s) => s.state !== "EXITED").length;
   const slotsTotal = slotRows.length;
 
-  const engineMode: EngineMode = (() => {
-    if (!snap?.ok) return "OBSERVE";
-    if (!baselineStartAt) return "OBSERVE";
-    if (!baselineIsReady) return "OBSERVE";
-    return "ARMED";
-  })();
+  // MODE + EXECUTION are BACKEND truth if present; else we fall back to display-safe values.
+  const engineMode: EngineMode = meta?.engineMode ?? (snap?.ok ? "OBSERVE" : "OBSERVE");
+  const executionMode: ExecutionMode = meta?.executionMode ?? "SIM";
+
+  const harvesterRunning = Boolean(meta?.harvester?.running);
+  const pending = meta?.harvester?.pending ?? null;
+  const pendingPhase = pending?.phase ?? "—";
+  const lastTickAgo = pending?.lastTickAt ? ageLabel(nowMs - pending.lastTickAt) : "—";
+  const lastErr = pending?.lastErr ? String(pending.lastErr) : null;
 
   const lastAction = useMemo(() => {
     const e = events[0];
@@ -430,7 +456,6 @@ export default function Engine() {
                 <div className="engine-sub">
                   Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
                 </div>
-
                 <div className="engine-sub">ENGINE: {engineHostLabel}</div>
               </div>
 
@@ -447,11 +472,11 @@ export default function Engine() {
                   UPDATED <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
                 </span>
 
-                <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Baseline measurement window (24h)">
+                <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Baseline measurement window (24h) — backend truth">
                   BASELINE <span>{baselineLabel}</span>
                 </span>
 
-                <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Countdown to next daily issuance">
+                <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Countdown to next daily issuance — backend truth">
                   NEXT DEPLOY <span>{nextDeployLabel}</span>
                 </span>
 
@@ -462,13 +487,56 @@ export default function Engine() {
                   </span>
                 </span>
 
-                <span className={`indicator ${engineMode === "ARMED" ? "ok" : "warn"}`} title="Engine state (UI preview)">
+                <span className={`indicator ${engineMode === "EXECUTING" ? "ok" : "warn"}`} title="Engine lifecycle mode (backend truth when available)">
                   MODE <span>{engineMode}</span>
+                </span>
+
+                <span
+                  className={`indicator ${executionMode === "LIVE" ? "warn" : "ok"}`}
+                  title="Execution reality (backend truth). SIM = no real trades. LIVE = real trades."
+                >
+                  EXECUTION <span>{executionMode}</span>
                 </span>
 
                 <span className="indicator" title="Most recent ledger event (public)">
                   LAST <span>{lastAction ? lastAction.slice(-8) : "—"}</span>
                 </span>
+              </div>
+            </div>
+
+            {/* ---------------- Harvester status strip (read-only) ---------------- */}
+            <div className="card machine-surface panel-frame engine-telemetry" aria-label="Harvester Status">
+              <div className="engine-telemetry-head">
+                <div className="engine-telemetry-title">Harvester Status</div>
+                <div className="engine-telemetry-note">Backend wiring clarity (read-only)</div>
+              </div>
+
+              <div className="engine-telemetry-grid">
+                <div className="engine-telemetry-item">
+                  <div className="engine-telemetry-k">Harvester</div>
+                  <div className="engine-telemetry-v">{meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}</div>
+                  <div className="engine-telemetry-sub">
+                    {meta?.writeEnabled === false ? "Writes disabled" : meta?.writeEnabled === true ? "Writes enabled" : "Write gate unknown"}
+                  </div>
+                </div>
+
+                <div className="engine-telemetry-item">
+                  <div className="engine-telemetry-k">Package phase</div>
+                  <div className="engine-telemetry-v">{meta ? pendingPhase : "BACKEND PENDING"}</div>
+                  <div className="engine-telemetry-sub">{pending?.packageId ? String(pending.packageId) : "—"}</div>
+                </div>
+
+                <div className="engine-telemetry-item">
+                  <div className="engine-telemetry-k">Last tick</div>
+                  <div className="engine-telemetry-v">{meta ? lastTickAgo : "—"}</div>
+                  <div className="engine-telemetry-sub">{pending?.lastTickAt ? fmtEventTime(pending.lastTickAt) : "—"}</div>
+                </div>
+
+                <div className="engine-telemetry-item">
+                  <div className="engine-telemetry-k">Last error</div>
+                  <div className="engine-telemetry-v">{lastErr ? "ERROR" : "—"}</div>
+                  <div className="engine-telemetry-sub">{lastErr ? lastErr.slice(0, 72) : "—"}</div>
+                </div>
               </div>
             </div>
 
@@ -561,16 +629,19 @@ export default function Engine() {
               })}
             </div>
 
+            {/* ---------------- Market telemetry (UI preview) ---------------- */}
             <div className="card machine-surface panel-frame engine-telemetry" aria-label="Market Selection Telemetry">
               <div className="engine-telemetry-head">
                 <div className="engine-telemetry-title">Market Selection Telemetry</div>
-                <div className="engine-telemetry-note">Preview signals (series-based metrics come with backend)</div>
+                <div className="engine-telemetry-note">
+                  Preview (UI-only). Backend ranking will publish <em>RANK</em> events + slot deploys.
+                </div>
               </div>
 
               {telemetry ? (
                 <div className="engine-telemetry-grid">
                   <div className="engine-telemetry-item">
-                    <div className="engine-telemetry-k">Selected coin</div>
+                    <div className="engine-telemetry-k">Preview coin</div>
                     <div className="engine-telemetry-v">{telemetry.coin}</div>
                     <div className="engine-telemetry-sub">{telemetry.market}</div>
                   </div>
@@ -586,7 +657,7 @@ export default function Engine() {
                   </div>
 
                   <div className="engine-telemetry-item">
-                    <div className="engine-telemetry-k">Rank score</div>
+                    <div className="engine-telemetry-k">Preview score</div>
                     <div className="engine-telemetry-v">{telemetry.score.toFixed(3)}</div>
                   </div>
                 </div>
@@ -611,9 +682,7 @@ export default function Engine() {
                     <strong>Slots activate soon.</strong>
                   </div>
 
-                  <div className="engine-slots-subcopy">
-                    All slots execute under identical deterministic harvester rules. Only unit size varies.
-                  </div>
+                  <div className="engine-slots-subcopy">All slots execute under identical deterministic harvester rules. Only unit size varies.</div>
 
                   <div className="engine-slots-timing">
                     Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy: <strong>{nextDeployLabel}</strong>
@@ -756,10 +825,10 @@ export default function Engine() {
                       valid bid + ask are displayed. This keeps the input surface clean, tradable, and restart-safe.
                     </p>
 
-                    <div className="engine-about-h">Baseline initialization</div>
+                    <div className="engine-about-h">Baseline initialization (backend)</div>
                     <p>
-                      The engine begins in observation mode to build baseline measurements before any deployments can occur.
-                      Baseline window: 24 hours from first successful data capture.
+                      Baseline is a backend fact when available. This UI will show <strong>BACKEND PENDING</strong> until the
+                      service publishes a baseline start timestamp.
                     </p>
 
                     <div className="engine-about-h">Tracking (public ledger)</div>
@@ -769,12 +838,14 @@ export default function Engine() {
                       controls.
                     </p>
 
-                    <div className="engine-about-h">How the harvester layer will operate (future)</div>
+                    <div className="engine-about-h">Execution clarity</div>
                     <ul>
-                      <li>Observe live tradable markets → build a deterministic snapshot.</li>
-                      <li>Evaluate under fixed system rules → authorize or reject actions.</li>
-                      <li>Execute from the operator account only → write public logs for transparency.</li>
-                      <li>Persist state so the machine remains coherent across restarts.</li>
+                      <li>
+                        <strong>MODE</strong> is lifecycle (observe → armed → executing → cooldown).
+                      </li>
+                      <li>
+                        <strong>EXECUTION</strong> is reality (<strong>SIM</strong> = no real trades, <strong>LIVE</strong> = real trades).
+                      </li>
                     </ul>
 
                     <p className="engine-about-risk">
@@ -801,7 +872,8 @@ export default function Engine() {
               <div>
                 <div className="slot-drawer-id">{selectedSlot.id}</div>
                 <div className="slot-drawer-sub">
-                  Unit ${selectedSlot.unitAud} • {selectedSlot.state} • {selectedSlot.coin ?? "—"}
+                  Unit ${selectedSlot.unitAud} • {selectedSlot.state} • {selectedSlot.coin ?? "—"}{" "}
+                  {selectedSlot.source ? `• ${selectedSlot.source}` : ""}
                 </div>
               </div>
 
@@ -860,7 +932,9 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">(Backend will attach exact friction/spread assumptions + entry band parameters here.)</div>
+              <div className="slot-rules-note">
+                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
+              </div>
             </div>
           </div>
         </div>
