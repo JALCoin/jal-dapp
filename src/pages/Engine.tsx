@@ -200,20 +200,42 @@ function fmtEventTime(atMs: number) {
   return `${hh}:${mm}:${ss}`;
 }
 
-// ---------------- ENGINE SERVICE URL (UPDATED) ----------------
-// Preferred: VITE_ENGINE_URL (matches your .env.local + Vercel env var)
-// Back-compat: VITE_ENGINE_SERVICE_URL
-// Default fallback: localhost (change port if your local service differs)
-const BASE =
-  (
-    (import.meta as any).env?.VITE_ENGINE_URL ||
-    (import.meta as any).env?.VITE_ENGINE_SERVICE_URL ||
-    ""
-  )
-    .toString()
-    .replace(/\/+$/, "") || "http://localhost:8787";
+// ---------------- Engine service base URL (UPDATED) ----------------
+//
+// ✅ Fixes your production "Failed to fetch" caused by falling back to localhost.
+// Priority:
+//   1) VITE_ENGINE_SERVICE_URL (explicit)
+//   2) PROD fallback -> Railway public URL
+//   3) DEV fallback  -> localhost
+//
+// In Vercel Project Settings -> Environment Variables, set:
+//   VITE_ENGINE_SERVICE_URL = https://jal-engine-service-production.up.railway.app
+//
+const PROD_DEFAULT = "https://jal-engine-service-production.up.railway.app";
+const DEV_DEFAULT = "http://localhost:8787";
+
+function normalizeBase(u: string) {
+  return u.replace(/\/+$/, "");
+}
+
+function pickBase(): string {
+  const raw = (import.meta as any).env?.VITE_ENGINE_SERVICE_URL;
+  if (typeof raw === "string" && raw.trim().length) return normalizeBase(raw.trim());
+  const isProd = Boolean((import.meta as any).env?.PROD);
+  return normalizeBase(isProd ? PROD_DEFAULT : DEV_DEFAULT);
+}
 
 export default function Engine() {
+  const BASE = useMemo(() => pickBase(), []);
+  const engineHostLabel = useMemo(() => {
+    try {
+      const url = new URL(BASE);
+      return url.host;
+    } catch {
+      return BASE;
+    }
+  }, [BASE]);
+
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -288,7 +310,9 @@ export default function Engine() {
         setSlotRows(readSlotsLedger());
         setEvents(readEventsLedger());
       } catch (e: any) {
-        setErr(e?.message ?? String(e));
+        // Helpful error for CORS / DNS / mixed content / wrong URL
+        const msg = e?.message ?? String(e);
+        setErr(`${msg}\nENGINE_BASE: ${BASE}`);
       }
     };
 
@@ -301,7 +325,7 @@ export default function Engine() {
       timerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feed]);
+  }, [feed, BASE]);
 
   useEffect(() => {
     const t = window.setInterval(() => setNowMs(Date.now()), 500);
@@ -436,9 +460,9 @@ export default function Engine() {
                 <div className="engine-sub">
                   Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
                 </div>
-                <div className="engine-sub" style={{ opacity: 0.75 }}>
-                  ENGINE: <span style={{ fontFamily: "monospace" }}>{BASE}</span>
-                </div>
+
+                {/* UPDATED: show the actual engine host (not localhost) */}
+                <div className="engine-sub">ENGINE: {engineHostLabel}</div>
               </div>
 
               <div className="engine-auth">
@@ -731,7 +755,9 @@ export default function Engine() {
                       </button>
                     ))
                   ) : (
-                    <div className="ledger-empty">No slots in ledger yet. (This will populate once the backend harvester is live.)</div>
+                    <div className="ledger-empty">
+                      No slots in ledger yet. (This will populate once the backend harvester is live.)
+                    </div>
                   )}
                 </div>
               </div>
