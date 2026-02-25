@@ -84,7 +84,7 @@ const SLOT_CARDS: SlotCard[] = [
   { tier: "JEROID_200", amountAud: 200, title: "System Slot", bullets: SLOT_BULLETS },
 ];
 
-// ---------------- Baseline + issuance countdown (client-only pre-backend) ----------------
+// ---------------- Baseline + issuance countdown (client-only) ----------------
 const BASELINE_STORAGE_KEY = "jal_engine_baseline_start_at_ms";
 const BASELINE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -107,7 +107,7 @@ function writeBaselineStartAt(ms: number) {
   }
 }
 
-// ---------------- Ledger tracking (UI-first; backend later) ----------------
+// ---------------- Public Ledger (backend-sourced) ----------------
 type EngineMode = "OBSERVE" | "ARMED" | "EXECUTING" | "COOLDOWN";
 
 type SlotState =
@@ -137,6 +137,7 @@ type SlotRow = {
 type SlotEvent = {
   id: string; // event id
   at: number; // ms
+  iso?: string;
   kind:
     | "BASELINE_CAPTURE"
     | "RANK"
@@ -150,39 +151,6 @@ type SlotEvent = {
   slotId?: string;
   coin?: string;
 };
-
-const LEDGER_SLOTS_KEY = "jal_engine_slots_ledger_v1";
-const LEDGER_EVENTS_KEY = "jal_engine_events_v1";
-
-function readSlotsLedger(): SlotRow[] {
-  try {
-    const raw = localStorage.getItem(LEDGER_SLOTS_KEY);
-    if (!raw) return [];
-    const j = JSON.parse(raw);
-    return Array.isArray(j) ? (j as SlotRow[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function readEventsLedger(): SlotEvent[] {
-  try {
-    const raw = localStorage.getItem(LEDGER_EVENTS_KEY);
-    if (!raw) return [];
-    const j = JSON.parse(raw);
-    return Array.isArray(j) ? (j as SlotEvent[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeEventsLedger(ev: SlotEvent[]) {
-  try {
-    localStorage.setItem(LEDGER_EVENTS_KEY, JSON.stringify(ev));
-  } catch {
-    // ignore
-  }
-}
 
 function ageLabel(msSince: number) {
   const s = Math.max(0, Math.floor(msSince / 1000));
@@ -200,17 +168,7 @@ function fmtEventTime(atMs: number) {
   return `${hh}:${mm}:${ss}`;
 }
 
-// ---------------- Engine service base URL (UPDATED) ----------------
-//
-// ✅ Fixes your production "Failed to fetch" caused by falling back to localhost.
-// Priority:
-//   1) VITE_ENGINE_SERVICE_URL (explicit)
-//   2) PROD fallback -> Railway public URL
-//   3) DEV fallback  -> localhost
-//
-// In Vercel Project Settings -> Environment Variables, set:
-//   VITE_ENGINE_SERVICE_URL = https://jal-engine-service-production.up.railway.app
-//
+// ---------------- Engine service base URL ----------------
 const PROD_DEFAULT = "https://jal-engine-service-production.up.railway.app";
 const DEV_DEFAULT = "http://localhost:8787";
 
@@ -224,6 +182,9 @@ function pickBase(): string {
   const isProd = Boolean((import.meta as any).env?.PROD);
   return normalizeBase(isProd ? PROD_DEFAULT : DEV_DEFAULT);
 }
+
+type PublicEventsResponse = { ok: boolean; ts: number; rows: SlotEvent[] };
+type PublicSlotsResponse = { ok: boolean; ts: number; rows: SlotRow[] };
 
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
@@ -253,9 +214,9 @@ export default function Engine() {
   const [baselineStartAt, setBaselineStartAt] = useState<number | null>(() => readBaselineStartAt());
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  // Ledger (UI-first)
-  const [slotRows, setSlotRows] = useState<SlotRow[]>(() => readSlotsLedger());
-  const [events, setEvents] = useState<SlotEvent[]>(() => readEventsLedger());
+  // Ledger (PUBLIC, backend)
+  const [slotRows, setSlotRows] = useState<SlotRow[]>([]);
+  const [events, setEvents] = useState<SlotEvent[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
   async function fetchRows(signal?: AbortSignal) {
@@ -271,6 +232,26 @@ export default function Engine() {
     return (await r.json()) as Snapshot;
   }
 
+  async function fetchPublicEvents(signal?: AbortSignal) {
+    const r = await fetch(`${BASE}/api/public/events?limit=200`, { method: "GET", signal });
+    if (!r.ok) throw new Error(`public/events HTTP ${r.status}`);
+    const j = (await r.json()) as Partial<PublicEventsResponse>;
+    const list = Array.isArray(j?.rows) ? (j!.rows as SlotEvent[]) : [];
+    // newest-first display; backend may already be newest-first, but we enforce
+    list.sort((a, b) => (b.at || 0) - (a.at || 0));
+    return list;
+  }
+
+  async function fetchPublicSlots(signal?: AbortSignal) {
+    const r = await fetch(`${BASE}/api/public/slots`, { method: "GET", signal });
+    if (!r.ok) throw new Error(`public/slots HTTP ${r.status}`);
+    const j = (await r.json()) as Partial<PublicSlotsResponse>;
+    const list = Array.isArray(j?.rows) ? (j!.rows as SlotRow[]) : [];
+    // stable sort by id
+    list.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    return list;
+  }
+
   useEffect(() => {
     const ctrl = new AbortController();
 
@@ -278,39 +259,28 @@ export default function Engine() {
       try {
         setErr(null);
 
-        const [list, s] = await Promise.all([fetchRows(ctrl.signal), fetchSnap(ctrl.signal)]);
+        const [list, s, pubEv, pubSlots] = await Promise.all([
+          fetchRows(ctrl.signal),
+          fetchSnap(ctrl.signal),
+          fetchPublicEvents(ctrl.signal),
+          fetchPublicSlots(ctrl.signal),
+        ]);
+
         setRows(list);
         setSnap(s);
+        setEvents(pubEv);
+        setSlotRows(pubSlots);
 
-        // Latch baseline start time on first successful snapshot.
+        // Latch baseline start time on first successful snapshot (client-only for countdown)
         if (s?.ok) {
           const existing = baselineStartAt ?? readBaselineStartAt();
           if (!existing) {
             const startAt = Number.isFinite(s.lastOkAt) && s.lastOkAt > 0 ? s.lastOkAt : Date.now();
             writeBaselineStartAt(startAt);
             setBaselineStartAt(startAt);
-
-            // Seed baseline event once (public log)
-            const ev = readEventsLedger();
-            if (!ev.some((e) => e.kind === "BASELINE_CAPTURE")) {
-              const seeded: SlotEvent = {
-                id: `EVT-${startAt}`,
-                at: startAt,
-                kind: "BASELINE_CAPTURE",
-                msg: "BASELINE_CAPTURE OK (24h measurement window started)",
-              };
-              const next = [seeded, ...ev].slice(0, 200);
-              writeEventsLedger(next);
-              setEvents(next);
-            }
           }
         }
-
-        // UI ledger source (until backend exists)
-        setSlotRows(readSlotsLedger());
-        setEvents(readEventsLedger());
       } catch (e: any) {
-        // Helpful error for CORS / DNS / mixed content / wrong URL
         const msg = e?.message ?? String(e);
         setErr(`${msg}\nENGINE_BASE: ${BASE}`);
       }
@@ -461,7 +431,6 @@ export default function Engine() {
                   Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
                 </div>
 
-                {/* UPDATED: show the actual engine host (not localhost) */}
                 <div className="engine-sub">ENGINE: {engineHostLabel}</div>
               </div>
 
@@ -497,34 +466,22 @@ export default function Engine() {
                   MODE <span>{engineMode}</span>
                 </span>
 
-                <span className="indicator" title="Most recent ledger event (UI preview)">
+                <span className="indicator" title="Most recent ledger event (public)">
                   LAST <span>{lastAction ? lastAction.slice(-8) : "—"}</span>
                 </span>
               </div>
             </div>
 
             <div className="engine-controls" aria-label="Controls">
-              <button
-                type="button"
-                className={`button ghost ${feed === "all" ? "active" : ""}`}
-                onClick={() => setFeed("all")}
-              >
+              <button type="button" className={`button ghost ${feed === "all" ? "active" : ""}`} onClick={() => setFeed("all")}>
                 Feed: All
               </button>
 
-              <button
-                type="button"
-                className={`button ghost ${feed === "aud" ? "active" : ""}`}
-                onClick={() => setFeed("aud")}
-              >
+              <button type="button" className={`button ghost ${feed === "aud" ? "active" : ""}`} onClick={() => setFeed("aud")}>
                 Feed: AUD
               </button>
 
-              <button
-                type="button"
-                className={`button ghost ${feed === "watch" ? "active" : ""}`}
-                onClick={() => setFeed("watch")}
-              >
+              <button type="button" className={`button ghost ${feed === "watch" ? "active" : ""}`} onClick={() => setFeed("watch")}>
                 Feed: Watch
               </button>
 
@@ -659,8 +616,7 @@ export default function Engine() {
                   </div>
 
                   <div className="engine-slots-timing">
-                    Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy:{" "}
-                    <strong>{nextDeployLabel}</strong>
+                    Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy: <strong>{nextDeployLabel}</strong>
                   </div>
                 </div>
 
@@ -669,11 +625,7 @@ export default function Engine() {
 
               <div className="jeroid-grid">
                 {SLOT_CARDS.map((c) => (
-                  <div
-                    key={c.tier}
-                    className="card machine-surface panel-frame engine-slot-card"
-                    aria-label={`System support slot ${c.amountAud}`}
-                  >
+                  <div key={c.tier} className="card machine-surface panel-frame engine-slot-card" aria-label={`System support slot ${c.amountAud}`}>
                     <div className="engine-slot-top">
                       <div className="engine-slot-amt">
                         ${c.amountAud} <span>AUD</span>
@@ -687,13 +639,7 @@ export default function Engine() {
                       ))}
                     </ul>
 
-                    <button
-                      type="button"
-                      className="button engine-slot-btn"
-                      disabled
-                      aria-disabled="true"
-                      title="Funding rail not yet active"
-                    >
+                    <button type="button" className="button engine-slot-btn" disabled aria-disabled="true" title="Funding rail not yet active">
                       Deploy (Soon)
                     </button>
 
@@ -702,14 +648,12 @@ export default function Engine() {
                 ))}
               </div>
 
-              {/* ---------------- Slots Ledger ---------------- */}
+              {/* ---------------- Slots Ledger (PUBLIC) ---------------- */}
               <div className="card machine-surface panel-frame engine-ledger" aria-label="Slots Ledger">
                 <div className="engine-ledger-top">
                   <div>
                     <div className="engine-ledger-title">Slots Ledger</div>
-                    <div className="engine-ledger-note">
-                      Read-only machine ledger. Backend will populate these rows when the harvester is live.
-                    </div>
+                    <div className="engine-ledger-note">Read-only public ledger (backend sourced).</div>
                   </div>
 
                   <div className="engine-ledger-counts">
@@ -755,18 +699,16 @@ export default function Engine() {
                       </button>
                     ))
                   ) : (
-                    <div className="ledger-empty">
-                      No slots in ledger yet. (This will populate once the backend harvester is live.)
-                    </div>
+                    <div className="ledger-empty">No slots in public ledger yet.</div>
                   )}
                 </div>
               </div>
 
-              {/* ---------------- Public Event Log ---------------- */}
+              {/* ---------------- Public Event Log (PUBLIC) ---------------- */}
               <div className="card machine-surface panel-frame engine-events" aria-label="Public Event Log">
                 <div className="engine-events-top">
                   <div className="engine-events-title">Public Event Log</div>
-                  <div className="engine-events-note">Append-only preview (no keys / no balances)</div>
+                  <div className="engine-events-note">Append-only public log (no keys / no balances)</div>
                 </div>
 
                 <div className="event-log">
@@ -851,7 +793,7 @@ export default function Engine() {
         </section>
       </div>
 
-      {/* ---------------- Slot Details Drawer (UI-only) ---------------- */}
+      {/* ---------------- Slot Details Drawer ---------------- */}
       {selectedSlot ? (
         <div className="slot-drawer-backdrop" role="dialog" aria-modal="true" aria-label="Slot Details">
           <div className="slot-drawer card machine-surface panel-frame">
@@ -903,8 +845,7 @@ export default function Engine() {
                   <div className="event-row" key={e.id}>
                     <div className="event-time">{fmtEventTime(e.at)}</div>
                     <div className="event-msg">
-                      <span className="event-kind">{e.kind}</span>{" "}
-                      <span className="event-text">{e.msg}</span>
+                      <span className="event-kind">{e.kind}</span> <span className="event-text">{e.msg}</span>
                     </div>
                   </div>
                 ))
@@ -919,9 +860,7 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">
-                (Backend will attach the exact friction/spread assumptions + entry band parameters here.)
-              </div>
+              <div className="slot-rules-note">(Backend will attach exact friction/spread assumptions + entry band parameters here.)</div>
             </div>
           </div>
         </div>
