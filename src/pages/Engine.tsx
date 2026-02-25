@@ -25,10 +25,6 @@ type Snapshot = {
   url?: string;
 };
 
-const BASE =
-  (import.meta as any).env?.VITE_ENGINE_SERVICE_URL?.replace(/\/+$/, "") ||
-  "http://localhost:8787";
-
 type SortKey = "spread" | "coin" | "mid";
 type SortDir = "asc" | "desc";
 type Feed = "all" | "aud" | "watch";
@@ -203,6 +199,19 @@ function fmtEventTime(atMs: number) {
   const ss = String(d.getSeconds()).padStart(2, "0");
   return `${hh}:${mm}:${ss}`;
 }
+
+// ---------------- ENGINE SERVICE URL (UPDATED) ----------------
+// Preferred: VITE_ENGINE_URL (matches your .env.local + Vercel env var)
+// Back-compat: VITE_ENGINE_SERVICE_URL
+// Default fallback: localhost (change port if your local service differs)
+const BASE =
+  (
+    (import.meta as any).env?.VITE_ENGINE_URL ||
+    (import.meta as any).env?.VITE_ENGINE_SERVICE_URL ||
+    ""
+  )
+    .toString()
+    .replace(/\/+$/, "") || "http://localhost:8787";
 
 export default function Engine() {
   const [rows, setRows] = useState<MarketRow[]>([]);
@@ -427,6 +436,9 @@ export default function Engine() {
                 <div className="engine-sub">
                   Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
                 </div>
+                <div className="engine-sub" style={{ opacity: 0.75 }}>
+                  ENGINE: <span style={{ fontFamily: "monospace" }}>{BASE}</span>
+                </div>
               </div>
 
               <div className="engine-auth">
@@ -633,7 +645,11 @@ export default function Engine() {
 
               <div className="jeroid-grid">
                 {SLOT_CARDS.map((c) => (
-                  <div key={c.tier} className="card machine-surface panel-frame engine-slot-card" aria-label={`System support slot ${c.amountAud}`}>
+                  <div
+                    key={c.tier}
+                    className="card machine-surface panel-frame engine-slot-card"
+                    aria-label={`System support slot ${c.amountAud}`}
+                  >
                     <div className="engine-slot-top">
                       <div className="engine-slot-amt">
                         ${c.amountAud} <span>AUD</span>
@@ -715,9 +731,7 @@ export default function Engine() {
                       </button>
                     ))
                   ) : (
-                    <div className="ledger-empty">
-                      No slots in ledger yet. (This will populate once the backend harvester is live.)
-                    </div>
+                    <div className="ledger-empty">No slots in ledger yet. (This will populate once the backend harvester is live.)</div>
                   )}
                 </div>
               </div>
