@@ -1439,36 +1439,31 @@ main[role="main"]{
   .indicator{ width: 100%; }
 }
 /* =========================================================
-   ENGINE HEADER — CLEAN INDICATOR SYSTEM (FINAL)
+   ENGINE HEADER — FINAL STRUCTURE FIX
 ========================================================= */
 
+/* Header becomes vertical stack */
+.engine-head{
+  display: flex !important;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Title block full width */
+.engine-head-center{
+  max-width: 900px;
+}
+
+/* Indicator block becomes full width grid */
 .engine-auth{
+  width: 100%;
   display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
-  width: 100%;
-  margin-top: 16px;
 }
 
-/* Each pill is a contained unit */
-.indicator{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: .55rem .75rem;
-  border-radius: 999px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Ensure text never breaks mid word */
-.indicator span{
-  white-space: nowrap;
-}
-
-/* Desktop alignment */
-@media (min-width: 900px){
+/* Lock desktop columns for clean console feel */
+@media (min-width: 1000px){
   .engine-auth{
     grid-template-columns: repeat(4, 1fr);
   }
@@ -1479,8 +1474,4 @@ main[role="main"]{
   .engine-auth{
     grid-template-columns: repeat(5, 1fr);
   }
-}
-.indicator{
-  border: 1px solid rgba(255,255,255,.12);
-  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.25));
 }
