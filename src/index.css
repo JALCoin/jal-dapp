@@ -1559,3 +1559,29 @@ main[role="main"]{
     transparent
   );
 }
+/* =========================================================
+   ENGINE — Hierarchy Weighting
+========================================================= */
+
+/* 1️⃣ Machine State — strongest */
+.indicator.status,
+.indicator.mode,
+.indicator.execution {
+  border-width: 2px;
+  box-shadow: 0 0 8px rgba(17,241,167,.25);
+}
+
+/* 2️⃣ Deployment — medium */
+.indicator.next,
+.indicator.slots,
+.indicator.baseline {
+  opacity: .9;
+}
+
+/* 3️⃣ Performance — quieter */
+.indicator.harvest,
+.indicator[data-metric],
+.indicator.last {
+  opacity: .75;
+  border-color: rgba(255,255,255,.15);
+}
