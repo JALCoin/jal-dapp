@@ -1453,26 +1453,44 @@ main[role="main"]{
 .engine-head-center{
   max-width: 900px;
 }
+.engine-growth-note{
+  margin-top: 14px;
+  font-size: .85rem;
+  opacity: .7;
+}
+/* =========================================================
+   ENGINE — Controlled 2-Row Indicator Layout
+========================================================= */
 
-/* Indicator block becomes full width grid */
 .engine-auth{
-  width: 100%;
   display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 16px;
+  width: 100%;
+  margin-top: 18px;
 }
 
-/* Lock desktop columns for clean console feel */
-@media (min-width: 1000px){
+/* Keep pills uniform */
+.indicator{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .55rem .75rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* If viewport shrinks, drop to 2 columns cleanly */
+@media (max-width: 1000px){
   .engine-auth{
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* Ultra wide */
-@media (min-width: 1400px){
+/* Mobile stack */
+@media (max-width: 640px){
   .engine-auth{
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: 1fr;
   }
 }
 /* =========================================================
