@@ -1585,3 +1585,18 @@ main[role="main"]{
   opacity: .75;
   border-color: rgba(255,255,255,.15);
 }
+/* ENGINE — Machine Hierarchy Discipline */
+
+.indicator[data-metric],
+.indicator.harvest,
+.indicator.metric {
+  opacity: .75;
+  border-color: rgba(255,255,255,.12);
+  box-shadow: none;
+}
+
+.indicator.status,
+.indicator.execution,
+.indicator.mode {
+  border-width: 2px;
+}
