@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -83,6 +83,47 @@ function HeaderView({
 }
 
 /* ------------------------ Sidebar ------------------------ */
+type NavItem = { to: string; label: string };
+
+function SidebarSection({
+  title,
+  items,
+  onClose,
+}: {
+  title: string;
+  items: NavItem[];
+  onClose: () => void;
+}) {
+  return (
+    <section aria-label={title}>
+      <div
+        style={{
+          opacity: 0.78,
+          fontSize: "0.72rem",
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          margin: "8px 0 10px",
+        }}
+      >
+        {title}
+      </div>
+
+      <div style={{ display: "grid", gap: 10 }}>
+        {items.map((it) => (
+          <NavLink
+            key={it.to}
+            to={it.to}
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+            onClick={onClose}
+          >
+            {it.label}
+          </NavLink>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function SidebarView({
   open,
   onClose,
@@ -94,76 +135,87 @@ function SidebarView({
 
   return (
     <>
+      {/* Overlay click closes */}
       <button
         className="sidebar-overlay"
         aria-label="Close menu overlay"
         onClick={onClose}
       />
+
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
-        <nav>
-          <NavLink
-            to="/app/home"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
+        {/* Top row inside panel: title + close */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 900,
+              letterSpacing: ".10em",
+              textTransform: "uppercase",
+              opacity: 0.9,
+            }}
           >
-            Home
-          </NavLink>
+            Menu
+          </div>
 
-          <NavLink
-            to="/app/about"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+          <button
+            type="button"
             onClick={onClose}
+            aria-label="Close sidebar"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,.12)",
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0))",
+            }}
           >
-            About JAL
-          </NavLink>
+            ×
+          </button>
+        </div>
 
-          <NavLink
-            to="/app/shop"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
-            Shop
-          </NavLink>
+        <nav aria-label="Primary routes" style={{ display: "grid", gap: 14 }}>
+          <SidebarSection
+            title="Core"
+            onClose={onClose}
+            items={[
+              { to: "/app/home", label: "Home" },
+              { to: "/app/engine", label: "$JAL~Engine" },
+            ]}
+          />
 
-          <NavLink
-            to="/app/token"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
-            Token Generation
-          </NavLink>
+          <SidebarSection
+            title="Utility"
+            onClose={onClose}
+            items={[
+              { to: "/app/token", label: "Token Generation" },
+              { to: "/app/raydium", label: "Raydium / Liquidity" },
+            ]}
+          />
 
-          <NavLink
-            to="/app/raydium"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
-            Raydium / Liquidity
-          </NavLink>
+          <SidebarSection
+            title="Store"
+            onClose={onClose}
+            items={[
+              { to: "/app/shop", label: "Shop" },
+              { to: "/app/inventory", label: "Inventory" },
+            ]}
+          />
 
-          <NavLink
-            to="/app/engine"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
-            $JAL~Engine
-          </NavLink>
-
-          <NavLink
-            to="/app/inventory"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
-            Inventory
-          </NavLink>
-
-          <NavLink
-            to="/app/settings"
-            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-            onClick={onClose}
-          >
-            Settings
-          </NavLink>
+          <SidebarSection
+            title="System"
+            onClose={onClose}
+            items={[
+              { to: "/app/about", label: "About JAL" },
+              { to: "/app/settings", label: "Settings" },
+            ]}
+          />
         </nav>
       </aside>
     </>
@@ -177,7 +229,9 @@ function FeaturePage({ title }: { title: string }) {
       <div className="home-wrap">
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">{title}</h1>
-          <p className="home-lead">This page is live-routed. Wire the feature UI here.</p>
+          <p className="home-lead">
+            This page is live-routed. Wire the feature UI here.
+          </p>
         </section>
       </div>
     </main>
@@ -191,12 +245,12 @@ function AboutPage() {
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">About JAL</h1>
           <p className="home-lead">
-            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical
-            Metal Engineer • Digital Creator.
+            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> —
+            Sol-Trader • Mechanical Metal Engineer • Digital Creator.
           </p>
           <p className="home-lead">
-            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong> pool on Raydium and
-            verifiable on Solscan.
+            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong>{" "}
+            pool on Raydium and verifiable on Solscan.
           </p>
           <div className="home-links">
             <a className="chip" href="https://raydium.io/" target="_blank" rel="noreferrer">
@@ -219,8 +273,8 @@ function ShopPage() {
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">Shop</h1>
           <p className="home-lead">
-            Sole trader activity: design + creation of physical and digital products, sold online.
-            jalsol.com is the hub.
+            Sole trader activity: design + creation of physical and digital
+            products, sold online. jalsol.com is the hub.
           </p>
           <div className="home-links">
             <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
@@ -242,25 +296,43 @@ function AppShell() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // ESC closes sidebar
+  const navOverlayOpen = useMemo(() => {
+    // Keep this simple and explicit: only /app/nav is an overlay route
+    return location.pathname === "/app/nav";
+  }, [location.pathname]);
+
+  // ESC closes sidebar; if nav overlay is up, ESC returns to home
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key !== "Escape") return;
+
+      if (menuOpen) {
+        setMenuOpen(false);
+        return;
+      }
+
+      if (navOverlayOpen) {
+        navigate("/app/home", { replace: true });
+      }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [menuOpen, navOverlayOpen, navigate]);
 
   // Close sidebar on route changes
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Lock scroll when sidebar is open
+  // Lock scroll when sidebar OR nav overlay is open
   useEffect(() => {
-    document.body.setAttribute("data-nav-open", menuOpen ? "true" : "false");
-    return () => document.body.removeAttribute("data-nav-open");
-  }, [menuOpen]);
+    const locked = menuOpen || navOverlayOpen;
+    document.body.setAttribute("data-nav-open", locked ? "true" : "false");
+    return () => {
+      document.body.removeAttribute("data-nav-open");
+    };
+  }, [menuOpen, navOverlayOpen]);
 
   return (
     <>
@@ -288,7 +360,10 @@ function AppShell() {
         <Route path="engine/logs" element={<FeaturePage title="$JAL~Engine — Log Analysis" />} />
 
         <Route path="inventory" element={<FeaturePage title="Inventory / Packaged System" />} />
-        <Route path="inventory/purchase" element={<FeaturePage title="Inventory — Purchase" />} />
+        <Route
+          path="inventory/purchase"
+          element={<FeaturePage title="Inventory — Purchase" />}
+        />
 
         <Route path="settings" element={<FeaturePage title="Settings" />} />
 

@@ -6,6 +6,7 @@
    Fixes: sidebar vertical stack, remove collisions, mobile engine header stack
    Add: Home module grid (System Bays) + Engine page CSS moved from components
    Patch: force Public Event Log visible on desktop
+   Update: Engine sections/tabs + indicators grid + drawer polish
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -679,7 +680,7 @@ main[role="main"]{
 }
 
 /* ==================================
-   ENGINE WINDOW — hero + header + modules + log
+   ENGINE WINDOW — hero + header + controls
 ================================== */
 .engine-window{
   position:relative;
@@ -719,9 +720,25 @@ main[role="main"]{
 .engine-auth{
   justify-self:end;
   display:flex;
+  flex-direction:column;
   gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
+  align-items:flex-end;
+}
+
+/* Indicators become a responsive grid to prevent collisions */
+.engine-indicators{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap:10px;
+  width:100%;
+  max-width: 640px;
+  justify-items:end;
+}
+@media (max-width: 1020px){
+  .engine-indicators{ grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 520px; }
+}
+@media (max-width: 860px){
+  .engine-indicators{ grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; justify-items:start; }
 }
 
 /* Mobile: stack engine header + auth */
@@ -731,61 +748,17 @@ main[role="main"]{
   .engine-auth{
     justify-self:start;
     width:100%;
-    display:grid;
-    grid-template-columns: 1fr;
-    gap:10px;
+    align-items:flex-start;
   }
-  .engine-auth-col{ align-items:flex-start; }
+  .engine-indicators{
+    grid-template-columns: 1fr;
+    justify-items:start;
+    max-width:none;
+  }
   .engine-auth-hint{ max-width:none; text-align:left; }
 }
 
-/* module list */
-.engine-select{
-  display:grid;
-  gap:10px;
-  margin: 10px 0 14px;
-}
-.engine-select-row{
-  text-align:left;
-  padding: 12px 14px;
-  border-radius: var(--r-lg);
-  border:1px solid rgba(255,255,255,.12);
-  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-  position: relative;
-  overflow: hidden;
-}
-.engine-select-row::before{
-  content:"";
-  position:absolute;
-  left:0;
-  top:12%;
-  bottom:12%;
-  width:3px;
-  border-radius:6px;
-  background: linear-gradient(to bottom, rgba(0,240,255,.65), rgba(17,241,167,.55));
-  opacity:.55;
-}
-.engine-select-row:hover{
-  transform: translateY(-1px);
-  border-color: rgba(17,241,167,.55);
-  box-shadow: var(--glow-green);
-}
-.engine-select-row:hover::before{ opacity:.9; }
-
-.engine-select-row.active{
-  border-color: rgba(244,200,106,.55);
-  box-shadow: var(--glow-gold);
-}
-.engine-select-row.active::before{
-  opacity:1;
-  background: linear-gradient(to bottom, rgba(244,200,106,.95), rgba(255,255,255,.35));
-  box-shadow: var(--glow-gold);
-}
-
-.engine-select-title{ font-weight:700; letter-spacing:.02em; }
-.engine-select-desc{ opacity:.82; margin-top:3px; font-size:.95rem; }
-
+/* Controls */
 .engine-controls{
   display:flex;
   flex-wrap:wrap;
@@ -793,12 +766,7 @@ main[role="main"]{
   margin: 10px 0 12px;
 }
 
-.engine-indicators{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin: 6px 0 10px;
-}
+/* pill indicators */
 .indicator{
   display:inline-flex;
   align-items:center;
@@ -810,11 +778,14 @@ main[role="main"]{
   font-size: .86rem;
   letter-spacing: .06em;
   opacity:.92;
+  justify-content:space-between;
+  min-width: 0;
 }
 .indicator span{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
   letter-spacing: 0;
   opacity:.95;
+  white-space:nowrap;
 }
 .indicator.ok{
   border-color: rgba(17,241,167,.38);
@@ -825,14 +796,8 @@ main[role="main"]{
   box-shadow: 0 0 0 1px rgba(244,200,106,.08) inset;
 }
 
-.engine-auth-col{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  align-items:flex-end;
-}
 .engine-auth-hint{
-  max-width:220px;
+  max-width:320px;
   text-align:right;
   font-size:.86rem;
   opacity:.72;
@@ -868,128 +833,8 @@ main[role="main"]{
   opacity: .92;
 }
 
-/* Compact rows (optional) */
-.engine-select-row.compact .engine-select-desc.compact{
-  margin-top: 2px;
-  opacity: .68;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* ===== Modal (API sign-in) ===== */
-.engine-modal-backdrop{
-  position:fixed;
-  inset:0;
-  z-index:80;
-  background: rgba(0,0,0,.72);
-  backdrop-filter: blur(2px);
-  animation: overlayIn var(--t-slow) both;
-}
-.engine-modal{
-  position:fixed;
-  z-index:81;
-  left:50%;
-  top:50%;
-  transform: translate(-50%, -50%);
-  width: min(680px, 92vw);
-  border-radius: var(--r-lg);
-  border:1px solid var(--stroke-2);
-  background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.92));
-  box-shadow: 0 30px 120px rgba(0,0,0,.85), var(--glow-white);
-  overflow:hidden;
-}
-.engine-modal-head{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  padding: 16px 16px 10px;
-  border-bottom: 1px solid rgba(255,255,255,.10);
-}
-.engine-modal-title{ font-weight:800; letter-spacing:.04em; }
-.engine-modal-sub{ opacity:.78; font-size:.95rem; margin-top:2px; }
-.engine-modal-close{
-  width:40px;
-  height:40px;
-  border-radius: 12px;
-  border:1px solid rgba(255,255,255,.12);
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-}
-.engine-modal-close:hover{
-  transform: translateY(-1px);
-  border-color: var(--cyan);
-  box-shadow: var(--glow-cyan);
-}
-.engine-modal-body{
-  padding: 14px 16px 16px;
-  display:grid;
-  gap:12px;
-}
-.engine-field{ display:grid; gap:6px; }
-.engine-field span{
-  opacity:.85;
-  font-size:.9rem;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-.engine-field input{
-  width:100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.35);
-  color: var(--text);
-  outline:none;
-}
-.engine-field input:focus{
-  border-color: rgba(17,241,167,.55);
-  box-shadow: var(--glow-green);
-}
-.engine-remember{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  opacity:.85;
-  font-size:.95rem;
-}
-.engine-remember input{ width:18px; height:18px; }
-.engine-modal-actions{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  margin-top: 4px;
-}
-.engine-modal-note{
-  opacity:.75;
-  font-size:.9rem;
-  margin: 2px 0 0;
-}
-
-/* Motion preferences */
-@media (prefers-reduced-motion: reduce){
-  .hamburger span,
-  .hamburger,
-  .sidebar-nav,
-  .sidebar-overlay,
-  .button,
-  .card,
-  .logo.header-logo,
-  .center-logo-btn,
-  .nav-pill,
-  .nav-overlay,
-  .nav-overlay-backdrop,
-  .loading-logo,
-  .engine-bg-logo{
-    transition:none;
-    animation:none;
-  }
-}
-
 /* ==================================
-   MARKET CONSOLE (Home — Engine bay)
+   MARKET CONSOLE (Engine page)
 ================================== */
 .market-console{
   margin-top: 10px;
@@ -1029,9 +874,6 @@ main[role="main"]{
   font-size: .92rem;
   opacity:.94;
 }
-.market-pos{ color: rgba(17,241,167,.95); text-shadow: 0 0 10px rgba(17,241,167,.18); }
-.market-neg{ color: rgba(255,120,120,.95); text-shadow: 0 0 10px rgba(255,120,120,.14); }
-.market-foot{ margin-top: 10px; opacity: .75; font-size: .9rem; }
 
 @media (max-width: 720px){
   .market-head,
@@ -1048,85 +890,7 @@ main[role="main"]{
 }
 
 /* ==================================
-   JEROID BAY (Coming soon tiles)
-================================== */
-.jeroid-bay{
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,.08);
-}
-.jeroid-head{
-  font-size: .78rem;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  opacity: .78;
-  margin-bottom: 10px;
-}
-.jeroid-grid{
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-@media (max-width: 740px){
-  .jeroid-grid{ grid-template-columns: 1fr; }
-}
-
-.jeroid-card{
-  text-align:left;
-  padding: 12px 14px;
-  border-radius: var(--r-lg);
-  border: 1px solid rgba(255,255,255,.12);
-  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
-  position: relative;
-  overflow:hidden;
-  opacity: .92;
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-}
-.jeroid-card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:
-    radial-gradient(520px 180px at 20% 0%, rgba(244,200,106,.10), transparent 60%),
-    radial-gradient(520px 180px at 90% 120%, rgba(0,240,255,.08), transparent 60%);
-  opacity:.55;
-  pointer-events:none;
-}
-.jeroid-card:hover{
-  transform: translateY(-1px);
-  border-color: rgba(244,200,106,.45);
-  box-shadow: 0 16px 54px rgba(0,0,0,.66), var(--glow-gold);
-}
-.jeroid-title{ font-weight: 800; letter-spacing: .02em; position:relative; }
-.jeroid-desc{ opacity:.78; margin-top: 4px; font-size: .95rem; position:relative; }
-.jeroid-soon{
-  margin-top: 10px;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding: .35rem .55rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.24);
-  font-size: .78rem;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  opacity:.85;
-  position:relative;
-}
-.jeroid-card.is-soon{ cursor:not-allowed; opacity:.82; }
-.jeroid-card.is-soon:hover{ transform:none; border-color: rgba(255,255,255,.12); box-shadow:none; }
-.jeroid-note{
-  margin-top: 10px;
-  opacity: .78;
-  font-size: .92rem;
-  line-height: 1.55;
-  max-width: 78ch;
-}
-
-/* ==================================
-   ENGINE PAGE — moved from Engine.tsx
+   ENGINE PAGE — inputs + telemetry + ledger + events
 ================================== */
 .engine-filter{
   flex: 1;
@@ -1138,7 +902,42 @@ main[role="main"]{
   color: var(--text);
   outline: none;
 }
+.engine-filter:focus{
+  border-color: rgba(17,241,167,.55);
+  box-shadow: var(--glow-green);
+}
 
+/* Section tabs (Engine.tsx) */
+.engine-section-tabs{
+  margin-top: 14px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.engine-section-tab{
+  padding: .6rem .8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.22);
+  font-size: .86rem;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  opacity: .86;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), opacity var(--t-fast);
+}
+.engine-section-tab:hover{
+  transform: translateY(-1px);
+  border-color: rgba(0,240,255,.55);
+  box-shadow: var(--glow-cyan);
+  opacity: 1;
+}
+.engine-section-tab.active{
+  border-color: rgba(244,200,106,.55);
+  box-shadow: var(--glow-gold);
+  opacity: 1;
+}
+
+/* telemetry cards */
 .engine-telemetry{
   margin-top: 14px;
   padding: 14px;
@@ -1165,12 +964,19 @@ main[role="main"]{
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
+@media (max-width: 900px){
+  .engine-telemetry-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px){
+  .engine-telemetry-grid{ grid-template-columns: 1fr; }
+}
 .engine-telemetry-item{ opacity: .9; }
 .engine-telemetry-k{ font-size: 12px; opacity: .75; }
 .engine-telemetry-v{ font-weight: 900; }
 .engine-telemetry-sub{ font-size: 12px; opacity: .7; }
 .engine-telemetry-pending{ margin-top: 10px; opacity: .75; }
 
+/* slots bay */
 .engine-slots{
   margin-top: 18px;
   padding-top: 14px;
@@ -1193,6 +999,7 @@ main[role="main"]{
 .engine-slots-timing{ margin-top: 10px; opacity: .8; font-size: 13px; }
 .engine-slots-right{ align-self: flex-start; opacity: .8; font-size: 13px; }
 
+/* support slot cards */
 .engine-slot-card{
   padding: 16px;
   border-radius: 18px;
@@ -1222,6 +1029,7 @@ main[role="main"]{
 }
 .engine-slot-foot{ margin-top: 10px; font-size: 12px; opacity: .75; }
 
+/* ledger + events cards */
 .engine-ledger,
 .engine-events{
   margin-top: 14px;
@@ -1230,6 +1038,7 @@ main[role="main"]{
   background: rgba(0,0,0,.22);
   border: 1px solid rgba(255,255,255,.12);
 }
+
 .engine-ledger-top,
 .engine-events-top{
   display: flex;
@@ -1380,6 +1189,9 @@ main[role="main"]{
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
+@media (max-width: 520px){
+  .slot-drawer-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
 .slot-k{ font-size: 12px; opacity: .7; }
 .slot-v{ font-weight: 900; }
 .slot-section{
@@ -1396,6 +1208,116 @@ main[role="main"]{
   font-size: 13px;
 }
 .slot-rules-note{ margin-top: 8px; opacity: .75; }
+
+/* ===== Modal (API sign-in) ===== */
+.engine-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:80;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(2px);
+  animation: overlayIn var(--t-slow) both;
+}
+.engine-modal{
+  position:fixed;
+  z-index:81;
+  left:50%;
+  top:50%;
+  transform: translate(-50%, -50%);
+  width: min(680px, 92vw);
+  border-radius: var(--r-lg);
+  border:1px solid var(--stroke-2);
+  background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.92));
+  box-shadow: 0 30px 120px rgba(0,0,0,.85), var(--glow-white);
+  overflow:hidden;
+}
+.engine-modal-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+.engine-modal-title{ font-weight:800; letter-spacing:.04em; }
+.engine-modal-sub{ opacity:.78; font-size:.95rem; margin-top:2px; }
+.engine-modal-close{
+  width:40px;
+  height:40px;
+  border-radius: 12px;
+  border:1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.engine-modal-close:hover{
+  transform: translateY(-1px);
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+.engine-modal-body{
+  padding: 14px 16px 16px;
+  display:grid;
+  gap:12px;
+}
+.engine-field{ display:grid; gap:6px; }
+.engine-field span{
+  opacity:.85;
+  font-size:.9rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.engine-field input{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.35);
+  color: var(--text);
+  outline:none;
+}
+.engine-field input:focus{
+  border-color: rgba(17,241,167,.55);
+  box-shadow: var(--glow-green);
+}
+.engine-remember{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  opacity:.85;
+  font-size:.95rem;
+}
+.engine-remember input{ width:18px; height:18px; }
+.engine-modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top: 4px;
+}
+.engine-modal-note{
+  opacity:.75;
+  font-size:.9rem;
+  margin: 2px 0 0;
+}
+
+/* Motion preferences */
+@media (prefers-reduced-motion: reduce){
+  .hamburger span,
+  .hamburger,
+  .sidebar-nav,
+  .sidebar-overlay,
+  .button,
+  .card,
+  .logo.header-logo,
+  .center-logo-btn,
+  .nav-pill,
+  .nav-overlay,
+  .nav-overlay-backdrop,
+  .loading-logo,
+  .engine-bg-logo{
+    transition:none;
+    animation:none;
+  }
+}
 
 /* =========================================================
    PATCH — Engine: Desktop must show Public Event Log

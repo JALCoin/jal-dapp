@@ -149,10 +149,14 @@ type PublicMetaResponse = {
   engineMode?: EngineMode; // backend truth
   executionMode?: ExecutionMode; // SIM|LIVE backend truth
 
-  // Backend truth (preferred)
-  baselineStartAt?: number | null; // baseline anchor
-  baselineWindowMs?: number | null; // if backend publishes
-  nextDeployAt?: number | null; // if backend publishes the canonical schedule
+  baselineStartAt?: number | null;
+  baselineWindowMs?: number | null;
+  nextDeployAt?: number | null;
+
+  // Harvest-only AUD growth (preferred backend truth)
+  harvestAudTotal?: number | null;
+  harvestAud24h?: number | null;
+  harvestAud7d?: number | null;
 
   harvester?: {
     running?: boolean;
@@ -203,6 +207,58 @@ function safeUpper(s: any) {
 // UI-only exclusions for preview telemetry (prevents stablecoins "winning" the preview)
 const PREVIEW_EXCLUDE = new Set(["USDT", "USDC", "DAI", "TUSD", "USDP", "FDUSD", "EURT"]);
 
+// ---------------- Harvest-only AUD growth (UI fallback from events) ----------------
+// If backend provides harvestAud*, we use it. Otherwise, we parse NOTE lines if present.
+function parseHarvestAudFromEvents(events: SlotEvent[]) {
+  // Accept formats like:
+  // "HARVEST_AUD +12.34"
+  // "HARVEST_AUD_DELTA=+12.34"
+  // "HARVEST_AUD delta +12.34"
+  const out = {
+    total: 0,
+    last24h: 0,
+    last7d: 0,
+  };
+
+  if (!events?.length) return out;
+
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const weekMs = 7 * dayMs;
+
+  const grab = (msg: string) => {
+    const m =
+      msg.match(/HARVEST[_\s-]*AUD(?:[_\s-]*DELTA)?\s*[:=]?\s*([+-]?\d+(\.\d+)?)/i) ??
+      msg.match(/AUD\s*HARVEST\s*[:=]?\s*([+-]?\d+(\.\d+)?)/i);
+    if (!m) return null;
+    const v = Number(m[1]);
+    return Number.isFinite(v) ? v : null;
+  };
+
+  for (const e of events) {
+    const v = grab(String(e.msg ?? ""));
+    if (v == null) continue;
+
+    out.total += v;
+
+    const age = now - (e.at || 0);
+    if (age <= dayMs) out.last24h += v;
+    if (age <= weekMs) out.last7d += v;
+  }
+
+  // Round small floating noise
+  out.total = Math.round(out.total * 100) / 100;
+  out.last24h = Math.round(out.last24h * 100) / 100;
+  out.last7d = Math.round(out.last7d * 100) / 100;
+
+  return out;
+}
+
+function moneyAud(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return n.toLocaleString(undefined, { style: "currency", currency: "AUD", maximumFractionDigits: 2 });
+}
+
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
   const engineHostLabel = useMemo(() => {
@@ -233,6 +289,10 @@ export default function Engine() {
   const [events, setEvents] = useState<SlotEvent[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
+  // Sections (tabs) — reduces scroll + forces hierarchy
+  type Section = "ledger" | "events" | "support" | "about";
+  const [section, setSection] = useState<Section>("ledger");
+
   async function fetchRows(signal?: AbortSignal) {
     const r = await fetch(`${BASE}/api/market/${feed}`, { method: "GET", signal });
     if (!r.ok) throw new Error(`market/${feed} HTTP ${r.status}`);
@@ -247,7 +307,6 @@ export default function Engine() {
   }
 
   async function fetchMeta(signal?: AbortSignal) {
-    // Optional endpoint; UI degrades gracefully if missing.
     const r = await fetch(`${BASE}/api/public/meta`, { method: "GET", signal });
     if (!r.ok) return null;
     const j = (await r.json()) as Partial<PublicMetaResponse>;
@@ -316,23 +375,19 @@ export default function Engine() {
   }, []);
 
   // ---------------- Baseline + issuance countdown (BACKEND preferred) ----------------
-  // Fixed wall-clock schedule (exact 24h cadence anchored to baselineStartAt forever).
-  // UI will:
-  // 1) Prefer backend-published nextDeployAt/window
-  // 2) Else compute from baselineStartAt + windowMs
   const baselineStartAt = meta?.baselineStartAt ?? null;
 
   const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
-  const windowMs = meta?.baselineWindowMs && meta.baselineWindowMs > 0 ? meta.baselineWindowMs : FALLBACK_WINDOW_MS;
+  const windowMs =
+    meta?.baselineWindowMs && meta.baselineWindowMs > 0 ? meta.baselineWindowMs : FALLBACK_WINDOW_MS;
 
   const baselineReadyAt = baselineStartAt ? baselineStartAt + windowMs : null;
 
-  // Fixed cadence: nextDeployAt = smallest (baselineStartAt + k*windowMs) strictly greater than now.
   const computedNextDeployAt = useMemo(() => {
     if (!baselineStartAt) return null;
     const n = nowMs;
     const elapsed = n - baselineStartAt;
-    const k = Math.floor(elapsed / windowMs) + 1; // strictly next cycle boundary
+    const k = Math.floor(elapsed / windowMs) + 1;
     return baselineStartAt + k * windowMs;
   }, [baselineStartAt, nowMs, windowMs]);
 
@@ -387,8 +442,8 @@ export default function Engine() {
     feed === "all"
       ? snap?.counts?.all ?? rows.length
       : feed === "aud"
-        ? snap?.counts?.aud ?? rows.length
-        : snap?.counts?.watch ?? rows.length;
+      ? snap?.counts?.aud ?? rows.length
+      : snap?.counts?.watch ?? rows.length;
 
   // ---------------- Telemetry (UI preview only; backend ranking will supersede) ----------------
   const telemetry = useMemo(() => {
@@ -399,7 +454,7 @@ export default function Engine() {
       .map((r) => {
         const mid = r.mid ?? (r.bid + r.ask) / 2;
         const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
-        const spreadScore = 1 - clamp01(spread / 0.02); // 0..2% band
+        const spreadScore = 1 - clamp01(spread / 0.02);
         const priceScore = mid > 0 ? clamp01(1 / (1 + Math.abs(Math.log10(mid + 1e-9)))) : 0.5;
         const score = 0.8 * spreadScore + 0.2 * priceScore;
         return { r, mid, spread, score };
@@ -423,8 +478,7 @@ export default function Engine() {
   const slotsActive = slotRows.filter((s) => s.state !== "EXITED").length;
   const slotsTotal = slotRows.length;
 
-  // MODE + EXECUTION are BACKEND truth if present; else we fall back to display-safe values.
-  const engineMode: EngineMode = meta?.engineMode ?? (snap?.ok ? "OBSERVE" : "OBSERVE");
+  const engineMode: EngineMode = meta?.engineMode ?? "OBSERVE";
   const executionMode: ExecutionMode = meta?.executionMode ?? "SIM";
 
   const harvesterRunning = Boolean(meta?.harvester?.running);
@@ -451,10 +505,25 @@ export default function Engine() {
     return events.filter((e) => e.slotId === selectedSlotId).slice(0, 60);
   }, [events, selectedSlotId]);
 
+  // ---------------- Harvest-only AUD growth ----------------
+  const harvestFallback = useMemo(() => parseHarvestAudFromEvents(events), [events]);
+
+  const harvestAudTotal =
+    meta?.harvestAudTotal != null ? meta.harvestAudTotal : harvestFallback.total;
+
+  const harvestAud24h =
+    meta?.harvestAud24h != null ? meta.harvestAud24h : harvestFallback.last24h;
+
+  const harvestAud7d =
+    meta?.harvestAud7d != null ? meta.harvestAud7d : harvestFallback.last7d;
+
   return (
     <main className="home-shell" aria-label="$JAL~Engine">
       <div className="home-wrap">
-        <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="Engine">
+        <section
+          className="card engine-window engine-window--hero machine-surface panel-frame"
+          aria-label="Engine"
+        >
           <div className="engine-bg" aria-hidden="true">
             <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
           </div>
@@ -462,70 +531,101 @@ export default function Engine() {
           <div className="engine-foreground">
             <div className="engine-head">
               <div />
+
               <div className="engine-head-center">
                 <h1 className="engine-title">$JAL~Engine</h1>
                 <div className="engine-sub">
-                  Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
+                  Real-time tradable market console (CoinSpot public latest) — FEED:{" "}
+                  {feedLabel(feed)}
                 </div>
-                <div className="engine-sub">ENGINE: {engineHostLabel}</div>
+
+                {/* Keep host label subtle (under title, not fighting width) */}
+                <div className="engine-sub" style={{ opacity: 0.6 }}>
+                  ENGINE: {engineHostLabel}
+                </div>
               </div>
 
+              {/* Indicator grid lives in CSS via .engine-indicators */}
               <div className="engine-auth">
-                <span className={`indicator ${snap?.ok ? "ok" : "warn"}`}>
-                  STATUS <span>{snap?.ok ? "ONLINE" : "WAITING"}</span>
-                </span>
-
-                <span className="indicator">
-                  COINS <span>{coinsCount}</span>
-                </span>
-
-                <span className="indicator">
-                  UPDATED <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
-                </span>
-
-                <span
-                  className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
-                  title="Baseline measurement window (24h) — backend truth"
-                >
-                  BASELINE <span>{baselineLabel}</span>
-                </span>
-
-                <span
-                  className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
-                  title="Countdown to next daily issuance — fixed wall-clock schedule from baseline (backend truth when available)"
-                >
-                  NEXT DEPLOY <span>{nextDeployLabel}</span>
-                </span>
-
-                <span className="indicator" title="Slots currently visible to the system ledger">
-                  SLOTS{" "}
-                  <span>
-                    {slotsActive}/{Math.max(slotsTotal, 0)}
+                <div className="engine-indicators" aria-label="Engine indicators">
+                  <span className={`indicator ${snap?.ok ? "ok" : "warn"}`}>
+                    STATUS <span>{snap?.ok ? "ONLINE" : "WAITING"}</span>
                   </span>
-                </span>
 
-                <span
-                  className={`indicator ${engineMode === "EXECUTING" ? "ok" : "warn"}`}
-                  title="Engine lifecycle mode (backend truth when available)"
-                >
-                  MODE <span>{engineMode}</span>
-                </span>
+                  <span className="indicator">
+                    UPDATED{" "}
+                    <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
+                  </span>
 
-                <span
-                  className={`indicator ${executionMode === "LIVE" ? "warn" : "ok"}`}
-                  title="Execution reality (backend truth). SIM = no real trades. LIVE = real trades."
-                >
-                  EXECUTION <span>{executionMode}</span>
-                </span>
+                  <span className="indicator">
+                    COINS <span>{coinsCount}</span>
+                  </span>
 
-                <span className="indicator" title="Most recent ledger event (public)">
-                  LAST <span>{lastAction ? lastAction.slice(-8) : "—"}</span>
-                </span>
+                  <span
+                    className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
+                    title="Baseline measurement window (24h) — backend truth"
+                  >
+                    BASELINE <span>{baselineLabel}</span>
+                  </span>
+
+                  <span
+                    className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
+                    title="Countdown to next daily issuance"
+                  >
+                    NEXT DEPLOY <span>{nextDeployLabel}</span>
+                  </span>
+
+                  <span className="indicator" title="Slots currently visible to the system ledger">
+                    SLOTS{" "}
+                    <span>
+                      {slotsActive}/{Math.max(slotsTotal, 0)}
+                    </span>
+                  </span>
+
+                  <span
+                    className={`indicator ${engineMode === "EXECUTING" ? "ok" : "warn"}`}
+                    title="Engine lifecycle mode (backend truth when available)"
+                  >
+                    MODE <span>{engineMode}</span>
+                  </span>
+
+                  <span
+                    className={`indicator ${executionMode === "LIVE" ? "warn" : "ok"}`}
+                    title="Execution reality (SIM = no trades, LIVE = real trades)"
+                  >
+                    EXECUTION <span>{executionMode}</span>
+                  </span>
+
+                  <span className="indicator" title="Most recent ledger event (public)">
+                    LAST <span>{lastAction ? lastAction.slice(-8) : "—"}</span>
+                  </span>
+
+                  {/* The truth you locked: AUD growth is harvest-only */}
+                  <span className="indicator ok" title="Harvest-only AUD growth (excludes deposits/withdrawals)">
+                    HARVEST <span>{moneyAud(harvestAudTotal)}</span>
+                  </span>
+
+                  <span className="indicator" title="Harvest-only AUD delta over last 24h">
+                    24H <span>{moneyAud(harvestAud24h)}</span>
+                  </span>
+
+                  <span className="indicator" title="Harvest-only AUD delta over last 7 days">
+                    7D <span>{moneyAud(harvestAud7d)}</span>
+                  </span>
+                </div>
+
+                <div className="engine-auth-hint">
+                  AUD growth shown here is <strong>harvest-only</strong>. External transfers are
+                  ignored.
+                </div>
               </div>
             </div>
 
             {/* ---------------- Harvester status strip (read-only) ---------------- */}
-            <div className="card machine-surface panel-frame engine-telemetry" aria-label="Harvester Status">
+            <div
+              className="card machine-surface panel-frame engine-telemetry"
+              aria-label="Harvester Status"
+            >
               <div className="engine-telemetry-head">
                 <div className="engine-telemetry-title">Harvester Status</div>
                 <div className="engine-telemetry-note">Backend wiring clarity (read-only)</div>
@@ -541,21 +641,25 @@ export default function Engine() {
                     {meta?.writeEnabled === false
                       ? "Writes disabled"
                       : meta?.writeEnabled === true
-                        ? "Writes enabled"
-                        : "Write gate unknown"}
+                      ? "Writes enabled"
+                      : "Write gate unknown"}
                   </div>
                 </div>
 
                 <div className="engine-telemetry-item">
                   <div className="engine-telemetry-k">Package phase</div>
                   <div className="engine-telemetry-v">{meta ? pendingPhase : "BACKEND PENDING"}</div>
-                  <div className="engine-telemetry-sub">{pending?.packageId ? String(pending.packageId) : "—"}</div>
+                  <div className="engine-telemetry-sub">
+                    {pending?.packageId ? String(pending.packageId) : "—"}
+                  </div>
                 </div>
 
                 <div className="engine-telemetry-item">
                   <div className="engine-telemetry-k">Last tick</div>
                   <div className="engine-telemetry-v">{meta ? lastTickAgo : "—"}</div>
-                  <div className="engine-telemetry-sub">{pending?.lastTickAt ? fmtEventTime(pending.lastTickAt) : "—"}</div>
+                  <div className="engine-telemetry-sub">
+                    {pending?.lastTickAt ? fmtEventTime(pending.lastTickAt) : "—"}
+                  </div>
                 </div>
 
                 <div className="engine-telemetry-item">
@@ -566,6 +670,7 @@ export default function Engine() {
               </div>
             </div>
 
+            {/* ---------------- Controls (sticky via CSS) ---------------- */}
             <div className="engine-controls" aria-label="Controls">
               <button
                 type="button"
@@ -639,6 +744,7 @@ export default function Engine() {
               </div>
             ) : null}
 
+            {/* ---------------- Market table ---------------- */}
             <div className="market-console" aria-label="Market table">
               <div className="market-head">
                 <div>Coin</div>
@@ -668,7 +774,10 @@ export default function Engine() {
             </div>
 
             {/* ---------------- Market telemetry (UI preview) ---------------- */}
-            <div className="card machine-surface panel-frame engine-telemetry" aria-label="Market Selection Telemetry">
+            <div
+              className="card machine-surface panel-frame engine-telemetry"
+              aria-label="Market Selection Telemetry"
+            >
               <div className="engine-telemetry-head">
                 <div className="engine-telemetry-title">Market Selection Telemetry</div>
                 <div className="engine-telemetry-note">
@@ -704,78 +813,47 @@ export default function Engine() {
               )}
             </div>
 
-            {/* ---------------- System Support Slots ---------------- */}
-            <div className="engine-slots" aria-label="System Support Slots">
-              <div className="engine-slots-head">
-                <div className="engine-slots-left">
-                  <div className="engine-slots-title">System Support Slots</div>
+            {/* ---------------- Section tabs (reduce scroll) ---------------- */}
+            <div className="engine-section-tabs" aria-label="Engine sections">
+              <button
+                type="button"
+                className={`engine-section-tab ${section === "ledger" ? "active" : ""}`}
+                onClick={() => setSection("ledger")}
+              >
+                Ledger
+              </button>
+              <button
+                type="button"
+                className={`engine-section-tab ${section === "events" ? "active" : ""}`}
+                onClick={() => setSection("events")}
+              >
+                Events
+              </button>
+              <button
+                type="button"
+                className={`engine-section-tab ${section === "support" ? "active" : ""}`}
+                onClick={() => setSection("support")}
+              >
+                Support Slots
+              </button>
+              <button
+                type="button"
+                className={`engine-section-tab ${section === "about" ? "active" : ""}`}
+                onClick={() => setSection("about")}
+              >
+                About
+              </button>
+            </div>
 
-                  <div className="engine-slots-copy">
-                    These slots are <strong>public support donations</strong> for the JAL software system.
-                    <br />
-                    They are displayed as deployment slots for proof-of-concept transparency.
-                    <br />
-                    They <strong>do not</strong> create profits, returns, equity, ownership, or trading access.
-                    <br />
-                    <strong>Slots activate soon.</strong>
-                  </div>
-
-                  <div className="engine-slots-subcopy">
-                    All slots execute under identical deterministic harvester rules. Only unit size varies.
-                  </div>
-
-                  <div className="engine-slots-timing">
-                    Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy:{" "}
-                    <strong>{nextDeployLabel}</strong>
-                  </div>
-                </div>
-
-                <div className="engine-slots-right">
-                  1 unit = 1 slot • Public slot ID + log reference (when enabled)
-                </div>
-              </div>
-
-              <div className="jeroid-grid">
-                {SLOT_CARDS.map((c) => (
-                  <div
-                    key={c.tier}
-                    className="card machine-surface panel-frame engine-slot-card"
-                    aria-label={`System support slot ${c.amountAud}`}
-                  >
-                    <div className="engine-slot-top">
-                      <div className="engine-slot-amt">
-                        ${c.amountAud} <span>AUD</span>
-                      </div>
-                      <div className="engine-slot-tag">{c.title.toUpperCase()}</div>
-                    </div>
-
-                    <ul className="engine-slot-bullets">
-                      {c.bullets.map((b) => (
-                        <li key={b}>{b}</li>
-                      ))}
-                    </ul>
-
-                    <button
-                      type="button"
-                      className="button engine-slot-btn"
-                      disabled
-                      aria-disabled="true"
-                      title="Funding rail not yet active"
-                    >
-                      Deploy (Soon)
-                    </button>
-
-                    <div className="engine-slot-foot">Funding rail not yet active — slot visible for inspection.</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* ---------------- Slots Ledger (PUBLIC) ---------------- */}
+            {/* ---------------- Ledger (PUBLIC) ---------------- */}
+            {section === "ledger" ? (
               <div className="card machine-surface panel-frame engine-ledger" aria-label="Slots Ledger">
                 <div className="engine-ledger-top">
                   <div>
                     <div className="engine-ledger-title">Slots Ledger</div>
-                    <div className="engine-ledger-note">Read-only public ledger (backend sourced).</div>
+                    <div className="engine-ledger-note">
+                      Read-only public ledger (backend sourced). Click any row to inspect slot history.
+                    </div>
                   </div>
 
                   <div className="engine-ledger-counts">
@@ -824,9 +902,15 @@ export default function Engine() {
                     <div className="ledger-empty">No slots in public ledger yet.</div>
                   )}
                 </div>
-              </div>
 
-              {/* ---------------- Public Event Log (PUBLIC) ---------------- */}
+                <div className="engine-footer-note" style={{ marginTop: 12 }}>
+                  AUD growth shown on this page is harvest-only (market droid). External deposits/withdrawals are ignored.
+                </div>
+              </div>
+            ) : null}
+
+            {/* ---------------- Events (PUBLIC) ---------------- */}
+            {section === "events" ? (
               <div className="card machine-surface panel-frame engine-events" aria-label="Public Event Log">
                 <div className="engine-events-top">
                   <div className="engine-events-title">Public Event Log</div>
@@ -835,7 +919,7 @@ export default function Engine() {
 
                 <div className="event-log">
                   {events.length ? (
-                    events.slice(0, 20).map((e) => (
+                    events.slice(0, 50).map((e) => (
                       <div className="event-row" key={e.id}>
                         <div className="event-time">{fmtEventTime(e.at)}</div>
                         <div className="event-msg">
@@ -849,8 +933,79 @@ export default function Engine() {
                   )}
                 </div>
               </div>
+            ) : null}
 
-              {/* ---------------- About Dropdown ---------------- */}
+            {/* ---------------- Support Slots ---------------- */}
+            {section === "support" ? (
+              <div className="engine-slots" aria-label="System Support Slots">
+                <div className="engine-slots-head">
+                  <div className="engine-slots-left">
+                    <div className="engine-slots-title">System Support Slots</div>
+
+                    <div className="engine-slots-copy">
+                      These slots are <strong>public support donations</strong> for the JAL software system.
+                      <br />
+                      They are displayed for proof-of-concept transparency.
+                      <br />
+                      They <strong>do not</strong> create profits, returns, equity, ownership, or trading access.
+                      <br />
+                      <strong>Slots activate soon.</strong>
+                    </div>
+
+                    <div className="engine-slots-subcopy">
+                      All slots execute under identical deterministic harvester rules. Only unit size varies.
+                    </div>
+
+                    <div className="engine-slots-timing">
+                      Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy:{" "}
+                      <strong>{nextDeployLabel}</strong>
+                    </div>
+                  </div>
+
+                  <div className="engine-slots-right">1 unit = 1 slot • Public slot ID + log reference (when enabled)</div>
+                </div>
+
+                <div className="jeroid-grid">
+                  {SLOT_CARDS.map((c) => (
+                    <div
+                      key={c.tier}
+                      className="card machine-surface panel-frame engine-slot-card"
+                      aria-label={`System support slot ${c.amountAud}`}
+                    >
+                      <div className="engine-slot-top">
+                        <div className="engine-slot-amt">
+                          ${c.amountAud} <span>AUD</span>
+                        </div>
+                        <div className="engine-slot-tag">{c.title.toUpperCase()}</div>
+                      </div>
+
+                      <ul className="engine-slot-bullets">
+                        {c.bullets.map((b) => (
+                          <li key={b}>{b}</li>
+                        ))}
+                      </ul>
+
+                      <button
+                        type="button"
+                        className="button engine-slot-btn"
+                        disabled
+                        aria-disabled="true"
+                        title="Funding rail not yet active"
+                      >
+                        Deploy (Soon)
+                      </button>
+
+                      <div className="engine-slot-foot">
+                        Funding rail not yet active — slot visible for inspection.
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* ---------------- About ---------------- */}
+            {section === "about" ? (
               <div className="engine-about" aria-label="About $JAL~Engine + Jeroids">
                 <button
                   type="button"
@@ -859,7 +1014,7 @@ export default function Engine() {
                   aria-expanded={aboutOpen}
                   aria-controls="engine-about"
                 >
-                  <span>About $JAL~Engine + Jeroids</span>
+                  <span>About $JAL~Engine + Market Droid</span>
                   <span className="engine-about-toggle">{aboutOpen ? "—" : "+"}</span>
                 </button>
 
@@ -874,22 +1029,15 @@ export default function Engine() {
                     </p>
 
                     <p>
-                      The table above is sourced from CoinSpot’s public <em>latest</em> endpoint (bid/ask). Only symbols with
-                      valid bid + ask are displayed. This keeps the input surface clean, tradable, and restart-safe.
+                      <strong>AUD growth shown here is harvest-only.</strong> It is measured from market droid harvest deltas
+                      (completed cycles). Deposits, withdrawals, and manual portfolio changes are excluded.
                     </p>
 
                     <div className="engine-about-h">Baseline + fixed daily cadence</div>
                     <p>
                       Baseline is anchored to a backend <strong>baselineStartAt</strong> timestamp. After that, issuance uses a{" "}
                       <strong>fixed wall-clock schedule</strong>: the next deploy is always the next exact 24h boundary from the
-                      baseline, forever. The UI prefers backend-published cadence if available; otherwise it computes the same
-                      schedule locally from the baseline anchor.
-                    </p>
-
-                    <div className="engine-about-h">Queue now, re-rank at execution</div>
-                    <p>
-                      The harvester only queues slots. The executor deploys later and may re-rank at the moment of execution if
-                      spreads have changed.
+                      baseline.
                     </p>
 
                     <div className="engine-about-h">Execution clarity</div>
@@ -898,37 +1046,37 @@ export default function Engine() {
                         <strong>MODE</strong> is lifecycle (observe → armed → executing → cooldown).
                       </li>
                       <li>
-                        <strong>EXECUTION</strong> is reality (<strong>SIM</strong> = no real trades, <strong>LIVE</strong> = real
-                        trades).
+                        <strong>EXECUTION</strong> is reality (<strong>SIM</strong> = no trades, <strong>LIVE</strong> = real trades).
                       </li>
                     </ul>
-
-                    <p className="engine-about-risk">
-                      When slots activate, the system will still carry explicit risk: loss is possible, and there are no
-                      guaranteed outcomes.
-                    </p>
                   </div>
                 ) : null}
               </div>
-
-              <div className="engine-footer-note">
-                This is a public machine exhibit. The market window above reflects the tradable surface the engine evaluates.
-              </div>
-            </div>
+            ) : null}
           </div>
         </section>
       </div>
 
       {/* ---------------- Slot Details Drawer ---------------- */}
       {selectedSlot ? (
-        <div className="slot-drawer-backdrop" role="dialog" aria-modal="true" aria-label="Slot Details">
-          <div className="slot-drawer card machine-surface panel-frame">
+        <div
+          className="slot-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Slot Details"
+          onClick={() => setSelectedSlotId(null)}
+        >
+          <div
+            className="slot-drawer card machine-surface panel-frame"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="slot-drawer-top">
               <div>
                 <div className="slot-drawer-id">{selectedSlot.id}</div>
                 <div className="slot-drawer-sub">
                   Unit ${selectedSlot.unitAud} • {selectedSlot.state} • {selectedSlot.coin ?? "—"}{" "}
                   {selectedSlot.source ? `• ${selectedSlot.source}` : ""}
+                  <span style={{ marginLeft: 10, opacity: 0.75 }}>Esc to close</span>
                 </div>
               </div>
 
@@ -988,7 +1136,9 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">(Backend should attach exact friction/spread assumptions + entry band parameters here.)</div>
+              <div className="slot-rules-note">
+                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
+              </div>
             </div>
           </div>
         </div>
