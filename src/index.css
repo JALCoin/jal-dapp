@@ -6,7 +6,6 @@
    Fixes: sidebar vertical stack, remove collisions, mobile engine header stack
    Add: Home module grid (System Bays) + Engine page CSS moved from components
    Patch: force Public Event Log visible on desktop
-   Update: Engine sections/tabs + indicators grid + drawer polish
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -504,24 +503,6 @@ main[role="main"]{
 }
 
 /* ==================================
-   HOME — PRIMARY OUTCOME BAY
-================================== */
-.home-primary{
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,.08);
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  max-width: 520px;
-}
-.home-primary-note{
-  opacity:.82;
-  font-size: .95rem;
-}
-.home-primary-note span{ opacity:.92; }
-
-/* ==================================
    HOME — MODULE GRID (System Bays)
 ================================== */
 .home-modules .home-title{ margin-top: 6px; }
@@ -679,9 +660,19 @@ main[role="main"]{
   100% { transform: scale(1);    filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
 }
 
-/* ==================================
-   ENGINE WINDOW — hero + header + controls
-================================== */
+/* =========================================================
+   ENGINE — HERO + HEADER + CONTROLS (NO OVERLAP)
+   Goal: indicator pills NEVER collide (desktop + mobile)
+========================================================= */
+
+/* Let the engine card breathe */
+.engine-shell .card{
+  max-width: var(--max-w);
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Background watermark */
 .engine-window{
   position:relative;
   overflow:hidden;
@@ -706,80 +697,43 @@ main[role="main"]{
 }
 .engine-foreground{ position:relative; z-index:2; }
 
+/* Header is a vertical stack: title block then pills */
 .engine-head{
-  display:grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items:center;
-  gap:12px;
-  margin-bottom:10px;
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+  margin-bottom: 10px;
 }
-.engine-head-center{ text-align:center; }
+.engine-head-center{
+  max-width: 900px;
+}
 .engine-title{ margin:0; }
 .engine-sub{ opacity:.75; font-size:.95rem; }
 
+/* Pills grid: wraps naturally, no collisions */
 .engine-auth{
-  justify-self:end;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  align-items:flex-end;
-}
-
-/* Indicators become a responsive grid to prevent collisions */
-.engine-indicators{
-  display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap:10px;
   width:100%;
-  max-width: 640px;
-  justify-items:end;
-}
-@media (max-width: 1020px){
-  .engine-indicators{ grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 520px; }
-}
-@media (max-width: 860px){
-  .engine-indicators{ grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; justify-items:start; }
-}
-
-/* Mobile: stack engine header + auth */
-@media (max-width: 720px){
-  .engine-head{ grid-template-columns: 1fr; gap:10px; }
-  .engine-head-center{ text-align:left; }
-  .engine-auth{
-    justify-self:start;
-    width:100%;
-    align-items:flex-start;
-  }
-  .engine-indicators{
-    grid-template-columns: 1fr;
-    justify-items:start;
-    max-width:none;
-  }
-  .engine-auth-hint{ max-width:none; text-align:left; }
-}
-
-/* Controls */
-.engine-controls{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin: 10px 0 12px;
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 14px;
+  align-items:start;
 }
 
 /* pill indicators */
 .indicator{
-  display:inline-flex;
+  display:flex;
   align-items:center;
-  gap:8px;
-  padding: .45rem .65rem;
+  justify-content:space-between;
+  gap:10px;
+  padding: .55rem .75rem;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(0,0,0,.24);
   font-size: .86rem;
   letter-spacing: .06em;
   opacity:.92;
-  justify-content:space-between;
   min-width: 0;
+  white-space: nowrap;
 }
 .indicator span{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
@@ -796,9 +750,48 @@ main[role="main"]{
   box-shadow: 0 0 0 1px rgba(244,200,106,.08) inset;
 }
 
+/* Hierarchy (optional classes on indicators) */
+.indicator.status,
+.indicator.mode,
+.indicator.execution{
+  border-width:2px;
+  box-shadow: 0 0 8px rgba(17,241,167,.18);
+}
+.indicator.metric,
+.indicator.harvest,
+.indicator[data-metric]{
+  opacity:.75;
+  border-color: rgba(255,255,255,.12);
+  box-shadow:none;
+}
+
+/* Tighten for mid widths */
+@media (max-width: 900px){
+  .engine-auth{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .indicator{ font-size:.82rem; padding:.50rem .70rem; }
+}
+@media (max-width: 640px){
+  .engine-auth{ grid-template-columns: 1fr; }
+}
+
+/* Growth note */
+.engine-growth-note{
+  margin-top: 10px;
+  font-size: .85rem;
+  opacity: .7;
+}
+
+/* Controls */
+.engine-controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin: 10px 0 12px;
+}
+
+/* Engine helper hint */
 .engine-auth-hint{
-  max-width:320px;
-  text-align:right;
+  max-width: 64ch;
   font-size:.86rem;
   opacity:.72;
   line-height:1.25;
@@ -874,7 +867,6 @@ main[role="main"]{
   font-size: .92rem;
   opacity:.94;
 }
-
 @media (max-width: 720px){
   .market-head,
   .market-row{
@@ -890,7 +882,7 @@ main[role="main"]{
 }
 
 /* ==================================
-   ENGINE PAGE — inputs + telemetry + ledger + events
+   ENGINE PAGE — inputs + tabs + telemetry + ledger + events
 ================================== */
 .engine-filter{
   flex: 1;
@@ -907,7 +899,7 @@ main[role="main"]{
   box-shadow: var(--glow-green);
 }
 
-/* Section tabs (Engine.tsx) */
+/* Section tabs */
 .engine-section-tabs{
   margin-top: 14px;
   display:flex;
@@ -937,7 +929,7 @@ main[role="main"]{
   opacity: 1;
 }
 
-/* telemetry cards */
+/* telemetry */
 .engine-telemetry{
   margin-top: 14px;
   padding: 14px;
@@ -976,60 +968,7 @@ main[role="main"]{
 .engine-telemetry-sub{ font-size: 12px; opacity: .7; }
 .engine-telemetry-pending{ margin-top: 10px; opacity: .75; }
 
-/* slots bay */
-.engine-slots{
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,.10);
-}
-.engine-slots-head{
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.engine-slots-title{
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  opacity: .9;
-}
-.engine-slots-copy{ margin-top: 8px; opacity: .9; line-height: 1.5; }
-.engine-slots-subcopy{ margin-top: 8px; opacity: .85; }
-.engine-slots-timing{ margin-top: 10px; opacity: .8; font-size: 13px; }
-.engine-slots-right{ align-self: flex-start; opacity: .8; font-size: 13px; }
-
-/* support slot cards */
-.engine-slot-card{
-  padding: 16px;
-  border-radius: 18px;
-  background: rgba(0,0,0,.28);
-  border: 1px solid rgba(255,255,255,.12);
-}
-.engine-slot-top{ display: flex; justify-content: space-between; gap: 12px; }
-.engine-slot-amt{ font-size: 18px; font-weight: 900; }
-.engine-slot-amt span{ font-size: 12px; opacity: .8; }
-.engine-slot-tag{
-  font-size: 12px;
-  opacity: .75;
-  text-transform: uppercase;
-  letter-spacing: .12em;
-}
-.engine-slot-bullets{
-  margin-top: 10px;
-  opacity: .9;
-  padding-left: 18px;
-  line-height: 1.55;
-}
-.engine-slot-btn{
-  width: 100%;
-  margin-top: 12px;
-  opacity: .65;
-  cursor: not-allowed;
-}
-.engine-slot-foot{ margin-top: 10px; font-size: 12px; opacity: .75; }
-
-/* ledger + events cards */
+/* ledger + events bays */
 .engine-ledger,
 .engine-events{
   margin-top: 14px;
@@ -1133,31 +1072,6 @@ main[role="main"]{
 .event-text{ opacity: .9; }
 .event-empty{ padding: 10px; opacity: .75; }
 
-/* About panel */
-.engine-about{ margin-top: 16px; }
-.engine-about-btn{ width: 100%; justify-content: space-between; }
-.engine-about-toggle{ opacity: .8; }
-.engine-about-panel{
-  margin-top: 10px;
-  padding: 16px;
-  border-radius: 18px;
-  background: rgba(0,0,0,.22);
-  border: 1px solid rgba(255,255,255,.12);
-  line-height: 1.6;
-  opacity: .95;
-}
-.engine-about-title{ font-weight: 900; margin-bottom: 8px; }
-.engine-about-h{ font-weight: 800; margin-top: 10px; }
-.engine-about-panel p{ margin: 8px 0; }
-.engine-about-panel ul{ margin: 8px 0 0; padding-left: 18px; }
-.engine-about-risk{ margin: 10px 0 0; opacity: .9; }
-
-.engine-footer-note{
-  margin-top: 14px;
-  opacity: .75;
-  font-size: 13px;
-}
-
 /* Slot drawer */
 .slot-drawer-backdrop{
   position: fixed;
@@ -1175,39 +1089,6 @@ main[role="main"]{
   border-radius: 0;
   overflow: auto;
 }
-.slot-drawer-top{
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-}
-.slot-drawer-id{ font-weight: 900; font-size: 16px; }
-.slot-drawer-sub{ opacity: .75; font-size: 13px; }
-.slot-drawer-grid{
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-@media (max-width: 520px){
-  .slot-drawer-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-.slot-k{ font-size: 12px; opacity: .7; }
-.slot-v{ font-weight: 900; }
-.slot-section{
-  margin-top: 14px;
-  font-weight: 900;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  opacity: .9;
-}
-.slot-rules{
-  margin-top: 10px;
-  opacity: .85;
-  line-height: 1.55;
-  font-size: 13px;
-}
-.slot-rules-note{ margin-top: 8px; opacity: .75; }
 
 /* ===== Modal (API sign-in) ===== */
 .engine-modal-backdrop{
@@ -1230,73 +1111,6 @@ main[role="main"]{
   background: linear-gradient(180deg, rgba(13,18,24,.96), rgba(10,14,18,.92));
   box-shadow: 0 30px 120px rgba(0,0,0,.85), var(--glow-white);
   overflow:hidden;
-}
-.engine-modal-head{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  padding: 16px 16px 10px;
-  border-bottom: 1px solid rgba(255,255,255,.10);
-}
-.engine-modal-title{ font-weight:800; letter-spacing:.04em; }
-.engine-modal-sub{ opacity:.78; font-size:.95rem; margin-top:2px; }
-.engine-modal-close{
-  width:40px;
-  height:40px;
-  border-radius: 12px;
-  border:1px solid rgba(255,255,255,.12);
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
-}
-.engine-modal-close:hover{
-  transform: translateY(-1px);
-  border-color: var(--cyan);
-  box-shadow: var(--glow-cyan);
-}
-.engine-modal-body{
-  padding: 14px 16px 16px;
-  display:grid;
-  gap:12px;
-}
-.engine-field{ display:grid; gap:6px; }
-.engine-field span{
-  opacity:.85;
-  font-size:.9rem;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-.engine-field input{
-  width:100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.35);
-  color: var(--text);
-  outline:none;
-}
-.engine-field input:focus{
-  border-color: rgba(17,241,167,.55);
-  box-shadow: var(--glow-green);
-}
-.engine-remember{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  opacity:.85;
-  font-size:.95rem;
-}
-.engine-remember input{ width:18px; height:18px; }
-.engine-modal-actions{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  margin-top: 4px;
-}
-.engine-modal-note{
-  opacity:.75;
-  font-size:.9rem;
-  margin: 2px 0 0;
 }
 
 /* Motion preferences */
@@ -1321,7 +1135,6 @@ main[role="main"]{
 
 /* =========================================================
    PATCH — Engine: Desktop must show Public Event Log
-   (Place at END of index.css)
 ========================================================= */
 .engine-events{
   display: block !important;
@@ -1330,12 +1143,13 @@ main[role="main"]{
   height: auto !important;
   max-height: none !important;
 }
-.engine-events *{ visibility: visible !important; }
-
+.engine-events .event-log{
+  max-height: 320px;
+  overflow-y: auto;
+}
 @media (min-width: 900px){
   .engine-window,
   .engine-foreground,
-  .engine-slots,
   .engine-ledger,
   .home-shell,
   .home-wrap{
@@ -1343,260 +1157,4 @@ main[role="main"]{
     height: auto !important;
     max-height: none !important;
   }
-}
-.engine-events .event-log{
-  max-height: 320px;
-  overflow-y: auto;
-}
-/* =========================================================
-   PATCH — Engine header: prevent indicator collision
-   (Place at END of index.css)
-========================================================= */
-
-/* Give the center a real shrinkable column and cap widths */
-.engine-head{
-  grid-template-columns: 1fr minmax(280px, 560px) 1fr !important;
-  align-items: start;
-}
-
-/* Keep center readable, never fights the auth cluster */
-.engine-head-center{
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-/* Right cluster: wrap *inside its own box* */
-.engine-auth{
-  max-width: 520px;
-  justify-self: end;
-  align-self: start;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-/* Slightly tighter pills so more fit per row */
-.indicator{
-  font-size: .80rem;
-  padding: .40rem .58rem;
-}
-
-/* If viewport is “mid”, stack auth under title instead of overlapping */
-@media (max-width: 1100px){
-  .engine-head{
-    grid-template-columns: 1fr !important;
-  }
-  .engine-head-center{
-    margin: 0;
-    max-width: none;
-    text-align: left;
-  }
-  .engine-auth{
-    max-width: none;
-    justify-self: start;
-    justify-content: flex-start;
-  }
-}
-/* =========================================================
-   PATCH — Engine: Indicator pills must never collide/merge
-   (Place at END of index.css)
-========================================================= */
-
-/* Ensure pills never visually "join" */
-.engine-auth { align-items: start; }
-.indicator { white-space: nowrap; }
-.indicator { justify-content: space-between; width: 100%; }
-
-/* Desktop: lock pills into a grid so wrap is predictable */
-@media (min-width: 721px){
-  .engine-auth{
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(160px, 1fr));
-    gap: 10px 10px;
-    justify-content: end;
-    justify-items: end;
-  }
-  .indicator{
-    max-width: 100%;
-  }
-}
-
-/* If the row count grows (more indicators), let it expand cleanly */
-@media (min-width: 1100px){
-  .engine-auth{
-    grid-template-columns: repeat(5, minmax(160px, 1fr));
-  }
-}
-
-/* Mobile already stacks — just enforce full width */
-@media (max-width: 720px){
-  .engine-auth{
-    display: grid !important;
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  .indicator{ width: 100%; }
-}
-/* =========================================================
-   ENGINE HEADER — FINAL STRUCTURE FIX
-========================================================= */
-
-/* Header becomes vertical stack */
-.engine-head{
-  display: flex !important;
-  flex-direction: column;
-  gap: 18px;
-}
-
-/* Title block full width */
-.engine-head-center{
-  max-width: 900px;
-}
-.engine-growth-note{
-  margin-top: 14px;
-  font-size: .85rem;
-  opacity: .7;
-}
-/* =========================================================
-   ENGINE — Controlled 2-Row Indicator Layout
-========================================================= */
-
-.engine-auth{
-  display: grid !important;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px 16px;
-  width: 100%;
-  margin-top: 18px;
-}
-
-/* Keep pills uniform */
-.indicator{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: .55rem .75rem;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-/* If viewport shrinks, drop to 2 columns cleanly */
-@media (max-width: 1000px){
-  .engine-auth{
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Mobile stack */
-@media (max-width: 640px){
-  .engine-auth{
-    grid-template-columns: 1fr;
-  }
-}
-/* =========================================================
-   ENGINE CARD WIDTH — TRUE FIX
-========================================================= */
-
-/* Let the engine card breathe */
-.engine-shell .card{
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* Header stack, not 3-column */
-.engine-head{
-  display: flex !important;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Indicators span full width */
-.engine-auth{
-  width: 100%;
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-}
-
-/* Lock clean desktop console layout */
-@media (min-width: 1100px){
-  .engine-auth{
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-/* Ultra-wide monitor */
-@media (min-width: 1500px){
-  .engine-auth{
-    grid-template-columns: repeat(5, 1fr);
-  }
-}
-/* =========================================================
-   ENGINE — Visual Group Separation
-========================================================= */
-
-.engine-auth{
-  row-gap: 18px;
-}
-
-/* Add subtle separation after second row */
-.engine-auth .indicator:nth-child(8){
-  position: relative;
-}
-
-.engine-auth .indicator:nth-child(8)::after{
-  content: "";
-  position: absolute;
-  left: -8px;
-  right: -8px;
-  bottom: -14px;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255,255,255,.15),
-    transparent
-  );
-}
-/* =========================================================
-   ENGINE — Hierarchy Weighting
-========================================================= */
-
-/* 1️⃣ Machine State — strongest */
-.indicator.status,
-.indicator.mode,
-.indicator.execution {
-  border-width: 2px;
-  box-shadow: 0 0 8px rgba(17,241,167,.25);
-}
-
-/* 2️⃣ Deployment — medium */
-.indicator.next,
-.indicator.slots,
-.indicator.baseline {
-  opacity: .9;
-}
-
-/* 3️⃣ Performance — quieter */
-.indicator.harvest,
-.indicator[data-metric],
-.indicator.last {
-  opacity: .75;
-  border-color: rgba(255,255,255,.15);
-}
-/* ENGINE — Machine Hierarchy Discipline */
-
-.indicator[data-metric],
-.indicator.harvest,
-.indicator.metric {
-  opacity: .75;
-  border-color: rgba(255,255,255,.12);
-  box-shadow: none;
-}
-
-.indicator.status,
-.indicator.execution,
-.indicator.mode {
-  border-width: 2px;
 }
