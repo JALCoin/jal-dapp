@@ -149,8 +149,10 @@ type PublicMetaResponse = {
   engineMode?: EngineMode; // backend truth
   executionMode?: ExecutionMode; // SIM|LIVE backend truth
 
-  baselineStartAt?: number | null; // backend truth
-  baselineReadyAt?: number | null; // optional
+  // Backend truth (preferred)
+  baselineStartAt?: number | null; // baseline anchor
+  baselineWindowMs?: number | null; // if backend publishes
+  nextDeployAt?: number | null; // if backend publishes the canonical schedule
 
   harvester?: {
     running?: boolean;
@@ -224,7 +226,6 @@ export default function Engine() {
 
   const [aboutOpen, setAboutOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
-
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   // Ledger (PUBLIC, backend)
@@ -315,20 +316,30 @@ export default function Engine() {
   }, []);
 
   // ---------------- Baseline + issuance countdown (BACKEND preferred) ----------------
+  // Fixed wall-clock schedule (exact 24h cadence anchored to baselineStartAt forever).
+  // UI will:
+  // 1) Prefer backend-published nextDeployAt/window
+  // 2) Else compute from baselineStartAt + windowMs
   const baselineStartAt = meta?.baselineStartAt ?? null;
 
-  const BASELINE_WINDOW_MS = 24 * 60 * 60 * 1000;
-  const baselineReadyAt = baselineStartAt ? baselineStartAt + BASELINE_WINDOW_MS : null;
+  const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
+  const windowMs = meta?.baselineWindowMs && meta.baselineWindowMs > 0 ? meta.baselineWindowMs : FALLBACK_WINDOW_MS;
+
+  const baselineReadyAt = baselineStartAt ? baselineStartAt + windowMs : null;
+
+  // Fixed cadence: nextDeployAt = smallest (baselineStartAt + k*windowMs) strictly greater than now.
+  const computedNextDeployAt = useMemo(() => {
+    if (!baselineStartAt) return null;
+    const n = nowMs;
+    const elapsed = n - baselineStartAt;
+    const k = Math.floor(elapsed / windowMs) + 1; // strictly next cycle boundary
+    return baselineStartAt + k * windowMs;
+  }, [baselineStartAt, nowMs, windowMs]);
+
+  const nextDeployAt = meta?.nextDeployAt ?? computedNextDeployAt;
+
   const baselineRemainingMs = baselineReadyAt ? Math.max(0, baselineReadyAt - nowMs) : null;
   const baselineIsReady = baselineRemainingMs !== null ? baselineRemainingMs <= 0 : false;
-
-  const nextDeployAt = useMemo(() => {
-    if (!baselineReadyAt) return null;
-    if (!baselineIsReady) return baselineReadyAt;
-    const elapsed = Math.max(0, nowMs - baselineReadyAt);
-    const k = Math.floor(elapsed / BASELINE_WINDOW_MS) + 1;
-    return baselineReadyAt + k * BASELINE_WINDOW_MS;
-  }, [baselineReadyAt, baselineIsReady, nowMs]);
 
   const nextDeployRemainingMs = nextDeployAt ? Math.max(0, nextDeployAt - nowMs) : null;
 
@@ -472,11 +483,17 @@ export default function Engine() {
                   UPDATED <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
                 </span>
 
-                <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Baseline measurement window (24h) — backend truth">
+                <span
+                  className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
+                  title="Baseline measurement window (24h) — backend truth"
+                >
                   BASELINE <span>{baselineLabel}</span>
                 </span>
 
-                <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Countdown to next daily issuance — backend truth">
+                <span
+                  className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
+                  title="Countdown to next daily issuance — fixed wall-clock schedule from baseline (backend truth when available)"
+                >
                   NEXT DEPLOY <span>{nextDeployLabel}</span>
                 </span>
 
@@ -487,7 +504,10 @@ export default function Engine() {
                   </span>
                 </span>
 
-                <span className={`indicator ${engineMode === "EXECUTING" ? "ok" : "warn"}`} title="Engine lifecycle mode (backend truth when available)">
+                <span
+                  className={`indicator ${engineMode === "EXECUTING" ? "ok" : "warn"}`}
+                  title="Engine lifecycle mode (backend truth when available)"
+                >
                   MODE <span>{engineMode}</span>
                 </span>
 
@@ -514,9 +534,15 @@ export default function Engine() {
               <div className="engine-telemetry-grid">
                 <div className="engine-telemetry-item">
                   <div className="engine-telemetry-k">Harvester</div>
-                  <div className="engine-telemetry-v">{meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}</div>
+                  <div className="engine-telemetry-v">
+                    {meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}
+                  </div>
                   <div className="engine-telemetry-sub">
-                    {meta?.writeEnabled === false ? "Writes disabled" : meta?.writeEnabled === true ? "Writes enabled" : "Write gate unknown"}
+                    {meta?.writeEnabled === false
+                      ? "Writes disabled"
+                      : meta?.writeEnabled === true
+                        ? "Writes enabled"
+                        : "Write gate unknown"}
                   </div>
                 </div>
 
@@ -541,15 +567,27 @@ export default function Engine() {
             </div>
 
             <div className="engine-controls" aria-label="Controls">
-              <button type="button" className={`button ghost ${feed === "all" ? "active" : ""}`} onClick={() => setFeed("all")}>
+              <button
+                type="button"
+                className={`button ghost ${feed === "all" ? "active" : ""}`}
+                onClick={() => setFeed("all")}
+              >
                 Feed: All
               </button>
 
-              <button type="button" className={`button ghost ${feed === "aud" ? "active" : ""}`} onClick={() => setFeed("aud")}>
+              <button
+                type="button"
+                className={`button ghost ${feed === "aud" ? "active" : ""}`}
+                onClick={() => setFeed("aud")}
+              >
                 Feed: AUD
               </button>
 
-              <button type="button" className={`button ghost ${feed === "watch" ? "active" : ""}`} onClick={() => setFeed("watch")}>
+              <button
+                type="button"
+                className={`button ghost ${feed === "watch" ? "active" : ""}`}
+                onClick={() => setFeed("watch")}
+              >
                 Feed: Watch
               </button>
 
@@ -682,19 +720,28 @@ export default function Engine() {
                     <strong>Slots activate soon.</strong>
                   </div>
 
-                  <div className="engine-slots-subcopy">All slots execute under identical deterministic harvester rules. Only unit size varies.</div>
+                  <div className="engine-slots-subcopy">
+                    All slots execute under identical deterministic harvester rules. Only unit size varies.
+                  </div>
 
                   <div className="engine-slots-timing">
-                    Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy: <strong>{nextDeployLabel}</strong>
+                    Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy:{" "}
+                    <strong>{nextDeployLabel}</strong>
                   </div>
                 </div>
 
-                <div className="engine-slots-right">1 unit = 1 slot • Public slot ID + log reference (when enabled)</div>
+                <div className="engine-slots-right">
+                  1 unit = 1 slot • Public slot ID + log reference (when enabled)
+                </div>
               </div>
 
               <div className="jeroid-grid">
                 {SLOT_CARDS.map((c) => (
-                  <div key={c.tier} className="card machine-surface panel-frame engine-slot-card" aria-label={`System support slot ${c.amountAud}`}>
+                  <div
+                    key={c.tier}
+                    className="card machine-surface panel-frame engine-slot-card"
+                    aria-label={`System support slot ${c.amountAud}`}
+                  >
                     <div className="engine-slot-top">
                       <div className="engine-slot-amt">
                         ${c.amountAud} <span>AUD</span>
@@ -708,7 +755,13 @@ export default function Engine() {
                       ))}
                     </ul>
 
-                    <button type="button" className="button engine-slot-btn" disabled aria-disabled="true" title="Funding rail not yet active">
+                    <button
+                      type="button"
+                      className="button engine-slot-btn"
+                      disabled
+                      aria-disabled="true"
+                      title="Funding rail not yet active"
+                    >
                       Deploy (Soon)
                     </button>
 
@@ -825,17 +878,18 @@ export default function Engine() {
                       valid bid + ask are displayed. This keeps the input surface clean, tradable, and restart-safe.
                     </p>
 
-                    <div className="engine-about-h">Baseline initialization (backend)</div>
+                    <div className="engine-about-h">Baseline + fixed daily cadence</div>
                     <p>
-                      Baseline is a backend fact when available. This UI will show <strong>BACKEND PENDING</strong> until the
-                      service publishes a baseline start timestamp.
+                      Baseline is anchored to a backend <strong>baselineStartAt</strong> timestamp. After that, issuance uses a{" "}
+                      <strong>fixed wall-clock schedule</strong>: the next deploy is always the next exact 24h boundary from the
+                      baseline, forever. The UI prefers backend-published cadence if available; otherwise it computes the same
+                      schedule locally from the baseline anchor.
                     </p>
 
-                    <div className="engine-about-h">Tracking (public ledger)</div>
+                    <div className="engine-about-h">Queue now, re-rank at execution</div>
                     <p>
-                      Deployments and harvesting are tracked as a read-only machine ledger: a status strip, a slots table, and
-                      an append-only event log. This keeps the system inspectable without exposing keys, balances, or internal
-                      controls.
+                      The harvester only queues slots. The executor deploys later and may re-rank at the moment of execution if
+                      spreads have changed.
                     </p>
 
                     <div className="engine-about-h">Execution clarity</div>
@@ -844,7 +898,8 @@ export default function Engine() {
                         <strong>MODE</strong> is lifecycle (observe → armed → executing → cooldown).
                       </li>
                       <li>
-                        <strong>EXECUTION</strong> is reality (<strong>SIM</strong> = no real trades, <strong>LIVE</strong> = real trades).
+                        <strong>EXECUTION</strong> is reality (<strong>SIM</strong> = no real trades, <strong>LIVE</strong> = real
+                        trades).
                       </li>
                     </ul>
 
@@ -917,7 +972,8 @@ export default function Engine() {
                   <div className="event-row" key={e.id}>
                     <div className="event-time">{fmtEventTime(e.at)}</div>
                     <div className="event-msg">
-                      <span className="event-kind">{e.kind}</span> <span className="event-text">{e.msg}</span>
+                      <span className="event-kind">{e.kind}</span>{" "}
+                      <span className="event-text">{e.msg}</span>
                     </div>
                   </div>
                 ))
@@ -932,9 +988,7 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">
-                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
-              </div>
+              <div className="slot-rules-note">(Backend should attach exact friction/spread assumptions + entry band parameters here.)</div>
             </div>
           </div>
         </div>

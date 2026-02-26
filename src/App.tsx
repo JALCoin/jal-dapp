@@ -29,19 +29,39 @@ function HeaderView({
       <div className="header-inner">
         {/* Left: socials */}
         <div className="social-links" aria-label="Social Links">
-          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <a
+            href="https://x.com/JAL358"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="X"
+          >
             <img src="/icons/X.png" alt="" />
           </a>
-          <a href="https://t.me/jalsolcommute" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+          <a
+            href="https://t.me/jalsolcommute"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Telegram"
+          >
             <img src="/icons/Telegram.png" alt="" />
           </a>
-          <a href="https://www.tiktok.com/@358jalsol" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+          <a
+            href="https://www.tiktok.com/@358jalsol"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="TikTok"
+          >
             <img src="/icons/TikTok.png" alt="" />
           </a>
         </div>
 
         {/* Center: logo opens MAIN NAV overlay */}
-        <button type="button" onClick={onLogo} aria-label="Open navigation" className="logo-btn">
+        <button
+          type="button"
+          onClick={onLogo}
+          aria-label="Open navigation"
+          className="logo-btn"
+        >
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
         </button>
 
@@ -63,12 +83,22 @@ function HeaderView({
 }
 
 /* ------------------------ Sidebar ------------------------ */
-function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
+function SidebarView({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   if (!open) return null;
 
   return (
     <>
-      <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
+      <button
+        className="sidebar-overlay"
+        aria-label="Close menu overlay"
+        onClick={onClose}
+      />
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
         <nav>
           <NavLink
@@ -161,11 +191,12 @@ function AboutPage() {
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">About JAL</h1>
           <p className="home-lead">
-            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer • Digital
-            Creator.
+            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical
+            Metal Engineer • Digital Creator.
           </p>
           <p className="home-lead">
-            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong> pool on Raydium and verifiable on Solscan.
+            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong> pool on Raydium and
+            verifiable on Solscan.
           </p>
           <div className="home-links">
             <a className="chip" href="https://raydium.io/" target="_blank" rel="noreferrer">
@@ -188,7 +219,8 @@ function ShopPage() {
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">Shop</h1>
           <p className="home-lead">
-            Sole trader activity: design + creation of physical and digital products, sold online. jalsol.com is the hub.
+            Sole trader activity: design + creation of physical and digital products, sold online.
+            jalsol.com is the hub.
           </p>
           <div className="home-links">
             <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
@@ -232,7 +264,11 @@ function AppShell() {
 
   return (
     <>
-      <HeaderView onMenu={() => setMenuOpen((v) => !v)} onLogo={() => navigate("/app/nav")} isOpen={menuOpen} />
+      <HeaderView
+        onMenu={() => setMenuOpen((v) => !v)}
+        onLogo={() => navigate("/app/nav")}
+        isOpen={menuOpen}
+      />
 
       <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
 
