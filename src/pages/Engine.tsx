@@ -110,9 +110,7 @@ type SlotRow = {
   lockPct: number | null; // ratio
   createdAt: number;
   updatedAt: number;
-
-  // Optional (future backend fields; safe if absent)
-  source?: ExecutionMode; // SIM | LIVE
+  source?: ExecutionMode; // optional
 };
 
 type SlotEvent = {
@@ -133,37 +131,40 @@ type SlotEvent = {
   coin?: string;
 };
 
-type HarvesterPending = {
-  phase?: string; // IDLE | DETECT | SELLING | BUYING | DONE ...
-  packageId?: string | null;
-  solDelta?: number | null;
-  lastSolAvailable?: number;
-  lastTickAt?: number;
-  lastErr?: string | null;
-};
-
 type PublicMetaResponse = {
   ok: boolean;
   ts: number;
 
-  engineMode?: EngineMode; // backend truth
-  executionMode?: ExecutionMode; // SIM|LIVE backend truth
-
-  baselineStartAt?: number | null;
-  baselineWindowMs?: number | null;
-  nextDeployAt?: number | null;
-
-  // Harvest-only AUD growth (preferred backend truth)
-  harvestAudTotal?: number | null;
-  harvestAud24h?: number | null;
-  harvestAud7d?: number | null;
-
-  harvester?: {
-    running?: boolean;
-    pending?: HarvesterPending | null;
+  engine?: {
+    host?: string;
+    execution?: "SIM" | "LIVE";
+    liveTradingEnabled?: boolean;
   };
 
-  writeEnabled?: boolean;
+  gates?: {
+    writeEnabled?: boolean;
+    harvesterEnabled?: boolean;
+    harvesterTickMs?: number;
+    executorEnabled?: boolean;
+    executorTickMs?: number;
+  };
+
+  baseline?: {
+    startAt?: number | null;
+    nextIssueAt?: number | null;
+    windowMs?: number | null;
+    remainingMs?: number | null;
+    currentWindow?: number | null;
+    lastIssuedWindow?: number | null;
+  };
+
+  // server.cjs passes through harvester.getStatus() + executor.getStatus()
+  harvester?: any;
+  executor?: any;
+
+  market?: {
+    snapshot?: any;
+  };
 };
 
 function ageLabel(msSince: number) {
@@ -208,18 +209,8 @@ function safeUpper(s: any) {
 const PREVIEW_EXCLUDE = new Set(["USDT", "USDC", "DAI", "TUSD", "USDP", "FDUSD", "EURT"]);
 
 // ---------------- Harvest-only AUD growth (UI fallback from events) ----------------
-// If backend provides harvestAud*, we use it. Otherwise, we parse NOTE lines if present.
 function parseHarvestAudFromEvents(events: SlotEvent[]) {
-  // Accept formats like:
-  // "HARVEST_AUD +12.34"
-  // "HARVEST_AUD_DELTA=+12.34"
-  // "HARVEST_AUD delta +12.34"
-  const out = {
-    total: 0,
-    last24h: 0,
-    last7d: 0,
-  };
-
+  const out = { total: 0, last24h: 0, last7d: 0 };
   if (!events?.length) return out;
 
   const now = Date.now();
@@ -246,7 +237,6 @@ function parseHarvestAudFromEvents(events: SlotEvent[]) {
     if (age <= weekMs) out.last7d += v;
   }
 
-  // Round small floating noise
   out.total = Math.round(out.total * 100) / 100;
   out.last24h = Math.round(out.last24h * 100) / 100;
   out.last7d = Math.round(out.last7d * 100) / 100;
@@ -289,7 +279,7 @@ export default function Engine() {
   const [events, setEvents] = useState<SlotEvent[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
-  // Sections (tabs) — reduces scroll + forces hierarchy
+  // Sections (tabs)
   type Section = "ledger" | "events" | "support" | "about";
   const [section, setSection] = useState<Section>("ledger");
 
@@ -307,6 +297,7 @@ export default function Engine() {
   }
 
   async function fetchMeta(signal?: AbortSignal) {
+    // your server exposes /api/public/meta and aliases /api/status → same shape
     const r = await fetch(`${BASE}/api/public/meta`, { method: "GET", signal });
     if (!r.ok) return null;
     const j = (await r.json()) as Partial<PublicMetaResponse>;
@@ -374,24 +365,24 @@ export default function Engine() {
     return () => window.clearInterval(t);
   }, []);
 
-  // ---------------- Baseline + issuance countdown (BACKEND preferred) ----------------
-  const baselineStartAt = meta?.baselineStartAt ?? null;
+  // ---------------- Baseline + issuance countdown (BACKEND truth) ----------------
+  const baselineStartAt = meta?.baseline?.startAt ?? null;
 
   const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
   const windowMs =
-    meta?.baselineWindowMs && meta.baselineWindowMs > 0 ? meta.baselineWindowMs : FALLBACK_WINDOW_MS;
+    meta?.baseline?.windowMs && meta.baseline.windowMs > 0 ? meta.baseline.windowMs : FALLBACK_WINDOW_MS;
 
   const baselineReadyAt = baselineStartAt ? baselineStartAt + windowMs : null;
 
   const computedNextDeployAt = useMemo(() => {
     if (!baselineStartAt) return null;
-    const n = nowMs;
-    const elapsed = n - baselineStartAt;
+    const elapsed = nowMs - baselineStartAt;
     const k = Math.floor(elapsed / windowMs) + 1;
     return baselineStartAt + k * windowMs;
   }, [baselineStartAt, nowMs, windowMs]);
 
-  const nextDeployAt = meta?.nextDeployAt ?? computedNextDeployAt;
+  // backend calls it nextIssueAt
+  const nextDeployAt = meta?.baseline?.nextIssueAt ?? computedNextDeployAt;
 
   const baselineRemainingMs = baselineReadyAt ? Math.max(0, baselineReadyAt - nowMs) : null;
   const baselineIsReady = baselineRemainingMs !== null ? baselineRemainingMs <= 0 : false;
@@ -445,7 +436,7 @@ export default function Engine() {
       ? snap?.counts?.aud ?? rows.length
       : snap?.counts?.watch ?? rows.length;
 
-  // ---------------- Telemetry (UI preview only; backend ranking will supersede) ----------------
+  // ---------------- Telemetry (UI preview only) ----------------
   const telemetry = useMemo(() => {
     if (!filtered.length) return null;
 
@@ -478,14 +469,30 @@ export default function Engine() {
   const slotsActive = slotRows.filter((s) => s.state !== "EXITED").length;
   const slotsTotal = slotRows.length;
 
-  const engineMode: EngineMode = meta?.engineMode ?? "OBSERVE";
-  const executionMode: ExecutionMode = meta?.executionMode ?? "SIM";
+  const executionMode: ExecutionMode = (meta?.engine?.execution as ExecutionMode) ?? "SIM";
+
+  // best-effort engine lifecycle (until backend publishes a dedicated mode)
+  const engineMode: EngineMode = (() => {
+    const execRunning = Boolean(meta?.executor?.running);
+    const harvRunning = Boolean(meta?.harvester?.running);
+    if (executionMode === "LIVE" && execRunning) return "EXECUTING";
+    if (harvRunning || execRunning) return "ARMED";
+    return "OBSERVE";
+  })();
 
   const harvesterRunning = Boolean(meta?.harvester?.running);
-  const pending = meta?.harvester?.pending ?? null;
-  const pendingPhase = pending?.phase ?? "—";
-  const lastTickAgo = pending?.lastTickAt ? ageLabel(nowMs - pending.lastTickAt) : "—";
-  const lastErr = pending?.lastErr ? String(pending.lastErr) : null;
+
+  // backend harvester status has phase directly
+  const pendingPhase = String(meta?.harvester?.phase ?? "—");
+  const lastTickAt =
+    (typeof meta?.harvester?.now === "number" ? meta.harvester.now : null) ??
+    (typeof meta?.ts === "number" ? meta.ts : null);
+
+  const lastTickAgo = lastTickAt ? ageLabel(nowMs - lastTickAt) : "—";
+
+  const lastErr =
+    (meta?.harvester?.lastErr ? String(meta.harvester.lastErr) : null) ??
+    (meta?.market?.snapshot?.err ? String(meta.market.snapshot.err) : null);
 
   const lastAction = useMemo(() => {
     const e = events[0];
@@ -507,23 +514,14 @@ export default function Engine() {
 
   // ---------------- Harvest-only AUD growth ----------------
   const harvestFallback = useMemo(() => parseHarvestAudFromEvents(events), [events]);
-
-  const harvestAudTotal =
-    meta?.harvestAudTotal != null ? meta.harvestAudTotal : harvestFallback.total;
-
-  const harvestAud24h =
-    meta?.harvestAud24h != null ? meta.harvestAud24h : harvestFallback.last24h;
-
-  const harvestAud7d =
-    meta?.harvestAud7d != null ? meta.harvestAud7d : harvestFallback.last7d;
+  const harvestAudTotal = harvestFallback.total;
+  const harvestAud24h = harvestFallback.last24h;
+  const harvestAud7d = harvestFallback.last7d;
 
   return (
     <main className="home-shell" aria-label="$JAL~Engine">
       <div className="home-wrap">
-        <section
-          className="card engine-window engine-window--hero machine-surface panel-frame"
-          aria-label="Engine"
-        >
+        <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="Engine">
           <div className="engine-bg" aria-hidden="true">
             <img className="engine-bg-logo" src="/JALSOL1.gif" alt="" />
           </div>
@@ -535,17 +533,14 @@ export default function Engine() {
               <div className="engine-head-center">
                 <h1 className="engine-title">$JAL~Engine</h1>
                 <div className="engine-sub">
-                  Real-time tradable market console (CoinSpot public latest) — FEED:{" "}
-                  {feedLabel(feed)}
+                  Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
                 </div>
 
-                {/* Keep host label subtle (under title, not fighting width) */}
                 <div className="engine-sub" style={{ opacity: 0.6 }}>
                   ENGINE: {engineHostLabel}
                 </div>
               </div>
 
-              {/* Indicator grid lives in CSS via .engine-indicators */}
               <div className="engine-auth">
                 <div className="engine-indicators" aria-label="Engine indicators">
                   <span className={`indicator ${snap?.ok ? "ok" : "warn"}`}>
@@ -553,8 +548,7 @@ export default function Engine() {
                   </span>
 
                   <span className="indicator">
-                    UPDATED{" "}
-                    <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
+                    UPDATED <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
                   </span>
 
                   <span className="indicator">
@@ -584,7 +578,7 @@ export default function Engine() {
 
                   <span
                     className={`indicator ${engineMode === "EXECUTING" ? "ok" : "warn"}`}
-                    title="Engine lifecycle mode (backend truth when available)"
+                    title="Engine lifecycle (best-effort until backend publishes a dedicated field)"
                   >
                     MODE <span>{engineMode}</span>
                   </span>
@@ -600,7 +594,6 @@ export default function Engine() {
                     LAST <span>{lastAction ? lastAction.slice(-8) : "—"}</span>
                   </span>
 
-                  {/* The truth you locked: AUD growth is harvest-only */}
                   <span className="indicator ok" title="Harvest-only AUD growth (excludes deposits/withdrawals)">
                     HARVEST <span>{moneyAud(harvestAudTotal)}</span>
                   </span>
@@ -615,17 +608,13 @@ export default function Engine() {
                 </div>
 
                 <div className="engine-auth-hint">
-                  AUD growth shown here is <strong>harvest-only</strong>. External transfers are
-                  ignored.
+                  AUD growth shown here is <strong>harvest-only</strong>. External transfers are ignored.
                 </div>
               </div>
             </div>
 
             {/* ---------------- Harvester status strip (read-only) ---------------- */}
-            <div
-              className="card machine-surface panel-frame engine-telemetry"
-              aria-label="Harvester Status"
-            >
+            <div className="card machine-surface panel-frame engine-telemetry" aria-label="Harvester Status">
               <div className="engine-telemetry-head">
                 <div className="engine-telemetry-title">Harvester Status</div>
                 <div className="engine-telemetry-note">Backend wiring clarity (read-only)</div>
@@ -638,9 +627,9 @@ export default function Engine() {
                     {meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}
                   </div>
                   <div className="engine-telemetry-sub">
-                    {meta?.writeEnabled === false
+                    {meta?.gates?.writeEnabled === false
                       ? "Writes disabled"
-                      : meta?.writeEnabled === true
+                      : meta?.gates?.writeEnabled === true
                       ? "Writes enabled"
                       : "Write gate unknown"}
                   </div>
@@ -650,16 +639,14 @@ export default function Engine() {
                   <div className="engine-telemetry-k">Package phase</div>
                   <div className="engine-telemetry-v">{meta ? pendingPhase : "BACKEND PENDING"}</div>
                   <div className="engine-telemetry-sub">
-                    {pending?.packageId ? String(pending.packageId) : "—"}
+                    {meta?.baseline?.currentWindow != null ? `window ${meta.baseline.currentWindow}` : "—"}
                   </div>
                 </div>
 
                 <div className="engine-telemetry-item">
                   <div className="engine-telemetry-k">Last tick</div>
                   <div className="engine-telemetry-v">{meta ? lastTickAgo : "—"}</div>
-                  <div className="engine-telemetry-sub">
-                    {pending?.lastTickAt ? fmtEventTime(pending.lastTickAt) : "—"}
-                  </div>
+                  <div className="engine-telemetry-sub">{lastTickAt ? fmtEventTime(lastTickAt) : "—"}</div>
                 </div>
 
                 <div className="engine-telemetry-item">
@@ -670,21 +657,13 @@ export default function Engine() {
               </div>
             </div>
 
-            {/* ---------------- Controls (sticky via CSS) ---------------- */}
+            {/* ---------------- Controls ---------------- */}
             <div className="engine-controls" aria-label="Controls">
-              <button
-                type="button"
-                className={`button ghost ${feed === "all" ? "active" : ""}`}
-                onClick={() => setFeed("all")}
-              >
+              <button type="button" className={`button ghost ${feed === "all" ? "active" : ""}`} onClick={() => setFeed("all")}>
                 Feed: All
               </button>
 
-              <button
-                type="button"
-                className={`button ghost ${feed === "aud" ? "active" : ""}`}
-                onClick={() => setFeed("aud")}
-              >
+              <button type="button" className={`button ghost ${feed === "aud" ? "active" : ""}`} onClick={() => setFeed("aud")}>
                 Feed: AUD
               </button>
 
@@ -774,10 +753,7 @@ export default function Engine() {
             </div>
 
             {/* ---------------- Market telemetry (UI preview) ---------------- */}
-            <div
-              className="card machine-surface panel-frame engine-telemetry"
-              aria-label="Market Selection Telemetry"
-            >
+            <div className="card machine-surface panel-frame engine-telemetry" aria-label="Market Selection Telemetry">
               <div className="engine-telemetry-head">
                 <div className="engine-telemetry-title">Market Selection Telemetry</div>
                 <div className="engine-telemetry-note">
@@ -813,7 +789,7 @@ export default function Engine() {
               )}
             </div>
 
-            {/* ---------------- Section tabs (reduce scroll) ---------------- */}
+            {/* ---------------- Section tabs ---------------- */}
             <div className="engine-section-tabs" aria-label="Engine sections">
               <button
                 type="button"
@@ -923,8 +899,7 @@ export default function Engine() {
                       <div className="event-row" key={e.id}>
                         <div className="event-time">{fmtEventTime(e.at)}</div>
                         <div className="event-msg">
-                          <span className="event-kind">{e.kind}</span>{" "}
-                          <span className="event-text">{e.msg}</span>
+                          <span className="event-kind">{e.kind}</span> <span className="event-text">{e.msg}</span>
                         </div>
                       </div>
                     ))
@@ -985,19 +960,11 @@ export default function Engine() {
                         ))}
                       </ul>
 
-                      <button
-                        type="button"
-                        className="button engine-slot-btn"
-                        disabled
-                        aria-disabled="true"
-                        title="Funding rail not yet active"
-                      >
+                      <button type="button" className="button engine-slot-btn" disabled aria-disabled="true" title="Funding rail not yet active">
                         Deploy (Soon)
                       </button>
 
-                      <div className="engine-slot-foot">
-                        Funding rail not yet active — slot visible for inspection.
-                      </div>
+                      <div className="engine-slot-foot">Funding rail not yet active — slot visible for inspection.</div>
                     </div>
                   ))}
                 </div>
@@ -1023,9 +990,9 @@ export default function Engine() {
                     <div className="engine-about-title">$JAL~Engine — what you’re looking at</div>
 
                     <p>
-                      $JAL~Engine is a public machine exhibit: a live market window backed by a deterministic service layer.
-                      It mirrors the tradable surface available on the operator’s exchange (CoinSpot) and presents it as a
-                      readable execution environment.
+                      $JAL~Engine is a public machine exhibit: a live market window backed by a deterministic service layer. It
+                      mirrors the tradable surface available on the operator’s exchange (CoinSpot) and presents it as a readable
+                      execution environment.
                     </p>
 
                     <p>
@@ -1035,7 +1002,7 @@ export default function Engine() {
 
                     <div className="engine-about-h">Baseline + fixed daily cadence</div>
                     <p>
-                      Baseline is anchored to a backend <strong>baselineStartAt</strong> timestamp. After that, issuance uses a{" "}
+                      Baseline is anchored to backend <strong>baseline.startAt</strong>. After that, issuance uses a{" "}
                       <strong>fixed wall-clock schedule</strong>: the next deploy is always the next exact 24h boundary from the
                       baseline.
                     </p>
@@ -1066,10 +1033,7 @@ export default function Engine() {
           aria-label="Slot Details"
           onClick={() => setSelectedSlotId(null)}
         >
-          <div
-            className="slot-drawer card machine-surface panel-frame"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="slot-drawer card machine-surface panel-frame" onClick={(e) => e.stopPropagation()}>
             <div className="slot-drawer-top">
               <div>
                 <div className="slot-drawer-id">{selectedSlot.id}</div>
@@ -1120,8 +1084,7 @@ export default function Engine() {
                   <div className="event-row" key={e.id}>
                     <div className="event-time">{fmtEventTime(e.at)}</div>
                     <div className="event-msg">
-                      <span className="event-kind">{e.kind}</span>{" "}
-                      <span className="event-text">{e.msg}</span>
+                      <span className="event-kind">{e.kind}</span> <span className="event-text">{e.msg}</span>
                     </div>
                   </div>
                 ))
@@ -1136,9 +1099,7 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">
-                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
-              </div>
+              <div className="slot-rules-note">(Backend should attach exact friction/spread assumptions + entry band parameters here.)</div>
             </div>
           </div>
         </div>
