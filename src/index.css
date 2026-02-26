@@ -1475,3 +1475,42 @@ main[role="main"]{
     grid-template-columns: repeat(5, 1fr);
   }
 }
+/* =========================================================
+   ENGINE CARD WIDTH — TRUE FIX
+========================================================= */
+
+/* Let the engine card breathe */
+.engine-shell .card{
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Header stack, not 3-column */
+.engine-head{
+  display: flex !important;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Indicators span full width */
+.engine-auth{
+  width: 100%;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+/* Lock clean desktop console layout */
+@media (min-width: 1100px){
+  .engine-auth{
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Ultra-wide monitor */
+@media (min-width: 1500px){
+  .engine-auth{
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
