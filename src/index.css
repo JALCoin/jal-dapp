@@ -1532,3 +1532,30 @@ main[role="main"]{
     grid-template-columns: repeat(5, 1fr);
   }
 }
+/* =========================================================
+   ENGINE — Visual Group Separation
+========================================================= */
+
+.engine-auth{
+  row-gap: 18px;
+}
+
+/* Add subtle separation after second row */
+.engine-auth .indicator:nth-child(8){
+  position: relative;
+}
+
+.engine-auth .indicator:nth-child(8)::after{
+  content: "";
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  bottom: -14px;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255,255,255,.15),
+    transparent
+  );
+}
