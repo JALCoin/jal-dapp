@@ -1438,3 +1438,49 @@ main[role="main"]{
   }
   .indicator{ width: 100%; }
 }
+/* =========================================================
+   ENGINE HEADER — CLEAN INDICATOR SYSTEM (FINAL)
+========================================================= */
+
+.engine-auth{
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+/* Each pill is a contained unit */
+.indicator{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .55rem .75rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure text never breaks mid word */
+.indicator span{
+  white-space: nowrap;
+}
+
+/* Desktop alignment */
+@media (min-width: 900px){
+  .engine-auth{
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Ultra wide */
+@media (min-width: 1400px){
+  .engine-auth{
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+.indicator{
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.25));
+}
