@@ -84,13 +84,13 @@ export default function Shop() {
               jalsol.com
             </a>
             <a
-              className="chip"
-              href="https://jalrelics.etsy.com"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Etsy (small link)
-            </a>
+  className="chip"
+  href="https://jalrelics.etsy.com"
+  target="_blank"
+  rel="noreferrer"
+>
+  Etsy
+</a>
           </div>
 
           <div className="shop-controls" aria-label="Shop filters">
