@@ -10,6 +10,12 @@ function ProductCard({ p }: { p: Product }) {
 
   return (
     <article className="product-card" aria-label={p.title}>
+      {p.image ? (
+        <div className="product-media" aria-label="Product image">
+          <img className="product-img" src={p.image} alt={p.title} loading="lazy" />
+        </div>
+      ) : null}
+
       <div className="product-top">
         <div className="product-title-row">
           <h3 className="product-title">{p.title}</h3>
@@ -32,13 +38,7 @@ function ProductCard({ p }: { p: Product }) {
 
       <div className="product-actions" aria-label="Product links">
         {p.links.slice(0, 2).map((l) => (
-          <a
-            key={l.href}
-            className="chip"
-            href={l.href}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a key={l.href} className="chip" href={l.href} target="_blank" rel="noreferrer">
             {l.label}
           </a>
         ))}
@@ -63,28 +63,16 @@ export default function Shop() {
           <h1 className="home-title">Shop</h1>
 
           <p className="home-lead">
-            Sole trader activity — design + creation of physical and digital
-            products. This module becomes the structured hub for releases,
-            inventory, and online sales.
+            Sovereign storefront — direct checkout will live here. Etsy stays as a small
+            outbound link while we build the full store pipeline.
           </p>
 
           <div className="home-links">
-            <a
-              className="chip"
-              href="https://jalrelics.etsy.com"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Etsy Shop
-            </a>
-
-            <a
-              className="chip"
-              href="https://jalsol.com"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
               jalsol.com
+            </a>
+            <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
+              Etsy (small link)
             </a>
           </div>
 
@@ -98,18 +86,14 @@ export default function Shop() {
             </button>
             <button
               type="button"
-              className={`chip chip-btn ${
-                filter === "physical" ? "is-active" : ""
-              }`}
+              className={`chip chip-btn ${filter === "physical" ? "is-active" : ""}`}
               onClick={() => setFilter("physical")}
             >
               Physical
             </button>
             <button
               type="button"
-              className={`chip chip-btn ${
-                filter === "digital" ? "is-active" : ""
-              }`}
+              className={`chip chip-btn ${filter === "digital" ? "is-active" : ""}`}
               onClick={() => setFilter("digital")}
             >
               Digital
