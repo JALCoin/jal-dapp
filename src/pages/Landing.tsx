@@ -5,11 +5,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 type LandingMode = "entry" | "nav";
 type LandingProps = { mode: LandingMode };
 
+type NavTo = "/app/home" | "/app/jal-sol" | "/app/about" | "/app/shop";
+
 function NavOverlay({
   onSelect,
   onClose,
 }: {
-  onSelect: (to: "/app/home" | "/app/about" | "/app/shop") => void;
+  onSelect: (to: NavTo) => void;
   onClose: () => void;
 }) {
   return (
@@ -35,9 +37,16 @@ function NavOverlay({
           <button className="nav-pill" onClick={() => onSelect("/app/home")}>
             HOME
           </button>
+
+          {/* NEW: JAL/SOL */}
+          <button className="nav-pill" onClick={() => onSelect("/app/jal-sol")}>
+            JAL/SOL
+          </button>
+
           <button className="nav-pill" onClick={() => onSelect("/app/about")}>
             ABOUT JAL
           </button>
+
           <button className="nav-pill" onClick={() => onSelect("/app/shop")}>
             SHOP
           </button>
@@ -50,7 +59,6 @@ function NavOverlay({
 export default function Landing({ mode }: LandingProps) {
   const navigate = useNavigate();
   const location = useLocation();
-
   const [loading, setLoading] = useState(false);
 
   // header logo should open NAV when inside /app/*
@@ -84,28 +92,16 @@ export default function Landing({ mode }: LandingProps) {
   // ENTRY screen (no header here because AppShell isn't mounted)
   if (mode === "entry") {
     return (
-      <main
-        className={`landing-blank ${loading ? "is-fading" : ""}`}
-        aria-label="JAL/SOL"
-      >
+      <main className={`landing-blank ${loading ? "is-fading" : ""}`} aria-label="JAL/SOL">
         {!loading && (
-          <button
-            className="center-logo-btn"
-            onClick={enter}
-            aria-label="Enter jalsol.com"
-          >
+          <button className="center-logo-btn" onClick={enter} aria-label="Enter jalsol.com">
             <img className="center-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
             <div className="center-logo-hint">ENTER</div>
           </button>
         )}
 
         {loading && (
-          <div
-            className="loading-screen"
-            role="status"
-            aria-label="Loading"
-            aria-live="polite"
-          >
+          <div className="loading-screen" role="status" aria-label="Loading" aria-live="polite">
             <img className="loading-logo" src="/JALSOL1.gif" alt="" />
           </div>
         )}
