@@ -1159,69 +1159,169 @@ main[role="main"]{
   }
 }
 /* ===============================
-   Store / Shop UI
-================================ */
+   Store / Shop UI (Premium Console)
+   - Product cards support images
+   - “Console bay” framing + cyber sheen
+   - Stable grid + pinned actions
+================================= */
 
 .shop-controls{
   margin-top: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
 }
 
-.chip-btn{
-  cursor: pointer;
-}
+.chip-btn{ cursor:pointer; }
 
 .chip-btn.is-active{
   border-color: rgba(17,241,167,.55);
   box-shadow: var(--glow-green);
 }
 
+/* Grid */
 .shop-grid{
   margin-top: 16px;
-  display: grid;
+  display:grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 14px;
 }
 
 .product-card{
   grid-column: span 12;
-  border-radius: 18px;
+  border-radius: 20px;
   border: 1px solid rgba(255,255,255,.12);
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0));
-  padding: 14px 14px 12px;
-  box-shadow: 0 0 0 rgba(0,0,0,0);
+  background:
+    radial-gradient(900px 260px at 20% 0%, rgba(0,240,255,.06), transparent 60%),
+    radial-gradient(900px 260px at 80% 120%, rgba(244,200,106,.07), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012));
+  box-shadow:
+    0 16px 50px rgba(0,0,0,.62),
+    inset 0 0 0 1px rgba(255,255,255,.05);
+  overflow:hidden;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  min-height: 520px; /* gives room for image + content + actions */
 }
 
 @media (min-width: 860px){
   .product-card{ grid-column: span 6; }
 }
 
+.product-card:hover{
+  transform: translateY(-2px);
+  border-color: rgba(0,240,255,.40);
+  box-shadow:
+    0 20px 70px rgba(0,0,0,.72),
+    0 0 26px rgba(0,240,255,.18),
+    inset 0 0 0 1px rgba(255,255,255,.06);
+}
+
+/* Media bay */
+.product-media{
+  position:relative;
+  height: 280px;
+  overflow:hidden;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(700px 280px at 50% 30%, rgba(255,255,255,.06), rgba(255,255,255,0));
+}
+
+@media (max-width: 520px){
+  .product-media{ height: 240px; }
+  .product-card{ min-height: 500px; }
+}
+
+.product-media::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.22;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mix-blend-mode: screen;
+}
+
+.product-media::after{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  pointer-events:none;
+  opacity:.22;
+  background:
+    radial-gradient(900px 280px at 50% 0%, rgba(244,200,106,.10), transparent 60%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,.03),
+      rgba(255,255,255,.03) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  mix-blend-mode: screen;
+}
+
+.product-img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transform: scale(1.01);
+  filter: brightness(.92) contrast(1.10) saturate(1.05);
+}
+
+/* Top content area */
+.product-top{
+  padding: 14px 14px 0;
+}
+
 .product-title-row{
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
 }
 
 .product-title{
-  margin: 0;
-  font-size: 1.05rem;
+  margin:0;
+  font-size: 1.08rem;
+  font-weight: 900;
   letter-spacing: .02em;
+  line-height: 1.2;
 }
 
+.product-price{
+  margin-top: 8px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  opacity:.95;
+}
+
+.product-summary{
+  margin-top: 10px;
+  opacity: .86;
+  line-height: 1.45;
+  max-width: 72ch;
+}
+
+/* Badge = HUD chip */
 .product-badge{
-  font-size: .72rem;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  opacity: .9;
+  font-size:.72rem;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  opacity:.95;
   border: 1px solid rgba(255,255,255,.14);
   padding: 6px 10px;
   border-radius: 999px;
-  white-space: nowrap;
+  white-space:nowrap;
+  background: rgba(0,0,0,.28);
+  backdrop-filter: blur(10px);
 }
 
+/* Status styling */
 .status-active{
   border-color: rgba(17,241,167,.45);
   box-shadow: var(--glow-green);
@@ -1229,113 +1329,51 @@ main[role="main"]{
 
 .status-coming_soon{
   border-color: rgba(244,200,106,.35);
-  box-shadow: 0 0 16px rgba(244,200,106,.18);
+  box-shadow: 0 0 18px rgba(244,200,106,.18);
 }
 
-.product-price{
-  margin-top: 6px;
-  opacity: .92;
-  font-size: .9rem;
+.status-archived{
+  opacity: .55;
+  border-color: rgba(255,255,255,.10);
+  box-shadow:none;
 }
 
-.product-summary{
-  margin-top: 10px;
-  opacity: .92;
-  line-height: 1.35;
-}
-
+/* Tags */
 .product-tags{
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  margin-top: 12px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
 }
 
 .tag{
-  font-size: .72rem;
-  opacity: .9;
+  font-size:.72rem;
+  opacity:.90;
   border: 1px solid rgba(255,255,255,.12);
   padding: 6px 10px;
   border-radius: 999px;
   background: rgba(0,0,0,.18);
+  letter-spacing: .06em;
 }
 
+/* Actions dock (pinned to bottom) */
 .product-actions{
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.status-active { box-shadow: var(--glow-green); }
-.status-coming_soon { box-shadow: var(--glow-gold); }
-.cyber-card {
-  position: relative;
-  background: linear-gradient(145deg, #0d1117, #0a0f14);
-  border: 1px solid rgba(0,255,200,0.25);
-  box-shadow:
-    0 0 20px rgba(0,255,200,0.25),
-    inset 0 0 20px rgba(0,255,200,0.05);
-  border-radius: 18px;
-  overflow: hidden;
-  transition: 0.3s ease;
+  margin-top: auto;
+  padding: 12px 14px 14px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.00), rgba(0,0,0,.22));
 }
 
-.cyber-card:hover {
-  box-shadow:
-    0 0 35px rgba(0,255,200,0.5),
-    inset 0 0 30px rgba(0,255,200,0.08);
-  transform: translateY(-3px);
+/* Optional: make “Pre-order” feel primary if it is first */
+.product-actions .chip:first-child{
+  border-color: rgba(17,241,167,.38);
+  box-shadow: 0 0 0 1px rgba(17,241,167,.10) inset;
 }
-
-.product-image-wrap {
-  height: 220px;
-  overflow: hidden;
-}
-
-.product-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: brightness(0.9) contrast(1.1);
-}
-
-.premium-price {
-  font-weight: 700;
-  color: #00f0ff;
-  margin-bottom: 10px;
-}
-
-.preorder-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-
-.preorder-card {
-  background: #0f141b;
-  padding: 30px;
-  border-radius: 20px;
-  border: 1px solid rgba(0,255,200,0.3);
-  box-shadow: 0 0 30px rgba(0,255,200,0.3);
-  width: 90%;
-  max-width: 420px;
-}
-
-.preorder-card input,
-.preorder-card textarea {
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 10px;
-  background: #0a0f14;
-  border: 1px solid rgba(0,255,200,0.2);
-  color: white;
-  border-radius: 10px;
-}
-
-.close-btn {
-  margin-top: 10px;
+.product-actions .chip:first-child:hover{
+  border-color: rgba(17,241,167,.60);
+  box-shadow: var(--glow-green);
 }
