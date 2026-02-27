@@ -267,7 +267,7 @@ function AboutPage() {
   );
 }
 
-function ShopPage() {
+function Shop() {
   return (
     <main className="home-shell" aria-label="Shop">
       <div className="home-wrap">
