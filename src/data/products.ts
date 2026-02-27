@@ -28,33 +28,39 @@ export type Product = {
   summary: string;
   tags?: ProductTag[];
   links: ProductLink[];
-  image?: string; // optional local path: "/shop/xyz.jpg"
+  image?: string; // public path: "/shop/xyz.jpg"
 };
 
 const EMAIL = "358jal@gmail.com";
 
-function preorderMailto(subject: string) {
+function mailto(subject: string, bodyLines?: string[]) {
   const s = encodeURIComponent(subject);
-  const body = encodeURIComponent(
-    [
-      "Name:",
-      "Phone (optional):",
-      "Shipping suburb/postcode:",
-      "",
-      "Order request:",
-      "- Qty:",
-      "- Notes:",
-      "",
-      "Preferred contact method: email / sms",
-    ].join("\n")
-  );
-  return `mailto:${EMAIL}?subject=${s}&body=${body}`;
+  const body = encodeURIComponent((bodyLines ?? []).join("\n"));
+  return `mailto:${EMAIL}?subject=${s}${bodyLines?.length ? `&body=${body}` : ""}`;
+}
+
+function preorderMailto(subject: string) {
+  return mailto(subject, [
+    "Name:",
+    "Phone (optional):",
+    "Shipping suburb/postcode:",
+    "",
+    "Order request:",
+    "- Qty:",
+    "- Notes:",
+    "",
+    "Preferred contact method: email / sms",
+  ]);
 }
 
 /**
  * Sovereign storefront:
  * - JALSOL direct checkout will live here long-term
- * - Etsy stays as a small outbound link elsewhere (not the core product)
+ * - Etsy stays as a small outbound link elsewhere (not a product card)
+ *
+ * Images:
+ * - Put files in: /public/shop/
+ * - Then reference: image: "/shop/your-file.jpg"
  */
 export const PRODUCTS: Product[] = [
   {
@@ -64,7 +70,7 @@ export const PRODUCTS: Product[] = [
     status: "coming_soon",
     priceNote: "$130.00 AUD",
     summary:
-      "Premium embroidered hoodie drop. Built as a flagship wearable release — structured, limited, and consistent with the JALSOL aesthetic.",
+      "Premium embroidered hoodie drop. Flagship wearable release — structured, limited, and consistent with the JALSOL aesthetic.",
     tags: ["Physical", "Handmade", "Premium", "Preorder", "Limited"],
     image: "/shop/hoodie-xxl.jpg",
     links: [
@@ -74,9 +80,7 @@ export const PRODUCTS: Product[] = [
       },
       {
         label: "Enquire",
-        href: `mailto:${EMAIL}?subject=${encodeURIComponent(
-          "Enquiry — JALSOL Embroidered Hoodie (XXL)"
-        )}`,
+        href: mailto("Enquiry — JALSOL Embroidered Hoodie (XXL)"),
       },
     ],
   },
@@ -100,45 +104,39 @@ export const PRODUCTS: Product[] = [
       },
       {
         label: "Enquire",
-        href: `mailto:${EMAIL}?subject=${encodeURIComponent(
-          "Enquiry — JALSOL Embroidered Mini Pillow Plush"
-        )}`,
+        href: mailto("Enquiry — JALSOL Embroidered Mini Pillow Plush"),
       },
     ],
   },
 
   {
-    id: "solid-gold-bracelet-band",
-    title: "Solid Gold JALSOL Bracelet Band",
+    id: "solid-gold-cuff",
+    title: "Solid Gold JALSOL Cuff",
     kind: "physical",
     status: "coming_soon",
     priceNote: "Enquire for price",
     summary:
-      "Solid gold band — bespoke enquiry-only piece. Material/weight/finish options handled privately before quoting.",
+      "Solid gold JALSOL cuff — sculpted open-form design. Precision metalwork, weight-balanced, made-to-order statement piece.",
     tags: ["Physical", "Handmade", "One-of-One", "Premium", "Limited"],
-    image: "/shop/solid-gold-band.jpg",
+    image: "/shop/solid-gold-cuff.jpg",
     links: [
       {
         label: "Enquire (Quote)",
-        href: `mailto:${EMAIL}?subject=${encodeURIComponent(
-          "Enquiry — Solid Gold JALSOL Bracelet Band (Quote Request)"
-        )}&body=${encodeURIComponent(
-          [
-            "Name:",
-            "Phone (optional):",
-            "",
-            "Gold purity (if known): 9k / 14k / 18k / 24k",
-            "Approx. size (mm) or wrist circumference:",
-            "Finish: polished / matte / brushed",
-            "Engraving: yes/no (details):",
-            "",
-            "Notes:",
-          ].join("\n")
-        )}`,
+        href: mailto("Enquiry — Solid Gold JALSOL Cuff (Quote Request)", [
+          "Name:",
+          "Phone (optional):",
+          "",
+          "Gold purity: 9k / 14k / 18k / 24k",
+          "Wrist circumference (mm):",
+          "Finish: polished / matte / brushed",
+          "Engraving: yes/no (details):",
+          "",
+          "Notes:",
+        ]),
       },
       {
         label: "Pre-register",
-        href: preorderMailto("Pre-register — Solid Gold JALSOL Bracelet Band (Enquiry)"),
+        href: mailto("Pre-register — Solid Gold JALSOL Cuff"),
       },
     ],
   },
