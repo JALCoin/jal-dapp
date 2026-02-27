@@ -13,6 +13,7 @@ import {
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Engine from "./pages/Engine";
+import Shop from "./pages/Shop";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -349,7 +350,7 @@ function AppShell() {
 
         <Route path="home" element={<Home />} />
         <Route path="about" element={<AboutPage />} />
-        <Route path="shop" element={<ShopPage />} />
+        <Route path="shop" element={<Shop />} />
 
         <Route path="token" element={<FeaturePage title="Token Generation" />} />
         <Route path="raydium" element={<FeaturePage title="Raydium / Liquidity" />} />
