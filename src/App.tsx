@@ -14,6 +14,7 @@ import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Engine from "./pages/Engine";
 import ShopPage from "./pages/Shop";
+import JalSolPage from "./pages/JalSol";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -30,12 +31,7 @@ function HeaderView({
       <div className="header-inner">
         {/* Left: socials */}
         <div className="social-links" aria-label="Social Links">
-          <a
-            href="https://x.com/JAL358"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="X"
-          >
+          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
             <img src="/icons/X.png" alt="" />
           </a>
           <a
@@ -57,12 +53,7 @@ function HeaderView({
         </div>
 
         {/* Center: logo opens MAIN NAV overlay */}
-        <button
-          type="button"
-          onClick={onLogo}
-          aria-label="Open navigation"
-          className="logo-btn"
-        >
+        <button type="button" onClick={onLogo} aria-label="Open navigation" className="logo-btn">
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
         </button>
 
@@ -125,26 +116,14 @@ function SidebarSection({
   );
 }
 
-function SidebarView({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
 
   return (
     <>
-      {/* Overlay click closes */}
-      <button
-        className="sidebar-overlay"
-        aria-label="Close menu overlay"
-        onClick={onClose}
-      />
+      <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
 
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
-        {/* Top row inside panel: title + close */}
         <div
           style={{
             display: "flex",
@@ -173,8 +152,7 @@ function SidebarView({
               height: 40,
               borderRadius: 12,
               border: "1px solid rgba(255,255,255,.12)",
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0))",
+              background: "linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0))",
             }}
           >
             ×
@@ -195,6 +173,7 @@ function SidebarView({
             title="Utility"
             onClose={onClose}
             items={[
+              { to: "/app/jal-sol", label: "JAL/SOL" },
               { to: "/app/token", label: "Token Generation" },
               { to: "/app/raydium", label: "Raydium / Liquidity" },
             ]}
@@ -244,12 +223,12 @@ function AboutPage() {
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">About JAL</h1>
           <p className="home-lead">
-            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader •
-            Mechanical Metal Engineer • Digital Creator.
+            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical
+            Metal Engineer • Digital Creator.
           </p>
           <p className="home-lead">
-            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong> pool on
-            Raydium and verifiable on Solscan.
+            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong> pool on Raydium and
+            verifiable on Solscan.
           </p>
           <div className="home-links">
             <a className="chip" href="https://raydium.io/" target="_blank" rel="noreferrer">
@@ -271,11 +250,8 @@ function AppShell() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const navOverlayOpen = useMemo(() => {
-    return location.pathname === "/app/nav";
-  }, [location.pathname]);
+  const navOverlayOpen = useMemo(() => location.pathname === "/app/nav", [location.pathname]);
 
-  // ESC closes sidebar; if nav overlay is up, ESC returns to home
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -284,28 +260,21 @@ function AppShell() {
         setMenuOpen(false);
         return;
       }
-
-      if (navOverlayOpen) {
-        navigate("/app/home", { replace: true });
-      }
+      if (navOverlayOpen) navigate("/app/home", { replace: true });
     };
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen, navOverlayOpen, navigate]);
 
-  // Close sidebar on route changes
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Lock scroll when sidebar OR nav overlay is open
   useEffect(() => {
     const locked = menuOpen || navOverlayOpen;
     document.body.setAttribute("data-nav-open", locked ? "true" : "false");
-    return () => {
-      document.body.removeAttribute("data-nav-open");
-    };
+    return () => document.body.removeAttribute("data-nav-open");
   }, [menuOpen, navOverlayOpen]);
 
   return (
@@ -315,23 +284,20 @@ function AppShell() {
         onLogo={() => navigate("/app/nav")}
         isOpen={menuOpen}
       />
-
       <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <Routes>
-        {/* NAV overlay */}
         <Route path="nav" element={<Landing mode="nav" />} />
 
         <Route path="home" element={<Home />} />
         <Route path="about" element={<AboutPage />} />
 
-        {/* REAL shop page */}
         <Route path="shop" element={<ShopPage />} />
+        <Route path="jal-sol" element={<JalSolPage />} />
 
         <Route path="token" element={<FeaturePage title="Token Generation" />} />
         <Route path="raydium" element={<FeaturePage title="Raydium / Liquidity" />} />
 
-        {/* WIRED: Engine */}
         <Route path="engine" element={<Engine />} />
         <Route path="engine/settings" element={<FeaturePage title="$JAL~Engine — Settings" />} />
         <Route path="engine/logs" element={<FeaturePage title="$JAL~Engine — Log Analysis" />} />
@@ -352,12 +318,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ENTRY ONLY (no header) */}
         <Route path="/" element={<Landing mode="entry" />} />
-
-        {/* APP (header appears only here) */}
         <Route path="/app/*" element={<AppShell />} />
-
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -6,18 +6,13 @@ type Filter = "all" | "physical" | "digital";
 
 function ProductCard({ p }: { p: Product }) {
   const badge =
-    p.status === "active" ? "LIVE" : p.status === "coming_soon" ? "SOON" : "—";
+    p.status === "active" ? "Live" : p.status === "coming_soon" ? "Soon" : "—";
 
   return (
-    <article className="product-card" aria-label={p.title}>
+    <article className="product-card cyber-card" aria-label={p.title}>
       {p.image ? (
-        <div className="product-media" aria-label="Product image">
-          <img
-            className="product-img"
-            src={p.image}
-            alt={p.title}
-            loading="lazy"
-          />
+        <div className="product-media product-image-wrap" aria-label="Product image">
+          <img className="product-img product-image" src={p.image} alt={p.title} loading="lazy" />
         </div>
       ) : null}
 
@@ -27,13 +22,12 @@ function ProductCard({ p }: { p: Product }) {
           <span className={`product-badge status-${p.status}`}>{badge}</span>
         </div>
 
-        {p.priceNote ? <div className="product-price">{p.priceNote}</div> : null}
-
+        {p.priceNote ? <div className="product-price premium-price">{p.priceNote}</div> : null}
         <p className="product-summary">{p.summary}</p>
 
         {p.tags?.length ? (
           <div className="product-tags" aria-label="Product tags">
-            {p.tags.slice(0, 5).map((t) => (
+            {p.tags.slice(0, 6).map((t) => (
               <span className="tag" key={t}>
                 {t}
               </span>
@@ -44,13 +38,7 @@ function ProductCard({ p }: { p: Product }) {
 
       <div className="product-actions" aria-label="Product links">
         {p.links.slice(0, 2).map((l) => (
-          <a
-            key={l.href}
-            className="chip"
-            href={l.href}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a key={l.href} className="chip" href={l.href} target="_blank" rel="noreferrer">
             {l.label}
           </a>
         ))}
@@ -75,7 +63,7 @@ export default function Shop() {
           <h1 className="home-title">Shop</h1>
 
           <p className="home-lead">
-            Sovereign storefront — direct checkout will live here. Etsy stays as a small
+            Sovereign storefront — direct checkout will live here. Etsy remains available as an
             outbound link while we build the full store pipeline.
           </p>
 
@@ -83,14 +71,9 @@ export default function Shop() {
             <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
               jalsol.com
             </a>
-            <a
-  className="chip"
-  href="https://jalrelics.etsy.com"
-  target="_blank"
-  rel="noreferrer"
->
-  Etsy
-</a>
+            <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
+              Etsy
+            </a>
           </div>
 
           <div className="shop-controls" aria-label="Shop filters">
