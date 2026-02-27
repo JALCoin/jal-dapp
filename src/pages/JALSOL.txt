@@ -1,0 +1,123 @@
+// src/pages/JALSol.tsx
+import { useMemo } from "react";
+
+type Link = { label: string; href: string; note?: string };
+
+export default function JALSol() {
+  // TODO: drop real links as you confirm them
+  const links = useMemo<Link[]>(
+    () => [
+      { label: "Raydium (JAL/SOL)", href: "https://raydium.io/" , note: "Swap / LP" },
+      { label: "Solscan ($JAL)", href: "https://solscan.io/", note: "Verify token" },
+      { label: "DexScreener", href: "https://dexscreener.com/", note: "Chart" },
+      { label: "Birdeye", href: "https://birdeye.so/", note: "Chart" },
+    ],
+    []
+  );
+
+  return (
+    <main className="home-shell jalsol-shell" aria-label="JAL/SOL">
+      <div className="home-wrap">
+        <section className="card machine-surface panel-frame jalsol-hero">
+          <div className="jalsol-hero-top">
+            <div className="jalsol-kicker">
+              <span className="jalsol-dot" aria-hidden="true" />
+              JAL/SOL • MARKET ENTRY
+            </div>
+
+            <h1 className="home-title">JAL/SOL</h1>
+
+            <p className="home-lead">
+              Minimalist console showroom for the JAL market layer. No urgency — just a clean
+              path: verify, acquire, and optionally provide liquidity.
+            </p>
+
+            <div className="jalsol-actions" aria-label="JAL/SOL quick links">
+              {links.map((l) => (
+                <a
+                  key={l.label}
+                  className="chip jalsol-chip"
+                  href={l.href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>{l.label}</span>
+                  {l.note ? <em className="jalsol-chip-note">{l.note}</em> : null}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="jalsol-grid" aria-label="JAL/SOL modules">
+            <section className="jalsol-panel" aria-label="How to acquire">
+              <h2 className="jalsol-title">Acquire</h2>
+              <ol className="jalsol-steps">
+                <li>
+                  <strong>Verify</strong> the $JAL token on Solscan (mint + holders).
+                </li>
+                <li>
+                  <strong>Swap</strong> via Raydium using SOL (preferred).
+                </li>
+                <li>
+                  <strong>Hold</strong> or use within the jalsol.com utility modules.
+                </li>
+              </ol>
+              <p className="jalsol-note">
+                Tip: always confirm the token address from an official source before swapping.
+              </p>
+            </section>
+
+            <section className="jalsol-panel" aria-label="Liquidity">
+              <h2 className="jalsol-title">Liquidity</h2>
+              <p className="jalsol-text">
+                The JAL/SOL pool is the public market surface. Liquidity is optional — it’s
+                how the market stays tradeable and priced.
+              </p>
+              <ul className="jalsol-bullets">
+                <li>LP is exposure to both sides (JAL and SOL)</li>
+                <li>LP can earn fees, but carries price divergence risk</li>
+                <li>Start small; scale only after you understand the mechanics</li>
+              </ul>
+            </section>
+
+            <section className="jalsol-panel" aria-label="Status">
+              <h2 className="jalsol-title">Status</h2>
+
+              <div className="jalsol-metrics" role="group" aria-label="Market status">
+                <div className="jalsol-metric">
+                  <div className="k">Network</div>
+                  <div className="v">Mainnet</div>
+                </div>
+                <div className="jalsol-metric">
+                  <div className="k">Pair</div>
+                  <div className="v">JAL / SOL</div>
+                </div>
+                <div className="jalsol-metric">
+                  <div className="k">Mode</div>
+                  <div className="v">Public</div>
+                </div>
+              </div>
+
+              <p className="jalsol-note">
+                Next: we can embed a live read-only panel (price + liquidity + volume) once we
+                choose the data source you want to canonize.
+              </p>
+            </section>
+
+            <section className="jalsol-panel" aria-label="Rules">
+              <h2 className="jalsol-title">Rules</h2>
+              <p className="jalsol-text">
+                This site is built like a console: each module has a purpose, a boundary, and a
+                predictable flow. The market layer follows the same rule.
+              </p>
+              <div className="jalsol-rulebox">
+                <div className="jalsol-rule">Order before outcome.</div>
+                <div className="jalsol-rule">No hype. No rush. Verify first.</div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
