@@ -13,7 +13,7 @@ import {
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Engine from "./pages/Engine";
-import Shop from "./pages/Shop";
+import ShopPage from "./pages/Shop";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -230,9 +230,7 @@ function FeaturePage({ title }: { title: string }) {
       <div className="home-wrap">
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">{title}</h1>
-          <p className="home-lead">
-            This page is live-routed. Wire the feature UI here.
-          </p>
+          <p className="home-lead">This page is live-routed. Wire the feature UI here.</p>
         </section>
       </div>
     </main>
@@ -246,12 +244,12 @@ function AboutPage() {
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">About JAL</h1>
           <p className="home-lead">
-            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> —
-            Sol-Trader • Mechanical Metal Engineer • Digital Creator.
+            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader •
+            Mechanical Metal Engineer • Digital Creator.
           </p>
           <p className="home-lead">
-            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong>{" "}
-            pool on Raydium and verifiable on Solscan.
+            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong> pool on
+            Raydium and verifiable on Solscan.
           </p>
           <div className="home-links">
             <a className="chip" href="https://raydium.io/" target="_blank" rel="noreferrer">
@@ -267,30 +265,6 @@ function AboutPage() {
   );
 }
 
-function Shop() {
-  return (
-    <main className="home-shell" aria-label="Shop">
-      <div className="home-wrap">
-        <section className="card machine-surface panel-frame">
-          <h1 className="home-title">Shop</h1>
-          <p className="home-lead">
-            Sole trader activity: design + creation of physical and digital
-            products, sold online. jalsol.com is the hub.
-          </p>
-          <div className="home-links">
-            <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
-              Etsy Shop
-            </a>
-            <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
-              jalsol.com
-            </a>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
-
 /* ------------------------ App Shell (only for /app/*) ------------------------ */
 function AppShell() {
   const location = useLocation();
@@ -298,7 +272,6 @@ function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const navOverlayOpen = useMemo(() => {
-    // Keep this simple and explicit: only /app/nav is an overlay route
     return location.pathname === "/app/nav";
   }, [location.pathname]);
 
@@ -346,11 +319,14 @@ function AppShell() {
       <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <Routes>
+        {/* NAV overlay */}
         <Route path="nav" element={<Landing mode="nav" />} />
 
         <Route path="home" element={<Home />} />
         <Route path="about" element={<AboutPage />} />
-        <Route path="shop" element={<Shop />} />
+
+        {/* REAL shop page */}
+        <Route path="shop" element={<ShopPage />} />
 
         <Route path="token" element={<FeaturePage title="Token Generation" />} />
         <Route path="raydium" element={<FeaturePage title="Raydium / Liquidity" />} />
@@ -361,10 +337,7 @@ function AppShell() {
         <Route path="engine/logs" element={<FeaturePage title="$JAL~Engine — Log Analysis" />} />
 
         <Route path="inventory" element={<FeaturePage title="Inventory / Packaged System" />} />
-        <Route
-          path="inventory/purchase"
-          element={<FeaturePage title="Inventory — Purchase" />}
-        />
+        <Route path="inventory/purchase" element={<FeaturePage title="Inventory — Purchase" />} />
 
         <Route path="settings" element={<FeaturePage title="Settings" />} />
 
