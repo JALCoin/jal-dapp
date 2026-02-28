@@ -38,7 +38,7 @@ function NavOverlay({
             HOME
           </button>
 
-          {/* NEW */}
+          {/* NEW: JAL/SOL directly under Home */}
           <button className="nav-pill" onClick={() => onSelect("/app/jal-sol")}>
             JAL/SOL
           </button>
@@ -60,7 +60,6 @@ export default function Landing({ mode }: LandingProps) {
   const location = useLocation();
   const [loading, setLoading] = useState(false);
 
-  // header logo should open NAV when inside /app/*
   useEffect(() => {
     const onOpen = () => {
       if (!location.pathname.startsWith("/app/")) return;
@@ -71,7 +70,6 @@ export default function Landing({ mode }: LandingProps) {
     return () => window.removeEventListener("JALSOL:OPEN_NAV" as any, onOpen);
   }, [navigate, location.pathname]);
 
-  // lock scroll while nav overlay is present
   useEffect(() => {
     const on = mode === "nav";
     if (on) document.body.setAttribute("data-nav-open", "true");
@@ -79,7 +77,6 @@ export default function Landing({ mode }: LandingProps) {
     return () => document.body.removeAttribute("data-nav-open");
   }, [mode]);
 
-  // ENTER: show 5s loading, then open /app/nav
   const enter = () => {
     setLoading(true);
     window.setTimeout(() => {
@@ -90,16 +87,28 @@ export default function Landing({ mode }: LandingProps) {
 
   if (mode === "entry") {
     return (
-      <main className={`landing-blank ${loading ? "is-fading" : ""}`} aria-label="JAL/SOL">
+      <main
+        className={`landing-blank ${loading ? "is-fading" : ""}`}
+        aria-label="JAL/SOL"
+      >
         {!loading && (
-          <button className="center-logo-btn" onClick={enter} aria-label="Enter jalsol.com">
+          <button
+            className="center-logo-btn"
+            onClick={enter}
+            aria-label="Enter jalsol.com"
+          >
             <img className="center-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
             <div className="center-logo-hint">ENTER</div>
           </button>
         )}
 
         {loading && (
-          <div className="loading-screen" role="status" aria-label="Loading" aria-live="polite">
+          <div
+            className="loading-screen"
+            role="status"
+            aria-label="Loading"
+            aria-live="polite"
+          >
             <img className="loading-logo" src="/JALSOL1.gif" alt="" />
           </div>
         )}

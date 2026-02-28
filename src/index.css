@@ -1764,3 +1764,155 @@ main[role="main"]{
   font-weight: 800;
   opacity: .92;
 }
+/* ===============================
+   SHOP — Product Modal Overlay
+================================ */
+
+body[data-modal-open="true"]{
+  overflow: hidden;
+}
+
+/* Backdrop sits above everything in the page */
+.product-modal-backdrop{
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  border: 0;
+  padding: 0;
+  background: rgba(0,0,0,.58);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Modal container */
+.product-modal{
+  position: fixed;
+  inset: 18px;
+  z-index: 9999;
+
+  display: grid;
+  place-items: center;
+
+  pointer-events: none; /* inner will re-enable */
+}
+
+.product-modal-inner{
+  width: min(980px, calc(100vw - 44px));
+  max-height: calc(100vh - 44px);
+  overflow: auto;
+
+  pointer-events: auto;
+
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.14);
+
+  background:
+    radial-gradient(1200px 520px at 20% 0%, rgba(0,240,255,.08), transparent 55%),
+    radial-gradient(900px 420px at 80% 0%, rgba(244,200,106,.06), transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)),
+    rgba(10,12,16,.86);
+
+  box-shadow:
+    0 24px 80px rgba(0,0,0,.65),
+    inset 0 1px 0 rgba(255,255,255,.08);
+
+  padding: 18px;
+}
+
+/* Close button: top-right, red glow on hover */
+.product-modal-close{
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 10000;
+
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0));
+  color: rgba(255,255,255,.85);
+
+  display: grid;
+  place-items: center;
+
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.product-modal-close:hover{
+  transform: translateY(-1px) scale(1.02);
+  border-color: rgba(255,80,80,.55);
+  color: rgba(255,255,255,.98);
+  box-shadow:
+    0 0 0 1px rgba(255,80,80,.18),
+    0 0 18px rgba(255,40,40,.40),
+    0 0 44px rgba(255,40,40,.22);
+}
+
+.product-modal-close:active{
+  transform: translateY(0) scale(.99);
+}
+
+/* Modal content styling */
+.product-modal-head{
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.product-modal-titleRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.product-modal-title{
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: .02em;
+}
+
+.product-modal-price{
+  font-weight: 800;
+  letter-spacing: .06em;
+  opacity: .92;
+}
+
+.product-modal-media{
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+.product-modal-img{
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.product-modal-body{
+  margin-top: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+.product-modal-summary{
+  margin: 0;
+  opacity: .92;
+  line-height: 1.45;
+}
+
+.product-modal-actions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.product-modal-footnote{
+  opacity: .72;
+  font-size: .9rem;
+}
