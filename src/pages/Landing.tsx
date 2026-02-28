@@ -38,7 +38,7 @@ function NavOverlay({
             HOME
           </button>
 
-          {/* NEW: JAL/SOL */}
+          {/* NEW */}
           <button className="nav-pill" onClick={() => onSelect("/app/jal-sol")}>
             JAL/SOL
           </button>
@@ -46,7 +46,6 @@ function NavOverlay({
           <button className="nav-pill" onClick={() => onSelect("/app/about")}>
             ABOUT JAL
           </button>
-
           <button className="nav-pill" onClick={() => onSelect("/app/shop")}>
             SHOP
           </button>
@@ -89,7 +88,6 @@ export default function Landing({ mode }: LandingProps) {
     }, 5000);
   };
 
-  // ENTRY screen (no header here because AppShell isn't mounted)
   if (mode === "entry") {
     return (
       <main className={`landing-blank ${loading ? "is-fading" : ""}`} aria-label="JAL/SOL">
@@ -109,7 +107,6 @@ export default function Landing({ mode }: LandingProps) {
     );
   }
 
-  // NAV overlay screen (inside /app/* with header visible)
   return (
     <main className="landing-blank" aria-label="JAL/SOL">
       <NavOverlay
