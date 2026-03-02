@@ -365,6 +365,23 @@ export default function Engine() {
     return () => window.clearInterval(t);
   }, []);
 
+  // Close slot drawer on ESC + lock body scroll while open
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectedSlotId(null);
+    };
+
+    if (selectedSlotId) {
+      window.addEventListener("keydown", onKey);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [selectedSlotId]);
+
   // ---------------- Baseline + issuance countdown (BACKEND truth) ----------------
   const baselineStartAt = meta?.baseline?.startAt ?? null;
 
@@ -562,10 +579,7 @@ export default function Engine() {
                     BASELINE <span>{baselineLabel}</span>
                   </span>
 
-                  <span
-                    className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
-                    title="Countdown to next daily issuance"
-                  >
+                  <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Countdown to next daily issuance">
                     NEXT DEPLOY <span>{nextDeployLabel}</span>
                   </span>
 
@@ -623,9 +637,7 @@ export default function Engine() {
               <div className="engine-telemetry-grid">
                 <div className="engine-telemetry-item">
                   <div className="engine-telemetry-k">Harvester</div>
-                  <div className="engine-telemetry-v">
-                    {meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}
-                  </div>
+                  <div className="engine-telemetry-v">{meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}</div>
                   <div className="engine-telemetry-sub">
                     {meta?.gates?.writeEnabled === false
                       ? "Writes disabled"
@@ -667,11 +679,7 @@ export default function Engine() {
                 Feed: AUD
               </button>
 
-              <button
-                type="button"
-                className={`button ghost ${feed === "watch" ? "active" : ""}`}
-                onClick={() => setFeed("watch")}
-              >
+              <button type="button" className={`button ghost ${feed === "watch" ? "active" : ""}`} onClick={() => setFeed("watch")}>
                 Feed: Watch
               </button>
 
@@ -791,32 +799,16 @@ export default function Engine() {
 
             {/* ---------------- Section tabs ---------------- */}
             <div className="engine-section-tabs" aria-label="Engine sections">
-              <button
-                type="button"
-                className={`engine-section-tab ${section === "ledger" ? "active" : ""}`}
-                onClick={() => setSection("ledger")}
-              >
+              <button type="button" className={`engine-section-tab ${section === "ledger" ? "active" : ""}`} onClick={() => setSection("ledger")}>
                 Ledger
               </button>
-              <button
-                type="button"
-                className={`engine-section-tab ${section === "events" ? "active" : ""}`}
-                onClick={() => setSection("events")}
-              >
+              <button type="button" className={`engine-section-tab ${section === "events" ? "active" : ""}`} onClick={() => setSection("events")}>
                 Events
               </button>
-              <button
-                type="button"
-                className={`engine-section-tab ${section === "support" ? "active" : ""}`}
-                onClick={() => setSection("support")}
-              >
+              <button type="button" className={`engine-section-tab ${section === "support" ? "active" : ""}`} onClick={() => setSection("support")}>
                 Support Slots
               </button>
-              <button
-                type="button"
-                className={`engine-section-tab ${section === "about" ? "active" : ""}`}
-                onClick={() => setSection("about")}
-              >
+              <button type="button" className={`engine-section-tab ${section === "about" ? "active" : ""}`} onClick={() => setSection("about")}>
                 About
               </button>
             </div>
@@ -827,9 +819,7 @@ export default function Engine() {
                 <div className="engine-ledger-top">
                   <div>
                     <div className="engine-ledger-title">Slots Ledger</div>
-                    <div className="engine-ledger-note">
-                      Read-only public ledger (backend sourced). Click any row to inspect slot history.
-                    </div>
+                    <div className="engine-ledger-note">Read-only public ledger (backend sourced). Click any row to inspect slot history.</div>
                   </div>
 
                   <div className="engine-ledger-counts">
@@ -854,13 +844,7 @@ export default function Engine() {
 
                   {slotRows.length ? (
                     slotRows.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className="ledger-row"
-                        onClick={() => setSelectedSlotId(s.id)}
-                        title="Open slot details"
-                      >
+                      <button key={s.id} type="button" className="ledger-row" onClick={() => setSelectedSlotId(s.id)} title="Open slot details">
                         <div className="ledger-slotid">{s.id}</div>
                         <div>${s.unitAud}</div>
                         <div>{s.state}</div>
@@ -927,13 +911,10 @@ export default function Engine() {
                       <strong>Slots activate soon.</strong>
                     </div>
 
-                    <div className="engine-slots-subcopy">
-                      All slots execute under identical deterministic harvester rules. Only unit size varies.
-                    </div>
+                    <div className="engine-slots-subcopy">All slots execute under identical deterministic harvester rules. Only unit size varies.</div>
 
                     <div className="engine-slots-timing">
-                      Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy:{" "}
-                      <strong>{nextDeployLabel}</strong>
+                      Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy: <strong>{nextDeployLabel}</strong>
                     </div>
                   </div>
 
@@ -960,7 +941,13 @@ export default function Engine() {
                         ))}
                       </ul>
 
-                      <button type="button" className="button engine-slot-btn" disabled aria-disabled="true" title="Funding rail not yet active">
+                      <button
+                        type="button"
+                        className="button engine-slot-btn"
+                        disabled
+                        aria-disabled="true"
+                        title="Funding rail not yet active"
+                      >
                         Deploy (Soon)
                       </button>
 
@@ -990,14 +977,14 @@ export default function Engine() {
                     <div className="engine-about-title">$JAL~Engine — what you’re looking at</div>
 
                     <p>
-                      $JAL~Engine is a public machine exhibit: a live market window backed by a deterministic service layer. It
-                      mirrors the tradable surface available on the operator’s exchange (CoinSpot) and presents it as a readable
-                      execution environment.
+                      $JAL~Engine is a public machine exhibit: a live market window backed by a deterministic service layer. It mirrors
+                      the tradable surface available on the operator’s exchange (CoinSpot) and presents it as a readable execution
+                      environment.
                     </p>
 
                     <p>
-                      <strong>AUD growth shown here is harvest-only.</strong> It is measured from market droid harvest deltas
-                      (completed cycles). Deposits, withdrawals, and manual portfolio changes are excluded.
+                      <strong>AUD growth shown here is harvest-only.</strong> It is measured from market droid harvest deltas (completed
+                      cycles). Deposits, withdrawals, and manual portfolio changes are excluded.
                     </p>
 
                     <div className="engine-about-h">Baseline + fixed daily cadence</div>
@@ -1099,7 +1086,9 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">(Backend should attach exact friction/spread assumptions + entry band parameters here.)</div>
+              <div className="slot-rules-note">
+                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
+              </div>
             </div>
           </div>
         </div>
