@@ -249,6 +249,32 @@ function moneyAud(n: number | null | undefined) {
   return n.toLocaleString(undefined, { style: "currency", currency: "AUD", maximumFractionDigits: 2 });
 }
 
+// Small helper: read desktop breakpoint once (avoids re-render spam)
+function useIsDesktop(bpPx = 980) {
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(`(min-width: ${bpPx}px)`).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia(`(min-width: ${bpPx}px)`);
+    const onChange = () => setIsDesktop(mq.matches);
+
+    // initial + subscribe
+    onChange();
+    if (typeof mq.addEventListener === "function") mq.addEventListener("change", onChange);
+    else (mq as any).addListener(onChange);
+
+    return () => {
+      if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", onChange);
+      else (mq as any).removeListener(onChange);
+    };
+  }, [bpPx]);
+
+  return isDesktop;
+}
+
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
   const engineHostLabel = useMemo(() => {
@@ -259,6 +285,8 @@ export default function Engine() {
       return BASE;
     }
   }, [BASE]);
+
+  const isDesktop = useIsDesktop(980);
 
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
@@ -297,7 +325,6 @@ export default function Engine() {
   }
 
   async function fetchMeta(signal?: AbortSignal) {
-    // your server exposes /api/public/meta and aliases /api/status → same shape
     const r = await fetch(`${BASE}/api/public/meta`, { method: "GET", signal });
     if (!r.ok) return null;
     const j = (await r.json()) as Partial<PublicMetaResponse>;
@@ -398,7 +425,6 @@ export default function Engine() {
     return baselineStartAt + k * windowMs;
   }, [baselineStartAt, nowMs, windowMs]);
 
-  // backend calls it nextIssueAt
   const nextDeployAt = meta?.baseline?.nextIssueAt ?? computedNextDeployAt;
 
   const baselineRemainingMs = baselineReadyAt ? Math.max(0, baselineReadyAt - nowMs) : null;
@@ -488,7 +514,6 @@ export default function Engine() {
 
   const executionMode: ExecutionMode = (meta?.engine?.execution as ExecutionMode) ?? "SIM";
 
-  // best-effort engine lifecycle (until backend publishes a dedicated mode)
   const engineMode: EngineMode = (() => {
     const execRunning = Boolean(meta?.executor?.running);
     const harvRunning = Boolean(meta?.harvester?.running);
@@ -499,7 +524,6 @@ export default function Engine() {
 
   const harvesterRunning = Boolean(meta?.harvester?.running);
 
-  // backend harvester status has phase directly
   const pendingPhase = String(meta?.harvester?.phase ?? "—");
   const lastTickAt =
     (typeof meta?.harvester?.now === "number" ? meta.harvester.now : null) ??
@@ -535,8 +559,12 @@ export default function Engine() {
   const harvestAud24h = harvestFallback.last24h;
   const harvestAud7d = harvestFallback.last7d;
 
+  // Desktop polish: if user taps "Events" then goes back to Ledger,
+  // keep Events visible under Ledger on desktop (page stays alive).
+  const showEventsUnderLedger = isDesktop && section === "ledger";
+
   return (
-    <main className="home-shell" aria-label="$JAL~Engine">
+    <main className="home-shell engine-shell" aria-label="$JAL~Engine">
       <div className="home-wrap">
         <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="Engine">
           <div className="engine-bg" aria-hidden="true">
@@ -544,80 +572,36 @@ export default function Engine() {
           </div>
 
           <div className="engine-foreground">
-            <div className="engine-head">
-              <div />
+            {/* ================= HERO (locked) ================= */}
+            <div className="engine-hero">
+              <div className="engine-hero-left" />
 
-              <div className="engine-head-center">
+              <div className="engine-hero-center">
                 <h1 className="engine-title">$JAL~Engine</h1>
                 <div className="engine-sub">
                   Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
                 </div>
-
                 <div className="engine-sub" style={{ opacity: 0.6 }}>
                   ENGINE: {engineHostLabel}
                 </div>
               </div>
 
-              <div className="engine-auth">
-                <div className="engine-indicators" aria-label="Engine indicators">
-                  <span className={`indicator ${snap?.ok ? "ok" : "warn"}`}>
+              <div className="engine-hero-right">
+                <div className="engine-hero-status" aria-label="Engine indicators">
+                  <span className={`indicator status ${snap?.ok ? "ok" : "warn"}`}>
                     STATUS <span>{snap?.ok ? "ONLINE" : "WAITING"}</span>
                   </span>
 
-                  <span className="indicator">
+                  <span className="indicator metric">
                     UPDATED <span>{snap?.lastOkIso ? snap.lastOkIso.slice(11, 19) : "—"}</span>
                   </span>
 
-                  <span className="indicator">
+                  <span className="indicator metric">
                     COINS <span>{coinsCount}</span>
                   </span>
 
-                  <span
-                    className={`indicator ${baselineIsReady ? "ok" : "warn"}`}
-                    title="Baseline measurement window (24h) — backend truth"
-                  >
-                    BASELINE <span>{baselineLabel}</span>
-                  </span>
-
-                  <span className={`indicator ${baselineIsReady ? "ok" : "warn"}`} title="Countdown to next daily issuance">
-                    NEXT DEPLOY <span>{nextDeployLabel}</span>
-                  </span>
-
-                  <span className="indicator" title="Slots currently visible to the system ledger">
-                    SLOTS{" "}
-                    <span>
-                      {slotsActive}/{Math.max(slotsTotal, 0)}
-                    </span>
-                  </span>
-
-                  <span
-                    className={`indicator ${engineMode === "EXECUTING" ? "ok" : "warn"}`}
-                    title="Engine lifecycle (best-effort until backend publishes a dedicated field)"
-                  >
-                    MODE <span>{engineMode}</span>
-                  </span>
-
-                  <span
-                    className={`indicator ${executionMode === "LIVE" ? "warn" : "ok"}`}
-                    title="Execution reality (SIM = no trades, LIVE = real trades)"
-                  >
-                    EXECUTION <span>{executionMode}</span>
-                  </span>
-
-                  <span className="indicator" title="Most recent ledger event (public)">
+                  <span className="indicator metric">
                     LAST <span>{lastAction ? lastAction.slice(-8) : "—"}</span>
-                  </span>
-
-                  <span className="indicator ok" title="Harvest-only AUD growth (excludes deposits/withdrawals)">
-                    HARVEST <span>{moneyAud(harvestAudTotal)}</span>
-                  </span>
-
-                  <span className="indicator" title="Harvest-only AUD delta over last 24h">
-                    24H <span>{moneyAud(harvestAud24h)}</span>
-                  </span>
-
-                  <span className="indicator" title="Harvest-only AUD delta over last 7 days">
-                    7D <span>{moneyAud(harvestAud7d)}</span>
                   </span>
                 </div>
 
@@ -627,59 +611,74 @@ export default function Engine() {
               </div>
             </div>
 
-            {/* ---------------- Harvester status strip (read-only) ---------------- */}
-            <div className="card machine-surface panel-frame engine-telemetry" aria-label="Harvester Status">
-              <div className="engine-telemetry-head">
-                <div className="engine-telemetry-title">Harvester Status</div>
-                <div className="engine-telemetry-note">Backend wiring clarity (read-only)</div>
+            {/* ================= CAPTURE CARDS (locked) ================= */}
+            <div className="engine-capture-grid" aria-label="Engine capture cards">
+              <div className="engine-capture card machine-surface panel-frame">
+                <div className="cap-k">Harvest Captured</div>
+                <div className="cap-v">{moneyAud(harvestAudTotal)}</div>
+                <div className="cap-sub">
+                  <span>24H {moneyAud(harvestAud24h)}</span>
+                  <span>•</span>
+                  <span>7D {moneyAud(harvestAud7d)}</span>
+                </div>
               </div>
 
-              <div className="engine-telemetry-grid">
-                <div className="engine-telemetry-item">
-                  <div className="engine-telemetry-k">Harvester</div>
-                  <div className="engine-telemetry-v">{meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}</div>
-                  <div className="engine-telemetry-sub">
-                    {meta?.gates?.writeEnabled === false
-                      ? "Writes disabled"
-                      : meta?.gates?.writeEnabled === true
-                      ? "Writes enabled"
-                      : "Write gate unknown"}
-                  </div>
+              <div className="engine-capture card machine-surface panel-frame">
+                <div className="cap-k">Baseline Window</div>
+                <div className="cap-v">{baselineLabel}</div>
+                <div className="cap-sub">
+                  <span>Next Deploy {nextDeployLabel}</span>
+                  <span>•</span>
+                  <span>Window {meta?.baseline?.currentWindow ?? "—"}</span>
                 </div>
+              </div>
 
-                <div className="engine-telemetry-item">
-                  <div className="engine-telemetry-k">Package phase</div>
-                  <div className="engine-telemetry-v">{meta ? pendingPhase : "BACKEND PENDING"}</div>
-                  <div className="engine-telemetry-sub">
-                    {meta?.baseline?.currentWindow != null ? `window ${meta.baseline.currentWindow}` : "—"}
-                  </div>
+              <div className="engine-capture card machine-surface panel-frame">
+                <div className="cap-k">Engine Mode</div>
+                <div className="cap-v">{engineMode}</div>
+                <div className="cap-sub">
+                  <span>Execution {executionMode}</span>
+                  <span>•</span>
+                  <span>
+                    Slots {slotsActive}/{Math.max(slotsTotal, 0)}
+                  </span>
                 </div>
+              </div>
 
-                <div className="engine-telemetry-item">
-                  <div className="engine-telemetry-k">Last tick</div>
-                  <div className="engine-telemetry-v">{meta ? lastTickAgo : "—"}</div>
-                  <div className="engine-telemetry-sub">{lastTickAt ? fmtEventTime(lastTickAt) : "—"}</div>
-                </div>
-
-                <div className="engine-telemetry-item">
-                  <div className="engine-telemetry-k">Last error</div>
-                  <div className="engine-telemetry-v">{lastErr ? "ERROR" : "—"}</div>
-                  <div className="engine-telemetry-sub">{lastErr ? lastErr.slice(0, 72) : "—"}</div>
+              <div className="engine-capture card machine-surface panel-frame">
+                <div className="cap-k">Harvester</div>
+                <div className="cap-v">{meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}</div>
+                <div className="cap-sub">
+                  <span>Phase {meta ? pendingPhase : "—"}</span>
+                  <span>•</span>
+                  <span>Tick {meta ? lastTickAgo : "—"}</span>
                 </div>
               </div>
             </div>
 
-            {/* ---------------- Controls ---------------- */}
+            {/* ================= CONTROLS ================= */}
             <div className="engine-controls" aria-label="Controls">
-              <button type="button" className={`button ghost ${feed === "all" ? "active" : ""}`} onClick={() => setFeed("all")}>
+              <button
+                type="button"
+                className={`button ghost ${feed === "all" ? "active" : ""}`}
+                onClick={() => setFeed("all")}
+              >
                 Feed: All
               </button>
 
-              <button type="button" className={`button ghost ${feed === "aud" ? "active" : ""}`} onClick={() => setFeed("aud")}>
+              <button
+                type="button"
+                className={`button ghost ${feed === "aud" ? "active" : ""}`}
+                onClick={() => setFeed("aud")}
+              >
                 Feed: AUD
               </button>
 
-              <button type="button" className={`button ghost ${feed === "watch" ? "active" : ""}`} onClick={() => setFeed("watch")}>
+              <button
+                type="button"
+                className={`button ghost ${feed === "watch" ? "active" : ""}`}
+                onClick={() => setFeed("watch")}
+              >
                 Feed: Watch
               </button>
 
@@ -731,142 +730,275 @@ export default function Engine() {
               </div>
             ) : null}
 
-            {/* ---------------- Market table ---------------- */}
-            <div className="market-console" aria-label="Market table">
-              <div className="market-head">
-                <div>Coin</div>
-                <div className="market-price">Bid</div>
-                <div className="market-price">Ask</div>
-                <div className="market-price">Mid</div>
-                <div className="market-price">Spread</div>
+            {/* ================= TWO-COLUMN CONSOLE (locked) ================= */}
+            <div className="engine-grid" aria-label="Engine bays">
+              {/* LEFT: Market surface */}
+              <div className="engine-bay engine-bay--wide">
+                <div className="bay-head">
+                  <div className="bay-title">Tradable Surface</div>
+                  <div className="bay-note">Bid/Ask/Mid + Spread (read-only)</div>
+                </div>
+
+                <div className="market-console" aria-label="Market table">
+                  <div className="market-head">
+                    <div>Coin</div>
+                    <div className="market-price">Bid</div>
+                    <div className="market-price">Ask</div>
+                    <div className="market-price">Mid</div>
+                    <div className="market-price">Spread</div>
+                  </div>
+
+                  {filtered.map((r) => {
+                    const mid = r.mid ?? (r.bid + r.ask) / 2;
+                    const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
+                    return (
+                      <div className="market-row" key={r.market ?? r.coin}>
+                        <div className="market-coin">
+                          <strong>{r.coin}</strong>
+                          <span className="market-market">{r.market ?? `${r.coin}/AUD`}</span>
+                        </div>
+
+                        <div className="market-price">{fmt(r.bid)}</div>
+                        <div className="market-price">{fmt(r.ask)}</div>
+                        <div className="market-price">{fmt(mid)}</div>
+                        <div className="market-price">{pctRatio(spread)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {filtered.map((r) => {
-                const mid = r.mid ?? (r.bid + r.ask) / 2;
-                const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
-                return (
-                  <div className="market-row" key={r.market ?? r.coin}>
-                    <div className="market-coin">
-                      <strong>{r.coin}</strong>
-                      <span className="market-market">{r.market ?? `${r.coin}/AUD`}</span>
+              {/* RIGHT: Analysis bay */}
+              <div className="engine-bay">
+                <div className="bay-head">
+                  <div className="bay-title">Engine Analysis</div>
+                  <div className="bay-note">UI preview + backend clarity</div>
+                </div>
+
+                <div className="engine-mini">
+                  <div className="engine-mini-row">
+                    <div className="mini-k">Write gate</div>
+                    <div className="mini-v">
+                      {meta?.gates?.writeEnabled === false
+                        ? "DISABLED"
+                        : meta?.gates?.writeEnabled === true
+                        ? "ENABLED"
+                        : "UNKNOWN"}
+                    </div>
+                  </div>
+
+                  <div className="engine-mini-row">
+                    <div className="mini-k">Last error</div>
+                    <div className="mini-v">{lastErr ? "ERROR" : "—"}</div>
+                  </div>
+
+                  {lastErr ? <div className="engine-mini-err">{String(lastErr).slice(0, 160)}</div> : null}
+                </div>
+
+                <div
+                  className="engine-mini-telemetry card machine-surface panel-frame"
+                  aria-label="Market Selection Telemetry"
+                >
+                  <div className="engine-telemetry-head">
+                    <div className="engine-telemetry-title">Market Selection Telemetry</div>
+                    <div className="engine-telemetry-note">Preview (UI-only)</div>
+                  </div>
+
+                  {telemetry ? (
+                    <div className="engine-telemetry-grid">
+                      <div className="engine-telemetry-item">
+                        <div className="engine-telemetry-k">Preview coin</div>
+                        <div className="engine-telemetry-v">{telemetry.coin}</div>
+                        <div className="engine-telemetry-sub">{telemetry.market}</div>
+                      </div>
+
+                      <div className="engine-telemetry-item">
+                        <div className="engine-telemetry-k">Mid</div>
+                        <div className="engine-telemetry-v">{fmt(telemetry.mid)}</div>
+                      </div>
+
+                      <div className="engine-telemetry-item">
+                        <div className="engine-telemetry-k">Spread</div>
+                        <div className="engine-telemetry-v">{pctRatio(telemetry.spread)}</div>
+                      </div>
+
+                      <div className="engine-telemetry-item">
+                        <div className="engine-telemetry-k">Score</div>
+                        <div className="engine-telemetry-v">{telemetry.score.toFixed(3)}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="engine-telemetry-pending">Telemetry pending (no rows).</div>
+                  )}
+                </div>
+
+                <div className="card machine-surface panel-frame engine-telemetry" aria-label="Harvester Status">
+                  <div className="engine-telemetry-head">
+                    <div className="engine-telemetry-title">Harvester Status</div>
+                    <div className="engine-telemetry-note">Backend wiring clarity (read-only)</div>
+                  </div>
+
+                  <div className="engine-telemetry-grid">
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">Harvester</div>
+                      <div className="engine-telemetry-v">
+                        {meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}
+                      </div>
+                      <div className="engine-telemetry-sub">
+                        {meta?.gates?.writeEnabled === false
+                          ? "Writes disabled"
+                          : meta?.gates?.writeEnabled === true
+                          ? "Writes enabled"
+                          : "Write gate unknown"}
+                      </div>
                     </div>
 
-                    <div className="market-price">{fmt(r.bid)}</div>
-                    <div className="market-price">{fmt(r.ask)}</div>
-                    <div className="market-price">{fmt(mid)}</div>
-                    <div className="market-price">{pctRatio(spread)}</div>
-                  </div>
-                );
-              })}
-            </div>
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">Package phase</div>
+                      <div className="engine-telemetry-v">{meta ? pendingPhase : "BACKEND PENDING"}</div>
+                      <div className="engine-telemetry-sub">
+                        {meta?.baseline?.currentWindow != null ? `window ${meta.baseline.currentWindow}` : "—"}
+                      </div>
+                    </div>
 
-            {/* ---------------- Market telemetry (UI preview) ---------------- */}
-            <div className="card machine-surface panel-frame engine-telemetry" aria-label="Market Selection Telemetry">
-              <div className="engine-telemetry-head">
-                <div className="engine-telemetry-title">Market Selection Telemetry</div>
-                <div className="engine-telemetry-note">
-                  Preview (UI-only). Backend ranking will publish <em>RANK</em> events + slot deploys.
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">Last tick</div>
+                      <div className="engine-telemetry-v">{meta ? lastTickAgo : "—"}</div>
+                      <div className="engine-telemetry-sub">{lastTickAt ? fmtEventTime(lastTickAt) : "—"}</div>
+                    </div>
+
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">Last error</div>
+                      <div className="engine-telemetry-v">{lastErr ? "ERROR" : "—"}</div>
+                      <div className="engine-telemetry-sub">{lastErr ? String(lastErr).slice(0, 72) : "—"}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {telemetry ? (
-                <div className="engine-telemetry-grid">
-                  <div className="engine-telemetry-item">
-                    <div className="engine-telemetry-k">Preview coin</div>
-                    <div className="engine-telemetry-v">{telemetry.coin}</div>
-                    <div className="engine-telemetry-sub">{telemetry.market}</div>
-                  </div>
-
-                  <div className="engine-telemetry-item">
-                    <div className="engine-telemetry-k">Mid</div>
-                    <div className="engine-telemetry-v">{fmt(telemetry.mid)}</div>
-                  </div>
-
-                  <div className="engine-telemetry-item">
-                    <div className="engine-telemetry-k">Spread</div>
-                    <div className="engine-telemetry-v">{pctRatio(telemetry.spread)}</div>
-                  </div>
-
-                  <div className="engine-telemetry-item">
-                    <div className="engine-telemetry-k">Preview score</div>
-                    <div className="engine-telemetry-v">{telemetry.score.toFixed(3)}</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="engine-telemetry-pending">Telemetry pending (no rows).</div>
-              )}
             </div>
 
             {/* ---------------- Section tabs ---------------- */}
             <div className="engine-section-tabs" aria-label="Engine sections">
-              <button type="button" className={`engine-section-tab ${section === "ledger" ? "active" : ""}`} onClick={() => setSection("ledger")}>
+              <button
+                type="button"
+                className={`engine-section-tab ${section === "ledger" ? "active" : ""}`}
+                onClick={() => setSection("ledger")}
+              >
                 Ledger
               </button>
-              <button type="button" className={`engine-section-tab ${section === "events" ? "active" : ""}`} onClick={() => setSection("events")}>
+              <button
+                type="button"
+                className={`engine-section-tab ${section === "events" ? "active" : ""}`}
+                onClick={() => setSection("events")}
+              >
                 Events
               </button>
-              <button type="button" className={`engine-section-tab ${section === "support" ? "active" : ""}`} onClick={() => setSection("support")}>
+              <button
+                type="button"
+                className={`engine-section-tab ${section === "support" ? "active" : ""}`}
+                onClick={() => setSection("support")}
+              >
                 Support Slots
               </button>
-              <button type="button" className={`engine-section-tab ${section === "about" ? "active" : ""}`} onClick={() => setSection("about")}>
+              <button
+                type="button"
+                className={`engine-section-tab ${section === "about" ? "active" : ""}`}
+                onClick={() => setSection("about")}
+              >
                 About
               </button>
             </div>
 
             {/* ---------------- Ledger (PUBLIC) ---------------- */}
             {section === "ledger" ? (
-              <div className="card machine-surface panel-frame engine-ledger" aria-label="Slots Ledger">
-                <div className="engine-ledger-top">
-                  <div>
-                    <div className="engine-ledger-title">Slots Ledger</div>
-                    <div className="engine-ledger-note">Read-only public ledger (backend sourced). Click any row to inspect slot history.</div>
+              <>
+                <div className="card machine-surface panel-frame engine-ledger" aria-label="Slots Ledger">
+                  <div className="engine-ledger-top">
+                    <div>
+                      <div className="engine-ledger-title">Slots Ledger</div>
+                      <div className="engine-ledger-note">
+                        Read-only public ledger (backend sourced). Click any row to inspect slot history.
+                      </div>
+                    </div>
+
+                    <div className="engine-ledger-counts">
+                      Active: <strong>{slotsActive}</strong> • Total: <strong>{slotsTotal}</strong>
+                    </div>
                   </div>
 
-                  <div className="engine-ledger-counts">
-                    Active: <strong>{slotsActive}</strong> • Total: <strong>{slotsTotal}</strong>
+                  <div className="ledger-table">
+                    <div className="ledger-head">
+                      <div>Slot ID</div>
+                      <div>Unit</div>
+                      <div>State</div>
+                      <div>Coin</div>
+                      <div className="num">Entry</div>
+                      <div className="num">Now</div>
+                      <div className="num">Net</div>
+                      <div>Level</div>
+                      <div className="num">Lock</div>
+                      <div>Age</div>
+                      <div className="num">Log</div>
+                    </div>
+
+                    {slotRows.length ? (
+                      slotRows.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className="ledger-row"
+                          onClick={() => setSelectedSlotId(s.id)}
+                          title="Open slot details"
+                        >
+                          <div className="ledger-slotid">{s.id}</div>
+                          <div>${s.unitAud}</div>
+                          <div>{s.state}</div>
+                          <div>{s.coin ?? "—"}</div>
+                          <div className="num">{s.entryMid != null ? fmt(s.entryMid) : "—"}</div>
+                          <div className="num">{s.nowMid != null ? fmt(s.nowMid) : "—"}</div>
+                          <div className="num">{s.netPct != null ? pctRatio(s.netPct) : "—"}</div>
+                          <div>{s.level ? `LVL${s.level}` : "—"}</div>
+                          <div className="num">{s.lockPct != null ? pctRatio(s.lockPct) : "—"}</div>
+                          <div>{ageLabel(nowMs - s.createdAt)}</div>
+                          <div className="num ledger-view">View</div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="ledger-empty">No slots in public ledger yet.</div>
+                    )}
+                  </div>
+
+                  <div className="engine-footer-note" style={{ marginTop: 12 }}>
+                    AUD growth shown on this page is harvest-only (market droid). External deposits/withdrawals are ignored.
                   </div>
                 </div>
 
-                <div className="ledger-table">
-                  <div className="ledger-head">
-                    <div>Slot ID</div>
-                    <div>Unit</div>
-                    <div>State</div>
-                    <div>Coin</div>
-                    <div className="num">Entry</div>
-                    <div className="num">Now</div>
-                    <div className="num">Net</div>
-                    <div>Level</div>
-                    <div className="num">Lock</div>
-                    <div>Age</div>
-                    <div className="num">Log</div>
+                {/* Desktop-only: keep the page alive by showing Events under Ledger */}
+                {showEventsUnderLedger ? (
+                  <div className="card machine-surface panel-frame engine-events" aria-label="Public Event Log">
+                    <div className="engine-events-top">
+                      <div className="engine-events-title">Public Event Log</div>
+                      <div className="engine-events-note">Append-only public log (no keys / no balances)</div>
+                    </div>
+
+                    <div className="event-log">
+                      {events.length ? (
+                        events.slice(0, 50).map((e) => (
+                          <div className="event-row" key={e.id}>
+                            <div className="event-time">{fmtEventTime(e.at)}</div>
+                            <div className="event-msg">
+                              <span className="event-kind">{e.kind}</span>{" "}
+                              <span className="event-text">{e.msg}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="event-empty">No events yet.</div>
+                      )}
+                    </div>
                   </div>
-
-                  {slotRows.length ? (
-                    slotRows.map((s) => (
-                      <button key={s.id} type="button" className="ledger-row" onClick={() => setSelectedSlotId(s.id)} title="Open slot details">
-                        <div className="ledger-slotid">{s.id}</div>
-                        <div>${s.unitAud}</div>
-                        <div>{s.state}</div>
-                        <div>{s.coin ?? "—"}</div>
-                        <div className="num">{s.entryMid != null ? fmt(s.entryMid) : "—"}</div>
-                        <div className="num">{s.nowMid != null ? fmt(s.nowMid) : "—"}</div>
-                        <div className="num">{s.netPct != null ? pctRatio(s.netPct) : "—"}</div>
-                        <div>{s.level ? `LVL${s.level}` : "—"}</div>
-                        <div className="num">{s.lockPct != null ? pctRatio(s.lockPct) : "—"}</div>
-                        <div>{ageLabel(nowMs - s.createdAt)}</div>
-                        <div className="num ledger-view">View</div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="ledger-empty">No slots in public ledger yet.</div>
-                  )}
-                </div>
-
-                <div className="engine-footer-note" style={{ marginTop: 12 }}>
-                  AUD growth shown on this page is harvest-only (market droid). External deposits/withdrawals are ignored.
-                </div>
-              </div>
+                ) : null}
+              </>
             ) : null}
 
             {/* ---------------- Events (PUBLIC) ---------------- */}
@@ -911,10 +1043,13 @@ export default function Engine() {
                       <strong>Slots activate soon.</strong>
                     </div>
 
-                    <div className="engine-slots-subcopy">All slots execute under identical deterministic harvester rules. Only unit size varies.</div>
+                    <div className="engine-slots-subcopy">
+                      All slots execute under identical deterministic harvester rules. Only unit size varies.
+                    </div>
 
                     <div className="engine-slots-timing">
-                      Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy: <strong>{nextDeployLabel}</strong>
+                      Baseline building: <strong>{baselineLabel}</strong> (24h) • Next deploy:{" "}
+                      <strong>{nextDeployLabel}</strong>
                     </div>
                   </div>
 

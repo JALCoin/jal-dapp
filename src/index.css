@@ -2809,3 +2809,209 @@ body[data-modal-open="true"] {
   .jeroid-grid { grid-template-columns: 1fr; }
   .event-row { grid-template-columns: 74px 1fr; }
 }
+/* =========================================================
+   LOCKED ENGINE LAYOUT (wins over duplicate engine blocks)
+   Goal: premium hierarchy + curved bays + clean glow
+========================================================= */
+
+/* Hero padding (wins) */
+.engine-shell .engine-window--hero{
+  padding: 18px;
+}
+
+/* HERO: left spacer | center title | right indicators */
+.engine-shell .engine-hero{
+  display:grid;
+  grid-template-columns: 1fr minmax(260px, 720px) 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+@media (max-width: 980px){
+  .engine-shell .engine-hero{
+    grid-template-columns: 1fr;
+    text-align:left;
+  }
+}
+
+.engine-shell .engine-hero-center{
+  text-align:center;
+}
+@media (max-width: 980px){
+  .engine-shell .engine-hero-center{ text-align:left; }
+}
+
+.engine-shell .engine-hero-right{
+  display:grid;
+  justify-items:end;
+  gap:10px;
+}
+@media (max-width: 980px){
+  .engine-shell .engine-hero-right{ justify-items:start; }
+}
+
+/* Pills container in right column */
+.engine-shell .engine-hero-status{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:flex-end;
+}
+@media (max-width: 980px){
+  .engine-shell .engine-hero-status{ justify-content:flex-start; }
+}
+
+/* Capture cards */
+.engine-shell .engine-capture-grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 10px 0 14px;
+}
+@media (max-width: 980px){
+  .engine-shell .engine-capture-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px){
+  .engine-shell .engine-capture-grid{ grid-template-columns: 1fr; }
+}
+
+.engine-shell .engine-capture{
+  padding: 14px;
+  border-radius: 20px;
+  background:
+    radial-gradient(900px 240px at 30% 0%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.28));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.05),
+    0 12px 44px rgba(0,0,0,.55);
+}
+
+.engine-shell .cap-k{
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  opacity: .72;
+}
+.engine-shell .cap-v{
+  margin-top: 6px;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: .02em;
+  text-shadow: var(--glow-white);
+}
+.engine-shell .cap-sub{
+  margin-top: 6px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  opacity:.78;
+  font-size: 13px;
+}
+
+/* Two-column bays */
+.engine-shell .engine-grid{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+  align-items:start;
+}
+
+.engine-shell .engine-bay{
+  grid-column: span 4;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.12);
+  background:
+    radial-gradient(900px 240px at 20% 0%, rgba(255,255,255,.05), rgba(255,255,255,0)),
+    linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.28));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.05),
+    0 12px 44px rgba(0,0,0,.55);
+  padding: 14px;
+  overflow:hidden;
+  position:relative;
+}
+
+.engine-shell .engine-bay::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.30;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.04), transparent 35%, rgba(255,255,255,.03)),
+    radial-gradient(520px 180px at 90% 120%, rgba(0,240,255,.10), transparent 60%);
+  mask-image: radial-gradient(70% 70% at 50% 35%, #000 0%, rgba(0,0,0,.6) 60%, transparent 85%);
+}
+
+.engine-shell .engine-bay--wide{
+  grid-column: span 8;
+}
+
+@media (max-width: 980px){
+  .engine-shell .engine-bay,
+  .engine-shell .engine-bay--wide{ grid-column: span 12; }
+}
+
+/* Bay head */
+.engine-shell .bay-head{
+  position:relative;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom: 10px;
+}
+.engine-shell .bay-title{
+  font-weight: 900;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  opacity: .92;
+}
+.engine-shell .bay-note{
+  opacity: .70;
+  font-size: 13px;
+}
+
+/* Analysis mini block */
+.engine-shell .engine-mini{
+  position:relative;
+  display:grid;
+  gap:10px;
+  margin-bottom: 12px;
+}
+.engine-shell .engine-mini-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.22);
+}
+.engine-shell .mini-k{
+  font-size: 12px;
+  letter-spacing:.14em;
+  text-transform: uppercase;
+  opacity:.72;
+}
+.engine-shell .mini-v{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  opacity:.92;
+}
+.engine-shell .engine-mini-err{
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,80,80,.22);
+  background: rgba(255,80,80,.07);
+  opacity: .92;
+  font-size: 13px;
+}
+
+/* Make telemetry card sit clean inside bay */
+.engine-shell .engine-mini-telemetry{
+  padding: 14px;
+  border-radius: 18px;
+}
