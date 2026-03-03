@@ -3015,3 +3015,139 @@ body[data-modal-open="true"] {
   padding: 14px;
   border-radius: 18px;
 }
+/* ===============================
+   Engine — density + hierarchy pass
+=================================*/
+
+.engine-window--hero{
+  padding-top: 18px;
+  padding-bottom: 22px;
+}
+
+.engine-hero{
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.engine-title{
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+
+.engine-sub{
+  line-height: 1.2;
+}
+
+.engine-hero-status{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-content: start;
+}
+
+.engine-auth-hint{
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+/* Capture cards */
+.engine-capture-grid{
+  margin-top: 10px;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.engine-capture .cap-k{
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  opacity: 0.78;
+}
+
+.engine-capture .cap-v{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  margin-top: 6px;
+}
+
+.engine-capture .cap-sub{
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.7;
+  gap: 8px;
+}
+
+/* Controls row */
+.engine-controls{
+  margin-top: 10px;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.engine-filter{
+  min-width: 260px;
+}
+
+/* Error banner */
+.engine-log{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+.engine-log pre{
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  opacity: 0.9;
+}
+
+/* Two-column bays */
+.engine-grid{
+  margin-top: 12px;
+  gap: 14px;
+}
+
+.engine-bay--wide{
+  min-height: 620px;
+}
+
+.market-console{
+  height: 560px;
+  overflow: auto;
+  border-radius: 16px;
+}
+
+.market-head{
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  backdrop-filter: blur(10px);
+}
+
+/* Right bay cards spacing */
+.engine-mini,
+.engine-mini-telemetry,
+.engine-telemetry{
+  margin-top: 12px;
+}
+
+/* Tabs separation */
+.engine-section-tabs{
+  margin-top: 14px;
+}
+
+/* Responsive */
+@media (max-width: 900px){
+  .engine-hero-status{
+    grid-template-columns: 1fr;
+  }
+  .market-console{
+    height: 420px;
+  }
+  .engine-bay--wide{
+    min-height: auto;
+  }
+}
