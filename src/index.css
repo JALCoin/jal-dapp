@@ -3150,4 +3150,11 @@ body[data-modal-open="true"] {
   .engine-bay--wide{
     min-height: auto;
   }
+  .engine-shell[data-view="simple"] .engine-bay:not(.engine-bay--wide){
+  display:none;
+}
+
+.engine-shell[data-view="simple"] .engine-section-tab[data-advanced="true"]{
+  opacity:.45;
+}
 }
