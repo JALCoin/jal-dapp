@@ -1536,4 +1536,116 @@ main[role="main"], main{
     transition:none;
     animation:none;
   }
+  /* =========================================================
+   ENGINE — polish pass (end-of-file override)
+   Goal: tighter hero, sticky controls, cleaner bays
+========================================================= */
+
+.engine-shell .engine-window--hero{
+  padding: 16px 18px 14px;
+}
+
+/* Desktop: subtle separation between center + right status column */
+@media (min-width: 980px){
+  .engine-shell .engine-hero{
+    position: relative;
+  }
+  .engine-shell .engine-hero::after{
+    content:"";
+    position:absolute;
+    top: 8px;
+    bottom: 8px;
+    right: calc(18px + 1fr); /* harmless fallback if grid shifts */
+    width: 1px;
+    opacity:.25;
+  }
+}
+
+/* Tighten title + sub */
+.engine-shell .engine-title{
+  font-size: clamp(26px, 3vw, 34px);
+  margin-bottom: 4px;
+}
+.engine-shell .engine-sub{
+  opacity: .72;
+  font-size: 13px;
+}
+
+/* Right pills: more “panel” less “floating” */
+.engine-shell .engine-hero-right{
+  padding-top: 4px;
+}
+.engine-shell .engine-hero-status .indicator{
+  background: rgba(0,0,0,.32);
+  border-color: rgba(255,255,255,.16);
+}
+
+/* Sticky control bar */
+.engine-shell .engine-controls{
+  position: sticky;
+  top: 74px; /* adjust if header height changes */
+  z-index: 30;
+  padding: 10px 0;
+  background: linear-gradient(180deg, rgba(10,14,18,.78), rgba(10,14,18,0));
+  backdrop-filter: blur(10px);
+}
+
+/* Buttons: slightly more “console key” feel */
+.engine-shell .engine-controls .button,
+.engine-shell .engine-controls .chip,
+.engine-shell .engine-section-tab{
+  border-radius: 14px;
+}
+
+/* Market bay: make it feel embedded */
+.engine-shell .market-console{
+  border-radius: 18px;
+  background: rgba(0,0,0,.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 18px 40px rgba(0,0,0,.42);
+}
+
+/* Market header: always sticky + slightly denser */
+.engine-shell .market-head{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(0,0,0,.46);
+  backdrop-filter: blur(10px);
+}
+
+/* Numeric columns: crisp */
+.engine-shell .market-price{
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
+
+/* Ledger + events bays: unify bezel look (reduce glow reliance) */
+.engine-shell .engine-ledger,
+.engine-shell .engine-events{
+  background: rgba(0,0,0,.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 18px 40px rgba(0,0,0,.42);
+}
+
+/* Scrollbars: match console (Chrome/Edge) */
+.market-console::-webkit-scrollbar,
+.event-log::-webkit-scrollbar,
+.engine-log::-webkit-scrollbar{
+  width: 10px;
+}
+.market-console::-webkit-scrollbar-thumb,
+.event-log::-webkit-scrollbar-thumb,
+.engine-log::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.14);
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,.25);
+}
+.market-console::-webkit-scrollbar-thumb:hover,
+.event-log::-webkit-scrollbar-thumb:hover,
+.engine-log::-webkit-scrollbar-thumb:hover{
+  background: rgba(17,241,167,.22);
+}
 }
