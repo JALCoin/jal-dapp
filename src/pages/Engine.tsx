@@ -158,7 +158,6 @@ type PublicMetaResponse = {
     lastIssuedWindow?: number | null;
   };
 
-  // server.cjs passes through harvester.getStatus() + executor.getStatus()
   harvester?: any;
   executor?: any;
 
@@ -205,7 +204,6 @@ function safeUpper(s: any) {
   return typeof s === "string" ? s.toUpperCase() : "";
 }
 
-// UI-only exclusions for preview telemetry (prevents stablecoins "winning" the preview)
 const PREVIEW_EXCLUDE = new Set(["USDT", "USDC", "DAI", "TUSD", "USDP", "FDUSD", "EURT"]);
 
 // ---------------- Harvest-only AUD growth (UI fallback from events) ----------------
@@ -246,7 +244,11 @@ function parseHarvestAudFromEvents(events: SlotEvent[]) {
 
 function moneyAud(n: number | null | undefined) {
   if (n == null || !Number.isFinite(n)) return "—";
-  return n.toLocaleString(undefined, { style: "currency", currency: "AUD", maximumFractionDigits: 2 });
+  return n.toLocaleString(undefined, {
+    style: "currency",
+    currency: "AUD",
+    maximumFractionDigits: 2,
+  });
 }
 
 // Small helper: read desktop breakpoint once (avoids re-render spam)
@@ -499,8 +501,8 @@ export default function Engine() {
     feed === "all"
       ? snap?.counts?.all ?? rows.length
       : feed === "aud"
-      ? snap?.counts?.aud ?? rows.length
-      : snap?.counts?.watch ?? rows.length;
+        ? snap?.counts?.aud ?? rows.length
+        : snap?.counts?.watch ?? rows.length;
 
   // ---------------- Telemetry (UI preview only) ----------------
   const telemetry = useMemo(() => {
@@ -631,14 +633,10 @@ export default function Engine() {
                       LAST <span>{lastAction ? lastAction.slice(-8) : "—"}</span>
                     </span>
                   </div>
-
-                  <div className="engine-auth-hint">
-                    AUD growth shown here is <strong>harvest-only</strong>. External transfers are ignored.
-                  </div>
                 </div>
               </div>
 
-              {/* ================= CAPTURE CARDS (locked) ================= */}
+              {/* ================= CAPTURE CARDS (ENGINE ONLY / 3-UP) ================= */}
               <div className="engine-capture-grid" aria-label="Engine capture cards">
                 <div className="engine-capture card machine-surface panel-frame">
                   <div className="cap-k">Harvest Captured</div>
@@ -669,16 +667,6 @@ export default function Engine() {
                     <span>
                       Slots {slotsActive}/{Math.max(slotsTotal, 0)}
                     </span>
-                  </div>
-                </div>
-
-                <div className="engine-capture card machine-surface panel-frame">
-                  <div className="cap-k">Harvester</div>
-                  <div className="cap-v">{meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}</div>
-                  <div className="cap-sub">
-                    <span>Phase {meta ? pendingPhase : "—"}</span>
-                    <span>•</span>
-                    <span>Tick {meta ? lastTickAgo : "—"}</span>
                   </div>
                 </div>
               </div>
@@ -928,6 +916,41 @@ export default function Engine() {
                LEDGER ZONE (gold / treasury)
             ========================================================= */}
             <div className="engine-zone" data-zone="ledger">
+              {/* ---------------- Jeroid Console Row (TREASURY HEADER) ---------------- */}
+              <div className="engine-ledger-topgrid" aria-label="Jeroid status cards">
+                <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
+                  <div className="cap-k">Jeroid Harvester</div>
+                  <div className="cap-v">{meta ? (harvesterRunning ? "RUNNING" : "STOPPED") : "BACKEND PENDING"}</div>
+                  <div className="cap-sub">
+                    <span>Phase {meta ? pendingPhase : "—"}</span>
+                    <span>•</span>
+                    <span>Tick {meta ? lastTickAgo : "—"}</span>
+                    {lastErr ? (
+                      <>
+                        <span>•</span>
+                        <span style={{ opacity: 0.9 }}>ERR</span>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
+                  <div className="cap-k">Slots / Execution</div>
+                  <div className="cap-v">
+                    {slotsActive}/{Math.max(slotsTotal, 0)}
+                  </div>
+                  <div className="cap-sub">
+                    <span>Exec {executionMode}</span>
+                    <span>•</span>
+                    <span>Mode {engineMode}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="engine-footer-note" style={{ marginTop: 10 }}>
+                AUD growth shown here is <strong>harvest-only</strong>. External transfers are ignored.
+              </div>
+
               {/* ---------------- Section tabs ---------------- */}
               <div className="engine-section-tabs" aria-label="Engine sections">
                 <button
@@ -946,7 +969,6 @@ export default function Engine() {
                   Events
                 </button>
 
-                {/* ✅ Hide these tabs entirely in Simple view */}
                 {view === "advanced" ? (
                   <>
                     <button
@@ -1334,7 +1356,9 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">(Backend should attach exact friction/spread assumptions + entry band parameters here.)</div>
+              <div className="slot-rules-note">
+                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
+              </div>
             </div>
           </div>
         </div>
