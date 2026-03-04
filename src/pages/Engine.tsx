@@ -90,6 +90,8 @@ type ExecutionMode = "SIM" | "LIVE";
 
 type SlotState =
   | "QUEUED"
+  | "WAITING_ENTRY"
+  | "DEPLOYING"
   | "TRACKING"
   | "HOLDING"
   | "LVL1_LOCK"
@@ -125,6 +127,7 @@ type SlotEvent = {
     | "LVL_REACHED"
     | "LOCK_UPDATED"
     | "EXIT_TRIGGER"
+    | "SLOT_EXITED"
     | "NOTE";
   msg: string;
   slotId?: string;
@@ -143,10 +146,15 @@ type PublicMetaResponse = {
 
   gates?: {
     writeEnabled?: boolean;
+
     harvesterEnabled?: boolean;
     harvesterTickMs?: number;
+
     executorEnabled?: boolean;
     executorTickMs?: number;
+
+    managerEnabled?: boolean;
+    managerTickMs?: number;
   };
 
   baseline?: {
@@ -160,6 +168,7 @@ type PublicMetaResponse = {
 
   harvester?: any;
   executor?: any;
+  manager?: any;
 
   market?: {
     snapshot?: any;
@@ -316,7 +325,7 @@ export default function Engine() {
   type Section = "ledger" | "events" | "support" | "about";
   const [section, setSection] = useState<Section>("ledger");
 
-  // ✅ Split event collapse state (prevents Ledger toggle affecting Events tab)
+  // Split event collapse state (prevents Ledger toggle affecting Events tab)
   const [ledgerEventsOpen, setLedgerEventsOpen] = useState(false);
   const [eventsPageOpen, setEventsPageOpen] = useState(false);
 
@@ -585,7 +594,6 @@ export default function Engine() {
   const harvestAud7d = harvestFallback.last7d;
 
   // Desktop polish: keep Events visible under Ledger on desktop.
-  // NOTE: in SIMPLE mode we keep it collapsed behind a toggle.
   const showEventsUnderLedger = isDesktop && section === "ledger";
 
   return (
@@ -601,21 +609,49 @@ export default function Engine() {
                ENGINE ZONE (cyan / machine)
             ========================================================= */}
             <div className="engine-zone" data-zone="engine">
-              {/* ================= HERO (locked) ================= */}
-              <div className="engine-hero">
-                <div className="engine-hero-left" />
+              {/* ================= HERO (2-col hooks) ================= */}
+              <header className="engine-hero" aria-label="Engine header">
+                {/* Main column */}
+                <div className="engine-hero-main">
+                  <div className="engine-hero-center">
+                    <h1 className="engine-title">$JAL~Engine</h1>
+                    <div className="engine-sub">
+                      Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
+                    </div>
+                    <div className="engine-sub engine-sub--muted">ENGINE: {engineHostLabel}</div>
+                  </div>
 
-                <div className="engine-hero-center">
-                  <h1 className="engine-title">$JAL~Engine</h1>
-                  <div className="engine-sub">
-                    Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
-                  </div>
-                  <div className="engine-sub" style={{ opacity: 0.6 }}>
-                    ENGINE: {engineHostLabel}
-                  </div>
+                  {/* Compact strip under title (advanced only) */}
+                  {view === "advanced" ? (
+                    <div
+                      className="card machine-surface panel-frame engine-telemetry engine-telemetry--compact"
+                      aria-label="Engine Analysis (compact)"
+                    >
+                      <div className="engine-mini">
+                        <div className="engine-mini-row">
+                          <div className="mini-k">Write gate</div>
+                          <div className="mini-v">
+                            {meta?.gates?.writeEnabled === false
+                              ? "DISABLED"
+                              : meta?.gates?.writeEnabled === true
+                                ? "ENABLED"
+                                : "UNKNOWN"}
+                          </div>
+                        </div>
+
+                        <div className="engine-mini-row">
+                          <div className="mini-k">Last error</div>
+                          <div className="mini-v">{lastErr ? "ERROR" : "—"}</div>
+                        </div>
+
+                        {lastErr ? <div className="engine-mini-err">{String(lastErr).slice(0, 160)}</div> : null}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
-                <div className="engine-hero-right">
+                {/* Right HUD column */}
+                <aside className="engine-hero-hud" aria-label="Engine HUD">
                   <div className="engine-hero-status" aria-label="Engine indicators">
                     <span className={`indicator status ${snap?.ok ? "ok" : "warn"}`}>
                       STATUS <span>{snap?.ok ? "ONLINE" : "WAITING"}</span>
@@ -633,8 +669,12 @@ export default function Engine() {
                       LAST <span>{lastAction ? lastAction.slice(-8) : "—"}</span>
                     </span>
                   </div>
-                </div>
-              </div>
+
+                  <div className="engine-hud-note">
+                    AUD growth shown here is <strong>harvest-only</strong>. External transfers are ignored.
+                  </div>
+                </aside>
+              </header>
 
               {/* ================= CAPTURE CARDS (ENGINE ONLY / 3-UP) ================= */}
               <div className="engine-capture-grid" aria-label="Engine capture cards">
@@ -671,80 +711,82 @@ export default function Engine() {
                 </div>
               </div>
 
-              {/* ================= CONTROLS ================= */}
-              <div className="engine-controls" aria-label="Controls">
-                <button
-                  type="button"
-                  className={`button ghost ${view === "advanced" ? "active" : ""}`}
-                  onClick={() => setView(view === "simple" ? "advanced" : "simple")}
-                >
-                  View: {view === "simple" ? "Simple" : "Advanced"}
-                </button>
+              {/* ================= CONTROLS (wrapper for sticky/blur via CSS) ================= */}
+              <div className="engine-controls-wrap" aria-label="Controls">
+                <div className="engine-controls">
+                  <button
+                    type="button"
+                    className={`button ghost ${view === "advanced" ? "active" : ""}`}
+                    onClick={() => setView(view === "simple" ? "advanced" : "simple")}
+                  >
+                    View: {view === "simple" ? "Simple" : "Advanced"}
+                  </button>
 
-                <button
-                  type="button"
-                  className={`button ghost ${feed === "all" ? "active" : ""}`}
-                  onClick={() => setFeed("all")}
-                >
-                  Feed: All
-                </button>
+                  <button
+                    type="button"
+                    className={`button ghost ${feed === "all" ? "active" : ""}`}
+                    onClick={() => setFeed("all")}
+                  >
+                    Feed: All
+                  </button>
 
-                <button
-                  type="button"
-                  className={`button ghost ${feed === "aud" ? "active" : ""}`}
-                  onClick={() => setFeed("aud")}
-                >
-                  Feed: AUD
-                </button>
+                  <button
+                    type="button"
+                    className={`button ghost ${feed === "aud" ? "active" : ""}`}
+                    onClick={() => setFeed("aud")}
+                  >
+                    Feed: AUD
+                  </button>
 
-                <button
-                  type="button"
-                  className={`button ghost ${feed === "watch" ? "active" : ""}`}
-                  onClick={() => setFeed("watch")}
-                >
-                  Feed: Watch
-                </button>
+                  <button
+                    type="button"
+                    className={`button ghost ${feed === "watch" ? "active" : ""}`}
+                    onClick={() => setFeed("watch")}
+                  >
+                    Feed: Watch
+                  </button>
 
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => {
-                    setSortKey("spread");
-                    setSortDir("desc");
-                  }}
-                >
-                  Sort: Spread
-                </button>
+                  <button
+                    type="button"
+                    className="button ghost"
+                    onClick={() => {
+                      setSortKey("spread");
+                      setSortDir("desc");
+                    }}
+                  >
+                    Sort: Spread
+                  </button>
 
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => {
-                    setSortKey("coin");
-                    setSortDir("asc");
-                  }}
-                >
-                  Sort: A→Z
-                </button>
+                  <button
+                    type="button"
+                    className="button ghost"
+                    onClick={() => {
+                      setSortKey("coin");
+                      setSortDir("asc");
+                    }}
+                  >
+                    Sort: A→Z
+                  </button>
 
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => {
-                    setSortKey("mid");
-                    setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-                  }}
-                >
-                  Sort: Price
-                </button>
+                  <button
+                    type="button"
+                    className="button ghost"
+                    onClick={() => {
+                      setSortKey("mid");
+                      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                    }}
+                  >
+                    Sort: Price
+                  </button>
 
-                <input
-                  className="engine-filter"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Filter (e.g. BTC, SOL, XRP)…"
-                  aria-label="Filter coins"
-                />
+                  <input
+                    className="engine-filter"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Filter (e.g. BTC, SOL, XRP)…"
+                    aria-label="Filter coins"
+                  />
+                </div>
               </div>
 
               {err ? (
@@ -771,23 +813,25 @@ export default function Engine() {
                       <div className="market-price">Spread</div>
                     </div>
 
-                    {filtered.map((r) => {
-                      const mid = r.mid ?? (r.bid + r.ask) / 2;
-                      const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
-                      return (
-                        <div className="market-row" key={r.market ?? r.coin}>
-                          <div className="market-coin">
-                            <strong>{r.coin}</strong>
-                            <span className="market-market">{r.market ?? `${r.coin}/AUD`}</span>
-                          </div>
+                    <div className="market-body" aria-label="Market rows">
+                      {filtered.map((r) => {
+                        const mid = r.mid ?? (r.bid + r.ask) / 2;
+                        const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
+                        return (
+                          <div className="market-row" key={r.market ?? r.coin}>
+                            <div className="market-coin">
+                              <strong>{r.coin}</strong>
+                              <span className="market-market">{r.market ?? `${r.coin}/AUD`}</span>
+                            </div>
 
-                          <div className="market-price">{fmt(r.bid)}</div>
-                          <div className="market-price">{fmt(r.ask)}</div>
-                          <div className="market-price">{fmt(mid)}</div>
-                          <div className="market-price">{pctRatio(spread)}</div>
-                        </div>
-                      );
-                    })}
+                            <div className="market-price">{fmt(r.bid)}</div>
+                            <div className="market-price">{fmt(r.ask)}</div>
+                            <div className="market-price">{fmt(mid)}</div>
+                            <div className="market-price">{pctRatio(spread)}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
@@ -797,26 +841,6 @@ export default function Engine() {
                     <div className="bay-head">
                       <div className="bay-title">Engine Analysis</div>
                       <div className="bay-note">UI preview + backend clarity</div>
-                    </div>
-
-                    <div className="engine-mini">
-                      <div className="engine-mini-row">
-                        <div className="mini-k">Write gate</div>
-                        <div className="mini-v">
-                          {meta?.gates?.writeEnabled === false
-                            ? "DISABLED"
-                            : meta?.gates?.writeEnabled === true
-                              ? "ENABLED"
-                              : "UNKNOWN"}
-                        </div>
-                      </div>
-
-                      <div className="engine-mini-row">
-                        <div className="mini-k">Last error</div>
-                        <div className="mini-v">{lastErr ? "ERROR" : "—"}</div>
-                      </div>
-
-                      {lastErr ? <div className="engine-mini-err">{String(lastErr).slice(0, 160)}</div> : null}
                     </div>
 
                     <div
@@ -916,7 +940,6 @@ export default function Engine() {
                LEDGER ZONE (gold / treasury)
             ========================================================= */}
             <div className="engine-zone" data-zone="ledger">
-              {/* ---------------- Jeroid Console Row (TREASURY HEADER) ---------------- */}
               <div className="engine-ledger-topgrid" aria-label="Jeroid status cards">
                 <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
                   <div className="cap-k">Jeroid Harvester</div>
@@ -928,7 +951,7 @@ export default function Engine() {
                     {lastErr ? (
                       <>
                         <span>•</span>
-                        <span style={{ opacity: 0.9 }}>ERR</span>
+                        <span className="cap-err">ERR</span>
                       </>
                     ) : null}
                   </div>
@@ -947,7 +970,7 @@ export default function Engine() {
                 </div>
               </div>
 
-              <div className="engine-footer-note" style={{ marginTop: 10 }}>
+              <div className="engine-footer-note engine-footer-note--spaced">
                 AUD growth shown here is <strong>harvest-only</strong>. External transfers are ignored.
               </div>
 
@@ -1051,12 +1074,12 @@ export default function Engine() {
                       )}
                     </div>
 
-                    <div className="engine-footer-note" style={{ marginTop: 12 }}>
+                    <div className="engine-footer-note engine-footer-note--spaced">
                       AUD growth shown on this page is harvest-only (market droid). External deposits/withdrawals are ignored.
                     </div>
                   </div>
 
-                  {/* Events under ledger: ALWAYS PRESENT, COLLAPSIBLE (default closed in Simple) */}
+                  {/* Events under ledger: ALWAYS PRESENT (desktop), COLLAPSIBLE */}
                   {showEventsUnderLedger ? (
                     <div className="card machine-surface panel-frame engine-events" aria-label="Public Event Log">
                       <div className="engine-events-top">
@@ -1123,8 +1146,7 @@ export default function Engine() {
                           <div className="event-row" key={e.id}>
                             <div className="event-time">{fmtEventTime(e.at)}</div>
                             <div className="event-msg">
-                              <span className="event-kind">{e.kind}</span>{" "}
-                              <span className="event-text">{e.msg}</span>
+                              <span className="event-kind">{e.kind}</span> <span className="event-text">{e.msg}</span>
                             </div>
                           </div>
                         ))
@@ -1166,9 +1188,7 @@ export default function Engine() {
                         </div>
                       </div>
 
-                      <div className="engine-slots-right">
-                        1 unit = 1 slot • Public slot ID + log reference (when enabled)
-                      </div>
+                      <div className="engine-slots-right">1 unit = 1 slot • Public slot ID + log reference (when enabled)</div>
                     </div>
 
                     <div className="jeroid-grid">
@@ -1297,7 +1317,7 @@ export default function Engine() {
                 <div className="slot-drawer-sub">
                   Unit ${selectedSlot.unitAud} • {selectedSlot.state} • {selectedSlot.coin ?? "—"}{" "}
                   {selectedSlot.source ? `• ${selectedSlot.source}` : ""}
-                  <span style={{ marginLeft: 10, opacity: 0.75 }}>Esc to close</span>
+                  <span className="slot-drawer-esc">Esc to close</span>
                 </div>
               </div>
 
