@@ -311,6 +311,26 @@ function useIsDesktop(bpPx = 980) {
 }
 
 /* =========================
+   ENTRY display rule (fix ENTRY showing 0)
+   - Never show 0 unless backend truly sent 0 (it shouldn't)
+   - WAITING_ENTRY: show last-known price instead of "0" (entryMid -> nowMid -> —)
+========================= */
+function entryDisplayValue(s: SlotRow): number | null {
+  // ENTRY should represent "reference entry" for the slot lifecycle.
+  // If the slot is WAITING_ENTRY (post-exit), entryMid was cleared intentionally.
+  // For that state, show the last known nowMid (or —) rather than 0.
+  if (s.state === "WAITING_ENTRY") {
+    return s.nowMid != null && Number.isFinite(s.nowMid) ? s.nowMid : null;
+  }
+  return s.entryMid != null && Number.isFinite(s.entryMid) ? s.entryMid : null;
+}
+
+function entryLabel(s: SlotRow): string {
+  const v = entryDisplayValue(s);
+  return v != null ? fmt(v) : "—";
+}
+
+/* =========================
    Component
 ========================= */
 export default function Engine() {
@@ -791,19 +811,11 @@ export default function Engine() {
                     View: {view === "simple" ? "Simple" : "Advanced"}
                   </button>
 
-                  <button
-                    type="button"
-                    className={`button ghost ${feed === "all" ? "active" : ""}`}
-                    onClick={() => setFeed("all")}
-                  >
+                  <button type="button" className={`button ghost ${feed === "all" ? "active" : ""}`} onClick={() => setFeed("all")}>
                     Feed: All
                   </button>
 
-                  <button
-                    type="button"
-                    className={`button ghost ${feed === "aud" ? "active" : ""}`}
-                    onClick={() => setFeed("aud")}
-                  >
+                  <button type="button" className={`button ghost ${feed === "aud" ? "active" : ""}`} onClick={() => setFeed("aud")}>
                     Feed: AUD
                   </button>
 
@@ -1135,7 +1147,10 @@ export default function Engine() {
                             <div>${s.unitAud}</div>
                             <div>{s.state}</div>
                             <div>{s.coin ?? "—"}</div>
-                            <div className="num">{s.entryMid != null ? fmt(s.entryMid) : "—"}</div>
+
+                            {/* ✅ ENTRY FIX: never show 0 for WAITING_ENTRY; uses entryMid for live states */}
+                            <div className="num">{entryLabel(s)}</div>
+
                             <div className="num">{s.nowMid != null ? fmt(s.nowMid) : "—"}</div>
                             <div className="num">{s.grossPct != null ? pctNum(s.grossPct) : "—"}</div>
                             <div className="num">{s.netPct != null ? pctNum(s.netPct) : "—"}</div>
@@ -1406,7 +1421,8 @@ export default function Engine() {
             <div className="slot-drawer-grid">
               <div>
                 <div className="slot-k">Entry</div>
-                <div className="slot-v">{selectedSlot.entryMid != null ? fmt(selectedSlot.entryMid) : "—"}</div>
+                {/* ✅ ENTRY FIX mirrors table: WAITING_ENTRY shows last-known nowMid, not 0 */}
+                <div className="slot-v">{entryLabel(selectedSlot)}</div>
               </div>
               <div>
                 <div className="slot-k">Now</div>
@@ -1459,9 +1475,7 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">
-                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
-              </div>
+              <div className="slot-rules-note">(Backend should attach exact friction/spread assumptions + entry band parameters here.)</div>
             </div>
           </div>
         </div>
