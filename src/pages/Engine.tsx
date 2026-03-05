@@ -11,7 +11,7 @@ type MarketRow = {
   last?: number | null;
   mid?: number | null;
   spreadAbs?: number | null;
-  spreadPct?: number | null; // ratio
+  spreadPct?: number | null; // IMPORTANT: percent NUMBER (e.g. 2.5 means 2.5%)
 };
 
 type Snapshot = {
@@ -36,9 +36,10 @@ function fmt(n: number) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 10 });
 }
 
-function pctRatio(r: number | null | undefined) {
-  if (r == null || !Number.isFinite(r)) return "—";
-  return `${(r * 100).toFixed(3)}%`;
+/** percent NUMBER -> string (e.g. 2.345 => "2.345%") */
+function pctNum(p: number | null | undefined) {
+  if (p == null || !Number.isFinite(p)) return "—";
+  return `${p.toFixed(3)}%`;
 }
 
 function feedLabel(feed: Feed) {
@@ -105,14 +106,21 @@ type SlotRow = {
   unitAud: number;
   state: SlotState;
   coin: string | null;
+
   entryMid: number | null;
   nowMid: number | null;
-  netPct: number | null; // ratio
+
+  /** IMPORTANT: percent NUMBER (already after friction if manager implements it) */
+  netPct: number | null;
+
   level: 0 | 1 | 2 | 3 | 4;
-  lockPct: number | null; // ratio
+
+  /** IMPORTANT: percent NUMBER */
+  lockPct: number | null;
+
   createdAt: number;
   updatedAt: number;
-  source?: ExecutionMode; // optional
+  source?: ExecutionMode;
 };
 
 type SlotEvent = {
@@ -128,7 +136,8 @@ type SlotEvent = {
     | "LOCK_UPDATED"
     | "EXIT_TRIGGER"
     | "SLOT_EXITED"
-    | "NOTE";
+    | "NOTE"
+    | "ERROR";
   msg: string;
   slotId?: string;
   coin?: string;
@@ -494,9 +503,17 @@ export default function Engine() {
 
     const getNum = (r: MarketRow) => {
       const mid = r.mid ?? (r.bid + r.ask) / 2;
-      const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
+
+      // spreadPct is percent number; fallback compute percent number.
+      const spreadPct =
+        r.spreadPct ??
+        (() => {
+          const m = mid || 1;
+          return ((r.ask - r.bid) / m) * 100;
+        })();
+
       if (sortKey === "mid") return mid;
-      if (sortKey === "spread") return spread;
+      if (sortKey === "spread") return spreadPct;
       return 0;
     };
 
@@ -521,11 +538,22 @@ export default function Engine() {
       .filter((r) => !PREVIEW_EXCLUDE.has(safeUpper(r.coin)))
       .map((r) => {
         const mid = r.mid ?? (r.bid + r.ask) / 2;
-        const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
-        const spreadScore = 1 - clamp01(spread / 0.02);
+
+        // spreadPct is percent number
+        const spreadPct =
+          r.spreadPct ??
+          (() => {
+            const m = mid || 1;
+            return ((r.ask - r.bid) / m) * 100;
+          })();
+
+        // heuristic: 2% spread is "bad" (tune later)
+        const spreadScore = 1 - clamp01(spreadPct / 2.0);
+
         const priceScore = mid > 0 ? clamp01(1 / (1 + Math.abs(Math.log10(mid + 1e-9)))) : 0.5;
         const score = 0.8 * spreadScore + 0.2 * priceScore;
-        return { r, mid, spread, score };
+
+        return { r, mid, spreadPct, score };
       });
 
     if (!scored.length) return null;
@@ -537,7 +565,7 @@ export default function Engine() {
       coin: top.r.coin,
       market: top.r.market ?? `${top.r.coin}/AUD`,
       mid: top.mid,
-      spread: top.spread,
+      spreadPct: top.spreadPct,
       score: top.score,
     };
   }, [filtered]);
@@ -711,7 +739,7 @@ export default function Engine() {
                 </div>
               </div>
 
-              {/* ================= CONTROLS (wrapper for sticky/blur via CSS) ================= */}
+              {/* ================= CONTROLS ================= */}
               <div className="engine-controls-wrap" aria-label="Controls">
                 <div className="engine-controls">
                   <button
@@ -816,7 +844,13 @@ export default function Engine() {
                     <div className="market-body" aria-label="Market rows">
                       {filtered.map((r) => {
                         const mid = r.mid ?? (r.bid + r.ask) / 2;
-                        const spread = r.spreadPct ?? ((r.ask - r.bid) / (mid || 1));
+                        const spreadPct =
+                          r.spreadPct ??
+                          (() => {
+                            const m = mid || 1;
+                            return ((r.ask - r.bid) / m) * 100;
+                          })();
+
                         return (
                           <div className="market-row" key={r.market ?? r.coin}>
                             <div className="market-coin">
@@ -827,7 +861,7 @@ export default function Engine() {
                             <div className="market-price">{fmt(r.bid)}</div>
                             <div className="market-price">{fmt(r.ask)}</div>
                             <div className="market-price">{fmt(mid)}</div>
-                            <div className="market-price">{pctRatio(spread)}</div>
+                            <div className="market-price">{pctNum(spreadPct)}</div>
                           </div>
                         );
                       })}
@@ -867,7 +901,7 @@ export default function Engine() {
 
                           <div className="engine-telemetry-item">
                             <div className="engine-telemetry-k">Spread</div>
-                            <div className="engine-telemetry-v">{pctRatio(telemetry.spread)}</div>
+                            <div className="engine-telemetry-v">{pctNum(telemetry.spreadPct)}</div>
                           </div>
 
                           <div className="engine-telemetry-item">
@@ -928,7 +962,7 @@ export default function Engine() {
             </div>
 
             {/* =========================================================
-               DIVIDER (hard separation)
+               DIVIDER
             ========================================================= */}
             <div className="engine-divider" aria-hidden="true">
               <div className="engine-divider-line" />
@@ -1062,9 +1096,9 @@ export default function Engine() {
                             <div>{s.coin ?? "—"}</div>
                             <div className="num">{s.entryMid != null ? fmt(s.entryMid) : "—"}</div>
                             <div className="num">{s.nowMid != null ? fmt(s.nowMid) : "—"}</div>
-                            <div className="num">{s.netPct != null ? pctRatio(s.netPct) : "—"}</div>
+                            <div className="num">{s.netPct != null ? pctNum(s.netPct) : "—"}</div>
                             <div>{s.level ? `LVL${s.level}` : "—"}</div>
-                            <div className="num">{s.lockPct != null ? pctRatio(s.lockPct) : "—"}</div>
+                            <div className="num">{s.lockPct != null ? pctNum(s.lockPct) : "—"}</div>
                             <div>{ageLabel(nowMs - s.createdAt)}</div>
                             <div className="num ledger-view">View</div>
                           </button>
@@ -1337,7 +1371,7 @@ export default function Engine() {
               </div>
               <div>
                 <div className="slot-k">Harvester Net</div>
-                <div className="slot-v">{selectedSlot.netPct != null ? pctRatio(selectedSlot.netPct) : "—"}</div>
+                <div className="slot-v">{selectedSlot.netPct != null ? pctNum(selectedSlot.netPct) : "—"}</div>
               </div>
               <div>
                 <div className="slot-k">Level</div>
@@ -1345,7 +1379,7 @@ export default function Engine() {
               </div>
               <div>
                 <div className="slot-k">Lock</div>
-                <div className="slot-v">{selectedSlot.lockPct != null ? pctRatio(selectedSlot.lockPct) : "—"}</div>
+                <div className="slot-v">{selectedSlot.lockPct != null ? pctNum(selectedSlot.lockPct) : "—"}</div>
               </div>
               <div>
                 <div className="slot-k">Age</div>
@@ -1376,9 +1410,7 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">
-                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
-              </div>
+              <div className="slot-rules-note">(Backend should attach exact friction/spread assumptions + entry band parameters here.)</div>
             </div>
           </div>
         </div>
