@@ -1,6 +1,9 @@
 // src/pages/Engine.tsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+/* =========================
+   Types
+========================= */
 type MarketRow = {
   ts: number;
   iso: string;
@@ -29,40 +32,6 @@ type SortKey = "spread" | "coin" | "mid";
 type SortDir = "asc" | "desc";
 type Feed = "all" | "aud" | "watch";
 
-function fmt(n: number) {
-  if (!Number.isFinite(n)) return "—";
-  if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  if (n >= 1) return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
-  return n.toLocaleString(undefined, { maximumFractionDigits: 10 });
-}
-
-/** percent NUMBER -> string (e.g. 2.345 => "2.345%") */
-function pctNum(p: number | null | undefined) {
-  if (p == null || !Number.isFinite(p)) return "—";
-  return `${p.toFixed(3)}%`;
-}
-
-function feedLabel(feed: Feed) {
-  if (feed === "aud") return "AUD";
-  if (feed === "watch") return "WATCH";
-  return "ALL";
-}
-
-function clamp01(x: number) {
-  if (!Number.isFinite(x)) return 0;
-  return Math.max(0, Math.min(1, x));
-}
-
-function msToCountdown(ms: number) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const hh = Math.floor(s / 3600);
-  const mm = Math.floor((s % 3600) / 60);
-  const ss = s % 60;
-  const pad = (x: number) => String(x).padStart(2, "0");
-  return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
-}
-
-// ---------------- System Support Slots (static cards) ----------------
 type SlotTier = "JEROID_50" | "JEROID_75" | "JEROID_150" | "JEROID_200";
 
 type SlotCard = {
@@ -72,20 +41,6 @@ type SlotCard = {
   bullets: string[];
 };
 
-const SLOT_BULLETS = [
-  "1 unit = 1 public slot ID (when enabled)",
-  "Executes under the same deterministic harvester rules",
-  "Identical system logic across all slots",
-];
-
-const SLOT_CARDS: SlotCard[] = [
-  { tier: "JEROID_50", amountAud: 50, title: "System Slot", bullets: SLOT_BULLETS },
-  { tier: "JEROID_75", amountAud: 75, title: "System Slot", bullets: SLOT_BULLETS },
-  { tier: "JEROID_150", amountAud: 150, title: "System Slot", bullets: SLOT_BULLETS },
-  { tier: "JEROID_200", amountAud: 200, title: "System Slot", bullets: SLOT_BULLETS },
-];
-
-// ---------------- Public Ledger (backend-sourced) ----------------
 type EngineMode = "OBSERVE" | "ARMED" | "EXECUTING" | "COOLDOWN";
 type ExecutionMode = "SIM" | "LIVE";
 
@@ -187,6 +142,66 @@ type PublicMetaResponse = {
   };
 };
 
+type PublicEventsResponse = { ok: boolean; ts: number; rows: SlotEvent[] };
+type PublicSlotsResponse = { ok: boolean; ts: number; rows: SlotRow[] };
+
+/* =========================
+   Constants
+========================= */
+const SLOT_BULLETS = [
+  "1 unit = 1 public slot ID (when enabled)",
+  "Executes under the same deterministic harvester rules",
+  "Identical system logic across all slots",
+];
+
+const SLOT_CARDS: SlotCard[] = [
+  { tier: "JEROID_50", amountAud: 50, title: "System Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_75", amountAud: 75, title: "System Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_150", amountAud: 150, title: "System Slot", bullets: SLOT_BULLETS },
+  { tier: "JEROID_200", amountAud: 200, title: "System Slot", bullets: SLOT_BULLETS },
+];
+
+const PROD_DEFAULT = "https://jal-engine-service-production.up.railway.app";
+const DEV_DEFAULT = "http://localhost:8787";
+
+const PREVIEW_EXCLUDE = new Set(["USDT", "USDC", "DAI", "TUSD", "USDP", "FDUSD", "EURT"]);
+
+/* =========================
+   Format helpers
+========================= */
+function fmt(n: number) {
+  if (!Number.isFinite(n)) return "—";
+  if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (n >= 1) return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  return n.toLocaleString(undefined, { maximumFractionDigits: 10 });
+}
+
+/** percent NUMBER -> string (e.g. 2.345 => "2.345%") */
+function pctNum(p: number | null | undefined) {
+  if (p == null || !Number.isFinite(p)) return "—";
+  return `${p.toFixed(3)}%`;
+}
+
+function feedLabel(feed: Feed) {
+  if (feed === "aud") return "AUD";
+  if (feed === "watch") return "WATCH";
+  return "ALL";
+}
+
+function clamp01(x: number) {
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(1, x));
+}
+
+function msToCountdown(ms: number) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const hh = Math.floor(s / 3600);
+  const mm = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const pad = (x: number) => String(x).padStart(2, "0");
+  return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+}
+
 function ageLabel(msSince: number) {
   const s = Math.max(0, Math.floor(msSince / 1000));
   const h = Math.floor(s / 3600);
@@ -203,10 +218,22 @@ function fmtEventTime(atMs: number) {
   return `${hh}:${mm}:${ss}`;
 }
 
-// ---------------- Engine service base URL ----------------
-const PROD_DEFAULT = "https://jal-engine-service-production.up.railway.app";
-const DEV_DEFAULT = "http://localhost:8787";
+function safeUpper(s: any) {
+  return typeof s === "string" ? s.toUpperCase() : "";
+}
 
+function moneyAud(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return n.toLocaleString(undefined, {
+    style: "currency",
+    currency: "AUD",
+    maximumFractionDigits: 2,
+  });
+}
+
+/* =========================
+   URL helpers
+========================= */
 function normalizeBase(u: string) {
   return u.replace(/\/+$/, "");
 }
@@ -218,16 +245,9 @@ function pickBase(): string {
   return normalizeBase(isProd ? PROD_DEFAULT : DEV_DEFAULT);
 }
 
-type PublicEventsResponse = { ok: boolean; ts: number; rows: SlotEvent[] };
-type PublicSlotsResponse = { ok: boolean; ts: number; rows: SlotRow[] };
-
-function safeUpper(s: any) {
-  return typeof s === "string" ? s.toUpperCase() : "";
-}
-
-const PREVIEW_EXCLUDE = new Set(["USDT", "USDC", "DAI", "TUSD", "USDP", "FDUSD", "EURT"]);
-
-// ---------------- Harvest-only AUD growth (UI fallback from events) ----------------
+/* =========================
+   Harvest-only AUD growth (from events)
+========================= */
 function parseHarvestAudFromEvents(events: SlotEvent[]) {
   const out = { total: 0, last24h: 0, last7d: 0 };
   if (!events?.length) return out;
@@ -263,16 +283,9 @@ function parseHarvestAudFromEvents(events: SlotEvent[]) {
   return out;
 }
 
-function moneyAud(n: number | null | undefined) {
-  if (n == null || !Number.isFinite(n)) return "—";
-  return n.toLocaleString(undefined, {
-    style: "currency",
-    currency: "AUD",
-    maximumFractionDigits: 2,
-  });
-}
-
-// Small helper: read desktop breakpoint once (avoids re-render spam)
+/* =========================
+   Desktop breakpoint helper
+========================= */
 function useIsDesktop(bpPx = 980) {
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -297,6 +310,9 @@ function useIsDesktop(bpPx = 980) {
   return isDesktop;
 }
 
+/* =========================
+   Component
+========================= */
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
   const engineHostLabel = useMemo(() => {
@@ -310,6 +326,7 @@ export default function Engine() {
 
   const isDesktop = useIsDesktop(980);
 
+  // market
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [meta, setMeta] = useState<PublicMetaResponse | null>(null);
@@ -320,27 +337,29 @@ export default function Engine() {
   const [sortKey, setSortKey] = useState<SortKey>("spread");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  // ---------------- View mode (DEFAULT SIMPLE) ----------------
+  // view
   type ViewMode = "simple" | "advanced";
   const [view, setView] = useState<ViewMode>("simple");
 
+  // sections
+  type Section = "ledger" | "events" | "support" | "about";
+  const [section, setSection] = useState<Section>("ledger");
+
+  // collapses (split so Ledger doesn't affect Events tab)
+  const [ledgerEventsOpen, setLedgerEventsOpen] = useState(false);
+  const [eventsPageOpen, setEventsPageOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  const pollRef = useRef<number | null>(null);
+  // time
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  // Ledger (PUBLIC, backend)
+  // public ledger
   const [slotRows, setSlotRows] = useState<SlotRow[]>([]);
   const [events, setEvents] = useState<SlotEvent[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
-  // Sections (tabs)
-  type Section = "ledger" | "events" | "support" | "about";
-  const [section, setSection] = useState<Section>("ledger");
-
-  // Split event collapse state (prevents Ledger toggle affecting Events tab)
-  const [ledgerEventsOpen, setLedgerEventsOpen] = useState(false);
-  const [eventsPageOpen, setEventsPageOpen] = useState(false);
+  // poll mgmt
+  const pollRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (view === "advanced") {
@@ -354,6 +373,7 @@ export default function Engine() {
     }
   }, [view]);
 
+  // fetchers
   const fetchRows = useCallback(
     async (signal?: AbortSignal) => {
       const r = await fetch(`${BASE}/api/market/${feed}`, { method: "GET", signal });
@@ -408,7 +428,7 @@ export default function Engine() {
     [BASE]
   );
 
-  // Poll everything (market + public ledger)
+  // poll everything (market + public ledger)
   useEffect(() => {
     const ctrl = new AbortController();
 
@@ -434,6 +454,12 @@ export default function Engine() {
         setErr(`${msg}\nENGINE_BASE: ${BASE}`);
       }
     };
+
+    // clear any stale interval (hard safety)
+    if (pollRef.current) {
+      window.clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
 
     tick();
     pollRef.current = window.setInterval(tick, 2500);
@@ -468,7 +494,9 @@ export default function Engine() {
     };
   }, [selectedSlotId]);
 
-  // ---------------- Baseline + issuance countdown (BACKEND truth) ----------------
+  /* =========================
+     Baseline + countdown (backend truth)
+  ========================= */
   const baselineStartAt = meta?.baseline?.startAt ?? null;
 
   const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -503,7 +531,9 @@ export default function Engine() {
     return msToCountdown(nextDeployRemainingMs ?? 0);
   })();
 
-  // ---------------- Market filtering/sorting ----------------
+  /* =========================
+     Market filtering/sorting
+  ========================= */
   const filtered = useMemo(() => {
     const q = query.trim().toUpperCase();
     let list = rows;
@@ -544,7 +574,9 @@ export default function Engine() {
         ? snap?.counts?.aud ?? rows.length
         : snap?.counts?.watch ?? rows.length;
 
-  // ---------------- Telemetry (UI preview only) ----------------
+  /* =========================
+     Telemetry (UI preview only)
+  ========================= */
   const telemetry = useMemo(() => {
     if (!filtered.length) return null;
 
@@ -580,7 +612,9 @@ export default function Engine() {
     };
   }, [filtered]);
 
-  // ---------------- Ledger derived ----------------
+  /* =========================
+     Ledger derived
+  ========================= */
   const slotsActive = slotRows.filter((s) => s.state !== "EXITED").length;
   const slotsTotal = slotRows.length;
 
@@ -625,7 +659,9 @@ export default function Engine() {
     return events.filter((e) => e.slotId === selectedSlotId).slice(0, 60);
   }, [events, selectedSlotId]);
 
-  // ---------------- Harvest-only AUD growth ----------------
+  /* =========================
+     Harvest-only AUD growth
+  ========================= */
   const harvestFallback = useMemo(() => parseHarvestAudFromEvents(events), [events]);
   const harvestAudTotal = harvestFallback.total;
   const harvestAud24h = harvestFallback.last24h;
@@ -644,27 +680,23 @@ export default function Engine() {
 
           <div className="engine-foreground">
             {/* =========================================================
-               ENGINE ZONE (cyan / machine)
+               ENGINE ZONE
             ========================================================= */}
             <div className="engine-zone" data-zone="engine">
-              {/* ================= HERO (2-col hooks) ================= */}
+              {/* ================= HERO (matches CSS grid) ================= */}
               <header className="engine-hero" aria-label="Engine header">
-                {/* Main column */}
-                <div className="engine-hero-main">
-                  <div className="engine-hero-center">
-                    <h1 className="engine-title">$JAL~Engine</h1>
-                    <div className="engine-sub">
-                      Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
-                    </div>
-                    <div className="engine-sub engine-sub--muted">ENGINE: {engineHostLabel}</div>
+                <div className="engine-hero-left" aria-hidden="true" />
+
+                <div className="engine-hero-center">
+                  <h1 className="engine-title">$JAL~Engine</h1>
+                  <div className="engine-sub">
+                    Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
                   </div>
+                  <div className="engine-sub engine-sub--muted">ENGINE: {engineHostLabel}</div>
 
                   {/* Compact strip under title (advanced only) */}
                   {view === "advanced" ? (
-                    <div
-                      className="card machine-surface panel-frame engine-telemetry engine-telemetry--compact"
-                      aria-label="Engine Analysis (compact)"
-                    >
+                    <div className="card machine-surface panel-frame engine-telemetry engine-telemetry--compact">
                       <div className="engine-mini">
                         <div className="engine-mini-row">
                           <div className="mini-k">Write gate</div>
@@ -688,8 +720,7 @@ export default function Engine() {
                   ) : null}
                 </div>
 
-                {/* Right HUD column */}
-                <aside className="engine-hero-hud" aria-label="Engine HUD">
+                <aside className="engine-hero-right" aria-label="Engine HUD">
                   <div className="engine-hero-status" aria-label="Engine indicators">
                     <span className={`indicator status ${snap?.ok ? "ok" : "warn"}`}>
                       STATUS <span>{snap?.ok ? "ONLINE" : "WAITING"}</span>
@@ -708,13 +739,13 @@ export default function Engine() {
                     </span>
                   </div>
 
-                  <div className="engine-hud-note">
+                  <div className="engine-auth-hint">
                     AUD growth shown here is <strong>harvest-only</strong>. External transfers are ignored.
                   </div>
                 </aside>
               </header>
 
-              {/* ================= CAPTURE CARDS (ENGINE ONLY / 3-UP) ================= */}
+              {/* ================= CAPTURE CARDS ================= */}
               <div className="engine-capture-grid" aria-label="Engine capture cards">
                 <div className="engine-capture card machine-surface panel-frame">
                   <div className="cap-k">Harvest Captured</div>
@@ -835,7 +866,7 @@ export default function Engine() {
 
               {/* ================= TWO-COLUMN CONSOLE ================= */}
               <div className="engine-grid" aria-label="Engine bays">
-                {/* LEFT: Market surface */}
+                {/* LEFT: Market */}
                 <div className="engine-bay engine-bay--wide">
                   <div className="bay-head">
                     <div className="bay-title">Tradable Surface</div>
@@ -861,8 +892,10 @@ export default function Engine() {
                             return ((r.ask - r.bid) / m) * 100;
                           })();
 
+                        const key = `${r.coin}::${r.market ?? ""}`;
+
                         return (
-                          <div className="market-row" key={r.market ?? r.coin}>
+                          <div className="market-row" key={key}>
                             <div className="market-coin">
                               <strong>{r.coin}</strong>
                               <span className="market-market">{r.market ?? `${r.coin}/AUD`}</span>
@@ -879,7 +912,7 @@ export default function Engine() {
                   </div>
                 </div>
 
-                {/* RIGHT: Analysis bay (ADVANCED ONLY) */}
+                {/* RIGHT: Analysis (ADVANCED ONLY) */}
                 {view === "advanced" ? (
                   <div className="engine-bay">
                     <div className="bay-head">
@@ -887,10 +920,7 @@ export default function Engine() {
                       <div className="bay-note">UI preview + backend clarity</div>
                     </div>
 
-                    <div
-                      className="engine-mini-telemetry card machine-surface panel-frame"
-                      aria-label="Market Selection Telemetry"
-                    >
+                    <div className="card machine-surface panel-frame engine-telemetry" aria-label="Market Selection Telemetry">
                       <div className="engine-telemetry-head">
                         <div className="engine-telemetry-title">Market Selection Telemetry</div>
                         <div className="engine-telemetry-note">Preview (UI-only)</div>
@@ -981,7 +1011,7 @@ export default function Engine() {
             </div>
 
             {/* =========================================================
-               LEDGER ZONE (gold / treasury)
+               LEDGER ZONE
             ========================================================= */}
             <div className="engine-zone" data-zone="ledger">
               <div className="engine-ledger-topgrid" aria-label="Jeroid status cards">
@@ -1235,9 +1265,7 @@ export default function Engine() {
                         </div>
                       </div>
 
-                      <div className="engine-slots-right">
-                        1 unit = 1 slot • Public slot ID + log reference (when enabled)
-                      </div>
+                      <div className="engine-slots-right">1 unit = 1 slot • Public slot ID + log reference (when enabled)</div>
                     </div>
 
                     <div className="jeroid-grid">
@@ -1260,13 +1288,7 @@ export default function Engine() {
                             ))}
                           </ul>
 
-                          <button
-                            type="button"
-                            className="button engine-slot-btn"
-                            disabled
-                            aria-disabled="true"
-                            title="Funding rail not yet active"
-                          >
+                          <button type="button" className="button engine-slot-btn" disabled aria-disabled="true" title="Funding rail not yet active">
                             Deploy (Soon)
                           </button>
 

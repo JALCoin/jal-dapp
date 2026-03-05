@@ -695,8 +695,6 @@ main[role="main"], main{
 
 /* zones */
 .engine-zone{ position:relative; }
-.engine-zone[data-zone="engine"]{ }
-.engine-zone[data-zone="ledger"]{ }
 
 /* divider (hard separation) */
 .engine-divider{
@@ -1156,10 +1154,14 @@ main[role="main"], main{
   margin-top: 10px;
   border: 1px solid rgba(255,255,255,.10);
   border-radius: 14px;
-  overflow: hidden;
   background: rgba(0,0,0,.18);
+
+  /* single source of truth */
   max-height: 320px;
   overflow-y: auto;
+
+  /* PATCH: keep inner glow + prevent “cut off” look */
+  padding-bottom: 6px;
 }
 .event-row{
   display:flex;
@@ -1168,15 +1170,16 @@ main[role="main"], main{
   border-bottom: 1px solid rgba(255,255,255,.06);
   align-items: baseline;
 }
+.event-row:last-child{ border-bottom:0; }
 .event-time{
   width: 70px;
   opacity: .75;
   font-variant-numeric: tabular-nums;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
-.event-msg{ flex: 1; }
+.event-msg{ flex: 1; min-width: 0; }
 .event-kind{ opacity: .9; font-weight: 800; }
-.event-text{ opacity: .9; }
+.event-text{ opacity: .9; word-break: break-word; }
 .event-empty{ padding: 10px; opacity: .75; }
 
 /* Slot drawer */
@@ -1536,7 +1539,9 @@ main[role="main"], main{
     transition:none;
     animation:none;
   }
-  /* =========================================================
+}
+
+/* =========================================================
    ENGINE — polish pass (end-of-file override)
    Goal: tighter hero, sticky controls, cleaner bays
 ========================================================= */
@@ -1555,8 +1560,9 @@ main[role="main"], main{
     position:absolute;
     top: 8px;
     bottom: 8px;
-    right: calc(18px + 1fr); /* harmless fallback if grid shifts */
+    right: 0;
     width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,.08), transparent);
     opacity:.25;
   }
 }
@@ -1647,5 +1653,4 @@ main[role="main"], main{
 .event-log::-webkit-scrollbar-thumb:hover,
 .engine-log::-webkit-scrollbar-thumb:hover{
   background: rgba(17,241,167,.22);
-}
 }
