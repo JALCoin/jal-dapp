@@ -1,5 +1,5 @@
 // src/pages/Engine.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type MarketRow = {
   ts: number;
@@ -110,7 +110,10 @@ type SlotRow = {
   entryMid: number | null;
   nowMid: number | null;
 
-  /** IMPORTANT: percent NUMBER (already after friction if manager implements it) */
+  /** percent NUMBER (mid-to-mid informational transparency) */
+  grossPct?: number | null;
+
+  /** IMPORTANT: percent NUMBER (after friction if manager implements it) */
   netPct: number | null;
 
   level: 0 | 1 | 2 | 3 | 4;
@@ -322,7 +325,8 @@ export default function Engine() {
   const [view, setView] = useState<ViewMode>("simple");
 
   const [aboutOpen, setAboutOpen] = useState(false);
-  const timerRef = useRef<number | null>(null);
+
+  const pollRef = useRef<number | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   // Ledger (PUBLIC, backend)
@@ -342,57 +346,69 @@ export default function Engine() {
     if (view === "advanced") {
       setLedgerEventsOpen(true);
       setEventsPageOpen(true);
-    }
-    if (view === "simple") {
+      setAboutOpen(true);
+    } else {
       setLedgerEventsOpen(false);
       setEventsPageOpen(false);
+      setAboutOpen(false);
     }
   }, [view]);
 
-  useEffect(() => {
-    if (view === "simple") setAboutOpen(false);
-    if (view === "advanced") setAboutOpen(true);
-  }, [view]);
+  const fetchRows = useCallback(
+    async (signal?: AbortSignal) => {
+      const r = await fetch(`${BASE}/api/market/${feed}`, { method: "GET", signal });
+      if (!r.ok) throw new Error(`market/${feed} HTTP ${r.status}`);
+      const j = await r.json();
+      return Array.isArray(j?.rows) ? (j.rows as MarketRow[]) : [];
+    },
+    [BASE, feed]
+  );
 
-  async function fetchRows(signal?: AbortSignal) {
-    const r = await fetch(`${BASE}/api/market/${feed}`, { method: "GET", signal });
-    if (!r.ok) throw new Error(`market/${feed} HTTP ${r.status}`);
-    const j = await r.json();
-    return Array.isArray(j?.rows) ? (j.rows as MarketRow[]) : [];
-  }
+  const fetchSnap = useCallback(
+    async (signal?: AbortSignal) => {
+      const r = await fetch(`${BASE}/api/market/snapshot`, { method: "GET", signal });
+      if (!r.ok) throw new Error(`market/snapshot HTTP ${r.status}`);
+      return (await r.json()) as Snapshot;
+    },
+    [BASE]
+  );
 
-  async function fetchSnap(signal?: AbortSignal) {
-    const r = await fetch(`${BASE}/api/market/snapshot`, { method: "GET", signal });
-    if (!r.ok) throw new Error(`market/snapshot HTTP ${r.status}`);
-    return (await r.json()) as Snapshot;
-  }
+  const fetchMeta = useCallback(
+    async (signal?: AbortSignal) => {
+      const r = await fetch(`${BASE}/api/public/meta`, { method: "GET", signal });
+      if (!r.ok) return null;
+      const j = (await r.json()) as Partial<PublicMetaResponse>;
+      if (!j || (j as any).ok === false) return null;
+      return j as PublicMetaResponse;
+    },
+    [BASE]
+  );
 
-  async function fetchMeta(signal?: AbortSignal) {
-    const r = await fetch(`${BASE}/api/public/meta`, { method: "GET", signal });
-    if (!r.ok) return null;
-    const j = (await r.json()) as Partial<PublicMetaResponse>;
-    if (!j || (j as any).ok === false) return null;
-    return j as PublicMetaResponse;
-  }
+  const fetchPublicEvents = useCallback(
+    async (signal?: AbortSignal) => {
+      const r = await fetch(`${BASE}/api/public/events?limit=200`, { method: "GET", signal });
+      if (!r.ok) throw new Error(`public/events HTTP ${r.status}`);
+      const j = (await r.json()) as Partial<PublicEventsResponse>;
+      const list = Array.isArray(j?.rows) ? (j!.rows as SlotEvent[]) : [];
+      list.sort((a, b) => (b.at || 0) - (a.at || 0));
+      return list;
+    },
+    [BASE]
+  );
 
-  async function fetchPublicEvents(signal?: AbortSignal) {
-    const r = await fetch(`${BASE}/api/public/events?limit=200`, { method: "GET", signal });
-    if (!r.ok) throw new Error(`public/events HTTP ${r.status}`);
-    const j = (await r.json()) as Partial<PublicEventsResponse>;
-    const list = Array.isArray(j?.rows) ? (j!.rows as SlotEvent[]) : [];
-    list.sort((a, b) => (b.at || 0) - (a.at || 0));
-    return list;
-  }
+  const fetchPublicSlots = useCallback(
+    async (signal?: AbortSignal) => {
+      const r = await fetch(`${BASE}/api/public/slots`, { method: "GET", signal });
+      if (!r.ok) throw new Error(`public/slots HTTP ${r.status}`);
+      const j = (await r.json()) as Partial<PublicSlotsResponse>;
+      const list = Array.isArray(j?.rows) ? (j!.rows as SlotRow[]) : [];
+      list.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+      return list;
+    },
+    [BASE]
+  );
 
-  async function fetchPublicSlots(signal?: AbortSignal) {
-    const r = await fetch(`${BASE}/api/public/slots`, { method: "GET", signal });
-    if (!r.ok) throw new Error(`public/slots HTTP ${r.status}`);
-    const j = (await r.json()) as Partial<PublicSlotsResponse>;
-    const list = Array.isArray(j?.rows) ? (j!.rows as SlotRow[]) : [];
-    list.sort((a, b) => String(a.id).localeCompare(String(b.id)));
-    return list;
-  }
-
+  // Poll everything (market + public ledger)
   useEffect(() => {
     const ctrl = new AbortController();
 
@@ -420,16 +436,16 @@ export default function Engine() {
     };
 
     tick();
-    timerRef.current = window.setInterval(tick, 2500);
+    pollRef.current = window.setInterval(tick, 2500);
 
     return () => {
       ctrl.abort();
-      if (timerRef.current) window.clearInterval(timerRef.current);
-      timerRef.current = null;
+      if (pollRef.current) window.clearInterval(pollRef.current);
+      pollRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feed, BASE]);
+  }, [BASE, fetchMeta, fetchPublicEvents, fetchPublicSlots, fetchRows, fetchSnap]);
 
+  // local clock tick (countdowns)
   useEffect(() => {
     const t = window.setInterval(() => setNowMs(Date.now()), 500);
     return () => window.clearInterval(t);
@@ -503,8 +519,6 @@ export default function Engine() {
 
     const getNum = (r: MarketRow) => {
       const mid = r.mid ?? (r.bid + r.ask) / 2;
-
-      // spreadPct is percent number; fallback compute percent number.
       const spreadPct =
         r.spreadPct ??
         (() => {
@@ -538,8 +552,6 @@ export default function Engine() {
       .filter((r) => !PREVIEW_EXCLUDE.has(safeUpper(r.coin)))
       .map((r) => {
         const mid = r.mid ?? (r.bid + r.ask) / 2;
-
-        // spreadPct is percent number
         const spreadPct =
           r.spreadPct ??
           (() => {
@@ -547,9 +559,7 @@ export default function Engine() {
             return ((r.ask - r.bid) / m) * 100;
           })();
 
-        // heuristic: 2% spread is "bad" (tune later)
         const spreadScore = 1 - clamp01(spreadPct / 2.0);
-
         const priceScore = mid > 0 ? clamp01(1 / (1 + Math.abs(Math.log10(mid + 1e-9)))) : 0.5;
         const score = 0.8 * spreadScore + 0.2 * priceScore;
 
@@ -1074,6 +1084,7 @@ export default function Engine() {
                         <div>Coin</div>
                         <div className="num">Entry</div>
                         <div className="num">Now</div>
+                        <div className="num">Gross</div>
                         <div className="num">Net</div>
                         <div>Level</div>
                         <div className="num">Lock</div>
@@ -1096,6 +1107,7 @@ export default function Engine() {
                             <div>{s.coin ?? "—"}</div>
                             <div className="num">{s.entryMid != null ? fmt(s.entryMid) : "—"}</div>
                             <div className="num">{s.nowMid != null ? fmt(s.nowMid) : "—"}</div>
+                            <div className="num">{s.grossPct != null ? pctNum(s.grossPct) : "—"}</div>
                             <div className="num">{s.netPct != null ? pctNum(s.netPct) : "—"}</div>
                             <div>{s.level ? `LVL${s.level}` : "—"}</div>
                             <div className="num">{s.lockPct != null ? pctNum(s.lockPct) : "—"}</div>
@@ -1180,7 +1192,8 @@ export default function Engine() {
                           <div className="event-row" key={e.id}>
                             <div className="event-time">{fmtEventTime(e.at)}</div>
                             <div className="event-msg">
-                              <span className="event-kind">{e.kind}</span> <span className="event-text">{e.msg}</span>
+                              <span className="event-kind">{e.kind}</span>{" "}
+                              <span className="event-text">{e.msg}</span>
                             </div>
                           </div>
                         ))
@@ -1222,7 +1235,9 @@ export default function Engine() {
                         </div>
                       </div>
 
-                      <div className="engine-slots-right">1 unit = 1 slot • Public slot ID + log reference (when enabled)</div>
+                      <div className="engine-slots-right">
+                        1 unit = 1 slot • Public slot ID + log reference (when enabled)
+                      </div>
                     </div>
 
                     <div className="jeroid-grid">
@@ -1316,6 +1331,12 @@ export default function Engine() {
                           <li>
                             <strong>EXECUTION</strong> is reality (<strong>SIM</strong> = no trades, <strong>LIVE</strong> = real trades).
                           </li>
+                          <li>
+                            <strong>GROSS</strong> is mid-to-mid movement (informational).
+                          </li>
+                          <li>
+                            <strong>NET</strong> is friction-aware movement (spread/fee model).
+                          </li>
                         </ul>
                       </div>
                     ) : null}
@@ -1369,10 +1390,16 @@ export default function Engine() {
                 <div className="slot-k">Now</div>
                 <div className="slot-v">{selectedSlot.nowMid != null ? fmt(selectedSlot.nowMid) : "—"}</div>
               </div>
+
               <div>
-                <div className="slot-k">Harvester Net</div>
+                <div className="slot-k">Gross</div>
+                <div className="slot-v">{selectedSlot.grossPct != null ? pctNum(selectedSlot.grossPct) : "—"}</div>
+              </div>
+              <div>
+                <div className="slot-k">Net</div>
                 <div className="slot-v">{selectedSlot.netPct != null ? pctNum(selectedSlot.netPct) : "—"}</div>
               </div>
+
               <div>
                 <div className="slot-k">Level</div>
                 <div className="slot-v">{selectedSlot.level ? `LVL${selectedSlot.level}` : "—"}</div>
@@ -1410,7 +1437,9 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">(Backend should attach exact friction/spread assumptions + entry band parameters here.)</div>
+              <div className="slot-rules-note">
+                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
+              </div>
             </div>
           </div>
         </div>
