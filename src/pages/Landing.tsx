@@ -5,7 +5,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 type LandingMode = "entry" | "nav";
 type LandingProps = { mode: LandingMode };
 
-type NavTo = "/app/home" | "/app/jal-sol" | "/app/about" | "/app/shop";
+type NavTo =
+  | "/app/home"
+  | "/app/jal-sol"
+  | "/app/engine"
+  | "/app/about"
+  | "/app/shop";
 
 function NavOverlay({
   onSelect,
@@ -21,6 +26,7 @@ function NavOverlay({
         aria-label="Close navigation"
         onClick={onClose}
       />
+
       <section
         className="nav-overlay"
         role="dialog"
@@ -34,19 +40,23 @@ function NavOverlay({
         </div>
 
         <div className="nav-overlay-body">
-          <button className="nav-pill" onClick={() => onSelect("/app/home")}>
+          <button type="button" className="nav-pill" onClick={() => onSelect("/app/home")}>
             HOME
           </button>
 
-          {/* NEW: JAL/SOL directly under Home */}
-          <button className="nav-pill" onClick={() => onSelect("/app/jal-sol")}>
+          <button type="button" className="nav-pill" onClick={() => onSelect("/app/jal-sol")}>
             JAL/SOL
           </button>
 
-          <button className="nav-pill" onClick={() => onSelect("/app/about")}>
+          <button type="button" className="nav-pill" onClick={() => onSelect("/app/engine")}>
+            $JAL~Engine
+          </button>
+
+          <button type="button" className="nav-pill" onClick={() => onSelect("/app/about")}>
             ABOUT JAL
           </button>
-          <button className="nav-pill" onClick={() => onSelect("/app/shop")}>
+
+          <button type="button" className="nav-pill" onClick={() => onSelect("/app/shop")}>
             SHOP
           </button>
         </div>
@@ -74,6 +84,7 @@ export default function Landing({ mode }: LandingProps) {
     const on = mode === "nav";
     if (on) document.body.setAttribute("data-nav-open", "true");
     else document.body.removeAttribute("data-nav-open");
+
     return () => document.body.removeAttribute("data-nav-open");
   }, [mode]);
 

@@ -78,8 +78,10 @@ export default function Home() {
   return (
     <main className="home-shell" aria-label="Home">
       <div className="home-wrap">
-        {/* ===== Top status strip ===== */}
-        <section className="terminal-bar panel-frame machine-surface home-topbar" aria-label="Terminal status">
+        <section
+          className="terminal-bar panel-frame machine-surface home-topbar"
+          aria-label="Terminal status"
+        >
           <div className="terminal-left">
             <span className="terminal-pill ok">ONLINE</span>
             <span className="terminal-sep">•</span>
@@ -94,19 +96,19 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== JAL SYSTEM hero ===== */}
         <section className="card home-hero machine-surface panel-frame" aria-label="JAL System">
           <div className="home-kicker">JAL SYSTEM • ONLINE</div>
 
           <h1 className="home-title">jalsol.com</h1>
 
           <p className="home-lead">
-            <strong>Terminal for Solana utility.</strong> Token generation, structured market execution, and deployable
-            systems — governed by order of processing.
+            <strong>Terminal for Solana utility.</strong> Token generation, structured market
+            execution, and deployable systems — governed by order of processing.
           </p>
 
           <p className="home-lead">
-            Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer • Digital Creator.
+            Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer
+            • Digital Creator.
           </p>
 
           <div className="home-links" aria-label="Links">
@@ -119,15 +121,13 @@ export default function Home() {
 
           <div className="home-primary" aria-label="Note">
             <div className="home-primary-note">
-              <span>Nothing here is urgent.</span> This homepage is the routing console. Each bay below opens a system
-              module.
+              <span>Nothing here is urgent.</span> This homepage is the routing console. Each bay
+              below opens a system module.
             </div>
           </div>
         </section>
 
-        {/* ===== MODULE STACK (no extra header text) ===== */}
         <section className="card module-window machine-surface panel-frame" aria-label="Modules">
-          {/* looping low-opacity logo behind bays */}
           <div className="module-bg" aria-hidden="true">
             <img className="module-bg-logo" src="/JALSOL1.gif" alt="" />
           </div>
@@ -141,6 +141,7 @@ export default function Home() {
                   className="module-card"
                   onClick={m.onOpen}
                   role="listitem"
+                  aria-label={`Open ${m.title}`}
                 >
                   <div className="module-card-top">
                     <div className="module-kicker">{m.kicker}</div>

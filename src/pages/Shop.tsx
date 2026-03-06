@@ -12,7 +12,6 @@ function ProductModal({
   p: Product;
   onClose: () => void;
 }) {
-  // ESC closes
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -21,7 +20,6 @@ function ProductModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // lock scroll
   useEffect(() => {
     document.body.setAttribute("data-modal-open", "true");
     return () => document.body.removeAttribute("data-modal-open");
@@ -32,14 +30,12 @@ function ProductModal({
 
   const modal = (
     <div className="product-modal-layer" role="dialog" aria-modal="true" aria-label={p.title}>
-      {/* Backdrop (click to close) */}
       <button
         className="product-modal-backdrop"
         aria-label="Close product"
         onClick={onClose}
       />
 
-      {/* Panel */}
       <section className="product-modal-panel" aria-label="Product details">
         <button
           type="button"
@@ -52,7 +48,6 @@ function ProductModal({
         </button>
 
         <div className="product-modal-grid">
-          {/* Media */}
           <div className="product-modal-media">
             {p.image ? (
               <img className="product-modal-img" src={p.image} alt={p.title} />
@@ -61,7 +56,6 @@ function ProductModal({
             )}
           </div>
 
-          {/* Details */}
           <div className="product-modal-details">
             <div className="product-modal-title-row">
               <h2 className="product-modal-title">{p.title}</h2>
@@ -124,13 +118,15 @@ function ProductCard({
       role="button"
       tabIndex={0}
       onClick={(e) => {
-        // If user clicked a link/button inside the card, don't open modal
         const el = e.target as HTMLElement;
         if (el.closest("a,button")) return;
         onOpen(p);
       }}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") onOpen(p);
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(p);
+        }
       }}
     >
       {p.image ? (
@@ -191,8 +187,8 @@ export default function Shop() {
           <h1 className="home-title">Shop</h1>
 
           <p className="home-lead">
-            Sovereign storefront — direct checkout will live here. Etsy stays as an outbound link
-            while we build the full store pipeline.
+            The JALSOL storefront. Physical relics and digital products are released here.
+            Direct checkout is coming soon while Etsy remains available for current orders.
           </p>
 
           <div className="home-links">
@@ -236,7 +232,6 @@ export default function Shop() {
         </section>
       </div>
 
-      {/* FULLSCREEN OVERLAY */}
       {active ? <ProductModal p={active} onClose={() => setActive(null)} /> : null}
     </main>
   );
