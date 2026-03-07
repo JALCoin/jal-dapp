@@ -73,7 +73,7 @@ export default function Landing({ mode }: LandingProps) {
   useEffect(() => {
     const onOpen = () => {
       if (!location.pathname.startsWith("/app/")) return;
-      navigate("/app/nav", { replace: true });
+      navigate("/app/nav");
     };
 
     window.addEventListener("JALSOL:OPEN_NAV" as any, onOpen);
@@ -92,7 +92,7 @@ export default function Landing({ mode }: LandingProps) {
     setLoading(true);
     window.setTimeout(() => {
       setLoading(false);
-      navigate("/app/nav", { replace: true });
+      navigate("/app/nav");
     }, 5000);
   };
 
@@ -130,8 +130,8 @@ export default function Landing({ mode }: LandingProps) {
   return (
     <main className="landing-blank" aria-label="JAL/SOL">
       <NavOverlay
-        onSelect={(to) => navigate(to, { replace: true })}
-        onClose={() => navigate("/app/home", { replace: true })}
+        onSelect={(to) => navigate(to)}
+        onClose={() => navigate("/app/home")}
       />
     </main>
   );
