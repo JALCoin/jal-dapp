@@ -182,12 +182,6 @@ function pctNum(p: number | null | undefined) {
   return `${p.toFixed(3)}%`;
 }
 
-function feedLabel(feed: Feed) {
-  if (feed === "aud") return "AUD";
-  if (feed === "watch") return "WATCH";
-  return "ALL";
-}
-
 function clamp01(x: number) {
   if (!Number.isFinite(x)) return 0;
   return Math.max(0, Math.min(1, x));
@@ -311,14 +305,9 @@ function useIsDesktop(bpPx = 980) {
 }
 
 /* =========================
-   ENTRY display rule (fix ENTRY showing 0)
-   - Never show 0 unless backend truly sent 0 (it shouldn't)
-   - WAITING_ENTRY: show last-known price instead of "0" (entryMid -> nowMid -> —)
+   ENTRY display rule
 ========================= */
 function entryDisplayValue(s: SlotRow): number | null {
-  // ENTRY should represent "reference entry" for the slot lifecycle.
-  // If the slot is WAITING_ENTRY (post-exit), entryMid was cleared intentionally.
-  // For that state, show the last known nowMid (or —) rather than 0.
   if (s.state === "WAITING_ENTRY") {
     return s.nowMid != null && Number.isFinite(s.nowMid) ? s.nowMid : null;
   }
@@ -335,15 +324,6 @@ function entryLabel(s: SlotRow): string {
 ========================= */
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
-  const engineHostLabel = useMemo(() => {
-    try {
-      const url = new URL(BASE);
-      return url.host;
-    } catch {
-      return BASE;
-    }
-  }, [BASE]);
-
   const isDesktop = useIsDesktop(980);
 
   // market
@@ -365,7 +345,7 @@ export default function Engine() {
   type Section = "ledger" | "events" | "support" | "about";
   const [section, setSection] = useState<Section>("ledger");
 
-  // collapses (split so Ledger doesn't affect Events tab)
+  // collapses
   const [ledgerEventsOpen, setLedgerEventsOpen] = useState(false);
   const [eventsPageOpen, setEventsPageOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -393,7 +373,6 @@ export default function Engine() {
     }
   }, [view]);
 
-  // fetchers
   const fetchRows = useCallback(
     async (signal?: AbortSignal) => {
       const r = await fetch(`${BASE}/api/market/${feed}`, { method: "GET", signal });
@@ -429,7 +408,7 @@ export default function Engine() {
       const r = await fetch(`${BASE}/api/public/events?limit=200`, { method: "GET", signal });
       if (!r.ok) throw new Error(`public/events HTTP ${r.status}`);
       const j = (await r.json()) as Partial<PublicEventsResponse>;
-      const list = Array.isArray(j?.rows) ? (j!.rows as SlotEvent[]) : [];
+      const list = Array.isArray(j?.rows) ? (j.rows as SlotEvent[]) : [];
       list.sort((a, b) => (b.at || 0) - (a.at || 0));
       return list;
     },
@@ -441,14 +420,13 @@ export default function Engine() {
       const r = await fetch(`${BASE}/api/public/slots`, { method: "GET", signal });
       if (!r.ok) throw new Error(`public/slots HTTP ${r.status}`);
       const j = (await r.json()) as Partial<PublicSlotsResponse>;
-      const list = Array.isArray(j?.rows) ? (j!.rows as SlotRow[]) : [];
+      const list = Array.isArray(j?.rows) ? (j.rows as SlotRow[]) : [];
       list.sort((a, b) => String(a.id).localeCompare(String(b.id)));
       return list;
     },
     [BASE]
   );
 
-  // poll everything (market + public ledger)
   useEffect(() => {
     const ctrl = new AbortController();
 
@@ -475,7 +453,6 @@ export default function Engine() {
       }
     };
 
-    // clear any stale interval (hard safety)
     if (pollRef.current) {
       window.clearInterval(pollRef.current);
       pollRef.current = null;
@@ -491,13 +468,11 @@ export default function Engine() {
     };
   }, [BASE, fetchMeta, fetchPublicEvents, fetchPublicSlots, fetchRows, fetchSnap]);
 
-  // local clock tick (countdowns)
   useEffect(() => {
     const t = window.setInterval(() => setNowMs(Date.now()), 500);
     return () => window.clearInterval(t);
   }, []);
 
-  // Close slot drawer on ESC + lock body scroll while open
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSelectedSlotId(null);
@@ -515,7 +490,7 @@ export default function Engine() {
   }, [selectedSlotId]);
 
   /* =========================
-     Baseline + countdown (backend truth)
+     Baseline + countdown
   ========================= */
   const baselineStartAt = meta?.baseline?.startAt ?? null;
 
@@ -687,7 +662,6 @@ export default function Engine() {
   const harvestAud24h = harvestFallback.last24h;
   const harvestAud7d = harvestFallback.last7d;
 
-  // Desktop polish: keep Events visible under Ledger on desktop.
   const showEventsUnderLedger = isDesktop && section === "ledger";
 
   return (
@@ -703,18 +677,13 @@ export default function Engine() {
                ENGINE ZONE
             ========================================================= */}
             <div className="engine-zone" data-zone="engine">
-              {/* ================= HERO (matches CSS grid) ================= */}
               <header className="engine-hero" aria-label="Engine header">
                 <div className="engine-hero-left" aria-hidden="true" />
 
                 <div className="engine-hero-center">
                   <h1 className="engine-title">$JAL~Engine</h1>
-                  <div className="engine-sub">
-                    Real-time tradable market console (CoinSpot public latest) — FEED: {feedLabel(feed)}
-                  </div>
-                  <div className="engine-sub engine-sub--muted">ENGINE: {engineHostLabel}</div>
+                  <div className="engine-sub">Real-time tradable market console .</div>
 
-                  {/* Compact strip under title (advanced only) */}
                   {view === "advanced" ? (
                     <div className="card machine-surface panel-frame engine-telemetry engine-telemetry--compact">
                       <div className="engine-mini">
@@ -765,7 +734,6 @@ export default function Engine() {
                 </aside>
               </header>
 
-              {/* ================= CAPTURE CARDS ================= */}
               <div className="engine-capture-grid" aria-label="Engine capture cards">
                 <div className="engine-capture card machine-surface panel-frame">
                   <div className="cap-k">Harvest Captured</div>
@@ -800,7 +768,6 @@ export default function Engine() {
                 </div>
               </div>
 
-              {/* ================= CONTROLS ================= */}
               <div className="engine-controls-wrap" aria-label="Controls">
                 <div className="engine-controls">
                   <button
@@ -811,11 +778,19 @@ export default function Engine() {
                     View: {view === "simple" ? "Simple" : "Advanced"}
                   </button>
 
-                  <button type="button" className={`button ghost ${feed === "all" ? "active" : ""}`} onClick={() => setFeed("all")}>
+                  <button
+                    type="button"
+                    className={`button ghost ${feed === "all" ? "active" : ""}`}
+                    onClick={() => setFeed("all")}
+                  >
                     Feed: All
                   </button>
 
-                  <button type="button" className={`button ghost ${feed === "aud" ? "active" : ""}`} onClick={() => setFeed("aud")}>
+                  <button
+                    type="button"
+                    className={`button ghost ${feed === "aud" ? "active" : ""}`}
+                    onClick={() => setFeed("aud")}
+                  >
                     Feed: AUD
                   </button>
 
@@ -876,9 +851,7 @@ export default function Engine() {
                 </div>
               ) : null}
 
-              {/* ================= TWO-COLUMN CONSOLE ================= */}
               <div className="engine-grid" aria-label="Engine bays">
-                {/* LEFT: Market */}
                 <div className="engine-bay engine-bay--wide">
                   <div className="bay-head">
                     <div className="bay-title">Tradable Surface</div>
@@ -924,7 +897,6 @@ export default function Engine() {
                   </div>
                 </div>
 
-                {/* RIGHT: Analysis (ADVANCED ONLY) */}
                 {view === "advanced" ? (
                   <div className="engine-bay">
                     <div className="bay-head">
@@ -1013,18 +985,12 @@ export default function Engine() {
               </div>
             </div>
 
-            {/* =========================================================
-               DIVIDER
-            ========================================================= */}
             <div className="engine-divider" aria-hidden="true">
               <div className="engine-divider-line" />
               <div className="engine-divider-label">Jeroid Ledger</div>
               <div className="engine-divider-line" />
             </div>
 
-            {/* =========================================================
-               LEDGER ZONE
-            ========================================================= */}
             <div className="engine-zone" data-zone="ledger">
               <div className="engine-ledger-topgrid" aria-label="Jeroid status cards">
                 <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
@@ -1060,7 +1026,6 @@ export default function Engine() {
                 AUD growth shown here is <strong>harvest-only</strong>. External transfers are ignored.
               </div>
 
-              {/* ---------------- Section tabs ---------------- */}
               <div className="engine-section-tabs" aria-label="Engine sections">
                 <button
                   type="button"
@@ -1101,7 +1066,6 @@ export default function Engine() {
                 ) : null}
               </div>
 
-              {/* ---------------- Ledger (PUBLIC) ---------------- */}
               {section === "ledger" ? (
                 <>
                   <div className="card machine-surface panel-frame engine-ledger" aria-label="Slots Ledger">
@@ -1147,10 +1111,7 @@ export default function Engine() {
                             <div>${s.unitAud}</div>
                             <div>{s.state}</div>
                             <div>{s.coin ?? "—"}</div>
-
-                            {/* ✅ ENTRY FIX: never show 0 for WAITING_ENTRY; uses entryMid for live states */}
                             <div className="num">{entryLabel(s)}</div>
-
                             <div className="num">{s.nowMid != null ? fmt(s.nowMid) : "—"}</div>
                             <div className="num">{s.grossPct != null ? pctNum(s.grossPct) : "—"}</div>
                             <div className="num">{s.netPct != null ? pctNum(s.netPct) : "—"}</div>
@@ -1170,7 +1131,6 @@ export default function Engine() {
                     </div>
                   </div>
 
-                  {/* Events under ledger: ALWAYS PRESENT (desktop), COLLAPSIBLE */}
                   {showEventsUnderLedger ? (
                     <div className="card machine-surface panel-frame engine-events" aria-label="Public Event Log">
                       <div className="engine-events-top">
@@ -1211,7 +1171,6 @@ export default function Engine() {
                 </>
               ) : null}
 
-              {/* ---------------- Events (PUBLIC) ---------------- */}
               {section === "events" ? (
                 <div className="card machine-surface panel-frame engine-events" aria-label="Public Event Log">
                   <div className="engine-events-top">
@@ -1252,7 +1211,6 @@ export default function Engine() {
                 </div>
               ) : null}
 
-              {/* ---------------- Support Slots ---------------- */}
               {section === "support" ? (
                 view === "advanced" ? (
                   <div className="engine-slots" aria-label="System Support Slots">
@@ -1303,7 +1261,13 @@ export default function Engine() {
                             ))}
                           </ul>
 
-                          <button type="button" className="button engine-slot-btn" disabled aria-disabled="true" title="Funding rail not yet active">
+                          <button
+                            type="button"
+                            className="button engine-slot-btn"
+                            disabled
+                            aria-disabled="true"
+                            title="Funding rail not yet active"
+                          >
                             Deploy (Soon)
                           </button>
 
@@ -1323,7 +1287,6 @@ export default function Engine() {
                 )
               ) : null}
 
-              {/* ---------------- About ---------------- */}
               {section === "about" ? (
                 view === "advanced" ? (
                   <div className="engine-about" aria-label="About $JAL~Engine + Jeroids">
@@ -1393,7 +1356,6 @@ export default function Engine() {
         </section>
       </div>
 
-      {/* ---------------- Slot Details Drawer ---------------- */}
       {selectedSlot ? (
         <div
           className="slot-drawer-backdrop"
@@ -1421,7 +1383,6 @@ export default function Engine() {
             <div className="slot-drawer-grid">
               <div>
                 <div className="slot-k">Entry</div>
-                {/* ✅ ENTRY FIX mirrors table: WAITING_ENTRY shows last-known nowMid, not 0 */}
                 <div className="slot-v">{entryLabel(selectedSlot)}</div>
               </div>
               <div>
@@ -1475,7 +1436,9 @@ export default function Engine() {
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
               <div>LVL4 may enable a 24h timer to capture late gains.</div>
-              <div className="slot-rules-note">(Backend should attach exact friction/spread assumptions + entry band parameters here.)</div>
+              <div className="slot-rules-note">
+                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
+              </div>
             </div>
           </div>
         </div>

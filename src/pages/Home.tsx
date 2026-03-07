@@ -127,6 +127,16 @@ export default function Home() {
           </div>
         </section>
 
+        <section
+          className="card machine-surface panel-frame home-donate-bar"
+          aria-label="Donate SOL"
+        >
+          <div className="home-donate-copy">
+            Donate SOL and support the project:{" "}
+            <strong>3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2</strong>
+          </div>
+        </section>
+
         <section className="card module-window machine-surface panel-frame" aria-label="Modules">
           <div className="module-bg" aria-hidden="true">
             <img className="module-bg-logo" src="/JALSOL1.gif" alt="" />

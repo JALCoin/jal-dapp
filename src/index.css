@@ -489,6 +489,27 @@ main[role="main"], main{
 .home-lead{ margin: 0 0 10px; opacity:.92; max-width:78ch }
 .home-links{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px }
 
+.home-donate-bar{
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 18px 22px;
+  border-radius: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-donate-copy{
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  text-align: center;
+  word-break: break-all;
+}
+
+.home-donate-copy strong{
+  color: var(--gold);
+  text-shadow: var(--glow-gold);
+}
 /* Packaged System block -> premium gold */
 .bundle-card{
   border-color: rgba(244,200,106,.28) !important;
