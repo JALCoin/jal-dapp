@@ -405,6 +405,81 @@ function entryLabel(s: SlotRow): string {
   const v = entryDisplayValue(s);
   return v != null ? fmt(v) : "—";
 }
+type EntrySignalPipelineProps = {
+  slot: SlotRow;
+};
+
+function EntrySignalPipeline({ slot }: EntrySignalPipelineProps) {
+  const steps = [
+    {
+      label: "Candidate",
+      value: slot.candidateCoin ?? "—",
+      sub: slot.candidateReason ? reasonLabel(slot.candidateReason) : "tracking",
+      active: true,
+    },
+    {
+      label: "Drawdown",
+      value: pctNum(slot.candidateDrawdownPct),
+      sub: slot.candidatePeakMid != null ? `Peak ${fmt(slot.candidatePeakMid)}` : "Peak —",
+      active: (slot.candidateDrawdownPct ?? 0) > 0,
+    },
+    {
+      label: "Bounce",
+      value: pctNum(slot.candidateBouncePct),
+      sub: slot.candidateLowMid != null ? `Low ${fmt(slot.candidateLowMid)}` : "Low —",
+      active: (slot.candidateBouncePct ?? 0) > 0,
+    },
+    {
+      label: "EMA Gap",
+      value: pctNum(slot.candidateEmaGapPct),
+      sub: `Fast ${
+        slot.candidateEmaFast != null && Number.isFinite(slot.candidateEmaFast)
+          ? fmt(slot.candidateEmaFast)
+          : "—"
+      } • Slow ${
+        slot.candidateEmaSlow != null && Number.isFinite(slot.candidateEmaSlow)
+          ? fmt(slot.candidateEmaSlow)
+          : "—"
+      }`,
+      active: slot.candidateEmaGapPct != null,
+    },
+    {
+      label: "Confirm",
+      value:
+        slot.candidateReversalTicks != null && Number.isFinite(slot.candidateReversalTicks)
+          ? String(slot.candidateReversalTicks)
+          : "—",
+      sub:
+        slot.candidateScore != null && Number.isFinite(slot.candidateScore)
+          ? `Score ${slot.candidateScore.toFixed(3)}`
+          : "Score —",
+      active: (slot.candidateReversalTicks ?? 0) > 0 || slot.candidateScore != null,
+    },
+  ];
+
+  return (
+    <div className="card machine-surface panel-frame engine-telemetry" aria-label="Entry Signal Pipeline">
+      <div className="engine-telemetry-head">
+        <div className="engine-telemetry-title">Entry Signal Pipeline</div>
+        <div className="engine-telemetry-note">Tracked reversal path before deploy</div>
+      </div>
+
+      <div className="engine-telemetry-grid">
+        {steps.map((step) => (
+          <div
+            key={step.label}
+            className={`engine-telemetry-item ${step.active ? "is-active" : ""}`}
+            data-active={step.active ? "true" : "false"}
+          >
+            <div className="engine-telemetry-k">{step.label}</div>
+            <div className="engine-telemetry-v">{step.value}</div>
+            <div className="engine-telemetry-sub">{step.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
   const isDesktop = useIsDesktop(980);
