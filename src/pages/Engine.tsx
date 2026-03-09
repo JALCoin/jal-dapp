@@ -14,7 +14,7 @@ type MarketRow = {
   last?: number | null;
   mid?: number | null;
   spreadAbs?: number | null;
-  spreadPct?: number | null; // IMPORTANT: percent NUMBER (e.g. 2.5 means 2.5%)
+  spreadPct?: number | null; // percent NUMBER
 };
 
 type Snapshot = {
@@ -65,20 +65,45 @@ type SlotRow = {
   entryMid: number | null;
   nowMid: number | null;
 
-  /** percent NUMBER (mid-to-mid informational transparency) */
   grossPct?: number | null;
-
-  /** IMPORTANT: percent NUMBER (after friction if manager implements it) */
   netPct: number | null;
 
   level: 0 | 1 | 2 | 3 | 4;
-
-  /** IMPORTANT: percent NUMBER */
   lockPct: number | null;
 
   createdAt: number;
   updatedAt: number;
   source?: ExecutionMode;
+
+  candidateCoin?: string | null;
+  candidateTrackingSince?: number | null;
+  candidateLastSeenAt?: number | null;
+
+  candidateMidPrev?: number | null;
+  candidateBidPrev?: number | null;
+  candidateAskPrev?: number | null;
+  candidateSpreadPrevPct?: number | null;
+
+  candidatePeakMid?: number | null;
+  candidateLowMid?: number | null;
+  candidateDrawdownPct?: number | null;
+  candidateBouncePct?: number | null;
+
+  candidateEmaFast?: number | null;
+  candidateEmaSlow?: number | null;
+  candidateEmaGapPct?: number | null;
+
+  candidateReversalTicks?: number | null;
+  candidateScore?: number | null;
+  candidateReason?: string | null;
+
+  entryDrawdownPct?: number | null;
+  entryBouncePct?: number | null;
+  entryEmaFast?: number | null;
+  entryEmaSlow?: number | null;
+  entryEmaGapPct?: number | null;
+  entryConfirmTicks?: number | null;
+  entryScore?: number | null;
 };
 
 type SlotEvent = {
@@ -95,7 +120,8 @@ type SlotEvent = {
     | "EXIT_TRIGGER"
     | "SLOT_EXITED"
     | "NOTE"
-    | "ERROR";
+    | "ERROR"
+    | "ISSUE_SKIPPED";
   msg: string;
   slotId?: string;
   coin?: string;
@@ -140,6 +166,21 @@ type PublicMetaResponse = {
   market?: {
     snapshot?: any;
   };
+
+  counts?: {
+    slots?: number;
+    waiting?: number;
+    queued?: number;
+    deploying?: number;
+    holding?: number;
+    locked?: number;
+    lvl1?: number;
+    lvl2?: number;
+    lvl3?: number;
+    lvl4?: number;
+    active?: number;
+    exited?: number;
+  };
 };
 
 type PublicEventsResponse = { ok: boolean; ts: number; rows: SlotEvent[] };
@@ -176,7 +217,6 @@ function fmt(n: number) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 10 });
 }
 
-/** percent NUMBER -> string (e.g. 2.345 => "2.345%") */
 function pctNum(p: number | null | undefined) {
   if (p == null || !Number.isFinite(p)) return "—";
   return `${p.toFixed(3)}%`;
@@ -223,6 +263,11 @@ function moneyAud(n: number | null | undefined) {
     currency: "AUD",
     maximumFractionDigits: 2,
   });
+}
+
+function reasonLabel(reason: string | null | undefined) {
+  if (!reason) return "tracking";
+  return String(reason).replace(/_/g, " ");
 }
 
 /* =========================
@@ -305,9 +350,48 @@ function useIsDesktop(bpPx = 980) {
 }
 
 /* =========================
-   ENTRY display rule
+   Slot helpers
 ========================= */
+function effectiveCoin(s: SlotRow): string | null {
+  return s.coin ?? s.candidateCoin ?? null;
+}
+
+function isTrackingState(s: SlotRow) {
+  return s.state === "QUEUED" && !!s.candidateCoin;
+}
+
+function trackingStatusLabel(s: SlotRow) {
+  if (!isTrackingState(s)) return s.state;
+  return s.candidateReason ? `TRACKING · ${reasonLabel(s.candidateReason)}` : "TRACKING";
+}
+
+function lockDisplay(s: SlotRow) {
+  if (s.lockPct == null || !Number.isFinite(s.lockPct) || s.lockPct <= 0) return "—";
+  return pctNum(s.lockPct);
+}
+
+function grossDisplay(s: SlotRow) {
+  if (isTrackingState(s)) return "—";
+  return s.grossPct != null ? pctNum(s.grossPct) : "—";
+}
+
+function netDisplay(s: SlotRow) {
+  if (isTrackingState(s)) return "—";
+  return s.netPct != null ? pctNum(s.netPct) : "—";
+}
+
+function nowDisplay(s: SlotRow) {
+  if (s.nowMid != null && Number.isFinite(s.nowMid) && s.nowMid > 0) return fmt(s.nowMid);
+  if (isTrackingState(s) && s.candidateMidPrev != null && Number.isFinite(s.candidateMidPrev)) {
+    return fmt(s.candidateMidPrev);
+  }
+  return "—";
+}
+
 function entryDisplayValue(s: SlotRow): number | null {
+  if (isTrackingState(s)) {
+    return s.candidateLowMid != null && Number.isFinite(s.candidateLowMid) ? s.candidateLowMid : null;
+  }
   if (s.state === "WAITING_ENTRY") {
     return s.nowMid != null && Number.isFinite(s.nowMid) ? s.nowMid : null;
   }
@@ -326,7 +410,6 @@ export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
   const isDesktop = useIsDesktop(980);
 
-  // market
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [meta, setMeta] = useState<PublicMetaResponse | null>(null);
@@ -337,28 +420,22 @@ export default function Engine() {
   const [sortKey, setSortKey] = useState<SortKey>("spread");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  // view
   type ViewMode = "simple" | "advanced";
   const [view, setView] = useState<ViewMode>("simple");
 
-  // sections
   type Section = "ledger" | "events" | "support" | "about";
   const [section, setSection] = useState<Section>("ledger");
 
-  // collapses
   const [ledgerEventsOpen, setLedgerEventsOpen] = useState(false);
   const [eventsPageOpen, setEventsPageOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  // time
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  // public ledger
   const [slotRows, setSlotRows] = useState<SlotRow[]>([]);
   const [events, setEvents] = useState<SlotEvent[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
-  // poll mgmt
   const pollRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -570,7 +647,7 @@ export default function Engine() {
         : snap?.counts?.watch ?? rows.length;
 
   /* =========================
-     Telemetry (UI preview only)
+     Telemetry
   ========================= */
   const telemetry = useMemo(() => {
     if (!filtered.length) return null;
@@ -654,6 +731,10 @@ export default function Engine() {
     return events.filter((e) => e.slotId === selectedSlotId).slice(0, 60);
   }, [events, selectedSlotId]);
 
+  const trackedSlot = useMemo(() => {
+    return slotRows.find((s) => s.state === "QUEUED" && !!s.candidateCoin) ?? null;
+  }, [slotRows]);
+
   /* =========================
      Harvest-only AUD growth
   ========================= */
@@ -673,16 +754,13 @@ export default function Engine() {
           </div>
 
           <div className="engine-foreground">
-            {/* =========================================================
-               ENGINE ZONE
-            ========================================================= */}
             <div className="engine-zone" data-zone="engine">
               <header className="engine-hero" aria-label="Engine header">
                 <div className="engine-hero-left" aria-hidden="true" />
 
                 <div className="engine-hero-center">
                   <h1 className="engine-title">$JAL~Engine</h1>
-                  <div className="engine-sub">Real-time tradable market console .</div>
+                  <div className="engine-sub">Real-time tradable market console.</div>
 
                   {view === "advanced" ? (
                     <div className="card machine-surface panel-frame engine-telemetry engine-telemetry--compact">
@@ -904,7 +982,10 @@ export default function Engine() {
                       <div className="bay-note">UI preview + backend clarity</div>
                     </div>
 
-                    <div className="card machine-surface panel-frame engine-telemetry" aria-label="Market Selection Telemetry">
+                    <div
+                      className="card machine-surface panel-frame engine-telemetry"
+                      aria-label="Market Selection Telemetry"
+                    >
                       <div className="engine-telemetry-head">
                         <div className="engine-telemetry-title">Market Selection Telemetry</div>
                         <div className="engine-telemetry-note">Preview (UI-only)</div>
@@ -1022,6 +1103,67 @@ export default function Engine() {
                 </div>
               </div>
 
+              {trackedSlot ? (
+                <div className="card machine-surface panel-frame engine-tracking-banner" data-treasury="true">
+                  <div className="engine-tracking-head">
+                    <div className="engine-ledger-title">Tracked Entry Setup</div>
+                    <div className="engine-ledger-note">Reversal-aware queue state before deploy.</div>
+                  </div>
+
+                  <div className="engine-telemetry-grid">
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">Slot</div>
+                      <div className="engine-telemetry-v">{trackedSlot.id}</div>
+                      <div className="engine-telemetry-sub">{trackedSlot.candidateReason ?? "tracking"}</div>
+                    </div>
+
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">Candidate</div>
+                      <div className="engine-telemetry-v">{trackedSlot.candidateCoin ?? "—"}</div>
+                      <div className="engine-telemetry-sub">
+                        {trackedSlot.candidateTrackingSince
+                          ? ageLabel(nowMs - trackedSlot.candidateTrackingSince)
+                          : "—"}
+                      </div>
+                    </div>
+
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">Drawdown</div>
+                      <div className="engine-telemetry-v">{pctNum(trackedSlot.candidateDrawdownPct)}</div>
+                      <div className="engine-telemetry-sub">
+                        Peak {trackedSlot.candidatePeakMid != null ? fmt(trackedSlot.candidatePeakMid) : "—"}
+                      </div>
+                    </div>
+
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">Bounce</div>
+                      <div className="engine-telemetry-v">{pctNum(trackedSlot.candidateBouncePct)}</div>
+                      <div className="engine-telemetry-sub">
+                        Low {trackedSlot.candidateLowMid != null ? fmt(trackedSlot.candidateLowMid) : "—"}
+                      </div>
+                    </div>
+
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">EMA Gap</div>
+                      <div className="engine-telemetry-v">{pctNum(trackedSlot.candidateEmaGapPct)}</div>
+                      <div className="engine-telemetry-sub">
+                        Confirm {trackedSlot.candidateReversalTicks ?? 0}
+                      </div>
+                    </div>
+
+                    <div className="engine-telemetry-item">
+                      <div className="engine-telemetry-k">Score</div>
+                      <div className="engine-telemetry-v">
+                        {trackedSlot.candidateScore != null ? trackedSlot.candidateScore.toFixed(3) : "—"}
+                      </div>
+                      <div className="engine-telemetry-sub">
+                        Mid {trackedSlot.candidateMidPrev != null ? fmt(trackedSlot.candidateMidPrev) : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="engine-footer-note engine-footer-note--spaced">
                 AUD growth shown here is <strong>harvest-only</strong>. External transfers are ignored.
               </div>
@@ -1109,14 +1251,14 @@ export default function Engine() {
                           >
                             <div className="ledger-slotid">{s.id}</div>
                             <div>${s.unitAud}</div>
-                            <div>{s.state}</div>
-                            <div>{s.coin ?? "—"}</div>
+                            <div>{trackingStatusLabel(s)}</div>
+                            <div>{effectiveCoin(s) ?? "—"}</div>
                             <div className="num">{entryLabel(s)}</div>
-                            <div className="num">{s.nowMid != null ? fmt(s.nowMid) : "—"}</div>
-                            <div className="num">{s.grossPct != null ? pctNum(s.grossPct) : "—"}</div>
-                            <div className="num">{s.netPct != null ? pctNum(s.netPct) : "—"}</div>
+                            <div className="num">{nowDisplay(s)}</div>
+                            <div className="num">{grossDisplay(s)}</div>
+                            <div className="num">{netDisplay(s)}</div>
                             <div>{s.level ? `LVL${s.level}` : "—"}</div>
-                            <div className="num">{s.lockPct != null ? pctNum(s.lockPct) : "—"}</div>
+                            <div className="num">{lockDisplay(s)}</div>
                             <div>{ageLabel(nowMs - s.createdAt)}</div>
                             <div className="num ledger-view">View</div>
                           </button>
@@ -1306,21 +1448,21 @@ export default function Engine() {
                         <div className="engine-about-title">$JAL~Engine — what you’re looking at</div>
 
                         <p>
-                          $JAL~Engine is a public machine exhibit: a live market window backed by a deterministic service layer. It
-                          mirrors the tradable surface available on the operator’s exchange (CoinSpot) and presents it as a readable
-                          execution environment.
+                          $JAL~Engine is a public machine exhibit: a live market window backed by a deterministic service
+                          layer. It mirrors the tradable surface available on the operator’s exchange (CoinSpot) and presents
+                          it as a readable execution environment.
                         </p>
 
                         <p>
-                          <strong>AUD growth shown here is harvest-only.</strong> It is measured from market droid harvest deltas
-                          (completed cycles). Deposits, withdrawals, and manual portfolio changes are excluded.
+                          <strong>AUD growth shown here is harvest-only.</strong> It is measured from market droid harvest
+                          deltas (completed cycles). Deposits, withdrawals, and manual portfolio changes are excluded.
                         </p>
 
                         <div className="engine-about-h">Baseline + fixed daily cadence</div>
                         <p>
                           Baseline is anchored to backend <strong>baseline.startAt</strong>. After that, issuance uses a{" "}
-                          <strong>fixed wall-clock schedule</strong>: the next deploy is always the next exact 24h boundary from the
-                          baseline.
+                          <strong>fixed wall-clock schedule</strong>: the next deploy is always the next exact boundary from
+                          the baseline.
                         </p>
 
                         <div className="engine-about-h">Execution clarity</div>
@@ -1336,6 +1478,9 @@ export default function Engine() {
                           </li>
                           <li>
                             <strong>NET</strong> is friction-aware movement (spread/fee model).
+                          </li>
+                          <li>
+                            <strong>TRACKING</strong> is queued reversal detection before deploy.
                           </li>
                         </ul>
                       </div>
@@ -1369,7 +1514,7 @@ export default function Engine() {
               <div>
                 <div className="slot-drawer-id">{selectedSlot.id}</div>
                 <div className="slot-drawer-sub">
-                  Unit ${selectedSlot.unitAud} • {selectedSlot.state} • {selectedSlot.coin ?? "—"}{" "}
+                  Unit ${selectedSlot.unitAud} • {trackingStatusLabel(selectedSlot)} • {effectiveCoin(selectedSlot) ?? "—"}{" "}
                   {selectedSlot.source ? `• ${selectedSlot.source}` : ""}
                   <span className="slot-drawer-esc">Esc to close</span>
                 </div>
@@ -1387,16 +1532,16 @@ export default function Engine() {
               </div>
               <div>
                 <div className="slot-k">Now</div>
-                <div className="slot-v">{selectedSlot.nowMid != null ? fmt(selectedSlot.nowMid) : "—"}</div>
+                <div className="slot-v">{nowDisplay(selectedSlot)}</div>
               </div>
 
               <div>
                 <div className="slot-k">Gross</div>
-                <div className="slot-v">{selectedSlot.grossPct != null ? pctNum(selectedSlot.grossPct) : "—"}</div>
+                <div className="slot-v">{grossDisplay(selectedSlot)}</div>
               </div>
               <div>
                 <div className="slot-k">Net</div>
-                <div className="slot-v">{selectedSlot.netPct != null ? pctNum(selectedSlot.netPct) : "—"}</div>
+                <div className="slot-v">{netDisplay(selectedSlot)}</div>
               </div>
 
               <div>
@@ -1405,13 +1550,96 @@ export default function Engine() {
               </div>
               <div>
                 <div className="slot-k">Lock</div>
-                <div className="slot-v">{selectedSlot.lockPct != null ? pctNum(selectedSlot.lockPct) : "—"}</div>
+                <div className="slot-v">{lockDisplay(selectedSlot)}</div>
               </div>
               <div>
                 <div className="slot-k">Age</div>
                 <div className="slot-v">{ageLabel(nowMs - selectedSlot.createdAt)}</div>
               </div>
             </div>
+
+            {selectedSlot.state === "QUEUED" && selectedSlot.candidateCoin ? (
+              <>
+                <div className="slot-section">Tracking Snapshot</div>
+
+                <div className="slot-drawer-grid">
+                  <div>
+                    <div className="slot-k">Candidate</div>
+                    <div className="slot-v">{selectedSlot.candidateCoin ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Reason</div>
+                    <div className="slot-v">{selectedSlot.candidateReason ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Drawdown</div>
+                    <div className="slot-v">{pctNum(selectedSlot.candidateDrawdownPct)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Bounce</div>
+                    <div className="slot-v">{pctNum(selectedSlot.candidateBouncePct)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">EMA Gap</div>
+                    <div className="slot-v">{pctNum(selectedSlot.candidateEmaGapPct)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Score</div>
+                    <div className="slot-v">
+                      {selectedSlot.candidateScore != null ? selectedSlot.candidateScore.toFixed(3) : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Tracked Peak</div>
+                    <div className="slot-v">
+                      {selectedSlot.candidatePeakMid != null ? fmt(selectedSlot.candidatePeakMid) : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Tracked Low</div>
+                    <div className="slot-v">
+                      {selectedSlot.candidateLowMid != null ? fmt(selectedSlot.candidateLowMid) : "—"}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            {(selectedSlot.entryDrawdownPct != null ||
+              selectedSlot.entryBouncePct != null ||
+              selectedSlot.entryEmaGapPct != null ||
+              selectedSlot.entryScore != null) && (
+              <>
+                <div className="slot-section">Entry Context</div>
+
+                <div className="slot-drawer-grid">
+                  <div>
+                    <div className="slot-k">Entry Drawdown</div>
+                    <div className="slot-v">{pctNum(selectedSlot.entryDrawdownPct)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Entry Bounce</div>
+                    <div className="slot-v">{pctNum(selectedSlot.entryBouncePct)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Entry EMA Gap</div>
+                    <div className="slot-v">{pctNum(selectedSlot.entryEmaGapPct)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Confirm Ticks</div>
+                    <div className="slot-v">
+                      {selectedSlot.entryConfirmTicks != null ? selectedSlot.entryConfirmTicks : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Entry Score</div>
+                    <div className="slot-v">
+                      {selectedSlot.entryScore != null ? selectedSlot.entryScore.toFixed(3) : "—"}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="slot-section">Timeline</div>
 
@@ -1435,9 +1663,9 @@ export default function Engine() {
             <div className="slot-rules">
               <div>Levels: LVL1 +3.75% • LVL2 +4.00% • LVL3 +4.50% • LVL4 +5.00%+</div>
               <div>Sell triggers on drop to the active lock threshold (not on first touch up).</div>
-              <div>LVL4 may enable a 24h timer to capture late gains.</div>
+              <div>LVL4 may enable a trailing capture window for late gains.</div>
               <div className="slot-rules-note">
-                (Backend should attach exact friction/spread assumptions + entry band parameters here.)
+                Backend tracking now supports queued reversal detection before deploy.
               </div>
             </div>
           </div>

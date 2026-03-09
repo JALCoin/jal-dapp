@@ -5,7 +5,7 @@
    Refinement: premium “machine immersion” + console bays
    Fixes: sidebar vertical stack, remove collisions, mobile engine header stack
    Add: Home module grid (System Bays) + Engine page CSS moved from components
-   Patch: prevent Public Event Log clipping on desktop (rendered content stays visible)
+   Patch: reversal-aware Engine UI + treasury glow ledger layer + no desktop event clipping
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -63,6 +63,7 @@ html,body{
 img{ display:block; max-width:100% }
 a{ color:inherit; text-decoration:none }
 button{ font:inherit; color:inherit; background:none; border:none; cursor:pointer }
+input{ font:inherit }
 :focus-visible{ outline:2px solid var(--green); outline-offset:2px }
 
 .sr-only{
@@ -77,7 +78,6 @@ button{ font:inherit; color:inherit; background:none; border:none; cursor:pointe
 
 .container{ width:min(100% - 2rem, var(--max-w)); margin-inline:auto }
 
-/* Lock scroll when overlays are visible */
 body[data-nav-open="true"]{ overflow:hidden }
 body[data-modal-open="true"]{ overflow:hidden }
 
@@ -91,9 +91,10 @@ main[role="main"], main{
 /* ==================================
    MACHINE IMMERSION (GLOBAL OPT-IN)
 ================================== */
-.machine-surface{ position:relative; overflow:hidden; }
-
-/* micro grid */
+.machine-surface{
+  position:relative;
+  overflow:hidden;
+}
 .machine-surface::before{
   content:"";
   position:absolute;
@@ -106,8 +107,6 @@ main[role="main"], main{
   background-size:34px 34px;
   mask-image: radial-gradient(60% 60% at 50% 25%, #000 0%, rgba(0,0,0,.35) 55%, transparent 85%);
 }
-
-/* scan sheen + haze */
 .machine-surface::after{
   content:"";
   position:absolute;
@@ -126,7 +125,6 @@ main[role="main"], main{
   mix-blend-mode:screen;
 }
 
-/* Inner frame = “ATM panel” */
 .panel-frame{
   position:relative;
   border-radius:var(--r-lg);
@@ -153,7 +151,11 @@ main[role="main"], main{
   border-radius:var(--r-lg);
   padding: clamp(1rem, 2.5vw, 1.25rem);
   box-shadow: 0 10px 30px rgba(0,0,0,.55);
-  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    transform var(--t-fast),
+    background var(--t-fast);
 }
 .card:hover{
   border-color:var(--green);
@@ -169,7 +171,11 @@ main[role="main"], main{
   border-radius:var(--r-md);
   border:1px solid var(--stroke);
   background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+  transition:
+    transform var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    background var(--t-fast);
 }
 .button:hover{ transform: translateY(-1px) }
 .button:active{ transform: translateY(1px) scale(.98); box-shadow:none }
@@ -187,7 +193,10 @@ main[role="main"], main{
   background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
   font-size:.9rem;
   opacity:.95;
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  transition:
+    transform var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
   backdrop-filter: blur(10px);
 }
 .chip:hover{
@@ -214,11 +223,10 @@ main[role="main"], main{
   padding: clamp(.75rem, 1.8vw, 1rem);
   display:grid;
   align-items:center;
-  grid-template-columns: 1fr auto 1fr; /* socials | logo | hamburger */
+  grid-template-columns: 1fr auto 1fr;
   gap:12px;
 }
 
-/* socials (left) */
 .social-links{ display:flex; align-items:center; gap:10px }
 .social-links a{
   width:36px; height:36px;
@@ -234,10 +242,8 @@ main[role="main"], main{
 }
 .social-links img{ width:18px; height:18px; object-fit:contain }
 
-/* logo wrapped in a button */
 .logo-btn{ justify-self:center; border:0; padding:0; background:transparent; }
 
-/* centered GIF logo */
 .logo.header-logo{
   height:clamp(68px,9.5vw,96px);
   filter: drop-shadow(0 0 10px rgba(255,255,255,.7));
@@ -250,7 +256,6 @@ main[role="main"], main{
   filter: drop-shadow(0 0 12px rgba(255,255,255,.9));
 }
 
-/* hamburger (right) */
 .hamburger{
   justify-self:end;
   width:44px; height:44px;
@@ -278,8 +283,7 @@ main[role="main"], main{
 .hamburger.is-open span:nth-child(3){ transform:translateY(-8px) rotate(-45deg) }
 
 /* ==================================
-   SIDEBAR (Hamburger menu)
-   Fix: true vertical stack, no collisions
+   SIDEBAR
 ================================== */
 .sidebar-overlay{
   position:fixed;
@@ -301,7 +305,6 @@ main[role="main"], main{
   backdrop-filter: blur(var(--blur));
   transform: translateX(100%);
   animation: drawerIn var(--t-slow) cubic-bezier(.22,.61,.36,1) forwards;
-
   display:flex;
   flex-direction:column;
   gap:14px;
@@ -315,7 +318,6 @@ main[role="main"], main{
   flex-direction:column;
   gap:10px;
 }
-
 .sidebar-nav .nav-link{
   display:flex;
   align-items:center;
@@ -386,7 +388,6 @@ main[role="main"], main{
   text-shadow: var(--glow-white);
 }
 
-/* NAV overlay */
 .nav-overlay-backdrop{
   position:fixed;
   inset:0;
@@ -432,7 +433,6 @@ main[role="main"], main{
   gap: 14px;
   padding: 0 0 40px;
 }
-
 .nav-pill{
   width:100%;
   height:64px;
@@ -497,7 +497,6 @@ main[role="main"], main{
   position: relative;
   overflow: hidden;
 }
-
 .home-donate-copy{
   font-size: 15px;
   line-height: 1.6;
@@ -505,12 +504,11 @@ main[role="main"], main{
   text-align: center;
   word-break: break-all;
 }
-
 .home-donate-copy strong{
   color: var(--gold);
   text-shadow: var(--glow-gold);
 }
-/* Packaged System block -> premium gold */
+
 .bundle-card{
   border-color: rgba(244,200,106,.28) !important;
   box-shadow: 0 12px 44px rgba(0,0,0,.62), inset 0 0 0 1px rgba(244,200,106,.08);
@@ -523,7 +521,6 @@ main[role="main"], main{
 .bundle-title{ margin: 0 0 6px; letter-spacing:.04em; }
 .bundle-lead{ margin: 0; opacity:.90; }
 
-/* Terminal header strip (Home) */
 .terminal-bar{
   padding: 12px 14px;
   display:flex;
@@ -573,7 +570,9 @@ main[role="main"], main{
   text-shadow: 0 0 10px rgba(244,200,106,.25);
 }
 
-/* HOME — MODULE GRID (System Bays) */
+/* ==================================
+   HOME — MODULE GRID
+================================== */
 .home-modules .home-title{ margin-top: 6px; }
 .module-grid{
   margin-top: 14px;
@@ -654,9 +653,7 @@ main[role="main"], main{
   text-transform: uppercase;
   opacity: .78;
 }
-/* ==================================
-   HOME — MODULE WINDOW (matches Home.tsx)
-================================== */
+
 .module-window{
   position: relative;
   overflow: hidden;
@@ -666,7 +663,6 @@ main[role="main"], main{
     radial-gradient(1000px 420px at 50% 0%, rgba(0,240,255,.05), transparent 58%),
     linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.012));
 }
-
 .module-bg{
   position:absolute;
   inset:0;
@@ -675,59 +671,47 @@ main[role="main"], main{
   pointer-events:none;
   opacity:.12;
 }
-
 .module-bg-logo{
   width:min(760px, 82vw);
   height:auto;
   filter: drop-shadow(0 0 14px rgba(255,255,255,.22));
 }
-
 .module-foreground{
   position:relative;
   z-index:2;
 }
-
 .module-stack{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap:14px;
   align-items:stretch;
 }
-
-/* First card spans full width */
 .module-stack > .module-card:first-child{
   grid-column: 1 / -1;
   min-height: 170px;
 }
-
-/* Better bay proportions */
 .module-stack > .module-card{
   min-height: 190px;
   display:flex;
   flex-direction:column;
   justify-content:space-between;
 }
-
-/* Current Home.tsx inner classnames */
 .module-card-top{
   position:relative;
   display:grid;
   gap:6px;
 }
-
 .module-name{
   font-size: 1.18rem;
   font-weight: 900;
   letter-spacing: .02em;
   line-height: 1.15;
 }
-
 .module-desc{
   opacity:.86;
   line-height:1.5;
   max-width: 68ch;
 }
-
 .module-open{
   position:relative;
   margin-top: 14px;
@@ -736,37 +720,24 @@ main[role="main"], main{
   text-transform: uppercase;
   opacity: .82;
 }
-
-/* Make second row feel balanced */
 .module-stack > .module-card:nth-child(2),
 .module-stack > .module-card:nth-child(3){
   min-height: 150px;
 }
-
 .module-stack > .module-card:nth-child(4),
 .module-stack > .module-card:nth-child(5){
   min-height: 138px;
 }
-
-/* Tablet */
 @media (max-width: 900px){
-  .module-window{
-    min-height: auto;
-  }
-
-  .module-stack{
-    grid-template-columns: 1fr;
-  }
-
+  .module-window{ min-height: auto; }
+  .module-stack{ grid-template-columns: 1fr; }
   .module-stack > .module-card:first-child{
     grid-column: auto;
     min-height: 160px;
   }
-
-  .module-stack > .module-card{
-    min-height: auto;
-  }
+  .module-stack > .module-card{ min-height: auto; }
 }
+
 /* ==================================
    LOADING SCREEN
 ================================== */
@@ -791,17 +762,13 @@ main[role="main"], main{
 
 /* =========================================================
    $JAL~Engine — SINGLE AUTHORITATIVE STYLING
-   Matches: src/pages/Engine.tsx classnames
 ========================================================= */
-
-/* engine page container */
 .engine-shell .card{
   max-width: var(--max-w);
   width: 100%;
   margin: 0 auto;
 }
 
-/* window + watermark */
 .engine-window{
   position:relative;
   overflow:hidden;
@@ -809,7 +776,10 @@ main[role="main"], main{
     radial-gradient(900px 420px at 50% 0%, rgba(0,240,255,.07), transparent 55%),
     linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
 }
-.engine-window--hero{ min-height:360px; }
+.engine-window--hero{
+  min-height:360px;
+  padding: 16px 18px 14px;
+}
 
 .engine-bg{
   position:absolute;
@@ -825,11 +795,8 @@ main[role="main"], main{
   animation: pulseGlow 1.2s ease-in-out infinite;
 }
 .engine-foreground{ position:relative; z-index:2; }
-
-/* zones */
 .engine-zone{ position:relative; }
 
-/* divider (hard separation) */
 .engine-divider{
   margin: 16px 0 10px;
   display:flex;
@@ -850,7 +817,9 @@ main[role="main"], main{
   text-shadow: 0 0 12px rgba(244,200,106,.20);
 }
 
-/* HERO: left spacer | center title | right indicators */
+/* ==================================
+   HERO
+================================== */
 .engine-hero{
   display:grid;
   grid-template-columns: 1fr minmax(260px, 720px) 1fr;
@@ -864,27 +833,42 @@ main[role="main"], main{
   display:grid;
   justify-items:end;
   gap:10px;
+  padding-top: 4px;
+}
+@media (min-width: 980px){
+  .engine-shell .engine-hero{
+    position: relative;
+  }
+  .engine-shell .engine-hero::after{
+    content:"";
+    position:absolute;
+    top: 8px;
+    bottom: 8px;
+    right: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,.08), transparent);
+    opacity:.25;
+  }
 }
 
 .engine-title{
-  margin:0;
+  margin:0 0 4px;
+  font-size: clamp(26px, 3vw, 34px);
   letter-spacing: 0.02em;
   text-shadow: var(--glow-cyan);
 }
 .engine-sub{
   opacity:.72;
-  font-size:.95rem;
+  font-size:13px;
   line-height:1.2;
 }
 
-/* indicators */
 .engine-hero-status{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
   justify-content:flex-end;
 }
-
 .indicator{
   display:flex;
   align-items:center;
@@ -893,7 +877,7 @@ main[role="main"], main{
   padding: .55rem .75rem;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.24);
+  background: rgba(0,0,0,.32);
   font-size: .86rem;
   letter-spacing: .06em;
   opacity:.92;
@@ -914,7 +898,6 @@ main[role="main"], main{
   border-color: rgba(244,200,106,.30);
   box-shadow: 0 0 0 1px rgba(244,200,106,.08) inset;
 }
-/* optional emphasis */
 .indicator.status,
 .indicator.mode,
 .indicator.execution{
@@ -937,10 +920,12 @@ main[role="main"], main{
   text-align:right;
 }
 
-/* Capture cards */
+/* ==================================
+   CAPTURE CARDS
+================================== */
 .engine-capture-grid{
   display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin: 10px 0 14px;
 }
@@ -976,13 +961,38 @@ main[role="main"], main{
   opacity:.72;
   font-size: 13px;
 }
+.cap-err{
+  color: var(--gold);
+  text-shadow: var(--glow-gold);
+}
 
-/* Controls */
+/* ==================================
+   CONTROLS
+================================== */
+.engine-controls-wrap{
+  position: relative;
+  z-index: 30;
+}
 .engine-controls{
+  position: sticky;
+  top: 74px;
+  z-index: 30;
   display:flex;
   flex-wrap:wrap;
   gap:10px;
   margin: 10px 0 12px;
+  padding: 10px 0;
+  background: linear-gradient(180deg, rgba(10,14,18,.78), rgba(10,14,18,0));
+  backdrop-filter: blur(10px);
+}
+.engine-controls .button,
+.engine-controls .chip,
+.engine-section-tab{
+  border-radius: 14px;
+}
+.engine-controls .button.active{
+  border-color: rgba(244,200,106,.55);
+  box-shadow: var(--glow-gold);
 }
 .engine-filter{
   flex: 1;
@@ -999,7 +1009,9 @@ main[role="main"], main{
   box-shadow: var(--glow-green);
 }
 
-/* Error log */
+/* ==================================
+   ERROR LOG
+================================== */
 .engine-log{
   border:1px solid rgba(255,255,255,.12);
   border-radius: var(--r-md);
@@ -1018,9 +1030,13 @@ main[role="main"], main{
   line-height: 1.55;
   color: rgba(231,255,247,.92);
   opacity: .92;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-/* Two-column console bays */
+/* ==================================
+   ENGINE GRID / BAYS
+================================== */
 .engine-grid{
   margin-top: 12px;
   display:grid;
@@ -1028,7 +1044,6 @@ main[role="main"], main{
   gap: 12px;
   align-items:start;
 }
-
 .engine-bay{
   grid-column: span 4;
   border-radius: 18px;
@@ -1076,14 +1091,19 @@ main[role="main"], main{
   font-size: 13px;
 }
 
-/* Market console */
+/* ==================================
+   MARKET CONSOLE
+================================== */
 .market-console{
   margin-top: 10px;
   border: 1px solid rgba(255,255,255,.12);
-  border-radius: 16px;
-  background: rgba(0,0,0,.28);
+  border-radius: 18px;
+  background: rgba(0,0,0,.22);
   overflow: auto;
   height: 560px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 18px 40px rgba(0,0,0,.42);
 }
 .market-head,
 .market-row{
@@ -1096,8 +1116,8 @@ main[role="main"], main{
 .market-head{
   position: sticky;
   top: 0;
-  z-index: 3;
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01));
+  z-index: 5;
+  background: rgba(0,0,0,.46);
   border-bottom: 1px solid rgba(255,255,255,.10);
   font-size: .78rem;
   letter-spacing: .14em;
@@ -1119,10 +1139,19 @@ main[role="main"], main{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
   font-size: .92rem;
   opacity:.94;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
 }
 
-/* Right bay: analysis mini blocks */
-.engine-mini{ position:relative; display:grid; gap:10px; margin-bottom: 12px; }
+/* ==================================
+   MINI / TELEMETRY
+================================== */
+.engine-mini{
+  position:relative;
+  display:grid;
+  gap:10px;
+  margin-bottom: 12px;
+}
 .engine-mini-row{
   display:flex;
   align-items:center;
@@ -1152,13 +1181,15 @@ main[role="main"], main{
   font-size: 13px;
 }
 
-/* Telemetry card (generic) */
 .engine-telemetry{
   margin-top: 14px;
   padding: 14px;
   border-radius: 18px;
   background: rgba(0,0,0,.22);
   border: 1px solid rgba(255,255,255,.12);
+}
+.engine-telemetry--compact{
+  margin-top: 12px;
 }
 .engine-telemetry-head{
   display: flex;
@@ -1179,13 +1210,59 @@ main[role="main"], main{
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
-.engine-telemetry-item{ opacity: .9; }
-.engine-telemetry-k{ font-size: 12px; opacity: .75; }
-.engine-telemetry-v{ font-weight: 900; }
-.engine-telemetry-sub{ font-size: 12px; opacity: .7; }
+.engine-telemetry-item{
+  opacity: .9;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(0,0,0,.18);
+}
+.engine-telemetry-k{
+  font-size: 12px;
+  opacity: .75;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.engine-telemetry-v{
+  font-weight: 900;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.engine-telemetry-sub{
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: .7;
+}
 .engine-telemetry-pending{ margin-top: 10px; opacity: .75; }
 
-/* Section tabs */
+/* ==================================
+   TRACKING BANNER / TREASURY STRIP
+================================== */
+.engine-tracking-banner{
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(244,200,106,.20);
+  background:
+    radial-gradient(720px 220px at 20% 0%, rgba(244,200,106,.10), transparent 60%),
+    radial-gradient(660px 240px at 100% 100%, rgba(0,240,255,.08), transparent 65%),
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01));
+  box-shadow:
+    0 16px 52px rgba(0,0,0,.58),
+    inset 0 0 0 1px rgba(244,200,106,.06);
+}
+.engine-tracking-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom: 8px;
+}
+
+/* ==================================
+   SECTION TABS
+================================== */
 .engine-section-tabs{
   margin-top: 14px;
   display:flex;
@@ -1201,7 +1278,11 @@ main[role="main"], main{
   letter-spacing: .10em;
   text-transform: uppercase;
   opacity: .86;
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), opacity var(--t-fast);
+  transition:
+    transform var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    opacity var(--t-fast);
 }
 .engine-section-tab:hover{
   transform: translateY(-1px);
@@ -1215,7 +1296,9 @@ main[role="main"], main{
   opacity: 1;
 }
 
-/* ledger + events containers */
+/* ==================================
+   LEDGER / EVENTS
+================================== */
 .engine-ledger,
 .engine-events{
   margin-top: 14px;
@@ -1223,6 +1306,31 @@ main[role="main"], main{
   border-radius: 18px;
   background: rgba(0,0,0,.22);
   border: 1px solid rgba(255,255,255,.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 18px 40px rgba(0,0,0,.42);
+}
+
+.engine-ledger-topgrid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+
+/* premium treasury feel for jeroid strip */
+.engine-ledger-topgrid [data-treasury="true"]{
+  border-color: rgba(244,200,106,.22);
+  background:
+    radial-gradient(720px 220px at 0% 0%, rgba(244,200,106,.09), transparent 60%),
+    radial-gradient(600px 220px at 100% 100%, rgba(0,240,255,.06), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+  box-shadow:
+    0 16px 52px rgba(0,0,0,.56),
+    inset 0 0 0 1px rgba(244,200,106,.06);
+}
+.engine-ledger-topgrid [data-treasury="true"] .cap-v{
+  color: var(--gold);
+  text-shadow: var(--glow-gold);
 }
 
 .engine-ledger-top,
@@ -1239,11 +1347,25 @@ main[role="main"], main{
   text-transform: uppercase;
   opacity: .9;
 }
-.engine-ledger-note{ margin-top: 6px; opacity: .8; font-size: 13px; }
+.engine-ledger-note{
+  margin-top: 6px;
+  opacity: .8;
+  font-size: 13px;
+}
 .engine-ledger-counts{ opacity: .8; font-size: 13px; }
 .engine-events-note{ opacity: .75; font-size: 13px; }
+.engine-footer-note{
+  opacity: .75;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.engine-footer-note--spaced{
+  margin-top: 12px;
+}
 
-/* Ledger table */
+/* ==================================
+   LEDGER TABLE
+================================== */
 .ledger-table{
   margin-top: 12px;
   border: 1px solid rgba(255,255,255,.10);
@@ -1253,7 +1375,7 @@ main[role="main"], main{
 }
 .ledger-head{
   display:grid;
-  grid-template-columns: 1.1fr .6fr 1fr .6fr .8fr .8fr .7fr .7fr .7fr .7fr .5fr;
+  grid-template-columns: 1.2fr .65fr 1.35fr .75fr .85fr .9fr .75fr .75fr .7fr .7fr .7fr .55fr;
   gap: 10px;
   padding: 10px 12px;
   font-size: 12px;
@@ -1266,7 +1388,7 @@ main[role="main"], main{
   width: 100%;
   text-align: left;
   display:grid;
-  grid-template-columns: 1.1fr .6fr 1fr .6fr .8fr .8fr .7fr .7fr .7fr .7fr .5fr;
+  grid-template-columns: 1.2fr .65fr 1.35fr .75fr .85fr .9fr .75fr .75fr .7fr .7fr .7fr .55fr;
   gap: 10px;
   padding: 10px 12px;
   border: 0;
@@ -1275,25 +1397,35 @@ main[role="main"], main{
   cursor: pointer;
   border-bottom: 1px solid rgba(255,255,255,.06);
 }
-.ledger-row:hover{ background: rgba(255,255,255,.04); }
+.ledger-row:last-child{ border-bottom: 0; }
+.ledger-row:hover{
+  background: rgba(255,255,255,.04);
+}
 .ledger-row .num,
 .ledger-head .num{ text-align: right; }
-.ledger-slotid{ font-weight: 900; }
-.ledger-view{ opacity: .9; }
-.ledger-empty{ padding: 12px; opacity: .75; }
+.ledger-slotid{
+  font-weight: 900;
+  letter-spacing: .01em;
+}
+.ledger-view{
+  opacity: .9;
+  color: var(--gold);
+}
+.ledger-empty{
+  padding: 12px;
+  opacity: .75;
+}
 
-/* Event log */
+/* ==================================
+   EVENT LOG
+================================== */
 .event-log{
   margin-top: 10px;
   border: 1px solid rgba(255,255,255,.10);
   border-radius: 14px;
   background: rgba(0,0,0,.18);
-
-  /* single source of truth */
   max-height: 320px;
   overflow-y: auto;
-
-  /* PATCH: keep inner glow + prevent “cut off” look */
   padding-bottom: 6px;
 }
 .event-row{
@@ -1312,10 +1444,18 @@ main[role="main"], main{
 }
 .event-msg{ flex: 1; min-width: 0; }
 .event-kind{ opacity: .9; font-weight: 800; }
-.event-text{ opacity: .9; word-break: break-word; }
-.event-empty{ padding: 10px; opacity: .75; }
+.event-text{
+  opacity: .9;
+  word-break: break-word;
+}
+.event-empty{
+  padding: 10px;
+  opacity: .75;
+}
 
-/* Slot drawer */
+/* ==================================
+   SLOT DRAWER
+================================== */
 .slot-drawer-backdrop{
   position: fixed;
   inset: 0;
@@ -1326,16 +1466,86 @@ main[role="main"], main{
   z-index: 9999;
 }
 .slot-drawer{
-  width: min(520px, 92vw);
+  width: min(560px, 92vw);
   height: 100%;
   padding: 14px;
   border-radius: 0;
   overflow: auto;
+  background:
+    radial-gradient(740px 220px at 20% 0%, rgba(244,200,106,.08), transparent 60%),
+    radial-gradient(620px 220px at 100% 100%, rgba(0,240,255,.06), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012));
+}
+.slot-drawer-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom: 12px;
+}
+.slot-drawer-id{
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+.slot-drawer-sub{
+  opacity: .8;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.slot-drawer-esc{
+  display:inline-block;
+  margin-left: 8px;
+  opacity: .6;
+}
+.slot-drawer-grid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:10px;
+  margin-bottom: 16px;
+}
+.slot-drawer-grid > div{
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+}
+.slot-k{
+  font-size: 12px;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  opacity: .72;
+}
+.slot-v{
+  margin-top: 4px;
+  font-weight: 900;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+.slot-section{
+  margin: 14px 0 8px;
+  font-size: 12px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(244,200,106,.92);
+  text-shadow: 0 0 12px rgba(244,200,106,.18);
+}
+.slot-rules{
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  display:grid;
+  gap:8px;
+  font-size: 14px;
+}
+.slot-rules-note{
+  opacity: .68;
+  font-size: 12px;
 }
 
-/* =========================================================
-   SHOP — Industrial Luxury Showroom (authoritative)
-========================================================= */
+/* ==================================
+   SHOP — Industrial Luxury Showroom
+================================== */
 .shop-controls{
   margin-top: 14px;
   display:flex;
@@ -1349,10 +1559,6 @@ main[role="main"], main{
   box-shadow: 0 0 0 1px rgba(17,241,167,.14) inset;
 }
 
-/* remove duplicate hover block for close button */
-/* keep only one .product-modal-close:hover rule */
-
-/* optional: cleaner small-screen shop cards */
 .shop-grid{
   margin-top: 18px;
   display:grid;
@@ -1360,12 +1566,10 @@ main[role="main"], main{
   gap: 16px;
   align-items: stretch;
 }
-
 @media (max-width: 560px){
-  .shop-grid{
-    grid-template-columns: 1fr;
-  }
+  .shop-grid{ grid-template-columns: 1fr; }
 }
+
 .product-card{
   position:relative;
   border-radius: 20px;
@@ -1498,7 +1702,7 @@ main[role="main"], main{
   transform: translateY(-1px);
 }
 
-/* Shop: Fullscreen Product Modal (single implementation) */
+/* Shop modal */
 .product-modal-layer{
   position: fixed;
   inset: 0;
@@ -1528,9 +1732,6 @@ main[role="main"], main{
     0 0 0 1px rgba(255,255,255,.06) inset;
   overflow: hidden;
   max-height: calc(100vh - 36px);
-}
-@media (max-width: 720px){
-  .product-modal-panel{ inset: 10px; border-radius: 18px; }
 }
 .product-modal-close{
   position: absolute;
@@ -1565,48 +1766,12 @@ main[role="main"], main{
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr);
 }
-@media (max-width: 980px){
-  .product-modal-grid{
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-}
 .product-modal-media{
   position: relative;
   min-height: 0;
   border-right: 1px solid rgba(255,255,255,.08);
   background: radial-gradient(900px 500px at 30% 20%, rgba(255,255,255,.06), transparent 60%);
   overflow: hidden;
-}
-@media (max-width: 980px){
-  .product-modal-panel{
-    inset: 10px;
-    border-radius: 18px;
-    max-height: calc(100vh - 20px);
-  }
-
-  .product-modal-grid{
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(220px, 42vh) 1fr;
-  }
-
-  .product-modal-media{
-    border-right: 0;
-    border-bottom: 1px solid rgba(255,255,255,.08);
-  }
-
-  .product-modal-details{
-    padding: 18px 16px 20px;
-  }
-
-  .product-modal-close{
-    top: 10px;
-    right: 10px;
-    width: 54px;
-    height: 54px;
-    font-size: 32px;
-    border-radius: 16px;
-  }
 }
 .product-modal-img,
 .product-modal-img-placeholder{
@@ -1635,9 +1800,9 @@ main[role="main"], main{
 .product-modal-actions{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
 .product-modal-footnote{ margin-top: 8px; font-size: 0.85rem; opacity: 0.72; }
 
-/* =========================================================
-   RESPONSIVE FIXES (Engine + tables)
-========================================================= */
+/* ==================================
+   RESPONSIVE
+================================== */
 @media (max-width: 980px){
   .engine-hero{
     grid-template-columns: 1fr;
@@ -1649,40 +1814,87 @@ main[role="main"], main{
   .engine-auth-hint{ text-align:left; }
 
   .engine-capture-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .engine-bay, .engine-bay--wide{ grid-column: span 12; }
+  .engine-ledger-topgrid{ grid-template-columns: 1fr; }
+
+  .engine-bay,
+  .engine-bay--wide{ grid-column: span 12; }
+
   .market-console{ height: 420px; }
   .engine-telemetry-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .product-modal-panel{
+    inset: 10px;
+    border-radius: 18px;
+    max-height: calc(100vh - 20px);
+  }
+  .product-modal-grid{
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(220px, 42vh) 1fr;
+  }
+  .product-modal-media{
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .product-modal-details{
+    padding: 18px 16px 20px;
+  }
+  .product-modal-close{
+    top: 10px;
+    right: 10px;
+    width: 54px;
+    height: 54px;
+    font-size: 32px;
+    border-radius: 16px;
+  }
 }
+
+@media (max-width: 900px){
+  .ledger-head,
+  .ledger-row{
+    grid-template-columns: 1.25fr .7fr 1.2fr .75fr .9fr .9fr .8fr .8fr .7fr;
+  }
+  .ledger-head > :nth-child(10),
+  .ledger-head > :nth-child(11),
+  .ledger-head > :nth-child(12),
+  .ledger-row > :nth-child(10),
+  .ledger-row > :nth-child(11),
+  .ledger-row > :nth-child(12){ display:none; }
+}
+
+@media (max-width: 720px){
+  .slot-drawer{
+    width: min(100vw, 100%);
+  }
+  .slot-drawer-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 560px){
+  .engine-window--hero{
+    padding: 14px 12px 12px;
+  }
   .engine-capture-grid{ grid-template-columns: 1fr; }
   .engine-filter{ min-width: 220px; }
   .engine-title{ font-size: 28px; }
   .engine-telemetry-grid{ grid-template-columns: 1fr; }
+
   .market-head,
   .market-row{ grid-template-columns: 1.5fr 1fr 1fr; }
   .market-head div:nth-child(4),
   .market-head div:nth-child(5),
   .market-row div:nth-child(4),
   .market-row div:nth-child(5){ display:none; }
-}
 
-/* Ledger table collapse on mid */
-@media (max-width: 900px){
-  .ledger-head, .ledger-row{
-    grid-template-columns: 1.2fr .7fr 1fr .7fr .9fr .9fr .8fr;
+  .slot-drawer-top{
+    flex-direction: column;
+    align-items: stretch;
   }
-  .ledger-head > :nth-child(9),
-  .ledger-head > :nth-child(10),
-  .ledger-head > :nth-child(11),
-  .ledger-row > :nth-child(9),
-  .ledger-row > :nth-child(10),
-  .ledger-row > :nth-child(11){ display:none; }
 }
 
-/* =========================================================
-   PATCH — Desktop must not CLIP Public Event Log
-   (Does NOT override React collapse; only prevents container clipping.)
-========================================================= */
+/* ==================================
+   DESKTOP NO-CLIP PATCH
+================================== */
 @media (min-width: 900px){
   .engine-window,
   .engine-foreground,
@@ -1692,6 +1904,30 @@ main[role="main"], main{
     max-height: none;
   }
   .engine-events{ visibility: visible; }
+}
+
+/* ==================================
+   SCROLLBARS
+================================== */
+.market-console::-webkit-scrollbar,
+.event-log::-webkit-scrollbar,
+.engine-log::-webkit-scrollbar,
+.slot-drawer::-webkit-scrollbar{
+  width: 10px;
+}
+.market-console::-webkit-scrollbar-thumb,
+.event-log::-webkit-scrollbar-thumb,
+.engine-log::-webkit-scrollbar-thumb,
+.slot-drawer::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.14);
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,.25);
+}
+.market-console::-webkit-scrollbar-thumb:hover,
+.event-log::-webkit-scrollbar-thumb:hover,
+.engine-log::-webkit-scrollbar-thumb:hover,
+.slot-drawer::-webkit-scrollbar-thumb:hover{
+  background: rgba(17,241,167,.22);
 }
 
 /* ==================================
@@ -1714,118 +1950,4 @@ main[role="main"], main{
     transition:none;
     animation:none;
   }
-}
-
-/* =========================================================
-   ENGINE — polish pass (end-of-file override)
-   Goal: tighter hero, sticky controls, cleaner bays
-========================================================= */
-
-.engine-shell .engine-window--hero{
-  padding: 16px 18px 14px;
-}
-
-/* Desktop: subtle separation between center + right status column */
-@media (min-width: 980px){
-  .engine-shell .engine-hero{
-    position: relative;
-  }
-  .engine-shell .engine-hero::after{
-    content:"";
-    position:absolute;
-    top: 8px;
-    bottom: 8px;
-    right: 0;
-    width: 1px;
-    background: linear-gradient(to bottom, transparent, rgba(255,255,255,.08), transparent);
-    opacity:.25;
-  }
-}
-
-/* Tighten title + sub */
-.engine-shell .engine-title{
-  font-size: clamp(26px, 3vw, 34px);
-  margin-bottom: 4px;
-}
-.engine-shell .engine-sub{
-  opacity: .72;
-  font-size: 13px;
-}
-
-/* Right pills: more “panel” less “floating” */
-.engine-shell .engine-hero-right{
-  padding-top: 4px;
-}
-.engine-shell .engine-hero-status .indicator{
-  background: rgba(0,0,0,.32);
-  border-color: rgba(255,255,255,.16);
-}
-
-/* Sticky control bar */
-.engine-shell .engine-controls{
-  position: sticky;
-  top: 74px; /* adjust if header height changes */
-  z-index: 30;
-  padding: 10px 0;
-  background: linear-gradient(180deg, rgba(10,14,18,.78), rgba(10,14,18,0));
-  backdrop-filter: blur(10px);
-}
-
-/* Buttons: slightly more “console key” feel */
-.engine-shell .engine-controls .button,
-.engine-shell .engine-controls .chip,
-.engine-shell .engine-section-tab{
-  border-radius: 14px;
-}
-
-/* Market bay: make it feel embedded */
-.engine-shell .market-console{
-  border-radius: 18px;
-  background: rgba(0,0,0,.22);
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.06),
-    inset 0 18px 40px rgba(0,0,0,.42);
-}
-
-/* Market header: always sticky + slightly denser */
-.engine-shell .market-head{
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: rgba(0,0,0,.46);
-  backdrop-filter: blur(10px);
-}
-
-/* Numeric columns: crisp */
-.engine-shell .market-price{
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .01em;
-}
-
-/* Ledger + events bays: unify bezel look (reduce glow reliance) */
-.engine-shell .engine-ledger,
-.engine-shell .engine-events{
-  background: rgba(0,0,0,.22);
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.06),
-    inset 0 18px 40px rgba(0,0,0,.42);
-}
-
-/* Scrollbars: match console (Chrome/Edge) */
-.market-console::-webkit-scrollbar,
-.event-log::-webkit-scrollbar,
-.engine-log::-webkit-scrollbar{
-  width: 10px;
-}
-.market-console::-webkit-scrollbar-thumb,
-.event-log::-webkit-scrollbar-thumb,
-.engine-log::-webkit-scrollbar-thumb{
-  background: rgba(255,255,255,.14);
-  border-radius: 999px;
-  border: 2px solid rgba(0,0,0,.25);
-}
-.market-console::-webkit-scrollbar-thumb:hover,
-.event-log::-webkit-scrollbar-thumb:hover,
-.engine-log::-webkit-scrollbar-thumb:hover{
-  background: rgba(17,241,167,.22);
 }
