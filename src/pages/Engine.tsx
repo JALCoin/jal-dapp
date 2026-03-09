@@ -398,14 +398,13 @@ function entryDisplayValue(s: SlotRow): number | null {
   return s.entryMid != null && Number.isFinite(s.entryMid) ? s.entryMid : null;
 }
 
+/* =========================
+   Component
+========================= */
 function entryLabel(s: SlotRow): string {
   const v = entryDisplayValue(s);
   return v != null ? fmt(v) : "—";
 }
-
-/* =========================
-   Component
-========================= */
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
   const isDesktop = useIsDesktop(980);
@@ -1161,7 +1160,9 @@ export default function Engine() {
                       </div>
                     </div>
                   </div>
+                  <EntrySignalPipeline slot={trackedSlot} />
                 </div>
+                
               ) : null}
 
               <div className="engine-footer-note engine-footer-note--spaced">
