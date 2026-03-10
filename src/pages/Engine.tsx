@@ -240,6 +240,7 @@ type PublicSlotsResponse = { ok: boolean; ts: number; rows: SlotRow[] };
 ========================= */
 const PROD_DEFAULT = "https://jal-engine-service-production.up.railway.app";
 const DEV_DEFAULT = "http://localhost:8787";
+const CAROUSEL_INTERVAL_MS = 4500;
 
 /* =========================
    Helpers
@@ -400,6 +401,28 @@ function useIsDesktop(bpPx = 980) {
   return isDesktop;
 }
 
+function stateToneClass(slot: SlotRow) {
+  const tracking = String(slot.trackingState || "").toUpperCase();
+  const state = String(slot.state || "").toUpperCase();
+
+  if (state === "HOLDING" || state === "LVL1_LOCK" || state === "LVL2_LOCK" || state === "LVL3_LOCK" || state === "LVL4_TRAIL") {
+    return "is-holding";
+  }
+  if (state === "DEPLOYING" || tracking === "DEPLOYING" || tracking === "REVERSAL_CONFIRMING") {
+    return "is-deploying";
+  }
+  if (tracking === "TRACKING" || tracking === "ARMED" || tracking === "DRAWDOWN_SEEN") {
+    return "is-tracking";
+  }
+  if (tracking === "SPREAD_BLOCKED") {
+    return "is-blocked";
+  }
+  if (tracking === "NO_MARKET") {
+    return "is-muted";
+  }
+  return "is-neutral";
+}
+
 /* =========================
    Component
 ========================= */
@@ -426,6 +449,9 @@ export default function Engine() {
 
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselPaused, setCarouselPaused] = useState(false);
 
   const pollRef = useRef<number | null>(null);
 
@@ -530,10 +556,17 @@ export default function Engine() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSelectedSlotId(null);
+      if (e.key === "ArrowRight") {
+        setCarouselIndex((i) => (slotRows.length ? (i + 1) % slotRows.length : 0));
+      }
+      if (e.key === "ArrowLeft") {
+        setCarouselIndex((i) => (slotRows.length ? (i - 1 + slotRows.length) % slotRows.length : 0));
+      }
     };
 
+    window.addEventListener("keydown", onKey);
+
     if (selectedSlotId) {
-      window.addEventListener("keydown", onKey);
       document.body.style.overflow = "hidden";
     }
 
@@ -541,7 +574,7 @@ export default function Engine() {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [selectedSlotId]);
+  }, [selectedSlotId, slotRows.length]);
 
   const filteredMarketRows = useMemo(() => {
     const q = query.trim().toUpperCase();
@@ -595,6 +628,26 @@ export default function Engine() {
     });
   }, [query, slotRows, sortDir, sortKey]);
 
+  useEffect(() => {
+    if (!filteredSlots.length) {
+      setCarouselIndex(0);
+      return;
+    }
+    if (carouselIndex > filteredSlots.length - 1) {
+      setCarouselIndex(0);
+    }
+  }, [filteredSlots.length, carouselIndex]);
+
+  useEffect(() => {
+    if (!filteredSlots.length || carouselPaused) return;
+
+    const t = window.setInterval(() => {
+      setCarouselIndex((i) => (i + 1) % filteredSlots.length);
+    }, CAROUSEL_INTERVAL_MS);
+
+    return () => window.clearInterval(t);
+  }, [filteredSlots.length, carouselPaused]);
+
   const selectedSlot = useMemo(
     () => filteredSlots.find((s) => s.id === selectedSlotId) ?? null,
     [filteredSlots, selectedSlotId]
@@ -604,6 +657,11 @@ export default function Engine() {
     if (!selectedSlotId) return [];
     return events.filter((e) => e.slotId === selectedSlotId).slice(0, 60);
   }, [events, selectedSlotId]);
+
+  const carouselSlot = useMemo(() => {
+    if (!filteredSlots.length) return null;
+    return filteredSlots[Math.max(0, Math.min(carouselIndex, filteredSlots.length - 1))] ?? null;
+  }, [filteredSlots, carouselIndex]);
 
   const fixedAllowlist = meta?.fixedSlots?.allowlist ?? [];
   const fixedExpected = meta?.fixedSlots?.expected ?? fixedAllowlist.length;
@@ -634,7 +692,12 @@ export default function Engine() {
 
   const topTrackingCoins = useMemo(() => {
     return filteredSlots
-      .filter((s) => s.trackingState === "TRACKING" || s.trackingState === "DRAWDOWN_SEEN" || s.trackingState === "REVERSAL_CONFIRMING")
+      .filter(
+        (s) =>
+          s.trackingState === "TRACKING" ||
+          s.trackingState === "DRAWDOWN_SEEN" ||
+          s.trackingState === "REVERSAL_CONFIRMING"
+      )
       .map((s) => s.coin)
       .filter(Boolean)
       .slice(0, 6)
@@ -828,68 +891,134 @@ export default function Engine() {
                 </div>
               ) : null}
 
-              <div className="engine-grid" aria-label="Engine bays">
-                <div className="engine-bay engine-bay--wide">
-                  <div className="bay-head">
-                    <div className="bay-title">Fixed Slot Machine</div>
-                    <div className="bay-note">Permanent Jeroid identities backed by the public ledger.</div>
+              <div className="card machine-surface panel-frame engine-status-rail" aria-label="Live JRD Status">
+                <div className="engine-telemetry-head">
+                  <div>
+                    <div className="engine-telemetry-title">Live JRD Status</div>
+                    <div className="engine-telemetry-note">
+                      One fixed Jeroid position at a time. Click the card to open full details.
+                    </div>
                   </div>
 
-                  <div className="ledger-table">
-                    <div className="ledger-head">
-                      <div>Slot ID</div>
-                      <div>Coin</div>
-                      <div>State</div>
-                      <div>Tracking</div>
-                      <div className="num">Entry</div>
-                      <div className="num">Now</div>
-                      <div className="num">Gross</div>
-                      <div className="num">Net</div>
-                      <div>Level</div>
-                      <div className="num">Cycles</div>
-                      <div className="num">Log</div>
+                  <div className="engine-carousel-controls">
+                    <button
+                      type="button"
+                      className="button ghost"
+                      onClick={() =>
+                        setCarouselIndex((i) =>
+                          filteredSlots.length ? (i - 1 + filteredSlots.length) % filteredSlots.length : 0
+                        )
+                      }
+                      aria-label="Previous JRD"
+                    >
+                      ←
+                    </button>
+
+                    <div className="engine-carousel-counter">
+                      {filteredSlots.length ? `${carouselIndex + 1} / ${filteredSlots.length}` : "0 / 0"}
                     </div>
 
-                    {filteredSlots.length ? (
-                      filteredSlots.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          className="ledger-row"
-                          onClick={() => setSelectedSlotId(s.id)}
-                          title="Open slot details"
-                        >
-                          <div className="ledger-slotid">{s.id}</div>
-                          <div>{slotCoin(s)}</div>
-                          <div>{stateLabel(s)}</div>
-                          <div>{trackingLabel(s)}</div>
-                          <div className="num">{effectiveEntryLabel(s)}</div>
-                          <div className="num">{effectiveNowLabel(s)}</div>
-                          <div className="num">{pctNum(s.grossPct)}</div>
-                          <div className="num">{pctNum(s.netPct)}</div>
-                          <div>{s.level ? `LVL${s.level}` : "—"}</div>
-                          <div className="num">{s.cycles ?? 0}</div>
-                          <div className="num ledger-view">View</div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="ledger-empty">No public slots returned.</div>
-                    )}
+                    <button
+                      type="button"
+                      className="button ghost"
+                      onClick={() =>
+                        setCarouselIndex((i) => (filteredSlots.length ? (i + 1) % filteredSlots.length : 0))
+                      }
+                      aria-label="Next JRD"
+                    >
+                      →
+                    </button>
                   </div>
                 </div>
 
+                {carouselSlot ? (
+                  <>
+                    <button
+                      type="button"
+                      className={`engine-carousel-card ${stateToneClass(carouselSlot)}`}
+                      onClick={() => setSelectedSlotId(carouselSlot.id)}
+                      onMouseEnter={() => setCarouselPaused(true)}
+                      onMouseLeave={() => setCarouselPaused(false)}
+                      onFocus={() => setCarouselPaused(true)}
+                      onBlur={() => setCarouselPaused(false)}
+                    >
+                      <div className="engine-carousel-card-top">
+                        <div className="engine-carousel-id">{carouselSlot.id}</div>
+                        <div className="engine-carousel-coin">
+                          {slotCoin(carouselSlot)} <span>{carouselSlot.market ?? "—"}</span>
+                        </div>
+                      </div>
+
+                      <div className="engine-carousel-grid">
+                        <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">State</div>
+                          <div className="engine-carousel-v">{stateLabel(carouselSlot)}</div>
+                        </div>
+
+                        <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">Tracking</div>
+                          <div className="engine-carousel-v">{trackingLabel(carouselSlot)}</div>
+                        </div>
+
+                        <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">Net</div>
+                          <div className="engine-carousel-v">{pctNum(carouselSlot.netPct)}</div>
+                        </div>
+
+                        <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">Cycles</div>
+                          <div className="engine-carousel-v">{carouselSlot.cycles ?? 0}</div>
+                        </div>
+
+                        <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">Unit</div>
+                          <div className="engine-carousel-v">{moneyAud(carouselSlot.unitAud)}</div>
+                        </div>
+
+                        <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">Now</div>
+                          <div className="engine-carousel-v">{effectiveNowLabel(carouselSlot)}</div>
+                        </div>
+                      </div>
+
+                      <div className="engine-carousel-foot">
+                        <span>Entry {effectiveEntryLabel(carouselSlot)}</span>
+                        <span>•</span>
+                        <span>Level {carouselSlot.level ? `LVL${carouselSlot.level}` : "—"}</span>
+                        <span>•</span>
+                        <span>View Details</span>
+                      </div>
+                    </button>
+
+                    <div
+                      className="engine-carousel-dots"
+                      onMouseEnter={() => setCarouselPaused(true)}
+                      onMouseLeave={() => setCarouselPaused(false)}
+                    >
+                      {filteredSlots.map((slot, idx) => (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          className={`engine-carousel-dot ${idx === carouselIndex ? "active" : ""}`}
+                          onClick={() => setCarouselIndex(idx)}
+                          aria-label={`Show ${slot.id}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="ledger-empty">No fixed slots available.</div>
+                )}
+              </div>
+
+              <div className="engine-grid" aria-label="Engine bays">
                 <div className="engine-bay">
                   <div className="bay-head">
-                    <div className="bay-title">Surface + Telemetry</div>
-                    <div className="bay-note">Live CoinSpot market rows + engine summaries.</div>
+                    <div className="bay-title">Machine Summary</div>
+                    <div className="bay-note">Fixed-slot runtime state.</div>
                   </div>
 
                   <div className="card machine-surface panel-frame engine-telemetry" aria-label="Machine Summary">
-                    <div className="engine-telemetry-head">
-                      <div className="engine-telemetry-title">Machine Summary</div>
-                      <div className="engine-telemetry-note">Fixed-slot runtime state</div>
-                    </div>
-
                     <div className="engine-telemetry-grid">
                       <div className="engine-telemetry-item">
                         <div className="engine-telemetry-k">Expected slots</div>
@@ -929,45 +1058,6 @@ export default function Engine() {
                         <div className="engine-telemetry-sub">
                           {fixedMissing.length ? `Missing ${fixedMissing.join(", ")}` : "No missing fixed ids"}
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="card machine-surface panel-frame engine-telemetry" aria-label="Tradable Surface">
-                    <div className="engine-telemetry-head">
-                      <div className="engine-telemetry-title">Tradable Surface</div>
-                      <div className="engine-telemetry-note">Read-only market feed</div>
-                    </div>
-
-                    <div className="market-console" aria-label="Market table">
-                      <div className="market-head">
-                        <div>Coin</div>
-                        <div className="market-price">Bid</div>
-                        <div className="market-price">Ask</div>
-                        <div className="market-price">Mid</div>
-                        <div className="market-price">Spread</div>
-                      </div>
-
-                      <div className="market-body" aria-label="Market rows">
-                        {filteredMarketRows.map((r) => {
-                          const mid = r.mid ?? (r.bid + r.ask) / 2;
-                          const spreadPct =
-                            r.spreadPct ?? (((r.ask - r.bid) / Math.max(mid, 1e-9)) * 100);
-
-                          return (
-                            <div className="market-row" key={`${r.coin}::${r.market ?? ""}`}>
-                              <div className="market-coin">
-                                <strong>{r.coin}</strong>
-                                <span className="market-market">{r.market ?? `${r.coin}/AUD`}</span>
-                              </div>
-
-                              <div className="market-price">{fmt(r.bid)}</div>
-                              <div className="market-price">{fmt(r.ask)}</div>
-                              <div className="market-price">{fmt(mid)}</div>
-                              <div className="market-price">{pctNum(spreadPct)}</div>
-                            </div>
-                          );
-                        })}
                       </div>
                     </div>
                   </div>
@@ -1014,6 +1104,47 @@ export default function Engine() {
                       </div>
                     </div>
                   ) : null}
+                </div>
+
+                <div className="engine-bay">
+                  <div className="bay-head">
+                    <div className="bay-title">Market Surface</div>
+                    <div className="bay-note">Read-only CoinSpot feed.</div>
+                  </div>
+
+                  <div className="card machine-surface panel-frame engine-telemetry" aria-label="Tradable Surface">
+                    <div className="engine-telemetry-head">
+                      <div className="engine-telemetry-title">Tradable Surface</div>
+                      <div className="engine-telemetry-note">Coin / Mid / Spread</div>
+                    </div>
+
+                    <div className="market-console" aria-label="Market table">
+                      <div className="market-head market-head--compact">
+                        <div>Coin</div>
+                        <div className="market-price">Mid</div>
+                        <div className="market-price">Spread</div>
+                      </div>
+
+                      <div className="market-body" aria-label="Market rows">
+                        {filteredMarketRows.map((r) => {
+                          const mid = r.mid ?? (r.bid + r.ask) / 2;
+                          const spreadPct = r.spreadPct ?? (((r.ask - r.bid) / Math.max(mid, 1e-9)) * 100);
+
+                          return (
+                            <div className="market-row market-row--compact" key={`${r.coin}::${r.market ?? ""}`}>
+                              <div className="market-coin">
+                                <strong>{r.coin}</strong>
+                                <span className="market-market">{r.market ?? `${r.coin}/AUD`}</span>
+                              </div>
+
+                              <div className="market-price">{fmt(mid)}</div>
+                              <div className="market-price">{pctNum(spreadPct)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1240,8 +1371,8 @@ export default function Engine() {
                       <div className="engine-about-title">Fixed-Slot Jeroid Ledger</div>
 
                       <p>
-                        This page now reflects the permanent-slot backend architecture. Each Jeroid slot belongs to one fixed
-                        market identity and independently waits, deploys, holds, exits, and re-enters under the same machine rules.
+                        This page reflects the permanent-slot backend architecture. Each Jeroid slot belongs to one fixed market
+                        identity and independently waits, deploys, holds, exits, and re-enters under the same machine rules.
                       </p>
 
                       <p>
