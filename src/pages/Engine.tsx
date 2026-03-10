@@ -1011,8 +1011,8 @@ export default function Engine() {
                 )}
               </div>
 
-              <div className="engine-grid" aria-label="Engine bays">
-                <div className="engine-bay">
+                  <div className="engine-grid engine-grid--asym" aria-label="Engine bays">
+                <div className="engine-bay engine-bay--narrow">
                   <div className="bay-head">
                     <div className="bay-title">Machine Summary</div>
                     <div className="bay-note">Fixed-slot runtime state.</div>
