@@ -2,10 +2,8 @@
    JAL/SOL — Global CSS (index.css)
    Aesthetic: neon cyber / premium ATM
    Mode: entry-only landing + NAV overlay + no footer/tabbar
-   Refinement: premium “machine immersion” + console bays
-   Fixes: sidebar vertical stack, remove collisions, mobile engine header stack
-   Add: Home module grid (System Bays) + Engine page CSS moved from components
-   Patch: reversal-aware Engine UI + treasury glow ledger layer + no desktop event clipping
+   Refinement: premium machine immersion + fixed-slot engine ledger
+   Patch: Engine.tsx aligned to permanent fixed-slot Jeroid architecture
 =================================*/
 
 /* ---------- Design tokens ---------- */
@@ -20,6 +18,7 @@
   --green:#11f1a7;
   --cyan:#00f0ff;
   --gold:#f4c86a;
+  --red:#ff6b6b;
 
   --stroke:   rgba(255,255,255,.14);
   --stroke-2: rgba(255,255,255,.28);
@@ -1171,6 +1170,8 @@ main[role="main"], main{
 .mini-v{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
   opacity:.92;
+  text-align:right;
+  word-break: break-word;
 }
 .engine-mini-err{
   padding: 10px 10px;
@@ -1207,7 +1208,7 @@ main[role="main"], main{
 .engine-telemetry-grid{
   margin-top: 10px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 .engine-telemetry-item{
@@ -1216,6 +1217,7 @@ main[role="main"], main{
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.09);
   background: rgba(0,0,0,.18);
+  min-width:0;
 }
 .engine-telemetry-k{
   font-size: 12px;
@@ -1224,16 +1226,46 @@ main[role="main"], main{
   text-transform: uppercase;
 }
 .engine-telemetry-v{
+  margin-top:4px;
   font-weight: 900;
   font-size: 1rem;
   line-height: 1.2;
+  word-break: break-word;
 }
 .engine-telemetry-sub{
   margin-top: 4px;
   font-size: 12px;
   opacity: .7;
+  word-break: break-word;
 }
 .engine-telemetry-pending{ margin-top: 10px; opacity: .75; }
+.engine-telemetry-item.is-active,
+.engine-telemetry-item[data-active="true"]{
+  border-color: rgba(17,241,167,.38);
+  background:
+    radial-gradient(320px 120px at 50% 0%, rgba(17,241,167,.10), transparent 65%),
+    linear-gradient(180deg, rgba(17,241,167,.06), rgba(0,0,0,.18));
+  box-shadow:
+    0 0 0 1px rgba(17,241,167,.10) inset,
+    0 0 18px rgba(17,241,167,.14),
+    0 10px 24px rgba(0,0,0,.24);
+}
+.engine-telemetry-item.is-active .engine-telemetry-k,
+.engine-telemetry-item[data-active="true"] .engine-telemetry-k{
+  color: rgba(200,255,233,.92);
+  opacity: .88;
+}
+.engine-telemetry-item.is-active .engine-telemetry-v,
+.engine-telemetry-item[data-active="true"] .engine-telemetry-v{
+  color: var(--green);
+  text-shadow:
+    0 0 10px rgba(17,241,167,.24),
+    0 0 18px rgba(17,241,167,.12);
+}
+.engine-telemetry-item.is-active .engine-telemetry-sub,
+.engine-telemetry-item[data-active="true"] .engine-telemetry-sub{
+  opacity: .82;
+}
 
 /* ==================================
    TRACKING BANNER / TREASURY STRIP
@@ -1313,7 +1345,7 @@ main[role="main"], main{
 
 .engine-ledger-topgrid{
   display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap:12px;
 }
 
@@ -1364,7 +1396,7 @@ main[role="main"], main{
 }
 
 /* ==================================
-   LEDGER TABLE
+   LEDGER TABLES
 ================================== */
 .ledger-table{
   margin-top: 12px;
@@ -1374,8 +1406,7 @@ main[role="main"], main{
   background: rgba(0,0,0,.18);
 }
 .ledger-head{
-  display:grid;
-  grid-template-columns: 1.2fr .65fr 1.35fr .75fr .85fr .9fr .75fr .75fr .7fr .7fr .7fr .55fr;
+  align-items: center;
   gap: 10px;
   padding: 10px 12px;
   font-size: 12px;
@@ -1387,8 +1418,6 @@ main[role="main"], main{
 .ledger-row{
   width: 100%;
   text-align: left;
-  display:grid;
-  grid-template-columns: 1.2fr .65fr 1.35fr .75fr .85fr .9fr .75fr .75fr .7fr .7fr .7fr .55fr;
   gap: 10px;
   padding: 10px 12px;
   border: 0;
@@ -1416,6 +1445,20 @@ main[role="main"], main{
   opacity: .75;
 }
 
+/* first ledger table inside top engine bay */
+.engine-grid .engine-bay--wide .ledger-head,
+.engine-grid .engine-bay--wide .ledger-row{
+  display:grid;
+  grid-template-columns: 1.2fr .7fr .95fr 1.15fr .85fr .85fr .75fr .75fr .7fr .7fr .55fr;
+}
+
+/* second ledger table inside main ledger section */
+.engine-ledger .ledger-head,
+.engine-ledger .ledger-row{
+  display:grid;
+  grid-template-columns: 1.2fr .75fr 1fr 1fr 1.1fr .8fr .7fr .7fr .55fr;
+}
+
 /* ==================================
    EVENT LOG
 ================================== */
@@ -1441,9 +1484,14 @@ main[role="main"], main{
   opacity: .75;
   font-variant-numeric: tabular-nums;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  flex: 0 0 auto;
 }
 .event-msg{ flex: 1; min-width: 0; }
-.event-kind{ opacity: .9; font-weight: 800; }
+.event-kind{
+  opacity: .9;
+  font-weight: 800;
+  margin-right: 6px;
+}
 .event-text{
   opacity: .9;
   word-break: break-word;
@@ -1451,6 +1499,47 @@ main[role="main"], main{
 .event-empty{
   padding: 10px;
   opacity: .75;
+}
+
+/* ==================================
+   ABOUT PANEL
+================================== */
+.engine-about{
+  margin-top: 14px;
+}
+.engine-about-btn{
+  width:100%;
+  justify-content:space-between;
+}
+.engine-about-toggle{
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.engine-about-panel{
+  margin-top: 12px;
+  padding: 16px;
+}
+.engine-about-title{
+  font-weight: 900;
+  letter-spacing: .04em;
+  margin-bottom: 10px;
+}
+.engine-about-h{
+  margin-top: 14px;
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(244,200,106,.92);
+}
+.engine-about-panel p,
+.engine-about-panel li{
+  opacity:.9;
+}
+.engine-about-panel ul{
+  margin: 8px 0 0 18px;
+  padding:0;
+  display:grid;
+  gap:6px;
 }
 
 /* ==================================
@@ -1509,6 +1598,7 @@ main[role="main"], main{
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(0,0,0,.18);
+  min-width:0;
 }
 .slot-k{
   font-size: 12px;
@@ -1520,6 +1610,7 @@ main[role="main"], main{
   margin-top: 4px;
   font-weight: 900;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  word-break: break-word;
 }
 .slot-section{
   margin: 14px 0 8px;
@@ -1849,16 +1940,27 @@ main[role="main"], main{
 }
 
 @media (max-width: 900px){
-  .ledger-head,
-  .ledger-row{
-    grid-template-columns: 1.25fr .7fr 1.2fr .75fr .9fr .9fr .8fr .8fr .7fr;
+  .engine-grid .engine-bay--wide .ledger-head,
+  .engine-grid .engine-bay--wide .ledger-row{
+    grid-template-columns: 1.25fr .75fr 1fr 1fr .85fr .85fr .75fr .75fr .7fr;
   }
-  .ledger-head > :nth-child(10),
-  .ledger-head > :nth-child(11),
-  .ledger-head > :nth-child(12),
-  .ledger-row > :nth-child(10),
-  .ledger-row > :nth-child(11),
-  .ledger-row > :nth-child(12){ display:none; }
+  .engine-grid .engine-bay--wide .ledger-head > :nth-child(10),
+  .engine-grid .engine-bay--wide .ledger-head > :nth-child(11),
+  .engine-grid .engine-bay--wide .ledger-row > :nth-child(10),
+  .engine-grid .engine-bay--wide .ledger-row > :nth-child(11){
+    display:none;
+  }
+
+  .engine-ledger .ledger-head,
+  .engine-ledger .ledger-row{
+    grid-template-columns: 1.2fr .75fr 1fr 1fr .95fr .8fr .7fr;
+  }
+  .engine-ledger .ledger-head > :nth-child(8),
+  .engine-ledger .ledger-head > :nth-child(9),
+  .engine-ledger .ledger-row > :nth-child(8),
+  .engine-ledger .ledger-row > :nth-child(9){
+    display:none;
+  }
 }
 
 @media (max-width: 720px){
@@ -1885,6 +1987,42 @@ main[role="main"], main{
   .market-head div:nth-child(5),
   .market-row div:nth-child(4),
   .market-row div:nth-child(5){ display:none; }
+
+  .engine-grid .engine-bay--wide .ledger-head,
+  .engine-grid .engine-bay--wide .ledger-row{
+    grid-template-columns: 1.2fr .8fr 1fr .95fr .55fr;
+  }
+  .engine-grid .engine-bay--wide .ledger-head > :nth-child(5),
+  .engine-grid .engine-bay--wide .ledger-head > :nth-child(6),
+  .engine-grid .engine-bay--wide .ledger-head > :nth-child(7),
+  .engine-grid .engine-bay--wide .ledger-head > :nth-child(8),
+  .engine-grid .engine-bay--wide .ledger-head > :nth-child(9),
+  .engine-grid .engine-bay--wide .ledger-head > :nth-child(10),
+  .engine-grid .engine-bay--wide .ledger-row > :nth-child(5),
+  .engine-grid .engine-bay--wide .ledger-row > :nth-child(6),
+  .engine-grid .engine-bay--wide .ledger-row > :nth-child(7),
+  .engine-grid .engine-bay--wide .ledger-row > :nth-child(8),
+  .engine-grid .engine-bay--wide .ledger-row > :nth-child(9),
+  .engine-grid .engine-bay--wide .ledger-row > :nth-child(10){
+    display:none;
+  }
+
+  .engine-ledger .ledger-head,
+  .engine-ledger .ledger-row{
+    grid-template-columns: 1.2fr .8fr 1fr .9fr;
+  }
+  .engine-ledger .ledger-head > :nth-child(3),
+  .engine-ledger .ledger-head > :nth-child(5),
+  .engine-ledger .ledger-head > :nth-child(6),
+  .engine-ledger .ledger-head > :nth-child(7),
+  .engine-ledger .ledger-head > :nth-child(8),
+  .engine-ledger .ledger-row > :nth-child(3),
+  .engine-ledger .ledger-row > :nth-child(5),
+  .engine-ledger .ledger-row > :nth-child(6),
+  .engine-ledger .ledger-row > :nth-child(7),
+  .engine-ledger .ledger-row > :nth-child(8){
+    display:none;
+  }
 
   .slot-drawer-top{
     flex-direction: column;
