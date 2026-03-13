@@ -11,7 +11,7 @@ type MarketRow = {
   ask: number;
   mid?: number | null;
   spreadAbs?: number | null;
-  spreadPct?: number | null; // percent number
+  spreadPct?: number | null;
 };
 
 type Snapshot = {
@@ -136,7 +136,6 @@ type SlotRow = {
   liveBuyLockActualRate?: number | null;
   liveBuyLockFilledAt?: number | null;
 
-  candidateCoin?: string | null;
   candidateTrackingSince?: number | null;
   candidateLastSeenAt?: number | null;
   candidateMidPrev?: number | null;
@@ -206,7 +205,6 @@ type PublicMetaResponse = {
   ok: boolean;
   ts: number;
   service?: string;
-
   engine?: {
     host?: string;
     execution?: "SIM" | "LIVE";
@@ -214,7 +212,6 @@ type PublicMetaResponse = {
     liveExecutionAllowed?: boolean;
     architecture?: string;
   };
-
   gates?: {
     writeEnabled?: boolean;
     destructiveDebugAllowed?: boolean;
@@ -227,7 +224,6 @@ type PublicMetaResponse = {
     topupEnabled?: boolean;
     topupTickMs?: number;
   };
-
   fixedSlots?: {
     expected?: number;
     allowlist?: string[];
@@ -235,7 +231,6 @@ type PublicMetaResponse = {
     missing?: string[];
     fixedCoinsPresent?: string[];
   };
-
   cadence?: {
     baselineAt?: number | null;
     firstArmedAt?: number | null;
@@ -246,7 +241,6 @@ type PublicMetaResponse = {
     lastRegistrySweepAt?: number | null;
     lastRegistrySweepWindow?: number | null;
   };
-
   counts?: {
     slots?: number;
     fixedSlots?: number;
@@ -261,7 +255,6 @@ type PublicMetaResponse = {
     lvl4?: number;
     inPlay?: number;
   };
-
   trackingStates?: Record<string, number>;
   harvester?: any;
   executor?: any;
@@ -383,9 +376,9 @@ function subslotLabel(s: SlotRow) {
   const tracking = String(s.trackingState || "").toUpperCase();
   const state = String(s.state || "").toUpperCase();
 
-  if (tracking === "BUY_LOCK_SUBMITTED") return "BUY-LOCK SUBSLOT";
-  if (tracking === "SELL_SUBMITTED" || state === "EXITING") return "EXIT SUBSLOT";
-  if (tracking === "BUY_SUBMITTING" || tracking === "BUY_SUBMITTED") return "ENTRY SUBSLOT";
+  if (tracking === "BUY_LOCK_SUBMITTED") return "SUBSLOT: BUY-LOCK";
+  if (tracking === "SELL_SUBMITTED" || state === "EXITING") return "SUBSLOT: EXIT";
+  if (tracking === "BUY_SUBMITTING" || tracking === "BUY_SUBMITTED") return "SUBSLOT: ENTRY";
   if (
     state === "HOLDING" ||
     state === "LVL1_LOCK" ||
@@ -393,15 +386,15 @@ function subslotLabel(s: SlotRow) {
     state === "LVL3_LOCK" ||
     state === "LVL4_TRAIL"
   ) {
-    return "HOLD SUBSLOT";
+    return "SUBSLOT: HOLD";
   }
   if (state === "DEPLOYING" || tracking === "DEPLOYING" || tracking === "REVERSAL_CONFIRMING") {
-    return "DEPLOY SUBSLOT";
+    return "SUBSLOT: DEPLOY";
   }
-  if (tracking === "TRACKING" || tracking === "DRAWDOWN_SEEN") return "TRACK SUBSLOT";
-  if (tracking === "SPREAD_BLOCKED") return "BLOCKED SUBSLOT";
-  if (tracking === "NO_MARKET") return "NO-MARKET SUBSLOT";
-  return "IDLE SUBSLOT";
+  if (tracking === "TRACKING" || tracking === "DRAWDOWN_SEEN") return "SUBSLOT: TRACK";
+  if (tracking === "SPREAD_BLOCKED") return "SUBSLOT: BLOCKED";
+  if (tracking === "NO_MARKET") return "SUBSLOT: NO MARKET";
+  return "SUBSLOT: IDLE";
 }
 
 function subslotToneClass(s: SlotRow) {
@@ -420,12 +413,29 @@ function subslotToneClass(s: SlotRow) {
   ) {
     return "is-holding";
   }
-  if (tracking === "TRACKING" || tracking === "DRAWDOWN_SEEN" || tracking === "REVERSAL_CONFIRMING") {
-    return "is-tracking";
-  }
+  if (tracking === "TRACKING" || tracking === "DRAWDOWN_SEEN") return "is-tracking";
   if (tracking === "SPREAD_BLOCKED") return "is-blocked";
   if (tracking === "NO_MARKET") return "is-muted";
   return "is-neutral";
+}
+
+function subslotSummaryRows(s: SlotRow, nowMs: number) {
+  return [
+    { k: "Role", v: subslotLabel(s) },
+    {
+      k: "Status",
+      v: s.liveBuyLockFillStatus ?? s.trackingState ?? s.state ?? "—",
+    },
+    { k: "Buy-lock count", v: String(s.buyLockCount ?? 0) },
+    { k: "Combined entry AUD", v: moneyAud(s.combinedEntryAud) },
+    { k: "Combined coin qty", v: fmt(s.combinedCoinQty) },
+    { k: "Combined entry rate", v: fmt(s.combinedEntryRate) },
+    {
+      k: "Last reconcile",
+      v: s.liveLastReconcileAt ? ageLabel(nowMs - s.liveLastReconcileAt) : "—",
+    },
+    { k: "Last error", v: s.liveLastError ?? "—" },
+  ];
 }
 
 function parseHarvestAudFromEvents(events: SlotEvent[]) {
@@ -519,14 +529,8 @@ function stateToneClass(slot: SlotRow) {
     return "is-tracking";
   }
 
-  if (tracking === "SPREAD_BLOCKED") {
-    return "is-blocked";
-  }
-
-  if (tracking === "NO_MARKET") {
-    return "is-muted";
-  }
-
+  if (tracking === "SPREAD_BLOCKED") return "is-blocked";
+  if (tracking === "NO_MARKET") return "is-muted";
   return "is-neutral";
 }
 
@@ -550,13 +554,14 @@ export default function Engine() {
   const [query, setQuery] = useState("");
 
   const [view, setView] = useState<ViewMode>("simple");
-  const [section, setSection] = useState<Section>("ledger");
+  const [section, setSection] = useState<Section>("ledger" as Section);
   const [eventsOpen, setEventsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [expandedLedgerSlotId, setExpandedLedgerSlotId] = useState<string | null>(null);
 
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
 
@@ -576,7 +581,8 @@ export default function Engine() {
     async (signal?: AbortSignal) => {
       const r = await fetch(`${BASE}/api/market/snapshot`, { method: "GET", signal });
       if (!r.ok) throw new Error(`market/snapshot HTTP ${r.status}`);
-      return (await r.json()) as Snapshot;
+      const j = await r.json();
+      return (j?.snapshot ?? j) as Snapshot;
     },
     [BASE]
   );
@@ -1380,46 +1386,75 @@ export default function Engine() {
                         <div>Coin</div>
                         <div>Market</div>
                         <div>State</div>
-                        <div>Subslot</div>
                         <div>Tracking</div>
                         <div className="num">Unit</div>
                         <div className="num">Net</div>
                         <div className="num">Cycles</div>
-                        <div className="num">Log</div>
+                        <div className="num">Open</div>
                       </div>
 
                       {filteredSlots.length ? (
-                        filteredSlots.map((s) => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            className="ledger-row"
-                            onClick={() => setSelectedSlotId(s.id)}
-                            title="Open slot details"
-                          >
-                            <div className="ledger-slotid">{s.id}</div>
-                            <div>{slotCoin(s)}</div>
-                            <div>{s.market ?? "—"}</div>
-                            <div>{stateLabel(s)}</div>
-                            <div>
-                              <span className={`ledger-subslot ${subslotToneClass(s)}`}>
-                                {subslotLabel(s)}
-                              </span>
-                            </div>
-                            <div>{trackingLabel(s)}</div>
-                            <div className="num">{moneyAud(s.unitAud)}</div>
-                            <div className="num">{pctNum(s.netPct)}</div>
-                            <div className="num">{s.cycles ?? 0}</div>
-                            <div className="num ledger-view">View</div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="ledger-empty">No slots in public ledger yet.</div>
-                      )}
-                    </div>
+                        filteredSlots.map((s) => {
+                          const expanded = expandedLedgerSlotId === s.id;
+                          const subslotRows = subslotSummaryRows(s, nowMs);
 
-                    <div className="engine-footer-note engine-footer-note--spaced">
-                      AUD growth shown on this page is <strong>harvest-only</strong>. External deposits and withdrawals are ignored.
+                          return (
+                            <div key={s.id} className={`ledger-entry ${expanded ? "is-expanded" : ""}`}>
+                              <button
+                                type="button"
+                                className="ledger-row"
+                                onClick={() =>
+                                  setExpandedLedgerSlotId((prev) => (prev === s.id ? null : s.id))
+                                }
+                                title="Toggle subslot tracker"
+                                aria-expanded={expanded}
+                              >
+                                <div className="ledger-slotid">{s.id}</div>
+                                <div>{slotCoin(s)}</div>
+                                <div>{s.market ?? "—"}</div>
+                                <div>{stateLabel(s)}</div>
+                                <div>{trackingLabel(s)}</div>
+                                <div className="num">{moneyAud(s.unitAud)}</div>
+                                <div className="num">{pctNum(s.netPct)}</div>
+                                <div className="num">{s.cycles ?? 0}</div>
+                                <div className="num ledger-view">{expanded ? "Hide" : "Show"}</div>
+                              </button>
+
+                              {expanded ? (
+                                <div className="ledger-subpanel">
+                                  <div className={`ledger-subpanel-badge ${subslotToneClass(s)}`}>
+                                    {subslotLabel(s)}
+                                  </div>
+
+                                  <div className="ledger-subpanel-grid">
+                                    {subslotRows.map((row) => (
+                                      <div key={row.k} className="ledger-subpanel-item">
+                                        <div className="ledger-subpanel-k">{row.k}</div>
+                                        <div className="ledger-subpanel-v">{row.v}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  <div className="ledger-subpanel-actions">
+                                    <button
+                                      type="button"
+                                      className="button ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedSlotId(s.id);
+                                      }}
+                                    >
+                                      Open Full Details
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="ledger-empty">No fixed slots available.</div>
+                      )}
                     </div>
                   </div>
 
@@ -1806,16 +1841,17 @@ export default function Engine() {
             <div className="slot-section">Timeline</div>
 
             <div className="event-log">
-{selectedSlotEvents.length ? (
-  selectedSlotEvents.slice(0, 60).map((e) => (
-    <div className="event-row" key={e.id}>
-      <div className="event-time">{fmtEventTime(e.at)}</div>
-      <div className="event-msg">
-        <span className="event-kind">{e.kind}</span> <span className="event-text">{e.msg}</span>
-      </div>
-    </div>
-  ))
-) : (
+              {selectedSlotEvents.length ? (
+                selectedSlotEvents.slice(0, 60).map((e) => (
+                  <div className="event-row" key={e.id}>
+                    <div className="event-time">{fmtEventTime(e.at)}</div>
+                    <div className="event-msg">
+                      <span className="event-kind">{e.kind}</span>{" "}
+                      <span className="event-text">{e.msg}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
                 <div className="event-empty">No slot events yet.</div>
               )}
             </div>
