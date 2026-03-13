@@ -41,6 +41,7 @@ type SlotState =
   | "LVL2_LOCK"
   | "LVL3_LOCK"
   | "LVL4_TRAIL"
+  | "EXITING"
   | "QUEUED"
   | "EXITED";
 
@@ -50,9 +51,15 @@ type TrackingState =
   | "DRAWDOWN_SEEN"
   | "REVERSAL_CONFIRMING"
   | "DEPLOYING"
+  | "BUY_SUBMITTING"
+  | "BUY_SUBMITTED"
+  | "BUY_LOCK_SUBMITTED"
   | "HOLDING"
+  | "SELL_SUBMITTED"
+  | "EXIT_FAILED_PENDING"
   | "NO_MARKET"
   | "SPREAD_BLOCKED"
+  | "REGISTRY_FAULT"
   | string;
 
 type SlotRow = {
@@ -101,6 +108,33 @@ type SlotRow = {
   frictionModel?: string | null;
   executorVersion?: string | null;
   paperOnly?: boolean;
+
+  buyLockCount?: number | null;
+  buyLockActive?: boolean | null;
+  buyLockLastAt?: number | null;
+  buyLockLastUnitAud?: number | null;
+  buyLockLastRate?: number | null;
+  buyLockLastCoinQty?: number | null;
+
+  combinedEntryAud?: number | null;
+  combinedCoinQty?: number | null;
+  combinedEntryRate?: number | null;
+
+  liveExecutionMode?: string | null;
+  liveLastError?: string | null;
+  liveLastReconcileAt?: number | null;
+  liveLastReconcileNote?: string | null;
+
+  liveBuyLockOrderId?: string | null;
+  liveBuyLockRequestedAud?: number | null;
+  liveBuyLockRequestedCoinQty?: number | null;
+  liveBuyLockSubmittedRate?: number | null;
+  liveBuyLockOrderAt?: number | null;
+  liveBuyLockFillStatus?: string | null;
+  liveBuyLockActualAud?: number | null;
+  liveBuyLockActualCoinQty?: number | null;
+  liveBuyLockActualRate?: number | null;
+  liveBuyLockFilledAt?: number | null;
 
   candidateCoin?: string | null;
   candidateTrackingSince?: number | null;
@@ -177,17 +211,21 @@ type PublicMetaResponse = {
     host?: string;
     execution?: "SIM" | "LIVE";
     liveTradingEnabled?: boolean;
+    liveExecutionAllowed?: boolean;
     architecture?: string;
   };
 
   gates?: {
     writeEnabled?: boolean;
+    destructiveDebugAllowed?: boolean;
     harvesterEnabled?: boolean;
     harvesterTickMs?: number;
     executorEnabled?: boolean;
     executorTickMs?: number;
     managerEnabled?: boolean;
     managerTickMs?: number;
+    topupEnabled?: boolean;
+    topupTickMs?: number;
   };
 
   fixedSlots?: {
@@ -214,21 +252,21 @@ type PublicMetaResponse = {
     fixedSlots?: number;
     waiting?: number;
     deploying?: number;
+    exiting?: number;
     holding?: number;
     locked?: number;
     lvl1?: number;
     lvl2?: number;
     lvl3?: number;
     lvl4?: number;
-    active?: number;
-    queuedLegacy?: number;
-    exitedLegacy?: number;
+    inPlay?: number;
   };
 
   trackingStates?: Record<string, number>;
   harvester?: any;
   executor?: any;
   manager?: any;
+  topup?: any;
   market?: { snapshot?: Snapshot | null };
 };
 
@@ -341,6 +379,55 @@ function reasonLabel(reason: string | null | undefined) {
   return String(reason).replace(/_/g, " ");
 }
 
+function subslotLabel(s: SlotRow) {
+  const tracking = String(s.trackingState || "").toUpperCase();
+  const state = String(s.state || "").toUpperCase();
+
+  if (tracking === "BUY_LOCK_SUBMITTED") return "BUY-LOCK SUBSLOT";
+  if (tracking === "SELL_SUBMITTED" || state === "EXITING") return "EXIT SUBSLOT";
+  if (tracking === "BUY_SUBMITTING" || tracking === "BUY_SUBMITTED") return "ENTRY SUBSLOT";
+  if (
+    state === "HOLDING" ||
+    state === "LVL1_LOCK" ||
+    state === "LVL2_LOCK" ||
+    state === "LVL3_LOCK" ||
+    state === "LVL4_TRAIL"
+  ) {
+    return "HOLD SUBSLOT";
+  }
+  if (state === "DEPLOYING" || tracking === "DEPLOYING" || tracking === "REVERSAL_CONFIRMING") {
+    return "DEPLOY SUBSLOT";
+  }
+  if (tracking === "TRACKING" || tracking === "DRAWDOWN_SEEN") return "TRACK SUBSLOT";
+  if (tracking === "SPREAD_BLOCKED") return "BLOCKED SUBSLOT";
+  if (tracking === "NO_MARKET") return "NO-MARKET SUBSLOT";
+  return "IDLE SUBSLOT";
+}
+
+function subslotToneClass(s: SlotRow) {
+  const tracking = String(s.trackingState || "").toUpperCase();
+  const state = String(s.state || "").toUpperCase();
+
+  if (tracking === "BUY_LOCK_SUBMITTED") return "is-buylock";
+  if (tracking === "SELL_SUBMITTED" || state === "EXITING") return "is-exiting";
+  if (tracking === "BUY_SUBMITTING" || tracking === "BUY_SUBMITTED") return "is-deploying";
+  if (
+    state === "HOLDING" ||
+    state === "LVL1_LOCK" ||
+    state === "LVL2_LOCK" ||
+    state === "LVL3_LOCK" ||
+    state === "LVL4_TRAIL"
+  ) {
+    return "is-holding";
+  }
+  if (tracking === "TRACKING" || tracking === "DRAWDOWN_SEEN" || tracking === "REVERSAL_CONFIRMING") {
+    return "is-tracking";
+  }
+  if (tracking === "SPREAD_BLOCKED") return "is-blocked";
+  if (tracking === "NO_MARKET") return "is-muted";
+  return "is-neutral";
+}
+
 function parseHarvestAudFromEvents(events: SlotEvent[]) {
   const out = { total: 0, last24h: 0, last7d: 0 };
   if (!events?.length) return out;
@@ -405,21 +492,41 @@ function stateToneClass(slot: SlotRow) {
   const tracking = String(slot.trackingState || "").toUpperCase();
   const state = String(slot.state || "").toUpperCase();
 
-  if (state === "HOLDING" || state === "LVL1_LOCK" || state === "LVL2_LOCK" || state === "LVL3_LOCK" || state === "LVL4_TRAIL") {
+  if (
+    state === "HOLDING" ||
+    state === "LVL1_LOCK" ||
+    state === "LVL2_LOCK" ||
+    state === "LVL3_LOCK" ||
+    state === "LVL4_TRAIL"
+  ) {
     return "is-holding";
   }
-  if (state === "DEPLOYING" || tracking === "DEPLOYING" || tracking === "REVERSAL_CONFIRMING") {
+
+  if (
+    state === "DEPLOYING" ||
+    state === "EXITING" ||
+    tracking === "DEPLOYING" ||
+    tracking === "REVERSAL_CONFIRMING" ||
+    tracking === "BUY_SUBMITTING" ||
+    tracking === "BUY_SUBMITTED" ||
+    tracking === "BUY_LOCK_SUBMITTED" ||
+    tracking === "SELL_SUBMITTED"
+  ) {
     return "is-deploying";
   }
+
   if (tracking === "TRACKING" || tracking === "ARMED" || tracking === "DRAWDOWN_SEEN") {
     return "is-tracking";
   }
+
   if (tracking === "SPREAD_BLOCKED") {
     return "is-blocked";
   }
+
   if (tracking === "NO_MARKET") {
     return "is-muted";
   }
+
   return "is-neutral";
 }
 
@@ -649,13 +756,13 @@ export default function Engine() {
   }, [filteredSlots.length, carouselPaused]);
 
   const selectedSlot = useMemo(
-    () => filteredSlots.find((s) => s.id === selectedSlotId) ?? null,
-    [filteredSlots, selectedSlotId]
+    () => slotRows.find((s) => s.id === selectedSlotId) ?? null,
+    [slotRows, selectedSlotId]
   );
 
   const selectedSlotEvents = useMemo(() => {
     if (!selectedSlotId) return [];
-    return events.filter((e) => e.slotId === selectedSlotId).slice(0, 60);
+    return events.filter((e) => e.slotId === selectedSlotId);
   }, [events, selectedSlotId]);
 
   const carouselSlot = useMemo(() => {
@@ -988,6 +1095,43 @@ export default function Engine() {
                         <span>•</span>
                         <span>View Details</span>
                       </div>
+
+                      <div className={`engine-subslot ${subslotToneClass(carouselSlot)}`}>
+                        <div className="engine-subslot-head">
+                          <span className="engine-subslot-title">{subslotLabel(carouselSlot)}</span>
+                          <span className="engine-subslot-state">
+                            {carouselSlot.liveBuyLockFillStatus ??
+                              carouselSlot.trackingState ??
+                              carouselSlot.state}
+                          </span>
+                        </div>
+
+                        <div className="engine-subslot-grid">
+                          <div className="engine-subslot-item">
+                            <div className="engine-subslot-k">Subslot Net</div>
+                            <div className="engine-subslot-v">{pctNum(carouselSlot.netPct)}</div>
+                          </div>
+
+                          <div className="engine-subslot-item">
+                            <div className="engine-subslot-k">Buy-Lock Count</div>
+                            <div className="engine-subslot-v">{carouselSlot.buyLockCount ?? 0}</div>
+                          </div>
+
+                          <div className="engine-subslot-item">
+                            <div className="engine-subslot-k">Combined Basis</div>
+                            <div className="engine-subslot-v">{moneyAud(carouselSlot.combinedEntryAud)}</div>
+                          </div>
+
+                          <div className="engine-subslot-item">
+                            <div className="engine-subslot-k">Last Reconcile</div>
+                            <div className="engine-subslot-v">
+                              {carouselSlot.liveLastReconcileAt
+                                ? ageLabel(nowMs - carouselSlot.liveLastReconcileAt)
+                                : "—"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </button>
 
                     <div
@@ -1011,7 +1155,7 @@ export default function Engine() {
                 )}
               </div>
 
-                  <div className="engine-grid engine-grid--asym" aria-label="Engine bays">
+              <div className="engine-grid engine-grid--asym" aria-label="Engine bays">
                 <div className="engine-bay engine-bay--narrow">
                   <div className="bay-head">
                     <div className="bay-title">Machine Summary</div>
@@ -1236,6 +1380,7 @@ export default function Engine() {
                         <div>Coin</div>
                         <div>Market</div>
                         <div>State</div>
+                        <div>Subslot</div>
                         <div>Tracking</div>
                         <div className="num">Unit</div>
                         <div className="num">Net</div>
@@ -1256,6 +1401,11 @@ export default function Engine() {
                             <div>{slotCoin(s)}</div>
                             <div>{s.market ?? "—"}</div>
                             <div>{stateLabel(s)}</div>
+                            <div>
+                              <span className={`ledger-subslot ${subslotToneClass(s)}`}>
+                                {subslotLabel(s)}
+                              </span>
+                            </div>
                             <div>{trackingLabel(s)}</div>
                             <div className="num">{moneyAud(s.unitAud)}</div>
                             <div className="num">{pctNum(s.netPct)}</div>
@@ -1459,6 +1609,12 @@ export default function Engine() {
                 <div className="slot-v">{selectedSlot.level ? `LVL${selectedSlot.level}` : "—"}</div>
               </div>
               <div>
+                <div className="slot-k">Subslot</div>
+                <div className={`slot-v slot-subslot ${subslotToneClass(selectedSlot)}`}>
+                  {subslotLabel(selectedSlot)}
+                </div>
+              </div>
+              <div>
                 <div className="slot-k">Lock</div>
                 <div className="slot-v">{lockDisplay(selectedSlot)}</div>
               </div>
@@ -1479,6 +1635,53 @@ export default function Engine() {
                 <div className="slot-v">
                   {selectedSlot.lastSeenAt ? ageLabel(nowMs - selectedSlot.lastSeenAt) : "—"}
                 </div>
+              </div>
+            </div>
+
+            <div className="slot-section">Subslot Snapshot</div>
+
+            <div className="slot-drawer-grid">
+              <div>
+                <div className="slot-k">Subslot Role</div>
+                <div className={`slot-v slot-subslot ${subslotToneClass(selectedSlot)}`}>
+                  {subslotLabel(selectedSlot)}
+                </div>
+              </div>
+              <div>
+                <div className="slot-k">Buy-Lock Count</div>
+                <div className="slot-v">{selectedSlot.buyLockCount ?? 0}</div>
+              </div>
+              <div>
+                <div className="slot-k">Buy-Lock Fill</div>
+                <div className="slot-v">{selectedSlot.liveBuyLockFillStatus ?? "—"}</div>
+              </div>
+              <div>
+                <div className="slot-k">Combined Entry AUD</div>
+                <div className="slot-v">{moneyAud(selectedSlot.combinedEntryAud)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Combined Coin Qty</div>
+                <div className="slot-v">{fmt(selectedSlot.combinedCoinQty)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Combined Entry Rate</div>
+                <div className="slot-v">{fmt(selectedSlot.combinedEntryRate)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Last Reconcile</div>
+                <div className="slot-v">
+                  {selectedSlot.liveLastReconcileAt
+                    ? ageLabel(nowMs - selectedSlot.liveLastReconcileAt)
+                    : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="slot-k">Reconcile Note</div>
+                <div className="slot-v">{selectedSlot.liveLastReconcileNote ?? "—"}</div>
+              </div>
+              <div>
+                <div className="slot-k">Last Error</div>
+                <div className="slot-v">{selectedSlot.liveLastError ?? "—"}</div>
               </div>
             </div>
 
@@ -1603,16 +1806,16 @@ export default function Engine() {
             <div className="slot-section">Timeline</div>
 
             <div className="event-log">
-              {selectedSlotEvents.length ? (
-                selectedSlotEvents.map((e) => (
-                  <div className="event-row" key={e.id}>
-                    <div className="event-time">{fmtEventTime(e.at)}</div>
-                    <div className="event-msg">
-                      <span className="event-kind">{e.kind}</span> <span className="event-text">{e.msg}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
+{selectedSlotEvents.length ? (
+  selectedSlotEvents.slice(0, 60).map((e) => (
+    <div className="event-row" key={e.id}>
+      <div className="event-time">{fmtEventTime(e.at)}</div>
+      <div className="event-msg">
+        <span className="event-kind">{e.kind}</span> <span className="event-text">{e.msg}</span>
+      </div>
+    </div>
+  ))
+) : (
                 <div className="event-empty">No slot events yet.</div>
               )}
             </div>
