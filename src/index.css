@@ -2661,4 +2661,70 @@ main{
     transition:none;
     animation:none;
   }
+  /* ==================================
+   Engine.tsx financial metrics patch
+================================== */
+
+.engine-capture-grid{
+  align-items:stretch;
+}
+
+.engine-capture{
+  min-height:124px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+
+.cap-v{
+  line-height:1.05;
+  word-break:break-word;
+  font-variant-numeric:tabular-nums;
+}
+
+.cap-sub{
+  align-items:center;
+  row-gap:6px;
+}
+
+.cap-sub span{
+  display:inline-flex;
+  align-items:center;
+  min-height:20px;
+}
+
+.engine-auth-hint strong{
+  color:var(--gold);
+  text-shadow:var(--glow-gold);
+}
+
+/* optional: make the first financial card feel slightly more premium */
+.engine-capture-grid > .engine-capture:first-child{
+  border-color:rgba(17,241,167,.24);
+  background:
+    radial-gradient(760px 220px at 20% 0%, rgba(17,241,167,.08), transparent 60%),
+    radial-gradient(620px 220px at 100% 100%, rgba(0,240,255,.05), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+  box-shadow:
+    0 16px 52px rgba(0,0,0,.56),
+    inset 0 0 0 1px rgba(17,241,167,.05);
+}
+
+.engine-capture-grid > .engine-capture:first-child .cap-v{
+  color:var(--green);
+  text-shadow:var(--glow-green);
+}
+
+/* tighter handling for long financial subtitles on mobile */
+@media (max-width:560px){
+  .cap-sub{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
+  }
+
+  .cap-sub span:nth-child(2){
+    display:none;
+  }
+}
 }

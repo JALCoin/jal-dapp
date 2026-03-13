@@ -19,7 +19,7 @@ type Snapshot = {
   lastOkAt: number;
   lastOkIso: string | null;
   lastPollAt?: number | null;
-  lastPollIso?: string | null;
+  lastPollIso?: number | null;
   err: string | null;
   counts: { all: number; aud: number; watch: number };
   watch: string[];
@@ -308,6 +308,10 @@ function moneyAud(n: number | null | undefined) {
   });
 }
 
+function roundMoney(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
 function msToCountdown(ms: number | null | undefined) {
   if (ms == null || !Number.isFinite(ms)) return "—";
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -370,6 +374,80 @@ function lockDisplay(s: SlotRow) {
 function reasonLabel(reason: string | null | undefined) {
   if (!reason) return "—";
   return String(reason).replace(/_/g, " ");
+}
+
+function isHoldingFamilyState(state: SlotState | string | null | undefined) {
+  const s = String(state || "").toUpperCase();
+  return (
+    s === "HOLDING" ||
+    s === "LVL1_LOCK" ||
+    s === "LVL2_LOCK" ||
+    s === "LVL3_LOCK" ||
+    s === "LVL4_TRAIL"
+  );
+}
+
+function parseWindowHarvestFromEvents(events: SlotEvent[]) {
+  const out = { window: 0, last24h: 0, last7d: 0 };
+  if (!events?.length) return out;
+
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const weekMs = 7 * dayMs;
+
+  const grab = (msg: string) => {
+    const profitAud =
+      msg.match(/profitAud=([+-]?\d+(\.\d+)?)/i) ??
+      msg.match(/HARVEST[_\s-]*AUD(?:[_\s-]*DELTA)?\s*[:=]?\s*([+-]?\d+(\.\d+)?)/i) ??
+      msg.match(/AUD\s*HARVEST\s*[:=]?\s*([+-]?\d+(\.\d+)?)/i) ??
+      msg.match(/\(([+-]?\$?\d+(\.\d+)?)\,/i);
+
+    if (!profitAud) return null;
+
+    const raw = String(profitAud[1]).replace(/\$/g, "");
+    const v = Number(raw);
+    return Number.isFinite(v) ? v : null;
+  };
+
+  for (const e of events) {
+    const v = grab(String(e.msg ?? ""));
+    if (v == null) continue;
+
+    out.window += v;
+    const age = now - (e.at || 0);
+    if (age <= dayMs) out.last24h += v;
+    if (age <= weekMs) out.last7d += v;
+  }
+
+  out.window = roundMoney(out.window);
+  out.last24h = roundMoney(out.last24h);
+  out.last7d = roundMoney(out.last7d);
+
+  return out;
+}
+
+function computeSlotFinancials(slotRows: SlotRow[]) {
+  let openPnl = 0;
+  let visibleRealized = 0;
+
+  for (const s of slotRows) {
+    const unitAud = Number(s.unitAud);
+    const netPct = Number(s.netPct);
+    const profitAud = Number(s.profitAud);
+
+    if (isHoldingFamilyState(s.state) && Number.isFinite(unitAud) && Number.isFinite(netPct)) {
+      openPnl += unitAud * (netPct / 100);
+    }
+
+    if (Number.isFinite(profitAud)) {
+      visibleRealized += profitAud;
+    }
+  }
+
+  return {
+    openPnl: roundMoney(openPnl),
+    visibleRealized: roundMoney(visibleRealized),
+  };
 }
 
 function subslotLabel(s: SlotRow) {
@@ -436,42 +514,6 @@ function subslotSummaryRows(s: SlotRow, nowMs: number) {
     },
     { k: "Last error", v: s.liveLastError ?? "—" },
   ];
-}
-
-function parseHarvestAudFromEvents(events: SlotEvent[]) {
-  const out = { total: 0, last24h: 0, last7d: 0 };
-  if (!events?.length) return out;
-
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const weekMs = 7 * dayMs;
-
-  const grab = (msg: string) => {
-    const m =
-      msg.match(/HARVEST[_\s-]*AUD(?:[_\s-]*DELTA)?\s*[:=]?\s*([+-]?\d+(\.\d+)?)/i) ??
-      msg.match(/AUD\s*HARVEST\s*[:=]?\s*([+-]?\d+(\.\d+)?)/i) ??
-      msg.match(/\(([+-]?\$?\d+(\.\d+)?)\,/i);
-    if (!m) return null;
-    const raw = String(m[1]).replace(/\$/g, "");
-    const v = Number(raw);
-    return Number.isFinite(v) ? v : null;
-  };
-
-  for (const e of events) {
-    const v = grab(String(e.msg ?? ""));
-    if (v == null) continue;
-
-    out.total += v;
-    const age = now - (e.at || 0);
-    if (age <= dayMs) out.last24h += v;
-    if (age <= weekMs) out.last7d += v;
-  }
-
-  out.total = Math.round(out.total * 100) / 100;
-  out.last24h = Math.round(out.last24h * 100) / 100;
-  out.last7d = Math.round(out.last7d * 100) / 100;
-
-  return out;
 }
 
 function useIsDesktop(bpPx = 980) {
@@ -554,7 +596,7 @@ export default function Engine() {
   const [query, setQuery] = useState("");
 
   const [view, setView] = useState<ViewMode>("simple");
-  const [section, setSection] = useState<Section>("ledger" as Section);
+  const [section, setSection] = useState<Section>("ledger");
   const [eventsOpen, setEventsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
@@ -651,8 +693,10 @@ export default function Engine() {
       pollRef.current = null;
     }
 
-    tick();
-    pollRef.current = window.setInterval(tick, 2500);
+    void tick();
+    pollRef.current = window.setInterval(() => {
+      void tick();
+    }, 2500);
 
     return () => {
       ctrl.abort();
@@ -787,7 +831,8 @@ export default function Engine() {
   const counts = meta?.counts ?? {};
   const trackingStates = meta?.trackingStates ?? {};
 
-  const harvest = useMemo(() => parseHarvestAudFromEvents(events), [events]);
+  const windowHarvest = useMemo(() => parseWindowHarvestFromEvents(events), [events]);
+  const slotFinancials = useMemo(() => computeSlotFinancials(slotRows), [slotRows]);
 
   const nextSweepLabel = msToCountdown(meta?.cadence?.remainingMs ?? null);
   const lastSweepAgo = ageLabel(
@@ -882,19 +927,19 @@ export default function Engine() {
                   </div>
 
                   <div className="engine-auth-hint">
-                    AUD growth shown here is <strong>harvest-only</strong>. External transfers are ignored.
+                    Open PnL is floating. Window harvest is event-slice realized flow. External transfers are ignored.
                   </div>
                 </aside>
               </header>
 
               <div className="engine-capture-grid" aria-label="Engine capture cards">
                 <div className="engine-capture card machine-surface panel-frame">
-                  <div className="cap-k">Harvest Captured</div>
-                  <div className="cap-v">{moneyAud(harvest.total)}</div>
+                  <div className="cap-k">Open PnL</div>
+                  <div className="cap-v">{moneyAud(slotFinancials.openPnl)}</div>
                   <div className="cap-sub">
-                    <span>24H {moneyAud(harvest.last24h)}</span>
+                    <span>Window Harvest {moneyAud(windowHarvest.window)}</span>
                     <span>•</span>
-                    <span>7D {moneyAud(harvest.last7d)}</span>
+                    <span>Visible Realized {moneyAud(slotFinancials.visibleRealized)}</span>
                   </div>
                 </div>
 
@@ -1578,8 +1623,9 @@ export default function Engine() {
                       <ul>
                         <li>Slot identity is permanent coin identity.</li>
                         <li>No anonymous queued selector pool is used anymore.</li>
-                        <li>AUD growth shown here is harvest-only.</li>
-                        <li>External transfers are excluded from displayed harvest totals.</li>
+                        <li>Open PnL is floating and not harvested.</li>
+                        <li>Window harvest reflects recent realized event flow only.</li>
+                        <li>External transfers are excluded from displayed totals.</li>
                       </ul>
                     </div>
                   ) : null}
