@@ -1,4 +1,3 @@
-// src/pages/Engine.tsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /* =========================
@@ -41,9 +40,7 @@ type SlotState =
   | "LVL2_LOCK"
   | "LVL3_LOCK"
   | "LVL4_TRAIL"
-  | "EXITING"
-  | "QUEUED"
-  | "EXITED";
+  | "EXITING";
 
 type TrackingState =
   | "ARMED"
@@ -109,32 +106,149 @@ type SlotRow = {
   executorVersion?: string | null;
   paperOnly?: boolean;
 
-  buyLockCount?: number | null;
-  buyLockActive?: boolean | null;
-  buyLockLastAt?: number | null;
-  buyLockLastUnitAud?: number | null;
-  buyLockLastRate?: number | null;
-  buyLockLastCoinQty?: number | null;
-
-  combinedEntryAud?: number | null;
-  combinedCoinQty?: number | null;
-  combinedEntryRate?: number | null;
-
   liveExecutionMode?: string | null;
   liveLastError?: string | null;
   liveLastReconcileAt?: number | null;
   liveLastReconcileNote?: string | null;
 
-  liveBuyLockOrderId?: string | null;
-  liveBuyLockRequestedAud?: number | null;
-  liveBuyLockRequestedCoinQty?: number | null;
-  liveBuyLockSubmittedRate?: number | null;
-  liveBuyLockOrderAt?: number | null;
-  liveBuyLockFillStatus?: string | null;
-  liveBuyLockActualAud?: number | null;
-  liveBuyLockActualCoinQty?: number | null;
-  liveBuyLockActualRate?: number | null;
-  liveBuyLockFilledAt?: number | null;
+  liveOrderId?: string | null;
+  liveOrderSide?: string | null;
+
+  liveEntryOrderId?: string | null;
+  liveEntryRequestedAud?: number | null;
+  liveEntryRequestedCoinQty?: number | null;
+  liveEntrySubmittedRate?: number | null;
+  liveEntryOrderAt?: number | null;
+  liveEntryFillStatus?: string | null;
+  liveEntryActualAud?: number | null;
+  liveEntryActualCoinQty?: number | null;
+  liveEntryActualRate?: number | null;
+  liveEntryFilledAt?: number | null;
+
+  liveExitOrderId?: string | null;
+  liveExitRequestedCoinQty?: number | null;
+  liveExitExpectedAud?: number | null;
+  liveExitSubmittedRate?: number | null;
+  liveExitOrderAt?: number | null;
+  liveExitFillStatus?: string | null;
+  liveExitActualAud?: number | null;
+  liveExitActualCoinQty?: number | null;
+  liveExitActualRate?: number | null;
+  liveExitFilledAt?: number | null;
+
+  subslotActive?: boolean | null;
+  subslotCount?: number | null;
+  subslotState?: string | null;
+  subslotOpenedAt?: number | null;
+  subslotClosedAt?: number | null;
+  subslotCooldownUntil?: number | null;
+
+  subslotRequestedAud?: number | null;
+  subslotRequestedCoinQty?: number | null;
+  subslotSubmittedRate?: number | null;
+
+  subslotActualAud?: number | null;
+  subslotActualCoinQty?: number | null;
+  subslotActualRate?: number | null;
+
+  subslotEntryMid?: number | null;
+  subslotNowMid?: number | null;
+  subslotGrossPct?: number | null;
+  subslotNetPct?: number | null;
+  subslotPeakBid?: number | null;
+  subslotDrawdownPct?: number | null;
+
+  subslotOrderId?: string | null;
+  subslotFillStatus?: string | null;
+  subslotPreAudAvailable?: number | null;
+  subslotPreCoinAvailable?: number | null;
+
+  subslotExitOrderId?: string | null;
+  subslotExitRequestedCoinQty?: number | null;
+  subslotExitSubmittedRate?: number | null;
+  subslotExitExpectedAud?: number | null;
+  subslotExitOrderAt?: number | null;
+  subslotExitActualAud?: number | null;
+  subslotExitActualCoinQty?: number | null;
+  subslotExitActualRate?: number | null;
+  subslotExitFilledAt?: number | null;
+
+  subslotExitReason?: string | null;
+  subslotProfitAud?: number | null;
+  subslotProfitPct?: number | null;
+  subslotRealizedAt?: number | null;
+
+  subslotLastError?: string | null;
+  subslotLastReconcileAt?: number | null;
+  subslotLastReconcileNote?: string | null;
+
+  subslotPendingMergeAud?: number | null;
+  subslotLastMergedAud?: number | null;
+  subslotMergedAt?: number | null;
+  subslotLifetimeProfitAud?: number | null;
+  subslotLifetimeCycles?: number | null;
+
+  subslotTrackingSince?: number | null;
+  subslotLowMid?: number | null;
+  subslotLastMid?: number | null;
+  subslotBouncePct?: number | null;
+  subslotEmaFast?: number | null;
+  subslotEmaSlow?: number | null;
+  subslotEmaGapPct?: number | null;
+  subslotConfirmTicks?: number | null;
+  subslotSignalState?: string | null;
+  subslotSignalReason?: string | null;
+
+  rotationEligibleOut?: boolean | null;
+  rotationScoreOut?: number | null;
+  rotationOutBlockedReason?: string | null;
+
+  rotationEligibleIn?: boolean | null;
+  rotationScoreIn?: number | null;
+  rotationInBlockedReason?: string | null;
+
+  rotationEdgeScore?: number | null;
+  rotationTargetSlotId?: string | null;
+  rotationTargetCoin?: string | null;
+  rotationSourceSlotId?: string | null;
+  rotationRequested?: boolean | null;
+  rotationRequestedAt?: number | null;
+  rotationReason?: string | null;
+
+  rotationReservationId?: string | null;
+  rotationRole?: string | null;
+  rotationLinkedSlotId?: string | null;
+  rotationStage?: string | null;
+  rotationPreExitState?: string | null;
+  rotationStartedAt?: number | null;
+  rotationCompletedAt?: number | null;
+  rotationLastError?: string | null;
+  rotationExitOrderId?: string | null;
+  rotationEntryOrderId?: string | null;
+  rotationReleasedAud?: number | null;
+  rotationFundingReservedAud?: number | null;
+  rotationFundingSourceSlotId?: string | null;
+  rotationExitSubmittedAt?: number | null;
+  rotationEntrySubmittedAt?: number | null;
+  rotationDryRun?: boolean | null;
+  rotationAttemptCount?: number | null;
+  rotationEntryAttemptCount?: number | null;
+  rotationOriginalUnitAud?: number | null;
+  rotationFundingTransferredAud?: number | null;
+
+  rotationExitIntentId?: string | null;
+  rotationExitIntentAt?: number | null;
+  rotationFundingIntentId?: string | null;
+  rotationFundingIntentAt?: number | null;
+  rotationEntryIntentId?: string | null;
+  rotationEntryIntentAt?: number | null;
+
+  topupLastAppliedAt?: number | null;
+  topupLastDeltaAud?: number | null;
+  topupLastTargetAud?: number | null;
+  topupRequestedTargetAud?: number | null;
+  topupFallbackAud?: number | null;
+  topupMode?: string | null;
 
   candidateTrackingSince?: number | null;
   candidateLastSeenAt?: number | null;
@@ -169,6 +283,27 @@ type SlotRow = {
   deployingAt?: number | null;
   lastSeenAt?: number | null;
   lastExitAt?: number | null;
+
+  // legacy compatibility only
+  buyLockCount?: number | null;
+  buyLockActive?: boolean | null;
+  buyLockLastAt?: number | null;
+  buyLockLastUnitAud?: number | null;
+  buyLockLastRate?: number | null;
+  buyLockLastCoinQty?: number | null;
+  combinedEntryAud?: number | null;
+  combinedCoinQty?: number | null;
+  combinedEntryRate?: number | null;
+  liveBuyLockOrderId?: string | null;
+  liveBuyLockRequestedAud?: number | null;
+  liveBuyLockRequestedCoinQty?: number | null;
+  liveBuyLockSubmittedRate?: number | null;
+  liveBuyLockOrderAt?: number | null;
+  liveBuyLockFillStatus?: string | null;
+  liveBuyLockActualAud?: number | null;
+  liveBuyLockActualCoinQty?: number | null;
+  liveBuyLockActualRate?: number | null;
+  liveBuyLockFilledAt?: number | null;
 };
 
 type SlotEventKind =
@@ -221,6 +356,10 @@ type PublicMetaResponse = {
     executorTickMs?: number;
     managerEnabled?: boolean;
     managerTickMs?: number;
+    rotationEnabled?: boolean;
+    rotationTickMs?: number;
+    rotationExecutorEnabled?: boolean;
+    rotationExecutorTickMs?: number;
     topupEnabled?: boolean;
     topupTickMs?: number;
   };
@@ -230,6 +369,7 @@ type PublicMetaResponse = {
     present?: number;
     missing?: string[];
     fixedCoinsPresent?: string[];
+    orphaned?: string[];
   };
   cadence?: {
     baselineAt?: number | null;
@@ -259,6 +399,8 @@ type PublicMetaResponse = {
   harvester?: any;
   executor?: any;
   manager?: any;
+  rotation?: any;
+  rotationExecutor?: any;
   topup?: any;
   market?: { snapshot?: Snapshot | null };
 };
@@ -451,68 +593,60 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
 }
 
 function subslotLabel(s: SlotRow) {
-  const tracking = String(s.trackingState || "").toUpperCase();
-  const state = String(s.state || "").toUpperCase();
+  const sub = String(s.subslotState || "").toUpperCase();
+  const signal = String(s.subslotSignalState || "").toUpperCase();
 
-  if (tracking === "BUY_LOCK_SUBMITTED") return "SUBSLOT: BUY-LOCK";
-  if (tracking === "SELL_SUBMITTED" || state === "EXITING") return "SUBSLOT: EXIT";
-  if (tracking === "BUY_SUBMITTING" || tracking === "BUY_SUBMITTED") return "SUBSLOT: ENTRY";
-  if (
-    state === "HOLDING" ||
-    state === "LVL1_LOCK" ||
-    state === "LVL2_LOCK" ||
-    state === "LVL3_LOCK" ||
-    state === "LVL4_TRAIL"
-  ) {
-    return "SUBSLOT: HOLD";
-  }
-  if (state === "DEPLOYING" || tracking === "DEPLOYING" || tracking === "REVERSAL_CONFIRMING") {
-    return "SUBSLOT: DEPLOY";
-  }
-  if (tracking === "TRACKING" || tracking === "DRAWDOWN_SEEN") return "SUBSLOT: TRACK";
-  if (tracking === "SPREAD_BLOCKED") return "SUBSLOT: BLOCKED";
-  if (tracking === "NO_MARKET") return "SUBSLOT: NO MARKET";
+  if (sub === "BUY_SUBMITTED") return "SUBSLOT: ENTRY PENDING";
+  if (sub === "ACTIVE") return "SUBSLOT: ACTIVE";
+  if (sub === "SELL_SUBMITTED") return "SUBSLOT: EXIT PENDING";
+  if (sub === "CLOSED") return "SUBSLOT: CLOSED";
+
+  if (signal === "REVERSAL_CONFIRMING") return "SUBSLOT: SIGNAL";
+  if (signal === "BOUNCE_SEEN") return "SUBSLOT: BOUNCE";
+  if (signal === "TRACKING") return "SUBSLOT: TRACK";
+  if (signal === "NO_MARKET") return "SUBSLOT: NO MARKET";
+
   return "SUBSLOT: IDLE";
 }
 
 function subslotToneClass(s: SlotRow) {
-  const tracking = String(s.trackingState || "").toUpperCase();
-  const state = String(s.state || "").toUpperCase();
+  const sub = String(s.subslotState || "").toUpperCase();
+  const signal = String(s.subslotSignalState || "").toUpperCase();
 
-  if (tracking === "BUY_LOCK_SUBMITTED") return "is-buylock";
-  if (tracking === "SELL_SUBMITTED" || state === "EXITING") return "is-exiting";
-  if (tracking === "BUY_SUBMITTING" || tracking === "BUY_SUBMITTED") return "is-deploying";
-  if (
-    state === "HOLDING" ||
-    state === "LVL1_LOCK" ||
-    state === "LVL2_LOCK" ||
-    state === "LVL3_LOCK" ||
-    state === "LVL4_TRAIL"
-  ) {
-    return "is-holding";
-  }
-  if (tracking === "TRACKING" || tracking === "DRAWDOWN_SEEN") return "is-tracking";
-  if (tracking === "SPREAD_BLOCKED") return "is-blocked";
-  if (tracking === "NO_MARKET") return "is-muted";
+  if (sub === "BUY_SUBMITTED") return "is-deploying";
+  if (sub === "ACTIVE") return "is-holding";
+  if (sub === "SELL_SUBMITTED") return "is-exiting";
+  if (sub === "CLOSED") return "is-neutral";
+
+  if (signal === "REVERSAL_CONFIRMING") return "is-deploying";
+  if (signal === "BOUNCE_SEEN" || signal === "TRACKING") return "is-tracking";
+  if (signal === "NO_MARKET") return "is-muted";
+
   return "is-neutral";
 }
 
 function subslotSummaryRows(s: SlotRow, nowMs: number) {
   return [
     { k: "Role", v: subslotLabel(s) },
-    {
-      k: "Status",
-      v: s.liveBuyLockFillStatus ?? s.trackingState ?? s.state ?? "—",
-    },
-    { k: "Buy-lock count", v: String(s.buyLockCount ?? 0) },
-    { k: "Combined entry AUD", v: moneyAud(s.combinedEntryAud) },
-    { k: "Combined coin qty", v: fmt(s.combinedCoinQty) },
-    { k: "Combined entry rate", v: fmt(s.combinedEntryRate) },
+    { k: "State", v: s.subslotState ?? "—" },
+    { k: "Signal", v: s.subslotSignalState ?? "—" },
+    { k: "Requested AUD", v: moneyAud(s.subslotRequestedAud) },
+    { k: "Actual AUD", v: moneyAud(s.subslotActualAud) },
+    { k: "Requested Qty", v: fmt(s.subslotRequestedCoinQty) },
+    { k: "Actual Qty", v: fmt(s.subslotActualCoinQty) },
+    { k: "Submitted Rate", v: fmt(s.subslotSubmittedRate) },
+    { k: "Actual Rate", v: fmt(s.subslotActualRate) },
+    { k: "Net %", v: pctNum(s.subslotNetPct) },
+    { k: "Profit AUD", v: moneyAud(s.subslotProfitAud) },
+    { k: "Pending Merge", v: moneyAud(s.subslotPendingMergeAud) },
+    { k: "Lifetime Profit", v: moneyAud(s.subslotLifetimeProfitAud) },
+    { k: "Lifetime Cycles", v: String(s.subslotLifetimeCycles ?? 0) },
     {
       k: "Last reconcile",
-      v: s.liveLastReconcileAt ? ageLabel(nowMs - s.liveLastReconcileAt) : "—",
+      v: s.subslotLastReconcileAt ? ageLabel(nowMs - s.subslotLastReconcileAt) : "—",
     },
-    { k: "Last error", v: s.liveLastError ?? "—" },
+    { k: "Reconcile note", v: s.subslotLastReconcileNote ?? "—" },
+    { k: "Last error", v: s.subslotLastError ?? "—" },
   ];
 }
 
@@ -561,7 +695,6 @@ function stateToneClass(slot: SlotRow) {
     tracking === "REVERSAL_CONFIRMING" ||
     tracking === "BUY_SUBMITTING" ||
     tracking === "BUY_SUBMITTED" ||
-    tracking === "BUY_LOCK_SUBMITTED" ||
     tracking === "SELL_SUBMITTED"
   ) {
     return "is-deploying";
@@ -611,8 +744,9 @@ export default function Engine() {
 
   const fetchRows = useCallback(
     async (signal?: AbortSignal) => {
-      const r = await fetch(`${BASE}/api/market/${feed}`, { method: "GET", signal });
-      if (!r.ok) throw new Error(`market/${feed} HTTP ${r.status}`);
+      const endpoint = feed === "watch" ? "aud" : feed;
+      const r = await fetch(`${BASE}/api/market/${endpoint}`, { method: "GET", signal });
+      if (!r.ok) throw new Error(`market/${endpoint} HTTP ${r.status}`);
       const j = await r.json();
       return Array.isArray(j?.rows) ? (j.rows as MarketRow[]) : [];
     },
@@ -735,7 +869,12 @@ export default function Engine() {
 
   const filteredMarketRows = useMemo(() => {
     const q = query.trim().toUpperCase();
+    const watchSet = new Set((snap?.watch ?? []).map((c) => String(c).toUpperCase()));
     let list = rows.slice();
+
+    if (feed === "watch") {
+      list = list.filter((r) => watchSet.has(String(r.coin).toUpperCase()));
+    }
 
     if (q) {
       list = list.filter((r) => {
@@ -756,7 +895,7 @@ export default function Engine() {
       if (sortKey === "mid") return (midA - midB) * dir;
       return (spreadA - spreadB) * dir;
     });
-  }, [query, rows, sortDir, sortKey]);
+  }, [feed, query, rows, snap?.watch, sortDir, sortKey]);
 
   const filteredSlots = useMemo(() => {
     const q = query.trim().toUpperCase();
@@ -768,7 +907,16 @@ export default function Engine() {
         const market = (s.market ?? "").toUpperCase();
         const id = (s.id ?? "").toUpperCase();
         const tracking = (s.trackingState ?? "").toUpperCase();
-        return coin.includes(q) || market.includes(q) || id.includes(q) || tracking.includes(q);
+        const subslot = (s.subslotState ?? "").toUpperCase();
+        const rotation = (s.rotationStage ?? "").toUpperCase();
+        return (
+          coin.includes(q) ||
+          market.includes(q) ||
+          id.includes(q) ||
+          tracking.includes(q) ||
+          subslot.includes(q) ||
+          rotation.includes(q)
+        );
       });
     }
 
@@ -927,14 +1075,15 @@ export default function Engine() {
                   </div>
 
                   <div className="engine-auth-hint">
-                    Open PnL is floating. Window harvest is event-slice realized flow. External transfers are ignored.
+                    Estimated open parent PnL is floating. Window harvest is event-slice realized flow. External transfers
+                    are ignored.
                   </div>
                 </aside>
               </header>
 
               <div className="engine-capture-grid" aria-label="Engine capture cards">
                 <div className="engine-capture card machine-surface panel-frame">
-                  <div className="cap-k">Open PnL</div>
+                  <div className="cap-k">Estimated Open PnL</div>
                   <div className="cap-v">{moneyAud(slotFinancials.openPnl)}</div>
                   <div className="cap-sub">
                     <span>Window Harvest {moneyAud(windowHarvest.window)}</span>
@@ -1151,33 +1300,31 @@ export default function Engine() {
                         <div className="engine-subslot-head">
                           <span className="engine-subslot-title">{subslotLabel(carouselSlot)}</span>
                           <span className="engine-subslot-state">
-                            {carouselSlot.liveBuyLockFillStatus ??
-                              carouselSlot.trackingState ??
-                              carouselSlot.state}
+                            {carouselSlot.subslotState ?? carouselSlot.subslotSignalState ?? "—"}
                           </span>
                         </div>
 
                         <div className="engine-subslot-grid">
                           <div className="engine-subslot-item">
                             <div className="engine-subslot-k">Subslot Net</div>
-                            <div className="engine-subslot-v">{pctNum(carouselSlot.netPct)}</div>
+                            <div className="engine-subslot-v">{pctNum(carouselSlot.subslotNetPct)}</div>
                           </div>
 
                           <div className="engine-subslot-item">
-                            <div className="engine-subslot-k">Buy-Lock Count</div>
-                            <div className="engine-subslot-v">{carouselSlot.buyLockCount ?? 0}</div>
+                            <div className="engine-subslot-k">Profit AUD</div>
+                            <div className="engine-subslot-v">{moneyAud(carouselSlot.subslotProfitAud)}</div>
                           </div>
 
                           <div className="engine-subslot-item">
-                            <div className="engine-subslot-k">Combined Basis</div>
-                            <div className="engine-subslot-v">{moneyAud(carouselSlot.combinedEntryAud)}</div>
+                            <div className="engine-subslot-k">Pending Merge</div>
+                            <div className="engine-subslot-v">{moneyAud(carouselSlot.subslotPendingMergeAud)}</div>
                           </div>
 
                           <div className="engine-subslot-item">
                             <div className="engine-subslot-k">Last Reconcile</div>
                             <div className="engine-subslot-v">
-                              {carouselSlot.liveLastReconcileAt
-                                ? ageLabel(nowMs - carouselSlot.liveLastReconcileAt)
+                              {carouselSlot.subslotLastReconcileAt
+                                ? ageLabel(nowMs - carouselSlot.subslotLastReconcileAt)
                                 : "—"}
                             </div>
                           </div>
@@ -1286,6 +1433,30 @@ export default function Engine() {
                           <div className="engine-telemetry-v">{meta?.manager?.mode ?? "—"}</div>
                           <div className="engine-telemetry-sub">
                             {meta?.manager?.running ? "RUNNING" : "STOPPED"}
+                          </div>
+                        </div>
+
+                        <div className="engine-telemetry-item">
+                          <div className="engine-telemetry-k">Rotation</div>
+                          <div className="engine-telemetry-v">{meta?.rotation?.mode ?? "—"}</div>
+                          <div className="engine-telemetry-sub">
+                            {meta?.rotation?.running ? "RUNNING" : "STOPPED"}
+                          </div>
+                        </div>
+
+                        <div className="engine-telemetry-item">
+                          <div className="engine-telemetry-k">Rotation Exec</div>
+                          <div className="engine-telemetry-v">{meta?.rotationExecutor?.mode ?? "—"}</div>
+                          <div className="engine-telemetry-sub">
+                            {meta?.rotationExecutor?.running ? "RUNNING" : "STOPPED"}
+                          </div>
+                        </div>
+
+                        <div className="engine-telemetry-item">
+                          <div className="engine-telemetry-k">Top-up</div>
+                          <div className="engine-telemetry-v">{meta?.topup?.mode ?? "—"}</div>
+                          <div className="engine-telemetry-sub">
+                            {meta?.topup?.running ? "RUNNING" : "STOPPED"}
                           </div>
                         </div>
 
@@ -1616,6 +1787,7 @@ export default function Engine() {
                         <li>Harvester ensures the fixed slot registry exists.</li>
                         <li>Executor evaluates only each slot’s own coin.</li>
                         <li>Manager controls hold / lock / exit / re-entry lifecycle.</li>
+                        <li>Rotation policy remains read-only; rotation executor bridges capital handoff.</li>
                         <li>Ledger persists public machine proof for UI inspection.</li>
                       </ul>
 
@@ -1623,7 +1795,8 @@ export default function Engine() {
                       <ul>
                         <li>Slot identity is permanent coin identity.</li>
                         <li>No anonymous queued selector pool is used anymore.</li>
-                        <li>Open PnL is floating and not harvested.</li>
+                        <li>Open parent PnL is floating and not harvested.</li>
+                        <li>Tactical subslot PnL remains separate until merge on parent reset.</li>
                         <li>Window harvest reflects recent realized event flow only.</li>
                         <li>External transfers are excluded from displayed totals.</li>
                       </ul>
@@ -1729,40 +1902,96 @@ export default function Engine() {
                 </div>
               </div>
               <div>
-                <div className="slot-k">Buy-Lock Count</div>
-                <div className="slot-v">{selectedSlot.buyLockCount ?? 0}</div>
+                <div className="slot-k">Subslot State</div>
+                <div className="slot-v">{selectedSlot.subslotState ?? "—"}</div>
               </div>
               <div>
-                <div className="slot-k">Buy-Lock Fill</div>
-                <div className="slot-v">{selectedSlot.liveBuyLockFillStatus ?? "—"}</div>
+                <div className="slot-k">Signal State</div>
+                <div className="slot-v">{selectedSlot.subslotSignalState ?? "—"}</div>
               </div>
               <div>
-                <div className="slot-k">Combined Entry AUD</div>
-                <div className="slot-v">{moneyAud(selectedSlot.combinedEntryAud)}</div>
+                <div className="slot-k">Requested AUD</div>
+                <div className="slot-v">{moneyAud(selectedSlot.subslotRequestedAud)}</div>
               </div>
               <div>
-                <div className="slot-k">Combined Coin Qty</div>
-                <div className="slot-v">{fmt(selectedSlot.combinedCoinQty)}</div>
+                <div className="slot-k">Actual AUD</div>
+                <div className="slot-v">{moneyAud(selectedSlot.subslotActualAud)}</div>
               </div>
               <div>
-                <div className="slot-k">Combined Entry Rate</div>
-                <div className="slot-v">{fmt(selectedSlot.combinedEntryRate)}</div>
+                <div className="slot-k">Requested Qty</div>
+                <div className="slot-v">{fmt(selectedSlot.subslotRequestedCoinQty)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Actual Qty</div>
+                <div className="slot-v">{fmt(selectedSlot.subslotActualCoinQty)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Submitted Rate</div>
+                <div className="slot-v">{fmt(selectedSlot.subslotSubmittedRate)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Actual Rate</div>
+                <div className="slot-v">{fmt(selectedSlot.subslotActualRate)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Subslot Gross</div>
+                <div className="slot-v">{pctNum(selectedSlot.subslotGrossPct)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Subslot Net</div>
+                <div className="slot-v">{pctNum(selectedSlot.subslotNetPct)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Peak Bid</div>
+                <div className="slot-v">{fmt(selectedSlot.subslotPeakBid)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Drawdown</div>
+                <div className="slot-v">{pctNum(selectedSlot.subslotDrawdownPct)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Exit Reason</div>
+                <div className="slot-v">{selectedSlot.subslotExitReason ?? "—"}</div>
+              </div>
+              <div>
+                <div className="slot-k">Profit AUD</div>
+                <div className="slot-v">{moneyAud(selectedSlot.subslotProfitAud)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Profit %</div>
+                <div className="slot-v">{pctNum(selectedSlot.subslotProfitPct)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Pending Merge</div>
+                <div className="slot-v">{moneyAud(selectedSlot.subslotPendingMergeAud)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Last Merged</div>
+                <div className="slot-v">{moneyAud(selectedSlot.subslotLastMergedAud)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Lifetime Profit</div>
+                <div className="slot-v">{moneyAud(selectedSlot.subslotLifetimeProfitAud)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Lifetime Cycles</div>
+                <div className="slot-v">{selectedSlot.subslotLifetimeCycles ?? 0}</div>
               </div>
               <div>
                 <div className="slot-k">Last Reconcile</div>
                 <div className="slot-v">
-                  {selectedSlot.liveLastReconcileAt
-                    ? ageLabel(nowMs - selectedSlot.liveLastReconcileAt)
+                  {selectedSlot.subslotLastReconcileAt
+                    ? ageLabel(nowMs - selectedSlot.subslotLastReconcileAt)
                     : "—"}
                 </div>
               </div>
               <div>
                 <div className="slot-k">Reconcile Note</div>
-                <div className="slot-v">{selectedSlot.liveLastReconcileNote ?? "—"}</div>
+                <div className="slot-v">{selectedSlot.subslotLastReconcileNote ?? "—"}</div>
               </div>
               <div>
                 <div className="slot-k">Last Error</div>
-                <div className="slot-v">{selectedSlot.liveLastError ?? "—"}</div>
+                <div className="slot-v">{selectedSlot.subslotLastError ?? "—"}</div>
               </div>
             </div>
 
@@ -1814,6 +2043,109 @@ export default function Engine() {
                 <div className="slot-v">{pctNum(selectedSlot.nowSpreadPct ?? selectedSlot.candidateSpreadPrevPct)}</div>
               </div>
             </div>
+
+            {(selectedSlot.rotationReservationId ||
+              selectedSlot.rotationStage ||
+              selectedSlot.rotationEligibleOut != null ||
+              selectedSlot.rotationEligibleIn != null) && (
+              <>
+                <div className="slot-section">Rotation Snapshot</div>
+
+                <div className="slot-drawer-grid">
+                  <div>
+                    <div className="slot-k">Reservation</div>
+                    <div className="slot-v">{selectedSlot.rotationReservationId ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Role</div>
+                    <div className="slot-v">{selectedSlot.rotationRole ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Stage</div>
+                    <div className="slot-v">{selectedSlot.rotationStage ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Linked Slot</div>
+                    <div className="slot-v">{selectedSlot.rotationLinkedSlotId ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Eligible Out</div>
+                    <div className="slot-v">
+                      {selectedSlot.rotationEligibleOut == null ? "—" : selectedSlot.rotationEligibleOut ? "YES" : "NO"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Eligible In</div>
+                    <div className="slot-v">
+                      {selectedSlot.rotationEligibleIn == null ? "—" : selectedSlot.rotationEligibleIn ? "YES" : "NO"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Edge Score</div>
+                    <div className="slot-v">{fmt(selectedSlot.rotationEdgeScore)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Released AUD</div>
+                    <div className="slot-v">{moneyAud(selectedSlot.rotationReleasedAud)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Funding Reserved</div>
+                    <div className="slot-v">{moneyAud(selectedSlot.rotationFundingReservedAud)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Funding Transferred</div>
+                    <div className="slot-v">{moneyAud(selectedSlot.rotationFundingTransferredAud)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Reason</div>
+                    <div className="slot-v">{selectedSlot.rotationReason ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Last Error</div>
+                    <div className="slot-v">{selectedSlot.rotationLastError ?? "—"}</div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {(selectedSlot.topupMode ||
+              selectedSlot.topupLastAppliedAt ||
+              selectedSlot.topupRequestedTargetAud != null) && (
+              <>
+                <div className="slot-section">Top-up Snapshot</div>
+
+                <div className="slot-drawer-grid">
+                  <div>
+                    <div className="slot-k">Mode</div>
+                    <div className="slot-v">{selectedSlot.topupMode ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Requested Target</div>
+                    <div className="slot-v">{moneyAud(selectedSlot.topupRequestedTargetAud)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Last Target</div>
+                    <div className="slot-v">{moneyAud(selectedSlot.topupLastTargetAud)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Fallback AUD</div>
+                    <div className="slot-v">{moneyAud(selectedSlot.topupFallbackAud)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Last Delta</div>
+                    <div className="slot-v">{moneyAud(selectedSlot.topupLastDeltaAud)}</div>
+                  </div>
+                  <div>
+                    <div className="slot-k">Last Applied</div>
+                    <div className="slot-v">
+                      {selectedSlot.topupLastAppliedAt
+                        ? ageLabel(nowMs - selectedSlot.topupLastAppliedAt)
+                        : "—"}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             {(selectedSlot.entryDrawdownPct != null ||
               selectedSlot.entryBouncePct != null ||
@@ -1908,6 +2240,7 @@ export default function Engine() {
               <div>Permanent identity: one slot belongs to one fixed coin market.</div>
               <div>WAITING_ENTRY is the latch before deployment.</div>
               <div>Deploy / hold / lock / exit decisions remain deterministic.</div>
+              <div>Tactical subslot accounting remains separate until merge on parent reset.</div>
               <div className="slot-rules-note">
                 This slot is part of the fixed-slot Jeroid ledger, not a selector pool.
               </div>
