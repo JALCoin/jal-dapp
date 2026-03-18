@@ -15,21 +15,22 @@ function getStatusLabel(status: Product["status"]) {
 function getPrimaryLink(p: Product) {
   if (!p.links?.length) return null;
 
-  const priority = [
-    "donate",
-    "support",
-    "buy now",
-    "checkout",
-    "pre-order",
-    "preorder",
-    "stripe",
-    "shop now",
-    "order now",
-    "enquire",
-    "inquire",
-    "view",
-    "request access",
-  ];
+const priority = [
+  "donate",
+  "support",
+  "claim",
+  "buy now",
+  "checkout",
+  "pre-order",
+  "preorder",
+  "stripe",
+  "shop now",
+  "order now",
+  "enquire",
+  "inquire",
+  "view",
+  "request access",
+];
 
   const scored = [...p.links].sort((a, b) => {
     const aIndex = priority.findIndex((x) => a.label.toLowerCase().includes(x));

@@ -190,31 +190,32 @@ export const PRODUCTS: Product[] = [
 
   {
 {
-  id: "hoodie-embroidered-xxl",
-  title: "JALSOL Embroidered Hoodie (XXL)",
-  kind: "physical",
-  status: STRIPE_LINKS.hoodieXXL ? "active" : "coming_soon",
-  priceNote: "$130.00 AUD",
-  summary:
-    "Flagship embroidered wearable release. Structured, limited, and aligned with the JALSOL storefront aesthetic.",
-  tags: ["Physical", "Handmade", "Premium", "Preorder", "Limited"],
-  image: "/shop/hoodie-xxl.jpg",
-  links: STRIPE_LINKS.hoodieXXL
-    ? [
-        {
-          label: "Claim",
-          href: STRIPE_LINKS.hoodieXXL,
-        },
-      ]
-    : [
-        {
-          label: "Pre-order via Email",
-          href: preorderMailto(
-            "Pre-order — JALSOL Embroidered Hoodie (XXL) — $130.00 AUD"
-          ),
-        },
-      ],
-
+  {
+    id: "hoodie-embroidered-xxl",
+    title: "JALSOL Embroidered Hoodie (XXL)",
+    kind: "physical",
+    status: STRIPE_LINKS.hoodieXXL ? "active" : "coming_soon",
+    priceNote: "$130.00 AUD",
+    summary:
+      "Flagship embroidered wearable release. Structured, limited, and aligned with the JALSOL storefront aesthetic.",
+    tags: ["Physical", "Handmade", "Premium", "Preorder", "Limited"],
+    image: "/shop/hoodie-xxl.jpg",
+    links: STRIPE_LINKS.hoodieXXL
+      ? [
+          {
+            label: "Claim",
+            href: STRIPE_LINKS.hoodieXXL,
+          },
+        ]
+      : [
+          {
+            label: "Pre-order via Email",
+            href: preorderMailto(
+              "Pre-order — JALSOL Embroidered Hoodie (XXL) — $130.00 AUD"
+            ),
+          },
+        ],
+  },
   {
     id: "mini-pillow-plush",
     title: "JALSOL Embroidered Mini Pillow Plush",
