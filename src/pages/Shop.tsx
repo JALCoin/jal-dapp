@@ -4,6 +4,46 @@ import { createPortal } from "react-dom";
 import { getActiveProducts, type Product } from "../data/products";
 
 type Filter = "all" | "physical" | "digital";
+type SortMode = "featured" | "title-asc" | "title-desc";
+
+function getStatusLabel(status: Product["status"]) {
+  if (status === "active") return "Live";
+  if (status === "coming_soon") return "Soon";
+  return "—";
+}
+
+function getPrimaryLink(p: Product) {
+  if (!p.links?.length) return null;
+
+  const priority = [
+    "buy now",
+    "checkout",
+    "pre-order",
+    "preorder",
+    "stripe",
+    "etsy",
+    "shop now",
+    "order now",
+    "enquire",
+    "inquire",
+    "view",
+  ];
+
+  const scored = [...p.links].sort((a, b) => {
+    const aIndex = priority.findIndex((x) => a.label.toLowerCase().includes(x));
+    const bIndex = priority.findIndex((x) => b.label.toLowerCase().includes(x));
+    const safeA = aIndex === -1 ? 999 : aIndex;
+    const safeB = bIndex === -1 ? 999 : bIndex;
+    return safeA - safeB;
+  });
+
+  return scored[0] ?? null;
+}
+
+function getSecondaryLinks(p: Product) {
+  const primary = getPrimaryLink(p);
+  return p.links.filter((l) => l.href !== primary?.href).slice(0, 2);
+}
 
 function ProductModal({
   p,
@@ -25,18 +65,24 @@ function ProductModal({
     return () => document.body.removeAttribute("data-modal-open");
   }, []);
 
-  const badge =
-    p.status === "active" ? "Live" : p.status === "coming_soon" ? "Soon" : "—";
+  const badge = getStatusLabel(p.status);
+  const primaryLink = getPrimaryLink(p);
+  const secondaryLinks = getSecondaryLinks(p);
 
   const modal = (
-    <div className="product-modal-layer" role="dialog" aria-modal="true" aria-label={p.title}>
+    <div
+      className="product-modal-layer"
+      role="dialog"
+      aria-modal="true"
+      aria-label={p.title}
+    >
       <button
         className="product-modal-backdrop"
         aria-label="Close product"
         onClick={onClose}
       />
 
-      <section className="product-modal-panel" aria-label="Product details">
+      <section className="product-modal-panel shop-modal-panel" aria-label="Product details">
         <button
           type="button"
           className="product-modal-close"
@@ -47,8 +93,8 @@ function ProductModal({
           ×
         </button>
 
-        <div className="product-modal-grid">
-          <div className="product-modal-media">
+        <div className="product-modal-grid shop-modal-grid">
+          <div className="product-modal-media shop-modal-media">
             {p.image ? (
               <img className="product-modal-img" src={p.image} alt={p.title} />
             ) : (
@@ -56,17 +102,24 @@ function ProductModal({
             )}
           </div>
 
-          <div className="product-modal-details">
-            <div className="product-modal-title-row">
-              <h2 className="product-modal-title">{p.title}</h2>
+          <div className="product-modal-details shop-modal-details">
+            <div className="shop-modal-kicker-row">
+              <span className="shop-modal-kicker">
+                {p.kind === "physical" ? "Physical" : "Digital"}
+              </span>
               <span className={`product-badge status-${p.status}`}>{badge}</span>
             </div>
 
-            {p.priceNote ? <div className="product-modal-price">{p.priceNote}</div> : null}
-            <p className="product-modal-summary">{p.summary}</p>
+            <h2 className="product-modal-title shop-modal-title">{p.title}</h2>
+
+            {p.priceNote ? (
+              <div className="product-modal-price shop-modal-price">{p.priceNote}</div>
+            ) : null}
+
+            <p className="product-modal-summary shop-modal-summary">{p.summary}</p>
 
             {p.tags?.length ? (
-              <div className="product-tags" aria-label="Product tags">
+              <div className="product-tags shop-modal-tags" aria-label="Product tags">
                 {p.tags.map((t) => (
                   <span className="tag" key={t}>
                     {t}
@@ -75,18 +128,33 @@ function ProductModal({
               </div>
             ) : null}
 
-            <div className="product-modal-actions" aria-label="Product links">
-              {p.links.map((l) => (
+            <div className="shop-modal-actions" aria-label="Product links">
+              {primaryLink ? (
                 <a
-                  key={l.href}
-                  className="chip"
-                  href={l.href}
+                  className="shop-primary-action"
+                  href={primaryLink.href}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {l.label}
+                  {primaryLink.label}
                 </a>
-              ))}
+              ) : null}
+
+              {secondaryLinks.length ? (
+                <div className="shop-secondary-actions">
+                  {secondaryLinks.map((l) => (
+                    <a
+                      key={l.href}
+                      className="chip"
+                      href={l.href}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {l.label}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className="product-modal-footnote">
@@ -108,12 +176,13 @@ function ProductCard({
   p: Product;
   onOpen: (p: Product) => void;
 }) {
-  const badge =
-    p.status === "active" ? "Live" : p.status === "coming_soon" ? "Soon" : "—";
+  const badge = getStatusLabel(p.status);
+  const primaryLink = getPrimaryLink(p);
+  const secondaryLinks = getSecondaryLinks(p);
 
   return (
     <article
-      className="product-card product-card-clickable"
+      className="product-card product-card-clickable shop-product-card"
       aria-label={p.title}
       role="button"
       tabIndex={0}
@@ -129,23 +198,37 @@ function ProductCard({
         }
       }}
     >
-      {p.image ? (
-        <div className="product-media" aria-label="Product image">
-          <img className="product-img" src={p.image} alt={p.title} loading="lazy" />
-        </div>
-      ) : null}
+      <div className="shop-card-image-wrap">
+        {p.image ? (
+          <div className="product-media shop-product-media" aria-label="Product image">
+            <img className="product-img shop-product-img" src={p.image} alt={p.title} loading="lazy" />
+          </div>
+        ) : (
+          <div className="product-media shop-product-media shop-product-placeholder" aria-label="No image" />
+        )}
 
-      <div className="product-top">
-        <div className="product-title-row">
-          <h3 className="product-title">{p.title}</h3>
+        <div className="shop-card-badges">
           <span className={`product-badge status-${p.status}`}>{badge}</span>
         </div>
+      </div>
 
-        {p.priceNote ? <div className="product-price">{p.priceNote}</div> : null}
-        <p className="product-summary">{p.summary}</p>
+      <div className="product-top shop-card-body">
+        <div className="shop-card-meta">
+          <span className="shop-card-kind">
+            {p.kind === "physical" ? "Physical" : "Digital"}
+          </span>
+        </div>
+
+        <div className="product-title-row shop-card-title-row">
+          <h3 className="product-title shop-card-title">{p.title}</h3>
+        </div>
+
+        {p.priceNote ? <div className="product-price shop-card-price">{p.priceNote}</div> : null}
+
+        <p className="product-summary shop-card-summary">{p.summary}</p>
 
         {p.tags?.length ? (
-          <div className="product-tags" aria-label="Product tags">
+          <div className="product-tags shop-card-tags" aria-label="Product tags">
             {p.tags.slice(0, 4).map((t) => (
               <span className="tag" key={t}>
                 {t}
@@ -156,15 +239,30 @@ function ProductCard({
       </div>
 
       <div
-        className="product-actions"
+        className="product-actions shop-card-actions"
         aria-label="Product links"
         onClick={(e) => e.stopPropagation()}
       >
-        {p.links.slice(0, 2).map((l) => (
-          <a key={l.href} className="chip" href={l.href} target="_blank" rel="noreferrer">
-            {l.label}
+        {primaryLink ? (
+          <a
+            className="shop-card-primary"
+            href={primaryLink.href}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {primaryLink.label}
           </a>
-        ))}
+        ) : null}
+
+        {secondaryLinks.length ? (
+          <div className="shop-card-secondary">
+            {secondaryLinks.map((l) => (
+              <a key={l.href} className="chip" href={l.href} target="_blank" rel="noreferrer">
+                {l.label}
+              </a>
+            ))}
+          </div>
+        ) : null}
       </div>
     </article>
   );
@@ -172,56 +270,110 @@ function ProductCard({
 
 export default function Shop() {
   const [filter, setFilter] = useState<Filter>("all");
+  const [sort, setSort] = useState<SortMode>("featured");
   const [active, setActive] = useState<Product | null>(null);
 
   const products = useMemo(() => {
-    const all = getActiveProducts();
-    if (filter === "all") return all;
-    return all.filter((p) => p.kind === filter);
-  }, [filter]);
+    let all = getActiveProducts();
+
+    if (filter !== "all") {
+      all = all.filter((p) => p.kind === filter);
+    }
+
+    const sorted = [...all];
+
+    switch (sort) {
+      case "title-asc":
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "title-desc":
+        sorted.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case "featured":
+      default:
+        sorted.sort((a, b) => {
+          const score = (p: Product) => {
+            if (p.status === "active") return 0;
+            if (p.status === "coming_soon") return 1;
+            return 2;
+          };
+          return score(a) - score(b) || a.title.localeCompare(b.title);
+        });
+        break;
+    }
+
+    return sorted;
+  }, [filter, sort]);
 
   return (
-    <main className="home-shell" aria-label="Shop">
-      <div className="home-wrap">
-        <section className="card machine-surface panel-frame">
-          <h1 className="home-title">Shop</h1>
+    <main className="home-shell shop-shell" aria-label="Shop">
+      <div className="home-wrap shop-wrap">
+        <section className="card machine-surface panel-frame shop-panel">
+          <div className="shop-header">
+            <div className="shop-header-main">
+              <p className="shop-eyebrow">JALSOL Storefront</p>
+              <h1 className="home-title shop-title">Shop</h1>
 
-          <p className="home-lead">
-            The JALSOL storefront. Physical relics and digital products are released here.
-            Direct checkout is coming soon while Etsy remains available for current orders.
-          </p>
+              <p className="home-lead shop-lead">
+                Physical relics and digital products released through the JALSOL storefront.
+                Stripe-ready checkout links can sit directly behind each product action while Etsy
+                remains available where needed.
+              </p>
+            </div>
 
-          <div className="home-links">
-            <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
-              jalsol.com
-            </a>
-            <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
-              Etsy
-            </a>
+            <div className="shop-header-links">
+              <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
+                jalsol.com
+              </a>
+              <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
+                Etsy
+              </a>
+            </div>
           </div>
 
-          <div className="shop-controls" aria-label="Shop filters">
-            <button
-              type="button"
-              className={`chip chip-btn ${filter === "all" ? "is-active" : ""}`}
-              onClick={() => setFilter("all")}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              className={`chip chip-btn ${filter === "physical" ? "is-active" : ""}`}
-              onClick={() => setFilter("physical")}
-            >
-              Physical
-            </button>
-            <button
-              type="button"
-              className={`chip chip-btn ${filter === "digital" ? "is-active" : ""}`}
-              onClick={() => setFilter("digital")}
-            >
-              Digital
-            </button>
+          <div className="shop-toolbar" aria-label="Shop controls">
+            <div className="shop-filter-group">
+              <button
+                type="button"
+                className={`chip chip-btn shop-filter-btn ${filter === "all" ? "is-active" : ""}`}
+                onClick={() => setFilter("all")}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                className={`chip chip-btn shop-filter-btn ${filter === "physical" ? "is-active" : ""}`}
+                onClick={() => setFilter("physical")}
+              >
+                Physical
+              </button>
+              <button
+                type="button"
+                className={`chip chip-btn shop-filter-btn ${filter === "digital" ? "is-active" : ""}`}
+                onClick={() => setFilter("digital")}
+              >
+                Digital
+              </button>
+            </div>
+
+            <div className="shop-toolbar-right">
+              <div className="shop-count" aria-label="Product count">
+                {products.length} {products.length === 1 ? "item" : "items"}
+              </div>
+
+              <label className="shop-sort" aria-label="Sort products">
+                <span className="shop-sort-label">Sort</span>
+                <select
+                  className="shop-sort-select"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortMode)}
+                >
+                  <option value="featured">Featured</option>
+                  <option value="title-asc">Title A–Z</option>
+                  <option value="title-desc">Title Z–A</option>
+                </select>
+              </label>
+            </div>
           </div>
 
           <div className="shop-grid" aria-label="Products grid">
