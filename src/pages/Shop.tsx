@@ -28,6 +28,7 @@ function getPrimaryLink(p: Product) {
     "enquire",
     "inquire",
     "view",
+    "request access",
   ];
 
   const scored = [...p.links].sort((a, b) => {
@@ -281,6 +282,7 @@ export default function Shop() {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortMode>("featured");
   const [active, setActive] = useState<Product | null>(null);
+  const [donateOpen, setDonateOpen] = useState(true);
 
   const supportProducts = useMemo(() => {
     const all = getActiveProducts();
@@ -350,7 +352,7 @@ export default function Shop() {
           </div>
 
           <section className="shop-section" aria-label="System entry">
-            <div className="shop-section-head">
+            <div className="shop-section-head shop-section-head-collapsible">
               <div>
                 <p className="shop-section-kicker">System Entry</p>
                 <h2 className="shop-section-title">Donate</h2>
@@ -358,13 +360,29 @@ export default function Shop() {
                   Direct contribution into the JALSOL system through fixed donation tiers.
                 </p>
               </div>
+
+              <button
+                type="button"
+                className="shop-section-toggle"
+                aria-expanded={donateOpen}
+                aria-controls="shop-donate-panel"
+                onClick={() => setDonateOpen((v) => !v)}
+              >
+                {donateOpen ? "Hide" : "Show"}
+              </button>
             </div>
 
-            <div className="shop-grid shop-grid-support" aria-label="Donation tiers">
-              {supportProducts.map((p) => (
-                <ProductCard key={p.id} p={p} onOpen={setActive} />
-              ))}
-            </div>
+            {donateOpen ? (
+              <div
+                id="shop-donate-panel"
+                className="shop-grid shop-grid-support"
+                aria-label="Donation tiers"
+              >
+                {supportProducts.map((p) => (
+                  <ProductCard key={p.id} p={p} onOpen={setActive} />
+                ))}
+              </div>
+            ) : null}
           </section>
 
           <section className="shop-section" aria-label="Store products">
@@ -385,7 +403,7 @@ export default function Shop() {
                   className={`chip chip-btn shop-filter-btn ${filter === "all" ? "is-active" : ""}`}
                   onClick={() => setFilter("all")}
                 >
-                  All
+                  All Products
                 </button>
                 <button
                   type="button"

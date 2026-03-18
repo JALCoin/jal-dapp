@@ -3680,3 +3680,42 @@ main{
     inset 0 0 0 1px rgba(255,255,255,0.03),
     0 12px 30px rgba(0,0,0,0.34);
 }
+.shop-section-head-collapsible {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+}
+
+.shop-section-toggle {
+  min-width: 88px;
+  min-height: 42px;
+  padding: 0.72rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    transform var(--t-fast);
+}
+
+.shop-section-toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,0.28);
+  box-shadow: var(--glow-white);
+}
+
+@media (max-width: 640px) {
+  .shop-section-head-collapsible {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .shop-section-toggle {
+    width: 100%;
+  }
+}
