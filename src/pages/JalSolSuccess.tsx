@@ -1,4 +1,11 @@
+import { useEffect } from "react";
+import { unlockLevel } from "../utils/jalLevel";
+
 export default function JalSolSuccess() {
+  useEffect(() => {
+    unlockLevel(1);
+  }, []);
+
   return (
     <main className="home-shell jal-shell" aria-label="JAL/SOL success">
       <div className="home-wrap">
