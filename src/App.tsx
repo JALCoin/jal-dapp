@@ -15,6 +15,7 @@ import Home from "./pages/Home";
 import Engine from "./pages/Engine";
 import ShopPage from "./pages/Shop";
 import JalSolPage from "./pages/JalSol";
+import JalSolSuccess from "./pages/JalSolSuccess";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -294,6 +295,7 @@ function AppShell() {
 
         <Route path="shop" element={<ShopPage />} />
         <Route path="jal-sol" element={<JalSolPage />} />
+        <Route path="jal-sol/success" element={<JalSolSuccess />} />
 
         <Route path="token" element={<FeaturePage title="Token Generation" />} />
         <Route path="raydium" element={<FeaturePage title="Raydium / Liquidity" />} />

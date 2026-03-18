@@ -3006,3 +3006,26 @@ main{
     align-items: flex-start;
   }
 }
+.jal-note {
+  margin: 0;
+  line-height: 1.7;
+  opacity: 0.82;
+}
+
+.jal-lock-text {
+  margin: 0.5rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  opacity: 0.76;
+}
+
+.is-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  word-break: break-all;
+}
+
+.jal-level-card.is-locked,
+.jal-level-card.is-invite {
+  opacity: 0.78;
+  filter: saturate(0.8);
+}

@@ -1,4 +1,3 @@
-// src/pages/JalSol.tsx
 import { useMemo } from "react";
 
 type Link = {
@@ -35,7 +34,13 @@ function QuickLinks({ links }: { links: Link[] }) {
   );
 }
 
-function LevelCard({ level }: { level: Level }) {
+function LevelCard({
+  level,
+  stripeLink,
+}: {
+  level: Level;
+  stripeLink: string;
+}) {
   const stateLabel =
     level.state === "open"
       ? "Open Access"
@@ -45,12 +50,7 @@ function LevelCard({ level }: { level: Level }) {
       ? "Invite Only"
       : "Locked";
 
-  const buttonClass =
-    level.state === "open"
-      ? "button neon"
-      : level.state === "paid"
-      ? "button"
-      : "button ghost";
+  const disabled = level.state === "locked" || level.state === "invite";
 
   return (
     <article
@@ -67,29 +67,66 @@ function LevelCard({ level }: { level: Level }) {
       <p className="jal-level-outcome">{level.outcome}</p>
       <p className="jal-level-body">{level.body}</p>
 
-      <button
-        type="button"
-        className={buttonClass}
-        disabled={level.state === "locked" || level.state === "invite"}
-        aria-disabled={level.state === "locked" || level.state === "invite"}
-      >
-        {level.cta}
-      </button>
+      {level.state === "open" && (
+        <button
+          type="button"
+          className="button neon"
+          onClick={() => {
+            document
+              .getElementById("level-0-section")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        >
+          {level.cta}
+        </button>
+      )}
+
+      {level.state === "paid" && (
+        <a
+          className="button"
+          href={stripeLink}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {level.cta}
+        </a>
+      )}
+
+      {disabled && (
+        <button
+          type="button"
+          className="button ghost"
+          onClick={() => window.alert("Access locked. Complete the previous level first.")}
+        >
+          {level.cta}
+        </button>
+      )}
     </article>
   );
 }
 
 export default function JalSol() {
-  const JAL_MINT = "";
-  const RAYDIUM_POOL = "";
+  const JAL_MINT = "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
+  const STRIPE_LEVEL_1 = "https://buy.stripe.com/dRmaEW5h62JRfgX8AA0x201";
 
   const links = useMemo<Link[]>(
     () => [
-      { label: "Phantom", href: "https://phantom.app/" },
-      { label: "CoinSpot", href: "https://www.coinspot.com.au/" },
-      { label: "Raydium", href: "https://raydium.io/" },
-      { label: "Jupiter", href: "https://jup.ag/" },
-      { label: "Solscan", href: "https://solscan.io/" },
+      {
+        label: "Solscan",
+        href: `https://solscan.io/token/${JAL_MINT}`,
+      },
+      {
+        label: "Birdeye",
+        href: `https://birdeye.so/token/${JAL_MINT}?chain=solana`,
+      },
+      {
+        label: "Jupiter",
+        href: `https://jup.ag/tokens/${JAL_MINT}`,
+      },
+      {
+        label: "Phantom",
+        href: "https://phantom.app/",
+      },
     ],
     []
   );
@@ -102,8 +139,10 @@ export default function JalSol() {
         title: "Awareness",
         state: "open",
         price: "Free",
-        outcome: "Understand what crypto is, why most people enter wrong, and what order actually matters.",
-        body: "This is the surface layer. CEX vs DEX, custody, basic risk, and why sequence matters before movement.",
+        outcome:
+          "Understand what crypto is, why most people enter wrong, and what order actually matters.",
+        body:
+          "This is the surface layer. CEX vs DEX, custody, basic risk, and why sequence matters before movement.",
         cta: "Enter Level 0",
       },
       {
@@ -112,8 +151,10 @@ export default function JalSol() {
         title: "Entry",
         state: "paid",
         price: "$19",
-        outcome: "Complete your first intentional move: exchange setup, wallet setup, and initial transfer flow.",
-        body: "This is the first paid initiation. Not theory for entertainment. Structured guidance toward correct first execution.",
+        outcome:
+          "Complete your first intentional move: exchange setup, wallet setup, and initial transfer flow.",
+        body:
+          "This is the first paid initiation. Not theory for entertainment. Structured guidance toward correct first execution.",
         cta: "Unlock Level 1",
       },
       {
@@ -122,8 +163,10 @@ export default function JalSol() {
         title: "Orientation",
         state: "locked",
         price: "$49",
-        outcome: "Understand Solana, tokens, liquidity, swaps, and how market routing actually works.",
-        body: "This layer explains the board itself: wallets, network behaviour, token pairs, and DEX function.",
+        outcome:
+          "Understand Solana, tokens, liquidity, swaps, and how market routing actually works.",
+        body:
+          "This layer explains the board itself: wallets, network behaviour, token pairs, and DEX function.",
         cta: "Locked",
       },
       {
@@ -132,8 +175,10 @@ export default function JalSol() {
         title: "Control",
         state: "locked",
         price: "$99",
-        outcome: "Move from reaction to structure through sizing, rules, and emotional control.",
-        body: "This is where gambling ends. Sequence, discipline, and system thinking begin here.",
+        outcome:
+          "Move from reaction to structure through sizing, rules, and emotional control.",
+        body:
+          "This is where gambling ends. Sequence, discipline, and system thinking begin here.",
         cta: "Locked",
       },
       {
@@ -142,8 +187,10 @@ export default function JalSol() {
         title: "System Access",
         state: "invite",
         price: "Premium",
-        outcome: "See the machine behind the market and how a system-based operator thinks.",
-        body: "This tier introduces the deeper logic layer behind JALSOL and future engine-aligned participation.",
+        outcome:
+          "See the machine behind the market and how a system-based operator thinks.",
+        body:
+          "This tier introduces the deeper logic layer behind JALSOL and future engine-aligned participation.",
         cta: "Invite Only",
       },
     ],
@@ -195,14 +242,26 @@ export default function JalSol() {
                 <div className="jal-bay-note">Structured progression</div>
               </div>
 
+              <p className="jal-note">
+                Access unlocks in sequence.
+              </p>
+
               <div className="jal-level-rail">
                 {levels.map((level) => (
-                  <LevelCard key={level.id} level={level} />
+                  <LevelCard
+                    key={level.id}
+                    level={level}
+                    stripeLink={STRIPE_LEVEL_1}
+                  />
                 ))}
               </div>
             </section>
 
-            <section className="jal-bay" aria-label="Level zero preview">
+            <section
+              id="level-0-section"
+              className="jal-bay"
+              aria-label="Level zero preview"
+            >
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Level 0</div>
                 <div className="jal-bay-note">Open access</div>
@@ -236,8 +295,16 @@ export default function JalSol() {
               </ol>
 
               <div className="jal-bay-actions">
-                <button type="button" className="button neon">
-                  Open Level 0
+                <button
+                  type="button"
+                  className="button neon"
+                  onClick={() => {
+                    document
+                      .getElementById("verification-section")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                >
+                  Continue
                 </button>
               </div>
             </section>
@@ -275,14 +342,28 @@ export default function JalSol() {
                 </li>
               </ol>
 
+              <p className="jal-lock-text">
+                Entry into this level is intentional.
+                Most people do not proceed.
+              </p>
+
               <div className="jal-bay-actions">
-                <button type="button" className="button">
+                <a
+                  className="button neon"
+                  href={STRIPE_LEVEL_1}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Unlock Level 1
-                </button>
+                </a>
               </div>
             </section>
 
-            <section className="jal-bay jal-bay-wide" aria-label="Verification bay">
+            <section
+              id="verification-section"
+              className="jal-bay jal-bay-wide"
+              aria-label="Verification bay"
+            >
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Verification</div>
                 <div className="jal-bay-note">Canonical references</div>
@@ -291,24 +372,75 @@ export default function JalSol() {
               <div className="jal-bullets">
                 <div className="jal-bullet">
                   <div className="jal-bullet-k">JAL Mint</div>
-                  <div className="jal-bullet-v">
-                    {JAL_MINT || "Set when token reference is locked."}
-                  </div>
+                  <div className="jal-bullet-v is-mono">{JAL_MINT}</div>
                 </div>
 
                 <div className="jal-bullet">
-                  <div className="jal-bullet-k">Raydium Pool</div>
+                  <div className="jal-bullet-k">Liquidity State</div>
                   <div className="jal-bullet-v">
-                    {RAYDIUM_POOL || "Set when pool reference is locked."}
+                    No public pool. Controlled entry phase.
                   </div>
                 </div>
 
                 <div className="jal-bullet">
                   <div className="jal-bullet-k">Role</div>
                   <div className="jal-bullet-v">
-                    This page becomes the public proof layer for entry, routing, and later checkout.
+                    This page is the public proof layer for entry, routing, and later checkout.
                   </div>
                 </div>
+              </div>
+            </section>
+
+            <section className="jal-bay jal-bay-wide" aria-label="Market state">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Market State</div>
+                <div className="jal-bay-note">Current condition</div>
+              </div>
+
+              <p className="jal-note">
+                Supply is intentionally concentrated during early phases.
+                This is a controlled system, not an open market.
+              </p>
+
+              <div className="jal-bullets">
+                <div className="jal-bullet">
+                  <div className="jal-bullet-k">Status</div>
+                  <div className="jal-bullet-v">Pre-market / low liquidity</div>
+                </div>
+
+                <div className="jal-bullet">
+                  <div className="jal-bullet-k">Access</div>
+                  <div className="jal-bullet-v">
+                    Available via aggregator routing through Jupiter.
+                  </div>
+                </div>
+
+                <div className="jal-bullet">
+                  <div className="jal-bullet-k">Design</div>
+                  <div className="jal-bullet-v">
+                    Structured system entry, not speculative trading.
+                  </div>
+                </div>
+              </div>
+
+              <div className="jal-bay-actions">
+                <a
+                  className="button"
+                  href={`https://jup.ag/tokens/${JAL_MINT}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Route via Jupiter
+                </a>
+
+                <a
+                  className="button ghost"
+                  href={`https://solscan.io/token/${JAL_MINT}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Verify on Solscan
+                </a>
               </div>
             </section>
           </div>
