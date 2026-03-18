@@ -32,27 +32,20 @@ function HeaderView({
     <header className="site-header">
       <div className="header-inner">
         {/* Left: socials */}
-        <div className="social-links" aria-label="Social Links">
-          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
-            <img src="/icons/X.png" alt="" />
-          </a>
-          <a
-            href="https://t.me/jalsolcommute"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Telegram"
-          >
-            <img src="/icons/Telegram.png" alt="" />
-          </a>
-          <a
-            href="https://www.tiktok.com/@358jalsol"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="TikTok"
-          >
-            <img src="/icons/TikTok.png" alt="" />
-          </a>
-        </div>
+<div className="social-links" aria-label="Social Links">
+  <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+    <img src="/icons/X.png" alt="" />
+  </a>
+
+  <a
+    href="https://www.tiktok.com/@358jalsol"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="TikTok"
+  >
+    <img src="/icons/TikTok.png" alt="" />
+  </a>
+</div>
 
         {/* Center: logo opens MAIN NAV overlay */}
         <button type="button" onClick={onLogo} aria-label="Open navigation" className="logo-btn">
