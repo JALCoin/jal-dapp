@@ -16,13 +16,13 @@ export default function JalSolSuccess() {
             <h1 className="home-title jal-title">You Entered Level 1</h1>
 
             <p className="home-lead jal-lead">
-              Entry confirmed.
-              You have moved past interest and into structured participation.
+              Entry confirmed. You have moved past interest and into structured
+              participation.
             </p>
 
             <p className="jal-sublead">
-              This is not the end of the payment flow.
-              This is the beginning of the initiation path.
+              This is not the end of the payment flow. This is the beginning of
+              the initiation path.
             </p>
           </div>
 
@@ -73,8 +73,8 @@ export default function JalSolSuccess() {
               </div>
 
               <p className="jal-note">
-                Level 1 content can now begin. This page marks entry.
-                Your next action should be guided wallet and exchange preparation.
+                Level 1 is now active in principle. Your next action is guided
+                wallet and exchange preparation.
               </p>
 
               <div className="jal-bay-actions">
@@ -82,7 +82,12 @@ export default function JalSolSuccess() {
                   Return to JAL/SOL
                 </a>
 
-                <a className="button ghost" href="https://phantom.app/" target="_blank" rel="noreferrer">
+                <a
+                  className="button ghost"
+                  href="https://phantom.app/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Get Phantom
                 </a>
               </div>
