@@ -126,7 +126,7 @@ export const PRODUCTS: Product[] = [
     isSupport: true,
     links: buildLinks({
       stripeHref: STRIPE_LINKS.support25,
-      stripeLabel: "Support",
+      stripeLabel: "Donate",
     }),
   },
 
@@ -143,7 +143,7 @@ export const PRODUCTS: Product[] = [
     isSupport: true,
     links: buildLinks({
       stripeHref: STRIPE_LINKS.support50,
-      stripeLabel: "Support",
+      stripeLabel: "Donate",
     }),
   },
 
@@ -160,7 +160,7 @@ export const PRODUCTS: Product[] = [
     isSupport: true,
     links: buildLinks({
       stripeHref: STRIPE_LINKS.support75,
-      stripeLabel: "Support",
+      stripeLabel: "Donate",
     }),
   },
 
@@ -177,7 +177,7 @@ export const PRODUCTS: Product[] = [
     isSupport: true,
     links: buildLinks({
       stripeHref: STRIPE_LINKS.support100,
-      stripeLabel: "Support",
+      stripeLabel: "Donate",
     }),
   },
 
@@ -194,7 +194,7 @@ export const PRODUCTS: Product[] = [
     isSupport: true,
     links: buildLinks({
       stripeHref: STRIPE_LINKS.support150,
-      stripeLabel: "Support",
+      stripeLabel: "Donate",
     }),
   },
 
