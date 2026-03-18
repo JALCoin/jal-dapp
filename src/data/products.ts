@@ -214,7 +214,6 @@ export const PRODUCTS: Product[] = [
           ),
         },
       ],
-}
 
   {
     id: "mini-pillow-plush",
