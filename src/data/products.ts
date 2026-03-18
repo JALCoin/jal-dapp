@@ -42,7 +42,7 @@ const STRIPE_LINKS = {
   support100: "https://donate.stripe.com/28EdR89xm2JR4CjbMM0x205",
   support150: "https://donate.stripe.com/6oU00i7pe4RZ1q70440x206",
 
-  hoodieXXL: "",
+  hoodieXXL: "https://buy.stripe.com/cNi00ifVKbgn6Kr6ss0x207",
   miniPillow: "",
 };
 
@@ -200,7 +200,7 @@ export const PRODUCTS: Product[] = [
     image: "/shop/hoodie-xxl.jpg",
     links: buildLinks({
       stripeHref: STRIPE_LINKS.hoodieXXL || undefined,
-      stripeLabel: "Pre-order",
+      stripeLabel: "Claim",
       enquiryHref: preorderMailto(
         "Pre-order — JALSOL Embroidered Hoodie (XXL) — $130.00 AUD"
       ),
