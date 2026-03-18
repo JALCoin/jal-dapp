@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import { getLevel } from "../utils/jalLevel";
+import { useMemo } from "react";
 
 type Link = {
   label: string;
   href: string;
 };
 
-type LevelState = "open" | "paid" | "locked" | "invite";
+type LevelState = "open" | "locked" | "invite";
 
 type Level = {
   id: string;
@@ -37,18 +36,10 @@ function QuickLinks({ links }: { links: Link[] }) {
   );
 }
 
-function LevelCard({
-  level,
-  stripeLink,
-}: {
-  level: Level;
-  stripeLink: string;
-}) {
+function LevelCard({ level }: { level: Level }) {
   const stateLabel =
     level.state === "open"
       ? "Open Access"
-      : level.state === "paid"
-      ? "Paid Access"
       : level.state === "invite"
       ? "Invite Only"
       : "Locked";
@@ -69,57 +60,19 @@ function LevelCard({
     }
 
     if (level.id === "lvl2") {
-      window.alert("Level 2 is unlocked in structure, but its guided flow is not live yet.");
+      window.alert("Level 2 scaffold exists, but the guided flow is not built yet.");
       return;
     }
 
     if (level.id === "lvl3") {
-      window.alert("Level 3 is unlocked in structure, but its guided flow is not live yet.");
+      window.alert("Level 3 scaffold exists, but the guided flow is not built yet.");
       return;
     }
 
     if (level.id === "lvl4") {
-      window.alert("System access exists as a scaffold, but the live entry layer is not enabled yet.");
+      window.alert("System Access scaffold exists, but the live layer is not enabled yet.");
     }
   };
-
-  const paidAction = () => {
-    if (level.id === "lvl1") return null;
-
-    return (
-      <button
-        type="button"
-        className="button"
-        onClick={() =>
-          window.alert("This paid level is scaffolded, but its checkout flow is not live yet.")
-        }
-      >
-        {level.cta}
-      </button>
-    );
-  };
-
-  const lockedAction = () => (
-    <button
-      type="button"
-      className="button ghost"
-      onClick={() => window.alert("Access locked. Complete the previous level first.")}
-    >
-      {level.cta}
-    </button>
-  );
-
-  const inviteAction = () => (
-    <button
-      type="button"
-      className="button ghost"
-      onClick={() =>
-        window.alert("System Access is by invitation after the previous levels are complete.")
-      }
-    >
-      {level.cta}
-    </button>
-  );
 
   return (
     <article
@@ -142,37 +95,31 @@ function LevelCard({
         </button>
       )}
 
-      {level.state === "paid" &&
-        (level.id === "lvl1" ? (
-          <a className="button" href={stripeLink} target="_blank" rel="noreferrer">
-            {level.cta}
-          </a>
-        ) : (
-          paidAction()
-        ))}
+      {level.state === "locked" && (
+        <button
+          type="button"
+          className="button ghost"
+          onClick={() => window.alert("This level is not open yet. Build the guided flow first.")}
+        >
+          {level.cta}
+        </button>
+      )}
 
-      {level.state === "locked" && lockedAction()}
-
-      {level.state === "invite" && inviteAction()}
+      {level.state === "invite" && (
+        <button
+          type="button"
+          className="button ghost"
+          onClick={() => window.alert("System Access will be enabled after the previous levels are fully built.")}
+        >
+          {level.cta}
+        </button>
+      )}
     </article>
   );
 }
 
 export default function JalSol() {
   const JAL_MINT = "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
-  const STRIPE_LEVEL_1 = "https://buy.stripe.com/dRmaEW5h62JRfgX8AA0x201";
-
-  const [currentLevel, setCurrentLevel] = useState(0);
-
-  useEffect(() => {
-    setCurrentLevel(getLevel());
-  }, []);
-
-  useEffect(() => {
-    const onFocus = () => setCurrentLevel(getLevel());
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, []);
 
   const links = useMemo<Link[]>(
     () => [
@@ -196,8 +143,8 @@ export default function JalSol() {
     [JAL_MINT]
   );
 
-  const levels = useMemo<Level[]>(() => {
-    return [
+  const levels = useMemo<Level[]>(
+    () => [
       {
         id: "lvl0",
         number: "0",
@@ -214,52 +161,53 @@ export default function JalSol() {
         id: "lvl1",
         number: "1",
         title: "Entry",
-        state: currentLevel >= 1 ? "open" : "paid",
-        price: "$19",
+        state: "open",
+        price: "Development Open",
         outcome:
-          "Complete your first intentional move: exchange setup, wallet setup, and initial transfer flow.",
+          "Build the first intentional move flow: exchange setup, wallet setup, and initial transfer logic.",
         body:
-          "This is the first paid initiation. Not theory for entertainment. Structured guidance toward correct first execution.",
-        cta: currentLevel >= 1 ? "Access Level 1" : "Unlock Level 1",
+          "This level is open during development so the guided onboarding experience can be designed properly before any paywall is added.",
+        cta: "Enter Level 1",
       },
       {
         id: "lvl2",
         number: "2",
         title: "Orientation",
-        state: currentLevel >= 2 ? "open" : currentLevel >= 1 ? "paid" : "locked",
-        price: "$49",
+        state: "locked",
+        price: "Locked",
         outcome:
           "Understand Solana, tokens, liquidity, swaps, and how market routing actually works.",
         body:
           "This layer explains the board itself: wallets, network behaviour, token pairs, and DEX function.",
-        cta: currentLevel >= 2 ? "Access Level 2" : currentLevel >= 1 ? "Unlock Level 2" : "Locked",
+        cta: "Locked",
       },
       {
         id: "lvl3",
         number: "3",
         title: "Control",
-        state: currentLevel >= 3 ? "open" : currentLevel >= 2 ? "paid" : "locked",
-        price: "$99",
+        state: "locked",
+        price: "Locked",
         outcome:
           "Move from reaction to structure through sizing, rules, and emotional control.",
         body:
           "This is where gambling ends. Sequence, discipline, and system thinking begin here.",
-        cta: currentLevel >= 3 ? "Access Level 3" : currentLevel >= 2 ? "Unlock Level 3" : "Locked",
+        cta: "Locked",
       },
       {
         id: "lvl4",
         number: "4",
         title: "System Access",
-        state: currentLevel >= 4 ? "open" : currentLevel >= 3 ? "invite" : "locked",
-        price: "Premium",
+        state: "invite",
+        price: "Future Access",
         outcome:
           "See the machine behind the market and how a system-based operator thinks.",
         body:
           "This tier introduces the deeper logic layer behind JALSOL and future engine-aligned participation.",
-        cta: currentLevel >= 4 ? "Enter System" : currentLevel >= 3 ? "Request Access" : "Locked",
+        cta: "Future Access",
       },
-    ];
-  }, [currentLevel]);
+    ],
+    []
+  );
 
   return (
     <main className="home-shell jal-shell" aria-label="JAL/SOL">
@@ -306,15 +254,13 @@ export default function JalSol() {
                 <div className="jal-bay-note">Structured progression</div>
               </div>
 
-              <p className="jal-note">Access unlocks in sequence.</p>
+              <p className="jal-note">
+                Build the guided flows first. Paywall them after the experience is real.
+              </p>
 
               <div className="jal-level-rail">
                 {levels.map((level) => (
-                  <LevelCard
-                    key={level.id}
-                    level={level}
-                    stripeLink={STRIPE_LEVEL_1}
-                  />
+                  <LevelCard key={level.id} level={level} />
                 ))}
               </div>
             </section>
@@ -362,11 +308,11 @@ export default function JalSol() {
                   className="button neon"
                   onClick={() => {
                     document
-                      .getElementById("verification-section")
+                      .getElementById("level-1-section")
                       ?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
                 >
-                  Continue
+                  Continue to Level 1
                 </button>
               </div>
             </section>
@@ -378,9 +324,7 @@ export default function JalSol() {
             >
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Level 1</div>
-                <div className="jal-bay-note">
-                  {currentLevel >= 1 ? "Unlocked entry" : "First paid initiation"}
-                </div>
+                <div className="jal-bay-note">Development open</div>
               </div>
 
               <ol className="jal-steps" aria-label="Level 1 contents">
@@ -411,36 +355,29 @@ export default function JalSol() {
               </ol>
 
               <p className="jal-lock-text">
-                {currentLevel >= 1
-                  ? "Level 1 is active. Return here after each successful step."
-                  : "Entry into this level is intentional. Most people do not proceed."}
+                Level 1 is open during development. Build the guided experience first,
+                then lock it behind Stripe after the flow is complete.
               </p>
 
               <div className="jal-bay-actions">
-                {currentLevel >= 1 ? (
-                  <>
-                    <a className="button neon" href="/app/jal-sol/success">
-                      Continue Level 1
-                    </a>
-                    <a
-                      className="button ghost"
-                      href="https://phantom.app/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Get Phantom
-                    </a>
-                  </>
-                ) : (
-                  <a
-                    className="button neon"
-                    href={STRIPE_LEVEL_1}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Unlock Level 1
-                  </a>
-                )}
+                <button
+                  type="button"
+                  className="button neon"
+                  onClick={() =>
+                    window.alert("Next step: build the actual Level 1 guided flow here.")
+                  }
+                >
+                  Enter Level 1
+                </button>
+
+                <a
+                  className="button ghost"
+                  href="https://phantom.app/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Get Phantom
+                </a>
               </div>
             </section>
 
