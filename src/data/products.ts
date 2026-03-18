@@ -189,8 +189,6 @@ export const PRODUCTS: Product[] = [
   },
 
   {
-{
-  {
     id: "hoodie-embroidered-xxl",
     title: "JALSOL Embroidered Hoodie (XXL)",
     kind: "physical",
@@ -216,6 +214,7 @@ export const PRODUCTS: Product[] = [
           },
         ],
   },
+
   {
     id: "mini-pillow-plush",
     title: "JALSOL Embroidered Mini Pillow Plush",
