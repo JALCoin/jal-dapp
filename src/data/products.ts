@@ -30,16 +30,19 @@ export type Product = {
   tags?: ProductTag[];
   links: ProductLink[];
   image?: string;
+  isSupport?: boolean;
 };
 
 const EMAIL = "358jal@gmail.com";
 const ETSY_SHOP = "https://jalrelics.etsy.com";
 
-/**
- * Replace these with your real Stripe Payment Links
- * once each product is created in Stripe Dashboard.
- */
 const STRIPE_LINKS = {
+  support25: "https://buy.stripe.com/28EcN438Y98f0m3dUU0x202",
+  support50: "https://donate.stripe.com/28EaEWaBqdov4Cj7ww0x203",
+  support75: "https://donate.stripe.com/4gM5kCeRG2JR2ub7ww0x204",
+  support100: "https://donate.stripe.com/28EdR89xm2JR4CjbMM0x205",
+  support150: "https://donate.stripe.com/6oU00i7pe4RZ1q70440x206",
+
   hoodieXXL: "",
   miniPillow: "",
   goldCuffDeposit: "",
@@ -109,99 +112,92 @@ function buildLinks(options: {
   return links;
 }
 
-/**
- * Storefront ordering:
- * 1. flagship wearable
- * 2. accessible entry product
- * 3. premium quote / made-to-order piece
- *
- * Status guidance:
- * - active: live now, buyable / actionable
- * - coming_soon: visible but not yet direct checkout ready
- * - archived: hidden from storefront
- */
 export const PRODUCTS: Product[] = [
-// ---------- SYSTEM SUPPORT (DIGITAL) ----------
+  {
+    id: "system-support-25",
+    title: "System Support — $25",
+    kind: "digital",
+    status: "active",
+    priceNote: "$25.00 AUD",
+    summary:
+      "Entry-level support into the JALSOL system. A signal of alignment and early-stage participation.",
+    tags: ["Digital", "Support", "New"],
+    image: "/shop/system-support.jpg",
+    isSupport: true,
+    links: buildLinks({
+      stripeHref: STRIPE_LINKS.support25,
+      stripeLabel: "Support",
+    }),
+  },
 
-{
-  id: "system-support-25",
-  title: "System Support — $25",
-  kind: "digital",
-  status: "active",
-  priceNote: "$25.00 AUD",
-  summary:
-    "Entry-level support into the JALSOL system. A signal of alignment and early-stage participation.",
-  tags: ["Digital", "Support", "New"],
-  links: buildLinks({
-    stripeHref: "", // add Stripe later
-    stripeLabel: "Support",
-    enquiryHref: mailto("System Support — $25"),
-  }),
-},
+  {
+    id: "system-support-50",
+    title: "System Support — $50",
+    kind: "digital",
+    status: "active",
+    priceNote: "$50.00 AUD",
+    summary:
+      "Mid-tier support level. Strengthens position and contribution into the system structure.",
+    tags: ["Digital", "Support"],
+    image: "/shop/system-support.jpg",
+    isSupport: true,
+    links: buildLinks({
+      stripeHref: STRIPE_LINKS.support50,
+      stripeLabel: "Support",
+    }),
+  },
 
-{
-  id: "system-support-50",
-  title: "System Support — $50",
-  kind: "digital",
-  status: "active",
-  priceNote: "$50.00 AUD",
-  summary:
-    "Mid-tier support level. Strengthens position and contribution into the system structure.",
-  tags: ["Digital", "Support"],
-  links: buildLinks({
-    stripeHref: "",
-    stripeLabel: "Support",
-    enquiryHref: mailto("System Support — $50"),
-  }),
-},
+  {
+    id: "system-support-75",
+    title: "System Support — $75",
+    kind: "digital",
+    status: "active",
+    priceNote: "$75.00 AUD",
+    summary:
+      "Elevated support layer. Positioned for those moving with stronger intent.",
+    tags: ["Digital", "Support"],
+    image: "/shop/system-support.jpg",
+    isSupport: true,
+    links: buildLinks({
+      stripeHref: STRIPE_LINKS.support75,
+      stripeLabel: "Support",
+    }),
+  },
 
-{
-  id: "system-support-75",
-  title: "System Support — $75",
-  kind: "digital",
-  status: "active",
-  priceNote: "$75.00 AUD",
-  summary:
-    "Elevated support layer. Positioned for those moving with stronger intent.",
-  tags: ["Digital", "Support"],
-  links: buildLinks({
-    stripeHref: "",
-    stripeLabel: "Support",
-    enquiryHref: mailto("System Support — $75"),
-  }),
-},
+  {
+    id: "system-support-100",
+    title: "System Support — $100",
+    kind: "digital",
+    status: "active",
+    priceNote: "$100.00 AUD",
+    summary:
+      "High-tier support level. Signals commitment to progression within the JALSOL system.",
+    tags: ["Digital", "Support", "Premium"],
+    image: "/shop/system-support.jpg",
+    isSupport: true,
+    links: buildLinks({
+      stripeHref: STRIPE_LINKS.support100,
+      stripeLabel: "Support",
+    }),
+  },
 
-{
-  id: "system-support-100",
-  title: "System Support — $100",
-  kind: "digital",
-  status: "active",
-  priceNote: "$100.00 AUD",
-  summary:
-    "High-tier support level. Signals commitment to progression within the JALSOL system.",
-  tags: ["Digital", "Support", "Premium"],
-  links: buildLinks({
-    stripeHref: "",
-    stripeLabel: "Support",
-    enquiryHref: mailto("System Support — $100"),
-  }),
-},
+  {
+    id: "system-support-150",
+    title: "System Support — $150",
+    kind: "digital",
+    status: "active",
+    priceNote: "$150.00 AUD",
+    summary:
+      "Top support tier. Reserved for those aligning deeper with system direction and future access.",
+    tags: ["Digital", "Support", "Premium"],
+    image: "/shop/system-support.jpg",
+    isSupport: true,
+    links: buildLinks({
+      stripeHref: STRIPE_LINKS.support150,
+      stripeLabel: "Support",
+    }),
+  },
 
-{
-  id: "system-support-150",
-  title: "System Support — $150",
-  kind: "digital",
-  status: "active",
-  priceNote: "$150.00 AUD",
-  summary:
-    "Top support tier. Reserved for those aligning deeper with system direction and future access.",
-  tags: ["Digital", "Support", "Premium", "Limited"],
-  links: buildLinks({
-    stripeHref: "",
-    stripeLabel: "Support",
-    enquiryHref: mailto("System Support — $150"),
-  }),
-},
   {
     id: "hoodie-embroidered-xxl",
     title: "JALSOL Embroidered Hoodie (XXL)",
@@ -269,24 +265,6 @@ export const PRODUCTS: Product[] = [
       enquiryLabel: "Enquire (Quote)",
     }),
   },
-
-  // Example future digital product
-  // {
-  //   id: "jalsol-guide-level-1",
-  //   title: "JALSOL Level 1 Guide",
-  //   kind: "digital",
-  //   status: "coming_soon",
-  //   priceNote: "$29.00 AUD",
-  //   summary:
-  //     "A structured onboarding guide for entering the cryptocurrency market through JALSOL order-of-operations.",
-  //   tags: ["Digital", "New", "Premium"],
-  //   image: "/shop/jalsol-guide-level-1.jpg",
-  //   links: buildLinks({
-  //     stripeHref: "",
-  //     stripeLabel: "Buy Now",
-  //     enquiryHref: mailto("Enquiry — JALSOL Level 1 Guide"),
-  //   }),
-  // },
 ];
 
 export function getActiveProducts(): Product[] {

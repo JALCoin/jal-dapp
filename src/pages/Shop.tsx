@@ -15,19 +15,20 @@ function getStatusLabel(status: Product["status"]) {
 function getPrimaryLink(p: Product) {
   if (!p.links?.length) return null;
 
-  const priority = [
-    "buy now",
-    "checkout",
-    "pre-order",
-    "preorder",
-    "stripe",
-    "etsy",
-    "shop now",
-    "order now",
-    "enquire",
-    "inquire",
-    "view",
-  ];
+const priority = [
+  "support", // ← ADD THIS (TOP PRIORITY)
+  "buy now",
+  "checkout",
+  "pre-order",
+  "preorder",
+  "stripe",
+  "etsy",
+  "shop now",
+  "order now",
+  "enquire",
+  "inquire",
+  "view",
+];
 
   const scored = [...p.links].sort((a, b) => {
     const aIndex = priority.findIndex((x) => a.label.toLowerCase().includes(x));
@@ -273,38 +274,55 @@ export default function Shop() {
   const [sort, setSort] = useState<SortMode>("featured");
   const [active, setActive] = useState<Product | null>(null);
 
-  const products = useMemo(() => {
-    let all = getActiveProducts();
+const products = useMemo(() => {
+  const all = getActiveProducts();
 
-    if (filter !== "all") {
-      all = all.filter((p) => p.kind === filter);
-    }
+  const getPrice = (p: Product) =>
+    Number((p.priceNote ?? "").replace(/[^0-9.]/g, "")) || 0;
 
-    const sorted = [...all];
+  // 1. Separate support vs non-support
+  const support = all
+    .filter((p) => p.isSupport === true)
+    .sort((a, b) => getPrice(a) - getPrice(b));
 
-    switch (sort) {
-      case "title-asc":
-        sorted.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case "title-desc":
-        sorted.sort((a, b) => b.title.localeCompare(a.title));
-        break;
-      case "featured":
-      default:
-        sorted.sort((a, b) => {
-          const score = (p: Product) => {
-            if (p.status === "active") return 0;
-            if (p.status === "coming_soon") return 1;
-            return 2;
-          };
-          return score(a) - score(b) || a.title.localeCompare(b.title);
-        });
-        break;
-    }
+  const nonSupport = all.filter((p) => p.isSupport !== true);
 
-    return sorted;
-  }, [filter, sort]);
+  // 2. Apply filter ONLY to non-support
+  let filteredRest = nonSupport;
 
+  if (filter !== "all") {
+    filteredRest = nonSupport.filter((p) => p.kind === filter);
+  }
+
+  // 3. Sort remaining products normally
+  switch (sort) {
+    case "title-asc":
+      filteredRest.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+
+    case "title-desc":
+      filteredRest.sort((a, b) => b.title.localeCompare(a.title));
+      break;
+
+    case "featured":
+    default:
+      filteredRest.sort((a, b) => {
+        const score = (p: Product) => {
+          if (p.status === "active") return 0;
+          if (p.status === "coming_soon") return 1;
+          return 2;
+        };
+
+        return score(a) - score(b) || a.title.localeCompare(b.title);
+      });
+      break;
+  }
+
+  // 4. Control when support tiers show
+  const showSupport = filter === "all" || filter === "digital";
+
+  return showSupport ? [...support, ...filteredRest] : filteredRest;
+}, [filter, sort]);
   return (
     <main className="home-shell shop-shell" aria-label="Shop">
       <div className="home-wrap shop-wrap">
