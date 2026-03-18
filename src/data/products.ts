@@ -34,7 +34,6 @@ export type Product = {
 };
 
 const EMAIL = "358jal@gmail.com";
-const ETSY_SHOP = "https://jalrelics.etsy.com";
 
 const STRIPE_LINKS = {
   support25: "https://buy.stripe.com/28EcN438Y98f0m3dUU0x202",
@@ -45,7 +44,6 @@ const STRIPE_LINKS = {
 
   hoodieXXL: "",
   miniPillow: "",
-  goldCuffDeposit: "",
 };
 
 function mailto(subject: string, bodyLines?: string[]) {
@@ -82,7 +80,6 @@ function quoteMailto(subject: string, bodyLines?: string[]) {
 function buildLinks(options: {
   stripeHref?: string;
   stripeLabel?: string;
-  etsyHref?: string;
   enquiryHref?: string;
   enquiryLabel?: string;
 }): ProductLink[] {
@@ -92,13 +89,6 @@ function buildLinks(options: {
     links.push({
       label: options.stripeLabel ?? "Buy Now",
       href: options.stripeHref,
-    });
-  }
-
-  if (options.etsyHref) {
-    links.push({
-      label: "Etsy",
-      href: options.etsyHref,
     });
   }
 
@@ -211,7 +201,6 @@ export const PRODUCTS: Product[] = [
     links: buildLinks({
       stripeHref: STRIPE_LINKS.hoodieXXL || undefined,
       stripeLabel: "Pre-order",
-      etsyHref: ETSY_SHOP,
       enquiryHref: preorderMailto(
         "Pre-order — JALSOL Embroidered Hoodie (XXL) — $130.00 AUD"
       ),
@@ -232,7 +221,6 @@ export const PRODUCTS: Product[] = [
     links: buildLinks({
       stripeHref: STRIPE_LINKS.miniPillow || undefined,
       stripeLabel: "Buy Now",
-      etsyHref: ETSY_SHOP,
       enquiryHref: preorderMailto(
         "Pre-order — JALSOL Embroidered Mini Pillow Plush — $17.50 AUD"
       ),
@@ -242,27 +230,26 @@ export const PRODUCTS: Product[] = [
 
   {
     id: "solid-gold-cuff",
-    title: "Solid Gold JALSOL Cuff",
+    title: "JALSOL Gold Cuff — Private Allocation",
     kind: "physical",
     status: "coming_soon",
-    priceNote: "Enquire for price",
+    priceNote: "Private allocation",
     summary:
-      "Made-to-order solid gold cuff with sculpted open-form geometry. Precision metalwork, premium finish, and one-off statement-piece positioning.",
+      "Made-to-order solid gold cuff with sculpted open-form geometry. Allocation is handled privately in crypto for aligned participants within the JALSOL system.",
     tags: ["Physical", "Handmade", "One-of-One", "Premium", "Limited"],
     image: "/shop/solid-gold-cuff.jpg",
     links: buildLinks({
-      stripeHref: STRIPE_LINKS.goldCuffDeposit || undefined,
-      stripeLabel: "Reserve",
       enquiryHref: quoteMailto(
-        "Enquiry — Solid Gold JALSOL Cuff (Quote Request)",
+        "Enquiry — JALSOL Gold Cuff (Private Allocation)",
         [
-          "Gold purity: 9k / 14k / 18k / 24k",
+          "Preferred payment: SOL / USDC / other",
+          "Estimated budget range:",
           "Wrist circumference (mm):",
           "Finish: polished / matte / brushed",
           "Engraving: yes / no (details):",
         ]
       ),
-      enquiryLabel: "Enquire (Quote)",
+      enquiryLabel: "Request Access",
     }),
   },
 ];

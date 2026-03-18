@@ -3635,3 +3635,48 @@ main{
   border-color: rgba(255, 215, 0, 0.25);
   box-shadow: 0 0 18px rgba(255, 215, 0, 0.08);
 }
+.shop-section {
+  margin-top: 2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.shop-section + .shop-section {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 2rem;
+}
+
+.shop-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1rem;
+}
+
+.shop-section-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+}
+
+.shop-section-title {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.shop-section-copy {
+  margin: 0.45rem 0 0;
+  max-width: 64ch;
+  color: rgba(255,255,255,0.72);
+  line-height: 1.6;
+}
+
+.shop-grid-support .shop-product-card {
+  border-color: rgba(255,255,255,0.1);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.03),
+    0 12px 30px rgba(0,0,0,0.34);
+}

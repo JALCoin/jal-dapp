@@ -15,20 +15,20 @@ function getStatusLabel(status: Product["status"]) {
 function getPrimaryLink(p: Product) {
   if (!p.links?.length) return null;
 
-const priority = [
-  "support", // ← ADD THIS (TOP PRIORITY)
-  "buy now",
-  "checkout",
-  "pre-order",
-  "preorder",
-  "stripe",
-  "etsy",
-  "shop now",
-  "order now",
-  "enquire",
-  "inquire",
-  "view",
-];
+  const priority = [
+    "donate",
+    "support",
+    "buy now",
+    "checkout",
+    "pre-order",
+    "preorder",
+    "stripe",
+    "shop now",
+    "order now",
+    "enquire",
+    "inquire",
+    "view",
+  ];
 
   const scored = [...p.links].sort((a, b) => {
     const aIndex = priority.findIndex((x) => a.label.toLowerCase().includes(x));
@@ -202,10 +202,18 @@ function ProductCard({
       <div className="shop-card-image-wrap">
         {p.image ? (
           <div className="product-media shop-product-media" aria-label="Product image">
-            <img className="product-img shop-product-img" src={p.image} alt={p.title} loading="lazy" />
+            <img
+              className="product-img shop-product-img"
+              src={p.image}
+              alt={p.title}
+              loading="lazy"
+            />
           </div>
         ) : (
-          <div className="product-media shop-product-media shop-product-placeholder" aria-label="No image" />
+          <div
+            className="product-media shop-product-media shop-product-placeholder"
+            aria-label="No image"
+          />
         )}
 
         <div className="shop-card-badges">
@@ -274,55 +282,52 @@ export default function Shop() {
   const [sort, setSort] = useState<SortMode>("featured");
   const [active, setActive] = useState<Product | null>(null);
 
-const products = useMemo(() => {
-  const all = getActiveProducts();
+  const supportProducts = useMemo(() => {
+    const all = getActiveProducts();
 
-  const getPrice = (p: Product) =>
-    Number((p.priceNote ?? "").replace(/[^0-9.]/g, "")) || 0;
+    const getPrice = (p: Product) =>
+      Number((p.priceNote ?? "").replace(/[^0-9.]/g, "")) || 0;
 
-  // 1. Separate support vs non-support
-  const support = all
-    .filter((p) => p.isSupport === true)
-    .sort((a, b) => getPrice(a) - getPrice(b));
+    return all
+      .filter((p) => p.isSupport === true)
+      .sort((a, b) => getPrice(a) - getPrice(b));
+  }, []);
 
-  const nonSupport = all.filter((p) => p.isSupport !== true);
+  const storeProducts = useMemo(() => {
+    const all = getActiveProducts().filter((p) => p.isSupport !== true);
 
-  // 2. Apply filter ONLY to non-support
-  let filteredRest = nonSupport;
+    let filtered = all;
 
-  if (filter !== "all") {
-    filteredRest = nonSupport.filter((p) => p.kind === filter);
-  }
+    if (filter !== "all") {
+      filtered = all.filter((p) => p.kind === filter);
+    }
 
-  // 3. Sort remaining products normally
-  switch (sort) {
-    case "title-asc":
-      filteredRest.sort((a, b) => a.title.localeCompare(b.title));
-      break;
+    switch (sort) {
+      case "title-asc":
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+        break;
 
-    case "title-desc":
-      filteredRest.sort((a, b) => b.title.localeCompare(a.title));
-      break;
+      case "title-desc":
+        filtered.sort((a, b) => b.title.localeCompare(a.title));
+        break;
 
-    case "featured":
-    default:
-      filteredRest.sort((a, b) => {
-        const score = (p: Product) => {
-          if (p.status === "active") return 0;
-          if (p.status === "coming_soon") return 1;
-          return 2;
-        };
+      case "featured":
+      default:
+        filtered.sort((a, b) => {
+          const score = (p: Product) => {
+            if (p.status === "active") return 0;
+            if (p.status === "coming_soon") return 1;
+            return 2;
+          };
 
-        return score(a) - score(b) || a.title.localeCompare(b.title);
-      });
-      break;
-  }
+          return score(a) - score(b) || a.title.localeCompare(b.title);
+        });
+        break;
+    }
 
-  // 4. Control when support tiers show
-  const showSupport = filter === "all" || filter === "digital";
+    return filtered;
+  }, [filter, sort]);
 
-  return showSupport ? [...support, ...filteredRest] : filteredRest;
-}, [filter, sort]);
   return (
     <main className="home-shell shop-shell" aria-label="Shop">
       <div className="home-wrap shop-wrap">
@@ -333,9 +338,7 @@ const products = useMemo(() => {
               <h1 className="home-title shop-title">Shop</h1>
 
               <p className="home-lead shop-lead">
-                Physical relics and digital products released through the JALSOL storefront.
-                Stripe-ready checkout links can sit directly behind each product action while Etsy
-                remains available where needed.
+                Stripe-powered checkout for direct system entry and product acquisition.
               </p>
             </div>
 
@@ -343,62 +346,89 @@ const products = useMemo(() => {
               <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
                 jalsol.com
               </a>
-              <a className="chip" href="https://jalrelics.etsy.com" target="_blank" rel="noreferrer">
-                Etsy
-              </a>
             </div>
           </div>
 
-          <div className="shop-toolbar" aria-label="Shop controls">
-            <div className="shop-filter-group">
-              <button
-                type="button"
-                className={`chip chip-btn shop-filter-btn ${filter === "all" ? "is-active" : ""}`}
-                onClick={() => setFilter("all")}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                className={`chip chip-btn shop-filter-btn ${filter === "physical" ? "is-active" : ""}`}
-                onClick={() => setFilter("physical")}
-              >
-                Physical
-              </button>
-              <button
-                type="button"
-                className={`chip chip-btn shop-filter-btn ${filter === "digital" ? "is-active" : ""}`}
-                onClick={() => setFilter("digital")}
-              >
-                Digital
-              </button>
+          <section className="shop-section" aria-label="System entry">
+            <div className="shop-section-head">
+              <div>
+                <p className="shop-section-kicker">System Entry</p>
+                <h2 className="shop-section-title">Donate</h2>
+                <p className="shop-section-copy">
+                  Direct contribution into the JALSOL system through fixed donation tiers.
+                </p>
+              </div>
             </div>
 
-            <div className="shop-toolbar-right">
-              <div className="shop-count" aria-label="Product count">
-                {products.length} {products.length === 1 ? "item" : "items"}
+            <div className="shop-grid shop-grid-support" aria-label="Donation tiers">
+              {supportProducts.map((p) => (
+                <ProductCard key={p.id} p={p} onOpen={setActive} />
+              ))}
+            </div>
+          </section>
+
+          <section className="shop-section" aria-label="Store products">
+            <div className="shop-section-head">
+              <div>
+                <p className="shop-section-kicker">Store Products</p>
+                <h2 className="shop-section-title">Buy</h2>
+                <p className="shop-section-copy">
+                  Physical releases, collectibles, and private allocation pieces.
+                </p>
+              </div>
+            </div>
+
+            <div className="shop-toolbar" aria-label="Shop controls">
+              <div className="shop-filter-group">
+                <button
+                  type="button"
+                  className={`chip chip-btn shop-filter-btn ${filter === "all" ? "is-active" : ""}`}
+                  onClick={() => setFilter("all")}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  className={`chip chip-btn shop-filter-btn ${filter === "physical" ? "is-active" : ""}`}
+                  onClick={() => setFilter("physical")}
+                >
+                  Physical
+                </button>
+                <button
+                  type="button"
+                  className={`chip chip-btn shop-filter-btn ${filter === "digital" ? "is-active" : ""}`}
+                  onClick={() => setFilter("digital")}
+                >
+                  Digital
+                </button>
               </div>
 
-              <label className="shop-sort" aria-label="Sort products">
-                <span className="shop-sort-label">Sort</span>
-                <select
-                  className="shop-sort-select"
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as SortMode)}
-                >
-                  <option value="featured">Featured</option>
-                  <option value="title-asc">Title A–Z</option>
-                  <option value="title-desc">Title Z–A</option>
-                </select>
-              </label>
-            </div>
-          </div>
+              <div className="shop-toolbar-right">
+                <div className="shop-count" aria-label="Product count">
+                  {storeProducts.length} {storeProducts.length === 1 ? "product" : "products"}
+                </div>
 
-          <div className="shop-grid" aria-label="Products grid">
-            {products.map((p) => (
-              <ProductCard key={p.id} p={p} onOpen={setActive} />
-            ))}
-          </div>
+                <label className="shop-sort" aria-label="Sort products">
+                  <span className="shop-sort-label">Sort</span>
+                  <select
+                    className="shop-sort-select"
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value as SortMode)}
+                  >
+                    <option value="featured">Featured</option>
+                    <option value="title-asc">Title A–Z</option>
+                    <option value="title-desc">Title Z–A</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div className="shop-grid" aria-label="Products grid">
+              {storeProducts.map((p) => (
+                <ProductCard key={p.id} p={p} onOpen={setActive} />
+              ))}
+            </div>
+          </section>
         </section>
       </div>
 
