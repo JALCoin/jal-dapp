@@ -1,69 +1,151 @@
 // src/pages/JalSol.tsx
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-type Link = { label: string; href: string; note?: string };
-
-function CopyRow({
-  label,
-  value,
-  mono = true,
-}: {
+type Link = {
   label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  const [copied, setCopied] = useState(false);
+  href: string;
+};
 
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 900);
-    } catch {
-      // fallback: do nothing (clipboard may be blocked)
-    }
-  };
-
-  return (
-    <div className="jal-row" aria-label={label}>
-      <div className="jal-row-label">{label}</div>
-
-      <div className={`jal-row-value ${mono ? "is-mono" : ""}`}>
-        <span className="jal-row-text">{value}</span>
-
-        <button type="button" className="jal-copy" onClick={copy} aria-label={`Copy ${label}`}>
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-    </div>
-  );
-}
+type Level = {
+  id: string;
+  number: string;
+  title: string;
+  state: "open" | "paid" | "locked" | "invite";
+  price: string;
+  outcome: string;
+  body: string;
+  cta: string;
+};
 
 function QuickLinks({ links }: { links: Link[] }) {
   return (
-    <div className="jal-links" aria-label="JAL/SOL links">
-      {links.map((l) => (
-        <a key={l.href} className="chip" href={l.href} target="_blank" rel="noreferrer">
-          {l.label}
+    <div className="jal-links" aria-label="JAL/SOL quick links">
+      {links.map((link) => (
+        <a
+          key={link.href}
+          className="chip"
+          href={link.href}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {link.label}
         </a>
       ))}
     </div>
   );
 }
 
+function LevelCard({ level }: { level: Level }) {
+  const stateLabel =
+    level.state === "open"
+      ? "Open Access"
+      : level.state === "paid"
+      ? "Paid Access"
+      : level.state === "invite"
+      ? "Invite Only"
+      : "Locked";
+
+  const buttonClass =
+    level.state === "open"
+      ? "button neon"
+      : level.state === "paid"
+      ? "button"
+      : "button ghost";
+
+  return (
+    <article
+      className={`jal-level-card is-${level.state}`}
+      aria-label={`${level.title} ${stateLabel}`}
+    >
+      <div className="jal-level-top">
+        <div className="jal-level-number">LEVEL {level.number}</div>
+        <div className={`jal-level-state is-${level.state}`}>{stateLabel}</div>
+      </div>
+
+      <h3 className="jal-level-title">{level.title}</h3>
+      <div className="jal-level-price">{level.price}</div>
+      <p className="jal-level-outcome">{level.outcome}</p>
+      <p className="jal-level-body">{level.body}</p>
+
+      <button
+        type="button"
+        className={buttonClass}
+        disabled={level.state === "locked" || level.state === "invite"}
+        aria-disabled={level.state === "locked" || level.state === "invite"}
+      >
+        {level.cta}
+      </button>
+    </article>
+  );
+}
+
 export default function JalSol() {
-  // TODO: Replace these when you want to “lock” canonical IDs.
-  // Keep them empty if you’re not ready; the UI still looks correct.
-  const JAL_MINT = ""; // ex: "..."
-  const RAYDIUM_POOL = ""; // ex: "..."
-  const SOLSCAN_JAL = "https://solscan.io/";
-  const RAYDIUM = "https://raydium.io/";
+  const JAL_MINT = "";
+  const RAYDIUM_POOL = "";
 
   const links = useMemo<Link[]>(
     () => [
-      { label: "Raydium", href: RAYDIUM },
-      { label: "Solscan", href: SOLSCAN_JAL },
-      // Optional: DexScreener / Birdeye / Jupiter links later
+      { label: "Phantom", href: "https://phantom.app/" },
+      { label: "CoinSpot", href: "https://www.coinspot.com.au/" },
+      { label: "Raydium", href: "https://raydium.io/" },
+      { label: "Jupiter", href: "https://jup.ag/" },
+      { label: "Solscan", href: "https://solscan.io/" },
+    ],
+    []
+  );
+
+  const levels = useMemo<Level[]>(
+    () => [
+      {
+        id: "lvl0",
+        number: "0",
+        title: "Awareness",
+        state: "open",
+        price: "Free",
+        outcome: "Understand what crypto is, why most people enter wrong, and what order actually matters.",
+        body: "This is the surface layer. CEX vs DEX, custody, basic risk, and why sequence matters before movement.",
+        cta: "Enter Level 0",
+      },
+      {
+        id: "lvl1",
+        number: "1",
+        title: "Entry",
+        state: "paid",
+        price: "$19",
+        outcome: "Complete your first intentional move: exchange setup, wallet setup, and initial transfer flow.",
+        body: "This is the first paid initiation. Not theory for entertainment. Structured guidance toward correct first execution.",
+        cta: "Unlock Level 1",
+      },
+      {
+        id: "lvl2",
+        number: "2",
+        title: "Orientation",
+        state: "locked",
+        price: "$49",
+        outcome: "Understand Solana, tokens, liquidity, swaps, and how market routing actually works.",
+        body: "This layer explains the board itself: wallets, network behaviour, token pairs, and DEX function.",
+        cta: "Locked",
+      },
+      {
+        id: "lvl3",
+        number: "3",
+        title: "Control",
+        state: "locked",
+        price: "$99",
+        outcome: "Move from reaction to structure through sizing, rules, and emotional control.",
+        body: "This is where gambling ends. Sequence, discipline, and system thinking begin here.",
+        cta: "Locked",
+      },
+      {
+        id: "lvl4",
+        number: "4",
+        title: "System Access",
+        state: "invite",
+        price: "Premium",
+        outcome: "See the machine behind the market and how a system-based operator thinks.",
+        body: "This tier introduces the deeper logic layer behind JALSOL and future engine-aligned participation.",
+        cta: "Invite Only",
+      },
     ],
     []
   );
@@ -72,111 +154,160 @@ export default function JalSol() {
     <main className="home-shell jal-shell" aria-label="JAL/SOL">
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
-          {/* HERO */}
           <div className="jal-hero">
             <div className="jal-hero-top">
               <div className="jal-kicker">JAL / SOL</div>
+
               <div className="jal-status">
                 <span className="jal-status-dot" aria-hidden="true" />
-                <span className="jal-status-text">Liquidity console</span>
+                <span className="jal-status-text">Initiation Layer</span>
               </div>
             </div>
 
-            <h1 className="home-title jal-title">JAL/SOL</h1>
+            <h1 className="home-title jal-title">Enter the System</h1>
 
             <p className="home-lead jal-lead">
-              The market-facing pool. This page becomes the clean “console view” for verification, routing,
-              and future on-site checkout flows.
+              Most people enter crypto in the wrong order.
+              This is the controlled path in.
+            </p>
+
+            <p className="jal-sublead">
+              JAL/SOL is the bridge layer between curiosity and structured participation.
+              Not noise. Not hype. Correct order.
             </p>
 
             <QuickLinks links={links} />
           </div>
 
-          {/* CONSOLE GRID */}
-          <div className="jal-grid" aria-label="JAL/SOL console bays">
-            <section className="jal-bay" aria-label="Verification">
+          <div className="jal-identity-band" aria-label="Identity statement">
+            <div className="jal-identity-copy">
+              <span className="jal-identity-line">This is not for everyone.</span>
+              <span className="jal-identity-sub">
+                Verification before movement. Structure before access.
+              </span>
+            </div>
+          </div>
+
+          <div className="jal-grid" aria-label="JAL/SOL initiation console">
+            <section className="jal-bay jal-bay-wide" aria-label="Progression map">
               <div className="jal-bay-head">
-                <div className="jal-bay-title">Verification</div>
-                <div className="jal-bay-note">Canonical IDs (when you’re ready)</div>
+                <div className="jal-bay-title">Initiation Path</div>
+                <div className="jal-bay-note">Structured progression</div>
               </div>
 
-              <div className="jal-rows">
-                <CopyRow
-                  label="JAL mint"
-                  value={JAL_MINT || "Set later (leave blank for now)"}
-                  mono
-                />
-                <CopyRow
-                  label="Raydium pool"
-                  value={RAYDIUM_POOL || "Set later (leave blank for now)"}
-                  mono
-                />
-              </div>
-
-              <div className="jal-bay-actions">
-                <a className="button ghost" href={RAYDIUM} target="_blank" rel="noreferrer">
-                  Open Raydium
-                </a>
-                <a className="button ghost" href={SOLSCAN_JAL} target="_blank" rel="noreferrer">
-                  Open Solscan
-                </a>
+              <div className="jal-level-rail">
+                {levels.map((level) => (
+                  <LevelCard key={level.id} level={level} />
+                ))}
               </div>
             </section>
 
-            <section className="jal-bay" aria-label="Acquire">
+            <section className="jal-bay" aria-label="Level zero preview">
               <div className="jal-bay-head">
-                <div className="jal-bay-title">Acquire</div>
-                <div className="jal-bay-note">Simple, calm, non-hype routing</div>
+                <div className="jal-bay-title">Level 0</div>
+                <div className="jal-bay-note">Open access</div>
               </div>
 
-              <ol className="jal-steps" aria-label="How to acquire">
+              <ol className="jal-steps" aria-label="Level 0 contents">
                 <li>
-                  Hold SOL in your wallet.
-                  <span className="jal-step-sub">SOL is the bridge asset for routing.</span>
+                  What crypto is.
+                  <span className="jal-step-sub">
+                    Separate noise, speculation, and actual utility.
+                  </span>
                 </li>
                 <li>
-                  Open Raydium and locate the JAL/SOL pool.
-                  <span className="jal-step-sub">Verify mint + pool IDs once set above.</span>
+                  Why most people lose.
+                  <span className="jal-step-sub">
+                    Wrong order, wrong expectations, wrong behaviour.
+                  </span>
                 </li>
                 <li>
-                  Swap SOL → JAL, then verify on-chain.
-                  <span className="jal-step-sub">Solscan becomes the final check.</span>
+                  CEX vs DEX.
+                  <span className="jal-step-sub">
+                    Understand the difference before touching capital.
+                  </span>
+                </li>
+                <li>
+                  Sequence first.
+                  <span className="jal-step-sub">
+                    Move correctly, not quickly.
+                  </span>
                 </li>
               </ol>
 
               <div className="jal-bay-actions">
-                <a className="button neon" href={RAYDIUM} target="_blank" rel="noreferrer">
-                  Route via Raydium
-                </a>
-                <a className="button" href={SOLSCAN_JAL} target="_blank" rel="noreferrer">
-                  Verify on Solscan
-                </a>
+                <button type="button" className="button neon">
+                  Open Level 0
+                </button>
               </div>
             </section>
 
-            <section className="jal-bay jal-bay-wide" aria-label="Notes">
+            <section className="jal-bay" aria-label="Level one preview">
               <div className="jal-bay-head">
-                <div className="jal-bay-title">Notes</div>
-                <div className="jal-bay-note">Storefront alignment</div>
+                <div className="jal-bay-title">Level 1</div>
+                <div className="jal-bay-note">First paid initiation</div>
               </div>
 
-              <p className="jal-note">
-                This console stays clean by design: verification, routing, and the future direct-checkout layer.
-                No urgency. No noise. Order first.
-              </p>
+              <ol className="jal-steps" aria-label="Level 1 contents">
+                <li>
+                  Create exchange account.
+                  <span className="jal-step-sub">
+                    Establish the fiat-to-crypto bridge properly.
+                  </span>
+                </li>
+                <li>
+                  Set up Phantom wallet.
+                  <span className="jal-step-sub">
+                    Secure the wallet before any transfer.
+                  </span>
+                </li>
+                <li>
+                  Understand fees and spread.
+                  <span className="jal-step-sub">
+                    Do not confuse movement with value.
+                  </span>
+                </li>
+                <li>
+                  Complete first controlled move.
+                  <span className="jal-step-sub">
+                    One intentional step into the system.
+                  </span>
+                </li>
+              </ol>
 
-              <div className="jal-bullets" aria-label="Guidance">
+              <div className="jal-bay-actions">
+                <button type="button" className="button">
+                  Unlock Level 1
+                </button>
+              </div>
+            </section>
+
+            <section className="jal-bay jal-bay-wide" aria-label="Verification bay">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Verification</div>
+                <div className="jal-bay-note">Canonical references</div>
+              </div>
+
+              <div className="jal-bullets">
                 <div className="jal-bullet">
-                  <div className="jal-bullet-k">Design rule</div>
-                  <div className="jal-bullet-v">This page is “proof + pathway”, not marketing.</div>
+                  <div className="jal-bullet-k">JAL Mint</div>
+                  <div className="jal-bullet-v">
+                    {JAL_MINT || "Set when token reference is locked."}
+                  </div>
                 </div>
+
                 <div className="jal-bullet">
-                  <div className="jal-bullet-k">Next step</div>
-                  <div className="jal-bullet-v">Add live pool widgets (DexScreener/Birdeye) as embedded bays.</div>
+                  <div className="jal-bullet-k">Raydium Pool</div>
+                  <div className="jal-bullet-v">
+                    {RAYDIUM_POOL || "Set when pool reference is locked."}
+                  </div>
                 </div>
+
                 <div className="jal-bullet">
-                  <div className="jal-bullet-k">Store tie-in</div>
-                  <div className="jal-bullet-v">When checkout is live, this becomes the “currency layer” entry.</div>
+                  <div className="jal-bullet-k">Role</div>
+                  <div className="jal-bullet-v">
+                    This page becomes the public proof layer for entry, routing, and later checkout.
+                  </div>
                 </div>
               </div>
             </section>
