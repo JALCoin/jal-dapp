@@ -52,12 +52,12 @@ function LevelCard({ level }: { level: Level }) {
       return;
     }
 
-    if (level.id === "lvl1") {
-      document
-        .getElementById("level-1-section")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
+if (level.id === "lvl1") {
+  document
+    .getElementById("level-1-section")
+    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  return;
+}
 
     if (level.id === "lvl2") {
       window.alert("Level 2 scaffold exists, but the guided flow is not built yet.");
@@ -359,26 +359,20 @@ export default function JalSol() {
                 then lock it behind Stripe after the flow is complete.
               </p>
 
-              <div className="jal-bay-actions">
-                <button
-                  type="button"
-                  className="button neon"
-                  onClick={() =>
-                    window.alert("Next step: build the actual Level 1 guided flow here.")
-                  }
-                >
-                  Enter Level 1
-                </button>
+<div className="jal-bay-actions">
+  <a className="button neon" href="/app/jal-sol/level-1">
+    Enter Level 1
+  </a>
 
-                <a
-                  className="button ghost"
-                  href="https://phantom.app/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Get Phantom
-                </a>
-              </div>
+  <a
+    className="button ghost"
+    href="https://phantom.app/"
+    target="_blank"
+    rel="noreferrer"
+  >
+    Get Phantom
+  </a>
+</div>
             </section>
 
             <section

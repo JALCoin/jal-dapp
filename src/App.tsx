@@ -16,6 +16,7 @@ import Engine from "./pages/Engine";
 import ShopPage from "./pages/Shop";
 import JalSolPage from "./pages/JalSol";
 import JalSolSuccess from "./pages/JalSolSuccess";
+import JalSolLevel1 from "./pages/JalSolLevel1";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -310,6 +311,8 @@ function AppShell() {
         <Route path="settings" element={<FeaturePage title="Settings" />} />
 
         <Route path="*" element={<Navigate to="/app/nav" replace />} />
+
+        <Route path="/app/jal-sol/level-1" element={<JalSolLevel1 />} />
       </Routes>
     </>
   );
