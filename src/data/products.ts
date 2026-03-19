@@ -197,7 +197,7 @@ export const PRODUCTS: Product[] = [
     status: STRIPE_LINKS.internalDialogueEntry ? "active" : "coming_soon",
     priceNote: "$29.00 AUD",
     summary:
-      "A structured method for stabilising internal dialogue, improving verbal clarity, and completing thought under pressure. Built from direct observation, sequence, and repeatable use.",
+  "Most people don’t struggle with thinking — they struggle with completing thought. This method stabilises internal dialogue, removes hesitation, and structures your ability to speak clearly and act without disruption. Entry layer into the JALSOL system.",
     tags: ["Digital", "New", "Premium"],
     image: "/shop/digital-product-1.jpg",
     links: buildLinks({

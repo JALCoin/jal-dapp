@@ -20,6 +20,9 @@ export default function Terms() {
           <p className="home-lead">
             All digital purchases are final and non-refundable once delivered.
           </p>
+                    <p className="home-lead">
+            Digital products are delivered as informational content only and are sold as-is for personal use.
+          </p>
         </section>
       </div>
     </main>

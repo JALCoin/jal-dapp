@@ -14,6 +14,10 @@ export default function Disclaimer() {
           </p>
 
           <p className="home-lead">
+            Nothing on this site should be interpreted as a promise of financial, medical, psychological, or performance outcomes.
+          </p>
+
+          <p className="home-lead">
             Use of any material is at your own discretion and responsibility.
           </p>
         </section>
