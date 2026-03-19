@@ -75,14 +75,14 @@ export default async function handler(req: any, res: any) {
         }
       );
 
+      const text = await supabaseRes.text();
+
       if (!supabaseRes.ok) {
-        const text = await supabaseRes.text();
-        console.error('Supabase insert failed:', text);
-        return res.status(500).send('Supabase insert failed');
+        console.error('❌ Supabase insert failed:', text);
+        return res.status(500).send(text);
       }
 
-      const inserted = await supabaseRes.text();
-      console.log('Order stored:', inserted);
+      console.log('✅ Supabase response:', text);
     }
 
     return res.status(200).json({ received: true });
