@@ -45,26 +45,24 @@ export default function ReviewFormModal({
         return;
       }
 
+      if (!orderEmail.trim() || !orderId.trim()) {
+        setError("Purchase verification is required. Enter your order email and Stripe Session ID.");
+        return;
+      }
+
       setSubmitting(true);
 
-      let isVerified = false;
+      const verification = await verifyPurchaseForReview({
+        orderEmail,
+        orderId,
+        productId,
+      });
 
-      const hasVerificationFields = orderEmail.trim() && orderId.trim();
-
-      if (hasVerificationFields) {
-        const verification = await verifyPurchaseForReview({
-          orderEmail,
-          orderId,
-          productId,
-        });
-
-        isVerified = verification.isVerified;
-
-        if (!verification.isVerified && verification.reason) {
-          setError(verification.reason);
-          setSubmitting(false);
-          return;
-        }
+      if (!verification.isVerified) {
+        setError(
+          verification.reason || "You must purchase this product before leaving a review."
+        );
+        return;
       }
 
       const imageUrls = files.length ? await uploadReviewImages(files) : [];
@@ -78,14 +76,10 @@ export default function ReviewFormModal({
         imageUrls,
         orderEmail,
         orderId,
-        verifiedPurchase: isVerified,
+        verifiedPurchase: true,
       });
 
-      setSuccess(
-        isVerified
-          ? "Review submitted as a verified purchase."
-          : "Review submitted."
-      );
+      setSuccess("Verified review submitted.");
 
       if (onCreated) {
         await onCreated();
@@ -206,6 +200,9 @@ export default function ReviewFormModal({
             maxLength={120}
             disabled={submitting}
           />
+          <div className="review-upload-count">
+            Reviews are only available to customers with a completed purchase.
+          </div>
         </div>
 
         <div className="review-field">
