@@ -14,30 +14,26 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export default async function handler(req: any, res: any) {
-  console.log('🔥 Webhook hit');
-
   if (req.method !== 'POST') {
     return res.status(405).send('Method Not Allowed');
   }
 
-  let buf;
+  let buf: Buffer;
 
   try {
     buf = await buffer(req);
-    console.log('✅ Buffer OK');
   } catch (err) {
-    console.error('❌ Buffer failed:', err);
+    console.error('Buffer error:', err);
     return res.status(500).send('Buffer error');
   }
 
   const sig = req.headers['stripe-signature'];
 
   if (!sig) {
-    console.error('❌ Missing stripe-signature header');
-    return res.status(400).send('Missing signature');
+    return res.status(400).send('Missing stripe-signature');
   }
 
-  let event;
+  let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
@@ -45,22 +41,53 @@ export default async function handler(req: any, res: any) {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-    console.log('✅ Event verified:', event.type);
   } catch (err: any) {
-    console.error('❌ Signature verification failed:', err.message);
+    console.error('Webhook verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   try {
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      console.log('💰 PAYMENT CONFIRMED:', session.id);
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      const supabaseRes = await fetch(
+        `${process.env.SUPABASE_URL}/rest/v1/orders`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            Prefer: 'return=representation',
+          },
+          body: JSON.stringify({
+            stripe_session_id: session.id,
+            stripe_payment_intent:
+              typeof session.payment_intent === 'string'
+                ? session.payment_intent
+                : session.payment_intent?.id ?? null,
+            customer_email: session.customer_details?.email ?? null,
+            product_id: session.metadata?.product_id ?? null,
+            amount_total: session.amount_total ?? null,
+            currency: session.currency ?? null,
+            status: 'paid',
+          }),
+        }
+      );
+
+      if (!supabaseRes.ok) {
+        const text = await supabaseRes.text();
+        console.error('Supabase insert failed:', text);
+        return res.status(500).send('Supabase insert failed');
+      }
+
+      const inserted = await supabaseRes.text();
+      console.log('Order stored:', inserted);
     }
 
     return res.status(200).json({ received: true });
-
   } catch (err) {
-    console.error('❌ Handler crash:', err);
+    console.error('Webhook handler crash:', err);
     return res.status(500).send('Handler error');
   }
 }
