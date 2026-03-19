@@ -1,4 +1,5 @@
 // src/pages/Shop.tsx
+import ProductStars from "../components/ProductStars";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { getActiveProducts, type Product } from "../data/products";
@@ -114,7 +115,10 @@ function ProductModal({
             </div>
 
             <h2 className="product-modal-title shop-modal-title">{p.title}</h2>
-
+              <ProductStars
+  rating={(p as any).rating ?? 0}
+  count={(p as any).reviewCount ?? 0}
+/>
             {p.priceNote ? (
               <div className="product-modal-price shop-modal-price">{p.priceNote}</div>
             ) : null}
@@ -230,9 +234,14 @@ function ProductCard({
           </span>
         </div>
 
-        <div className="product-title-row shop-card-title-row">
-          <h3 className="product-title shop-card-title">{p.title}</h3>
-        </div>
+<div className="product-title-row shop-card-title-row">
+  <h3 className="product-title shop-card-title">{p.title}</h3>
+</div>
+
+<ProductStars
+  rating={(p as any).rating ?? 0}
+  count={(p as any).reviewCount ?? 0}
+/>
 
         {p.priceNote ? <div className="product-price shop-card-price">{p.priceNote}</div> : null}
 

@@ -21,6 +21,7 @@ import Footer from "./components/Footer";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Disclaimer from "./pages/Disclaimer";
+import TrackPage from "./pages/TrackPage";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -175,14 +176,15 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
             ]}
           />
 
-          <SidebarSection
-            title="Store"
-            onClose={onClose}
-            items={[
-              { to: "/app/shop", label: "Shop" },
-              { to: "/app/inventory", label: "Inventory" },
-            ]}
-          />
+<SidebarSection
+  title="Store"
+  onClose={onClose}
+  items={[
+    { to: "/app/shop", label: "Shop" },
+    { to: "/app/track", label: "Track Order" },
+    { to: "/app/inventory", label: "Inventory" },
+  ]}
+/>
 
           <SidebarSection
             title="System"
@@ -290,6 +292,7 @@ function AppShell() {
         <Route path="about" element={<AboutPage />} />
 
         <Route path="shop" element={<ShopPage />} />
+        <Route path="track" element={<TrackPage />} />
         <Route path="jal-sol" element={<JalSolPage />} />
         <Route path="jal-sol/success" element={<JalSolSuccess />} />
         <Route path="jal-sol/level-1" element={<JalSolLevel1 />} />
