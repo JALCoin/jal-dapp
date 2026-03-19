@@ -36,7 +36,7 @@ export type Product = {
 const EMAIL = "358jal@gmail.com";
 
 const STRIPE_LINKS = {
-  support25: "https://buy.stripe.com/28EcN438Y98f0m3dUU0x202",
+  support25: "https://donate.stripe.com/28EcN438Y98f0m3dUU0x202",
   support50: "https://donate.stripe.com/28EaEWaBqdov4Cj7ww0x203",
   support75: "https://donate.stripe.com/4gM5kCeRG2JR2ub7ww0x204",
   support100: "https://donate.stripe.com/28EdR89xm2JR4CjbMM0x205",
@@ -44,6 +44,8 @@ const STRIPE_LINKS = {
 
   hoodieXXL: "https://buy.stripe.com/cNi00ifVKbgn6Kr6ss0x207",
   miniPillow: "",
+
+  internalDialogueEntry: "https://buy.stripe.com/4gM28q24Ubgn3yfg320x208",
 };
 
 function mailto(subject: string, bodyLines?: string[]) {
@@ -185,6 +187,34 @@ export const PRODUCTS: Product[] = [
     links: buildLinks({
       stripeHref: STRIPE_LINKS.support150,
       stripeLabel: "Donate",
+    }),
+  },
+
+  {
+    id: "jal-internal-dialogue-method-entry-layer",
+    title: "JAL’s Internal Dialogue Method — Entry Layer",
+    kind: "digital",
+    status: STRIPE_LINKS.internalDialogueEntry ? "active" : "coming_soon",
+    priceNote: "$29.00 AUD",
+    summary:
+      "A structured method for stabilising internal dialogue, improving verbal clarity, and completing thought under pressure. Built from direct observation, sequence, and repeatable use.",
+    tags: ["Digital", "New", "Premium"],
+    image: "/shop/digital-product-1.jpg",
+    links: buildLinks({
+      stripeHref: STRIPE_LINKS.internalDialogueEntry || undefined,
+      stripeLabel: "Buy Now",
+      enquiryHref: mailto(
+        "Enquiry — JAL’s Internal Dialogue Method — Entry Layer",
+        [
+          "Name:",
+          "Question:",
+          "",
+          "Product: JAL’s Internal Dialogue Method — Entry Layer",
+        ]
+      ),
+      enquiryLabel: STRIPE_LINKS.internalDialogueEntry
+        ? "Enquire"
+        : "Join Waitlist",
     }),
   },
 
