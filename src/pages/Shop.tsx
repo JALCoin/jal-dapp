@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { getActiveProducts, type Product } from "../data/products";
 import ReviewList from "../components/ReviewList";
 import ReviewFormModal from "../components/ReviewFormModal";
-import { getApprovedReviewsByProductId, type ProductReview } from "../lib/reviews";
+import { getReviewsByProductId, type ProductReview } from "../lib/reviews";
 
 type Filter = "all" | "physical" | "digital";
 type SortMode = "featured" | "title-asc" | "title-desc";
@@ -63,7 +63,7 @@ function useProductReviewSummary(productId: string, enabled = true) {
 
     try {
       setLoading(true);
-      const data = await getApprovedReviewsByProductId(productId);
+      const data = await getReviewsByProductId(productId);
       setReviews(data);
     } catch (err) {
       console.error("Failed to load reviews:", err);

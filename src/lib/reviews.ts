@@ -36,11 +36,19 @@ export type CreateReviewInput = {
   verifiedPurchase?: boolean;
 };
 
-export async function getApprovedReviewsByProductId(productId: string): Promise<ProductReview[]> {
+export async function getReviewsByProductId(productId: string): Promise<ProductReview[]> {
+  const cleanProductId = productId.trim();
+
+  if (!cleanProductId) {
+    return [];
+  }
+
   const { data: reviews, error: reviewsError } = await supabase
     .from("product_reviews")
-.select("id, product_id, display_name, rating, title, body, created_at, order_email, order_id, verified_purchase")
-    .eq("product_id", productId)
+    .select(
+      "id, product_id, display_name, rating, title, body, created_at, order_email, order_id, verified_purchase"
+    )
+    .eq("product_id", cleanProductId)
     .order("created_at", { ascending: false });
 
   if (reviewsError) {
@@ -53,7 +61,7 @@ export async function getApprovedReviewsByProductId(productId: string): Promise<
     return [];
   }
 
-  const reviewIds = typedReviews.map((r) => r.id);
+  const reviewIds = typedReviews.map((review) => review.id);
 
   const { data: reviewImages, error: imagesError } = await supabase
     .from("review_images")
@@ -69,27 +77,39 @@ export async function getApprovedReviewsByProductId(productId: string): Promise<
   return typedReviews.map((review) => ({
     ...review,
     images: typedImages
-      .filter((img) => img.review_id === review.id && img.image_url)
-      .map((img) => img.image_url as string),
+      .filter((image) => image.review_id === review.id && typeof image.image_url === "string")
+      .map((image) => image.image_url as string),
   }));
 }
 
 export async function createReview(input: CreateReviewInput): Promise<ProductReview> {
+  const rating = Number(input.rating);
+
+  if (!input.productId.trim()) {
+    throw new Error("Product ID is required.");
+  }
+
+  if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+    throw new Error("Rating must be between 1 and 5.");
+  }
+
   const { data: insertedReview, error: reviewError } = await supabase
     .from("product_reviews")
     .insert([
       {
-        product_id: input.productId,
+        product_id: input.productId.trim(),
         display_name: input.displayName?.trim() || null,
-        rating: input.rating,
+        rating,
         title: input.title?.trim() || null,
         body: input.body?.trim() || null,
-        order_email: input.orderEmail?.trim() || null,
+        order_email: input.orderEmail?.trim().toLowerCase() || null,
         order_id: input.orderId?.trim() || null,
         verified_purchase: input.verifiedPurchase ?? false,
       },
     ])
-.select("id, product_id, display_name, rating, title, body, created_at, order_email, order_id, verified_purchase")
+    .select(
+      "id, product_id, display_name, rating, title, body, created_at, order_email, order_id, verified_purchase"
+    )
     .single();
 
   if (reviewError || !insertedReview) {
@@ -104,7 +124,9 @@ export async function createReview(input: CreateReviewInput): Promise<ProductRev
       image_url: url,
     }));
 
-    const { error: imageInsertError } = await supabase.from("review_images").insert(rows);
+    const { error: imageInsertError } = await supabase
+      .from("review_images")
+      .insert(rows);
 
     if (imageInsertError) {
       throw new Error(imageInsertError.message);
@@ -120,7 +142,9 @@ export async function createReview(input: CreateReviewInput): Promise<ProductRev
 export function getReviewSummary(reviews: ProductReview[]) {
   const count = reviews.length;
   const average =
-    count > 0 ? reviews.reduce((sum, review) => sum + review.rating, 0) / count : 0;
+    count > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / count
+      : 0;
 
   return {
     count,

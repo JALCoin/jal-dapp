@@ -29,6 +29,8 @@ export default function ReviewFormModal({
   }
 
   async function handleSubmit() {
+    if (submitting) return;
+
     try {
       setError("");
       setSuccess("");
@@ -45,11 +47,25 @@ export default function ReviewFormModal({
 
       setSubmitting(true);
 
-      const verification = await verifyPurchaseForReview({
-        orderEmail,
-        orderId,
-        productId,
-      });
+      let isVerified = false;
+
+      const hasVerificationFields = orderEmail.trim() && orderId.trim();
+
+      if (hasVerificationFields) {
+        const verification = await verifyPurchaseForReview({
+          orderEmail,
+          orderId,
+          productId,
+        });
+
+        isVerified = verification.isVerified;
+
+        if (!verification.isVerified && verification.reason) {
+          setError(verification.reason);
+          setSubmitting(false);
+          return;
+        }
+      }
 
       const imageUrls = files.length ? await uploadReviewImages(files) : [];
 
@@ -62,11 +78,11 @@ export default function ReviewFormModal({
         imageUrls,
         orderEmail,
         orderId,
-        verifiedPurchase: verification.isVerified,
+        verifiedPurchase: isVerified,
       });
 
       setSuccess(
-        verification.isVerified
+        isVerified
           ? "Review submitted as a verified purchase."
           : "Review submitted."
       );
@@ -109,6 +125,7 @@ export default function ReviewFormModal({
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="Your name"
             maxLength={60}
+            disabled={submitting}
           />
         </div>
 
@@ -141,6 +158,7 @@ export default function ReviewFormModal({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Short headline"
             maxLength={120}
+            disabled={submitting}
           />
         </div>
 
@@ -156,6 +174,7 @@ export default function ReviewFormModal({
             placeholder="Write your review here"
             rows={5}
             maxLength={1500}
+            disabled={submitting}
           />
         </div>
 
@@ -170,20 +189,22 @@ export default function ReviewFormModal({
             onChange={(e) => setOrderEmail(e.target.value)}
             placeholder="Email used for purchase"
             maxLength={120}
+            disabled={submitting}
           />
         </div>
 
         <div className="review-field">
           <label className="review-label" htmlFor="review-order-id">
-            Order ID
+            Stripe Session ID
           </label>
           <input
             id="review-order-id"
             className="review-input"
             value={orderId}
             onChange={(e) => setOrderId(e.target.value)}
-            placeholder="Order number / receipt ID"
+            placeholder="cs_test_... or cs_live_..."
             maxLength={120}
+            disabled={submitting}
           />
         </div>
 
