@@ -1,11 +1,10 @@
-// src/pages/Shop.tsx
 import ProductStars from "../components/ProductStars";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { getActiveProducts, type Product } from "../data/products";
 import ReviewList from "../components/ReviewList";
 import ReviewFormModal from "../components/ReviewFormModal";
-import { getApprovedReviewsByProductId } from "../lib/reviews";
+import { getApprovedReviewsByProductId, type ProductReview } from "../lib/reviews";
 
 type Filter = "all" | "physical" | "digital";
 type SortMode = "featured" | "title-asc" | "title-desc";
@@ -19,22 +18,22 @@ function getStatusLabel(status: Product["status"]) {
 function getPrimaryLink(p: Product) {
   if (!p.links?.length) return null;
 
-const priority = [
-  "donate",
-  "support",
-  "claim",
-  "buy now",
-  "checkout",
-  "pre-order",
-  "preorder",
-  "stripe",
-  "shop now",
-  "order now",
-  "enquire",
-  "inquire",
-  "view",
-  "request access",
-];
+  const priority = [
+    "donate",
+    "support",
+    "claim",
+    "buy now",
+    "checkout",
+    "pre-order",
+    "preorder",
+    "stripe",
+    "shop now",
+    "order now",
+    "enquire",
+    "inquire",
+    "view",
+    "request access",
+  ];
 
   const scored = [...p.links].sort((a, b) => {
     const aIndex = priority.findIndex((x) => a.label.toLowerCase().includes(x));
@@ -52,39 +51,70 @@ function getSecondaryLinks(p: Product) {
   return p.links.filter((l) => l.href !== primary?.href).slice(0, 2);
 }
 
-function ProductModal({
-  p,
-  onClose,
-}: {
-  p: Product;
-  onClose: () => void;
-}) {
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [loadingReviews, setLoadingReviews] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
+function useProductReviewSummary(productId: string, enabled = true) {
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [loading, setLoading] = useState(false);
 
   async function loadReviews() {
-    if (p.isSupport) {
+    if (!enabled) {
       setReviews([]);
       return;
     }
 
     try {
-      setLoadingReviews(true);
-      const data = await getApprovedReviewsByProductId(p.id);
+      setLoading(true);
+      const data = await getApprovedReviewsByProductId(productId);
       setReviews(data);
     } catch (err) {
-      console.error("Failed to load reviews", err);
+      console.error("Failed to load reviews:", err);
       setReviews([]);
     } finally {
-      setLoadingReviews(false);
+      setLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadReviews();
+  }, [productId, enabled]);
+
+  const averageRating =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : 0;
+
+  return {
+    reviews,
+    loading,
+    averageRating,
+    reviewCount: reviews.length,
+    reload: loadReviews,
+  };
+}
+
+function ProductModal({
+  p,
+  onClose,
+  onReviewCreated,
+}: {
+  p: Product;
+  onClose: () => void;
+  onReviewCreated: () => void;
+}) {
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  const {
+    reviews,
+    loading,
+    averageRating,
+    reviewCount,
+    reload,
+  } = useProductReviewSummary(p.id, !p.isSupport);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -94,18 +124,9 @@ function ProductModal({
     return () => document.body.removeAttribute("data-modal-open");
   }, []);
 
-  useEffect(() => {
-    loadReviews();
-  }, [p.id]);
-
   const badge = getStatusLabel(p.status);
   const primaryLink = getPrimaryLink(p);
   const secondaryLinks = getSecondaryLinks(p);
-
-  const averageRating =
-    reviews.length > 0
-      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-      : ((p as any).rating ?? 0);
 
   const modal = (
     <div
@@ -151,10 +172,7 @@ function ProductModal({
             <h2 className="product-modal-title shop-modal-title">{p.title}</h2>
 
             {!p.isSupport ? (
-              <ProductStars
-                rating={averageRating}
-                count={reviews.length}
-              />
+              <ProductStars rating={averageRating} count={reviewCount} />
             ) : null}
 
             {p.priceNote ? (
@@ -215,7 +233,7 @@ function ProductModal({
                   </button>
                 </div>
 
-                {loadingReviews ? (
+                {loading ? (
                   <p className="shop-review-empty">Loading reviews...</p>
                 ) : (
                   <ReviewList reviews={reviews} />
@@ -235,7 +253,8 @@ function ProductModal({
           productId={p.id}
           onClose={() => setReviewOpen(false)}
           onCreated={async () => {
-            await loadReviews();
+            await reload();
+            onReviewCreated();
           }}
         />
       ) : null}
@@ -249,14 +268,25 @@ function ProductCard({
   p,
   onOpen,
   showRating = true,
+  refreshToken,
 }: {
   p: Product;
   onOpen: (p: Product) => void;
   showRating?: boolean;
+  refreshToken: number;
 }) {
   const badge = getStatusLabel(p.status);
   const primaryLink = getPrimaryLink(p);
   const secondaryLinks = getSecondaryLinks(p);
+
+  const {
+    averageRating,
+    reviewCount,
+  } = useProductReviewSummary(p.id, showRating && !p.isSupport);
+
+  useEffect(() => {
+    // refreshToken intentionally triggers rerender + hook refresh dependency path
+  }, [refreshToken]);
 
   return (
     <article
@@ -305,17 +335,13 @@ function ProductCard({
           </span>
         </div>
 
-<div className="product-title-row shop-card-title-row">
-  <h3 className="product-title shop-card-title">{p.title}</h3>
-</div>
+        <div className="product-title-row shop-card-title-row">
+          <h3 className="product-title shop-card-title">{p.title}</h3>
+        </div>
 
-{showRating ? (
-  <ProductStars
-    rating={(p as any).rating ?? 0}
-    count={(p as any).reviewCount ?? 0}
-  />
-
-) : null}
+        {showRating ? (
+          <ProductStars rating={averageRating} count={reviewCount} />
+        ) : null}
 
         {p.priceNote ? <div className="product-price shop-card-price">{p.priceNote}</div> : null}
 
@@ -367,6 +393,7 @@ export default function Shop() {
   const [sort, setSort] = useState<SortMode>("featured");
   const [active, setActive] = useState<Product | null>(null);
   const [donateOpen, setDonateOpen] = useState(true);
+  const [reviewRefreshToken, setReviewRefreshToken] = useState(0);
 
   const supportProducts = useMemo(() => {
     const all = getActiveProducts();
@@ -382,10 +409,10 @@ export default function Shop() {
   const storeProducts = useMemo(() => {
     const all = getActiveProducts().filter((p) => p.isSupport !== true);
 
-    let filtered = all;
+    let filtered = [...all];
 
     if (filter !== "all") {
-      filtered = all.filter((p) => p.kind === filter);
+      filtered = filtered.filter((p) => p.kind === filter);
     }
 
     switch (sort) {
@@ -462,9 +489,15 @@ export default function Shop() {
                 className="shop-grid shop-grid-support"
                 aria-label="Donation tiers"
               >
-{supportProducts.map((p) => (
-  <ProductCard key={p.id} p={p} onOpen={setActive} showRating={false} />
-))}
+                {supportProducts.map((p) => (
+                  <ProductCard
+                    key={p.id}
+                    p={p}
+                    onOpen={setActive}
+                    showRating={false}
+                    refreshToken={reviewRefreshToken}
+                  />
+                ))}
               </div>
             ) : null}
           </section>
@@ -527,14 +560,25 @@ export default function Shop() {
 
             <div className="shop-grid" aria-label="Products grid">
               {storeProducts.map((p) => (
-                <ProductCard key={p.id} p={p} onOpen={setActive} />
+                <ProductCard
+                  key={`${p.id}-${reviewRefreshToken}`}
+                  p={p}
+                  onOpen={setActive}
+                  refreshToken={reviewRefreshToken}
+                />
               ))}
             </div>
           </section>
         </section>
       </div>
 
-      {active ? <ProductModal p={active} onClose={() => setActive(null)} /> : null}
+      {active ? (
+        <ProductModal
+          p={active}
+          onClose={() => setActive(null)}
+          onReviewCreated={() => setReviewRefreshToken((v) => v + 1)}
+        />
+      ) : null}
     </main>
   );
 }

@@ -1,36 +1,4 @@
-import { useEffect, useState } from "react";
-import { readLevel1Access, clearLevel1Access } from "../lib/access";
-
 export default function JalSolLevel1() {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const access = readLevel1Access();
-
-    if (!access?.sessionId) {
-      window.location.href = "/app/jal-sol";
-      return;
-    }
-
-    setReady(true);
-  }, []);
-
-  if (!ready) {
-    return (
-      <main className="home-shell jal-shell" aria-label="JAL/SOL Level 1">
-        <div className="home-wrap">
-          <section className="card machine-surface panel-frame jal-window">
-            <div className="jal-hero">
-              <div className="jal-kicker">LEVEL 1</div>
-              <h1 className="home-title">Verifying</h1>
-              <p className="home-lead">Checking access...</p>
-            </div>
-          </section>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="home-shell jal-shell" aria-label="JAL/SOL Level 1">
       <div className="home-wrap">
@@ -120,17 +88,6 @@ export default function JalSolLevel1() {
                 <a className="button ghost" href="/app/jal-sol">
                   Back to JAL/SOL
                 </a>
-
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => {
-                    clearLevel1Access();
-                    window.location.href = "/app/jal-sol";
-                  }}
-                >
-                  Clear Access
-                </button>
               </div>
             </section>
           </div>

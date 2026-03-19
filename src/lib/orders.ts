@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 export type ReviewVerificationInput = {
   orderEmail?: string;
   orderId?: string;
@@ -9,29 +11,45 @@ export type ReviewVerificationResult = {
   reason?: string;
 };
 
-/*
-  Placeholder verification layer.
-
-  Current mode:
-  - verification is NOT yet connected to Stripe or a secure backend
-  - always returns false
-  - keeps architecture honest until a real order source is wired
-*/
 export async function verifyPurchaseForReview(
   input: ReviewVerificationInput
 ): Promise<ReviewVerificationResult> {
-  const hasEmail = Boolean(input.orderEmail?.trim());
-  const hasOrderId = Boolean(input.orderId?.trim());
+  const email = input.orderEmail?.trim().toLowerCase();
+  const orderId = input.orderId?.trim();
+  const productId = input.productId?.trim();
 
-  if (!hasEmail || !hasOrderId) {
+  if (!email || !orderId || !productId) {
     return {
       isVerified: false,
-      reason: "Order email and order ID are required for verification.",
+      reason: "Order email, order ID, and product are required.",
     };
   }
 
-  return {
-    isVerified: false,
-    reason: "Purchase verification is not connected yet.",
-  };
+  const { data, error } = await supabase
+    .from("orders")
+    .select("stripe_session_id, customer_email, product_id, status")
+    .eq("stripe_session_id", orderId)
+    .eq("customer_email", email)
+    .eq("product_id", productId)
+    .eq("status", "paid")
+    .limit(1);
+
+  if (error) {
+    console.error("verifyPurchaseForReview error:", error.message);
+    return {
+      isVerified: false,
+      reason: "Verification failed.",
+    };
+  }
+
+  const row = Array.isArray(data) ? data[0] : null;
+
+  if (!row) {
+    return {
+      isVerified: false,
+      reason: "No matching paid order found.",
+    };
+  }
+
+  return { isVerified: true };
 }
