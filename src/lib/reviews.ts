@@ -8,6 +8,9 @@ export type ReviewRow = {
   title: string | null;
   body: string | null;
   created_at: string;
+  order_email: string | null;
+  order_id: string | null;
+  verified_purchase: boolean;
 };
 
 export type ReviewImageRow = {
@@ -28,12 +31,15 @@ export type CreateReviewInput = {
   title?: string;
   body?: string;
   imageUrls?: string[];
+  orderEmail?: string;
+  orderId?: string;
+  verifiedPurchase?: boolean;
 };
 
 export async function getApprovedReviewsByProductId(productId: string): Promise<ProductReview[]> {
   const { data: reviews, error: reviewsError } = await supabase
     .from("product_reviews")
-    .select("id, product_id, display_name, rating, title, body, created_at")
+.select("id, product_id, display_name, rating, title, body, created_at, order_email, order_id, verified_purchase")
     .eq("product_id", productId)
     .order("created_at", { ascending: false });
 
@@ -78,9 +84,12 @@ export async function createReview(input: CreateReviewInput): Promise<ProductRev
         rating: input.rating,
         title: input.title?.trim() || null,
         body: input.body?.trim() || null,
+        order_email: input.orderEmail?.trim() || null,
+        order_id: input.orderId?.trim() || null,
+        verified_purchase: input.verifiedPurchase ?? false,
       },
     ])
-    .select("id, product_id, display_name, rating, title, body, created_at")
+.select("id, product_id, display_name, rating, title, body, created_at, order_email, order_id, verified_purchase")
     .single();
 
   if (reviewError || !insertedReview) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createReview } from "../lib/reviews";
 import { uploadReviewImages } from "../lib/uploads";
+import { verifyPurchaseForReview } from "../lib/orders";
 
 export default function ReviewFormModal({
   onClose,
@@ -15,6 +16,8 @@ export default function ReviewFormModal({
   const [rating, setRating] = useState(0);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [orderEmail, setOrderEmail] = useState("");
+  const [orderId, setOrderId] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -42,6 +45,12 @@ export default function ReviewFormModal({
 
       setSubmitting(true);
 
+      const verification = await verifyPurchaseForReview({
+        orderEmail,
+        orderId,
+        productId,
+      });
+
       const imageUrls = files.length ? await uploadReviewImages(files) : [];
 
       await createReview({
@@ -51,9 +60,16 @@ export default function ReviewFormModal({
         title,
         body,
         imageUrls,
+        orderEmail,
+        orderId,
+        verifiedPurchase: verification.isVerified,
       });
 
-      setSuccess("Review submitted.");
+      setSuccess(
+        verification.isVerified
+          ? "Review submitted as a verified purchase."
+          : "Review submitted."
+      );
 
       if (onCreated) {
         await onCreated();
@@ -140,6 +156,34 @@ export default function ReviewFormModal({
             placeholder="Write your review here"
             rows={5}
             maxLength={1500}
+          />
+        </div>
+
+        <div className="review-field">
+          <label className="review-label" htmlFor="review-order-email">
+            Order Email
+          </label>
+          <input
+            id="review-order-email"
+            className="review-input"
+            value={orderEmail}
+            onChange={(e) => setOrderEmail(e.target.value)}
+            placeholder="Email used for purchase"
+            maxLength={120}
+          />
+        </div>
+
+        <div className="review-field">
+          <label className="review-label" htmlFor="review-order-id">
+            Order ID
+          </label>
+          <input
+            id="review-order-id"
+            className="review-input"
+            value={orderId}
+            onChange={(e) => setOrderId(e.target.value)}
+            placeholder="Order number / receipt ID"
+            maxLength={120}
           />
         </div>
 

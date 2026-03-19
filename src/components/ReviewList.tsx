@@ -6,6 +6,7 @@ type ReviewItem = {
   body?: string | null;
   created_at?: string;
   images?: string[];
+  verified_purchase?: boolean; // ← ADD THIS
 };
 
 function formatReviewDate(value?: string) {
@@ -26,9 +27,17 @@ export default function ReviewList({ reviews }: { reviews: ReviewItem[] }) {
         <article key={review.id} className="shop-review-card">
           <div className="shop-review-head">
             <div>
-              <div className="shop-review-name">
-                {review.display_name?.trim() || "Anonymous"}
-              </div>
+<div className="shop-review-name-row">
+  <div className="shop-review-name">
+    {review.display_name?.trim() || "Anonymous"}
+  </div>
+
+  {review.verified_purchase ? (
+    <span className="shop-review-verified">
+      Verified Purchase
+    </span>
+  ) : null}
+</div>
               {review.created_at ? (
                 <div className="shop-review-date">{formatReviewDate(review.created_at)}</div>
               ) : null}
