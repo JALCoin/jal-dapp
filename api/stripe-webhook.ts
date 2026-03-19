@@ -1,5 +1,7 @@
 import Stripe from 'stripe';
 
+export const runtime = 'nodejs'; // ✅ ADD THIS LINE
+
 export const config = {
   api: {
     bodyParser: false,
