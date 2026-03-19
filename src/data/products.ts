@@ -217,7 +217,22 @@ export const PRODUCTS: Product[] = [
         : "Join Waitlist",
     }),
   },
-
+{
+  id: "test-product",
+  title: "Test Product ($1)",
+  kind: "digital",
+  status: "active",
+  priceNote: "$1.00 AUD",
+  summary: "Internal test product for purchase verification flow.",
+  tags: ["Digital", "New"],
+  image: "/shop/digital-product-1.jpg",
+  links: [
+    {
+      label: "Buy Now",
+      href: "https://buy.stripe.com/00w14mdNC84b1q73gg0x209",
+    },
+  ],
+},
   {
     id: "hoodie-embroidered-xxl",
     title: "JALSOL Embroidered Hoodie (XXL)",
