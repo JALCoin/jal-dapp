@@ -17,6 +17,10 @@ import ShopPage from "./pages/Shop";
 import JalSolPage from "./pages/JalSol";
 import JalSolSuccess from "./pages/JalSolSuccess";
 import JalSolLevel1 from "./pages/JalSolLevel1";
+import Footer from "./components/Footer";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import Disclaimer from "./pages/Disclaimer";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -31,28 +35,25 @@ function HeaderView({
   return (
     <header className="site-header">
       <div className="header-inner">
-        {/* Left: socials */}
-<div className="social-links" aria-label="Social Links">
-  <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
-    <img src="/icons/X.png" alt="" />
-  </a>
+        <div className="social-links" aria-label="Social Links">
+          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
+            <img src="/icons/X.png" alt="" />
+          </a>
 
-  <a
-    href="https://www.tiktok.com/@358jalsol"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="TikTok"
-  >
-    <img src="/icons/TikTok.png" alt="" />
-  </a>
-</div>
+          <a
+            href="https://www.tiktok.com/@358jalsol"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="TikTok"
+          >
+            <img src="/icons/TikTok.png" alt="" />
+          </a>
+        </div>
 
-        {/* Center: logo opens MAIN NAV overlay */}
         <button type="button" onClick={onLogo} aria-label="Open navigation" className="logo-btn">
           <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
         </button>
 
-        {/* Right: hamburger toggles SIDEBAR */}
         <button
           className={`hamburger ${isOpen ? "is-open" : ""}`}
           onClick={onMenu}
@@ -279,6 +280,7 @@ function AppShell() {
         onLogo={() => navigate("/app/nav")}
         isOpen={menuOpen}
       />
+
       <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <Routes>
@@ -290,6 +292,7 @@ function AppShell() {
         <Route path="shop" element={<ShopPage />} />
         <Route path="jal-sol" element={<JalSolPage />} />
         <Route path="jal-sol/success" element={<JalSolSuccess />} />
+        <Route path="jal-sol/level-1" element={<JalSolLevel1 />} />
 
         <Route path="token" element={<FeaturePage title="Token Generation" />} />
         <Route path="raydium" element={<FeaturePage title="Raydium / Liquidity" />} />
@@ -304,9 +307,9 @@ function AppShell() {
         <Route path="settings" element={<FeaturePage title="Settings" />} />
 
         <Route path="*" element={<Navigate to="/app/nav" replace />} />
-
-        <Route path="/app/jal-sol/level-1" element={<JalSolLevel1 />} />
       </Routes>
+
+      <Footer />
     </>
   );
 }
@@ -318,6 +321,11 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing mode="entry" />} />
         <Route path="/app/*" element={<AppShell />} />
+
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/disclaimer" element={<Disclaimer />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
