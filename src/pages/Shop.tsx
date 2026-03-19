@@ -3,6 +3,9 @@ import ProductStars from "../components/ProductStars";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { getActiveProducts, type Product } from "../data/products";
+import ReviewList from "../components/ReviewList";
+import ReviewFormModal from "../components/ReviewFormModal";
+import { getApprovedReviewsByProductId } from "../lib/reviews";
 
 type Filter = "all" | "physical" | "digital";
 type SortMode = "featured" | "title-asc" | "title-desc";
@@ -56,6 +59,28 @@ function ProductModal({
   p: Product;
   onClose: () => void;
 }) {
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  async function loadReviews() {
+    if (p.isSupport) {
+      setReviews([]);
+      return;
+    }
+
+    try {
+      setLoadingReviews(true);
+      const data = await getApprovedReviewsByProductId(p.id);
+      setReviews(data);
+    } catch (err) {
+      console.error("Failed to load reviews", err);
+      setReviews([]);
+    } finally {
+      setLoadingReviews(false);
+    }
+  }
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -69,9 +94,18 @@ function ProductModal({
     return () => document.body.removeAttribute("data-modal-open");
   }, []);
 
+  useEffect(() => {
+    loadReviews();
+  }, [p.id]);
+
   const badge = getStatusLabel(p.status);
   const primaryLink = getPrimaryLink(p);
   const secondaryLinks = getSecondaryLinks(p);
+
+  const averageRating =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : ((p as any).rating ?? 0);
 
   const modal = (
     <div
@@ -115,12 +149,14 @@ function ProductModal({
             </div>
 
             <h2 className="product-modal-title shop-modal-title">{p.title}</h2>
-{!p.isSupport ? (
-  <ProductStars
-    rating={(p as any).rating ?? 0}
-    count={(p as any).reviewCount ?? 0}
-  />
-) : null}
+
+            {!p.isSupport ? (
+              <ProductStars
+                rating={averageRating}
+                count={reviews.length}
+              />
+            ) : null}
+
             {p.priceNote ? (
               <div className="product-modal-price shop-modal-price">{p.priceNote}</div>
             ) : null}
@@ -166,12 +202,43 @@ function ProductModal({
               ) : null}
             </div>
 
+            {!p.isSupport ? (
+              <div className="shop-review-section">
+                <div className="shop-review-section-head">
+                  <h3 className="shop-review-section-title">Reviews</h3>
+                  <button
+                    type="button"
+                    className="shop-card-primary"
+                    onClick={() => setReviewOpen(true)}
+                  >
+                    Write Review
+                  </button>
+                </div>
+
+                {loadingReviews ? (
+                  <p className="shop-review-empty">Loading reviews...</p>
+                ) : (
+                  <ReviewList reviews={reviews} />
+                )}
+              </div>
+            ) : null}
+
             <div className="product-modal-footnote">
               Tip: press <span className="kbd">ESC</span> to close.
             </div>
           </div>
         </div>
       </section>
+
+      {reviewOpen ? (
+        <ReviewFormModal
+          productId={p.id}
+          onClose={() => setReviewOpen(false)}
+          onCreated={async () => {
+            await loadReviews();
+          }}
+        />
+      ) : null}
     </div>
   );
 
