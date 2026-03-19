@@ -115,10 +115,12 @@ function ProductModal({
             </div>
 
             <h2 className="product-modal-title shop-modal-title">{p.title}</h2>
-              <ProductStars
-  rating={(p as any).rating ?? 0}
-  count={(p as any).reviewCount ?? 0}
-/>
+{!p.isSupport ? (
+  <ProductStars
+    rating={(p as any).rating ?? 0}
+    count={(p as any).reviewCount ?? 0}
+  />
+) : null}
             {p.priceNote ? (
               <div className="product-modal-price shop-modal-price">{p.priceNote}</div>
             ) : null}
@@ -179,9 +181,11 @@ function ProductModal({
 function ProductCard({
   p,
   onOpen,
+  showRating = true,
 }: {
   p: Product;
   onOpen: (p: Product) => void;
+  showRating?: boolean;
 }) {
   const badge = getStatusLabel(p.status);
   const primaryLink = getPrimaryLink(p);
@@ -238,10 +242,13 @@ function ProductCard({
   <h3 className="product-title shop-card-title">{p.title}</h3>
 </div>
 
-<ProductStars
-  rating={(p as any).rating ?? 0}
-  count={(p as any).reviewCount ?? 0}
-/>
+{showRating ? (
+  <ProductStars
+    rating={(p as any).rating ?? 0}
+    count={(p as any).reviewCount ?? 0}
+  />
+
+) : null}
 
         {p.priceNote ? <div className="product-price shop-card-price">{p.priceNote}</div> : null}
 
@@ -388,9 +395,9 @@ export default function Shop() {
                 className="shop-grid shop-grid-support"
                 aria-label="Donation tiers"
               >
-                {supportProducts.map((p) => (
-                  <ProductCard key={p.id} p={p} onOpen={setActive} />
-                ))}
+{supportProducts.map((p) => (
+  <ProductCard key={p.id} p={p} onOpen={setActive} showRating={false} />
+))}
               </div>
             ) : null}
           </section>
