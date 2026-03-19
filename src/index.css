@@ -3767,3 +3767,97 @@ main{
   font-size: 11px;
   opacity: 0.5;
 }
+.track-panel {
+  min-height: 520px;
+}
+
+.track-header {
+  margin-bottom: 10px;
+}
+
+.track-section {
+  margin-top: 8px;
+}
+
+.track-console {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  max-width: 760px;
+  padding: 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(120, 220, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(9, 16, 28, 0.92), rgba(5, 10, 18, 0.96)),
+    radial-gradient(circle at top, rgba(0, 255, 200, 0.08), transparent 55%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+    0 22px 60px rgba(0, 0, 0, 0.36);
+}
+
+.track-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(220, 235, 255, 0.72);
+}
+
+.track-input {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(120, 220, 255, 0.18);
+  background: rgba(10, 16, 28, 0.9);
+  color: var(--text, #f5f7fb);
+  font-size: 1rem;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.track-input::placeholder {
+  color: rgba(210, 220, 235, 0.46);
+}
+
+.track-input:focus {
+  border-color: rgba(0, 255, 200, 0.46);
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 200, 0.2),
+    0 0 24px rgba(0, 255, 200, 0.12);
+}
+
+.track-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.track-button {
+  min-width: 220px;
+  justify-content: center;
+}
+
+.track-help {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(220, 232, 244, 0.68);
+}
+
+@media (max-width: 640px) {
+  .track-console {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .track-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .track-actions {
+    width: 100%;
+  }
+}
