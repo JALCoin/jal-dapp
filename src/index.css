@@ -4145,3 +4145,27 @@ main{
   text-transform: uppercase;
   font-weight: 800;
 }
+.review-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* allow scroll if content exceeds screen */
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.review-modal-panel {
+  width: 100%;
+  max-width: 520px;
+
+  /* THIS IS THE FIX */
+  max-height: 90vh;
+  overflow-y: auto;
+
+  border-radius: 18px;
+}
