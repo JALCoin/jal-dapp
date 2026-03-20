@@ -2486,3 +2486,76 @@ a.button[aria-disabled="true"]{
     min-height: 0;
   }
 }
+.home-console-hero::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(0, 240, 255, 0.12),
+    transparent 60%
+  );
+  opacity: 0.6;
+  filter: blur(60px);
+  pointer-events: none;
+}
+.home-module-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-module-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255,255,255,0.06),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.home-module-card:hover::after {
+  opacity: 1;
+}
+
+.home-module-card:active {
+  transform: scale(0.98);
+}
+.home-flow-divider {
+  height: 80px;
+  position: relative;
+  opacity: 0.4;
+}
+
+.home-flow-divider::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(17,241,167,0.4),
+    transparent
+  );
+  transform: translateX(-50%);
+}
+.home-topbar {
+  backdrop-filter: blur(10px);
+  border-color: rgba(17,241,167,0.15);
+  box-shadow:
+    0 6px 20px rgba(0,0,0,0.4),
+    0 0 10px rgba(17,241,167,0.05);
+}
+.home-module-card.is-featured {
+  border-color: rgba(244,200,106,0.3);
+  box-shadow:
+    0 20px 40px rgba(0,0,0,0.35),
+    0 0 20px rgba(244,200,106,0.08);
+}

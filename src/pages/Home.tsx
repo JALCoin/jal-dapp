@@ -176,20 +176,22 @@ export default function Home() {
           </div>
         </section>
 
-        <section
-          className="card machine-surface panel-frame home-donate-bar"
-          aria-label="Donate SOL"
-        >
-          <div className="home-donate-copy">
-            Donate SOL and support the project:{" "}
-            <strong>3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2</strong>
-          </div>
-        </section>
+<section
+  className="card machine-surface panel-frame home-donate-bar"
+  aria-label="Donate SOL"
+>
+  <div className="home-donate-copy">
+    Donate SOL and support the project:{" "}
+    <strong>3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2</strong>
+  </div>
+</section>
 
-        <section
-          className="card machine-surface panel-frame home-modules-window"
-          aria-label="System modules"
-        >
+<div className="home-flow-divider" aria-hidden="true" />
+
+<section
+  className="card machine-surface panel-frame home-modules-window"
+  aria-label="System modules"
+>
           <div className="home-modules-head">
             <div>
               <div className="home-kicker">MODULE ARRAY</div>
