@@ -284,7 +284,6 @@ type SlotRow = {
   lastSeenAt?: number | null;
   lastExitAt?: number | null;
 
-  // legacy compatibility only
   buyLockCount?: number | null;
   buyLockActive?: boolean | null;
   buyLockLastAt?: number | null;
@@ -707,6 +706,13 @@ function stateToneClass(slot: SlotRow) {
   if (tracking === "SPREAD_BLOCKED") return "is-blocked";
   if (tracking === "NO_MARKET") return "is-muted";
   return "is-neutral";
+}
+
+function stateClassName(value: string | null | undefined) {
+  const normalized = String(value || "")
+    .toUpperCase()
+    .replace(/_/g, "-");
+  return normalized ? `state-${normalized}` : "";
 }
 
 /* =========================
@@ -1259,12 +1265,16 @@ export default function Engine() {
                       <div className="engine-carousel-grid">
                         <div className="engine-carousel-metric">
                           <div className="engine-carousel-k">State</div>
-                          <div className="engine-carousel-v">{stateLabel(carouselSlot)}</div>
+                          <div className={`engine-carousel-v ${stateClassName(stateLabel(carouselSlot))}`}>
+                            {stateLabel(carouselSlot)}
+                          </div>
                         </div>
 
                         <div className="engine-carousel-metric">
                           <div className="engine-carousel-k">Tracking</div>
-                          <div className="engine-carousel-v">{trackingLabel(carouselSlot)}</div>
+                          <div className={`engine-carousel-v ${stateClassName(trackingLabel(carouselSlot))}`}>
+                            {trackingLabel(carouselSlot)}
+                          </div>
                         </div>
 
                         <div className="engine-carousel-metric">
@@ -1606,7 +1616,7 @@ export default function Engine() {
                         <div className="num">Unit</div>
                         <div className="num">Net</div>
                         <div className="num">Cycles</div>
-                        <div className="num">Open</div>
+                        <div className="num">More</div>
                       </div>
 
                       {filteredSlots.length ? (
@@ -1628,8 +1638,8 @@ export default function Engine() {
                                 <div className="ledger-slotid">{s.id}</div>
                                 <div>{slotCoin(s)}</div>
                                 <div>{s.market ?? "—"}</div>
-                                <div>{stateLabel(s)}</div>
-                                <div>{trackingLabel(s)}</div>
+                                <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
+                                <div className={stateClassName(trackingLabel(s))}>{trackingLabel(s)}</div>
                                 <div className="num">{moneyAud(s.unitAud)}</div>
                                 <div className="num">{pctNum(s.netPct)}</div>
                                 <div className="num">{s.cycles ?? 0}</div>
@@ -1811,438 +1821,459 @@ export default function Engine() {
 
       {selectedSlot ? (
         <div
-          className="slot-drawer-backdrop"
+          className="slot-modal-layer"
           role="dialog"
           aria-modal="true"
           aria-label="Slot Details"
           onClick={() => setSelectedSlotId(null)}
         >
-          <div className="slot-drawer card machine-surface panel-frame" onClick={(e) => e.stopPropagation()}>
-            <div className="slot-drawer-top">
-              <div>
-                <div className="slot-drawer-id">{selectedSlot.id}</div>
-                <div className="slot-drawer-sub">
-                  {slotCoin(selectedSlot)} • {selectedSlot.market ?? "—"} • {stateLabel(selectedSlot)} •{" "}
-                  {trackingLabel(selectedSlot)}
-                  <span className="slot-drawer-esc">Esc to close</span>
-                </div>
-              </div>
+          <div className="slot-modal-backdrop" aria-hidden="true" />
 
-              <button type="button" className="button ghost" onClick={() => setSelectedSlotId(null)}>
-                Close
-              </button>
-            </div>
+          <div
+            className="slot-modal-panel card machine-surface panel-frame"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="slot-modal-close"
+              aria-label="Close slot details"
+              onClick={() => setSelectedSlotId(null)}
+            >
+              ×
+            </button>
 
-            <div className="slot-drawer-grid">
-              <div>
-                <div className="slot-k">Unit</div>
-                <div className="slot-v">{moneyAud(selectedSlot.unitAud)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Cycles</div>
-                <div className="slot-v">{selectedSlot.cycles ?? 0}</div>
-              </div>
-              <div>
-                <div className="slot-k">Entry</div>
-                <div className="slot-v">{effectiveEntryLabel(selectedSlot)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Now</div>
-                <div className="slot-v">{effectiveNowLabel(selectedSlot)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Gross</div>
-                <div className="slot-v">{pctNum(selectedSlot.grossPct)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Net</div>
-                <div className="slot-v">{pctNum(selectedSlot.netPct)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Level</div>
-                <div className="slot-v">{selectedSlot.level ? `LVL${selectedSlot.level}` : "—"}</div>
-              </div>
-              <div>
-                <div className="slot-k">Subslot</div>
-                <div className={`slot-v slot-subslot ${subslotToneClass(selectedSlot)}`}>
-                  {subslotLabel(selectedSlot)}
-                </div>
-              </div>
-              <div>
-                <div className="slot-k">Lock</div>
-                <div className="slot-v">{lockDisplay(selectedSlot)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Re-entry target</div>
-                <div className="slot-v">{fmt(selectedSlot.reentryTargetMid)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Exit reason</div>
-                <div className="slot-v">{selectedSlot.exitReason ?? "—"}</div>
-              </div>
-              <div>
-                <div className="slot-k">Created</div>
-                <div className="slot-v">{ageLabel(nowMs - selectedSlot.createdAt)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Last seen</div>
-                <div className="slot-v">
-                  {selectedSlot.lastSeenAt ? ageLabel(nowMs - selectedSlot.lastSeenAt) : "—"}
-                </div>
-              </div>
-            </div>
-
-            <div className="slot-section">Subslot Snapshot</div>
-
-            <div className="slot-drawer-grid">
-              <div>
-                <div className="slot-k">Subslot Role</div>
-                <div className={`slot-v slot-subslot ${subslotToneClass(selectedSlot)}`}>
-                  {subslotLabel(selectedSlot)}
-                </div>
-              </div>
-              <div>
-                <div className="slot-k">Subslot State</div>
-                <div className="slot-v">{selectedSlot.subslotState ?? "—"}</div>
-              </div>
-              <div>
-                <div className="slot-k">Signal State</div>
-                <div className="slot-v">{selectedSlot.subslotSignalState ?? "—"}</div>
-              </div>
-              <div>
-                <div className="slot-k">Requested AUD</div>
-                <div className="slot-v">{moneyAud(selectedSlot.subslotRequestedAud)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Actual AUD</div>
-                <div className="slot-v">{moneyAud(selectedSlot.subslotActualAud)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Requested Qty</div>
-                <div className="slot-v">{fmt(selectedSlot.subslotRequestedCoinQty)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Actual Qty</div>
-                <div className="slot-v">{fmt(selectedSlot.subslotActualCoinQty)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Submitted Rate</div>
-                <div className="slot-v">{fmt(selectedSlot.subslotSubmittedRate)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Actual Rate</div>
-                <div className="slot-v">{fmt(selectedSlot.subslotActualRate)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Subslot Gross</div>
-                <div className="slot-v">{pctNum(selectedSlot.subslotGrossPct)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Subslot Net</div>
-                <div className="slot-v">{pctNum(selectedSlot.subslotNetPct)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Peak Bid</div>
-                <div className="slot-v">{fmt(selectedSlot.subslotPeakBid)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Drawdown</div>
-                <div className="slot-v">{pctNum(selectedSlot.subslotDrawdownPct)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Exit Reason</div>
-                <div className="slot-v">{selectedSlot.subslotExitReason ?? "—"}</div>
-              </div>
-              <div>
-                <div className="slot-k">Profit AUD</div>
-                <div className="slot-v">{moneyAud(selectedSlot.subslotProfitAud)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Profit %</div>
-                <div className="slot-v">{pctNum(selectedSlot.subslotProfitPct)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Pending Merge</div>
-                <div className="slot-v">{moneyAud(selectedSlot.subslotPendingMergeAud)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Last Merged</div>
-                <div className="slot-v">{moneyAud(selectedSlot.subslotLastMergedAud)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Lifetime Profit</div>
-                <div className="slot-v">{moneyAud(selectedSlot.subslotLifetimeProfitAud)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Lifetime Cycles</div>
-                <div className="slot-v">{selectedSlot.subslotLifetimeCycles ?? 0}</div>
-              </div>
-              <div>
-                <div className="slot-k">Last Reconcile</div>
-                <div className="slot-v">
-                  {selectedSlot.subslotLastReconcileAt
-                    ? ageLabel(nowMs - selectedSlot.subslotLastReconcileAt)
-                    : "—"}
-                </div>
-              </div>
-              <div>
-                <div className="slot-k">Reconcile Note</div>
-                <div className="slot-v">{selectedSlot.subslotLastReconcileNote ?? "—"}</div>
-              </div>
-              <div>
-                <div className="slot-k">Last Error</div>
-                <div className="slot-v">{selectedSlot.subslotLastError ?? "—"}</div>
-              </div>
-            </div>
-
-            <div className="slot-section">Tracking Snapshot</div>
-
-            <div className="slot-drawer-grid">
-              <div>
-                <div className="slot-k">Tracking State</div>
-                <div className="slot-v">{trackingLabel(selectedSlot)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Reason</div>
-                <div className="slot-v">{reasonLabel(selectedSlot.candidateReason)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Drawdown</div>
-                <div className="slot-v">{pctNum(selectedSlot.candidateDrawdownPct)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Bounce</div>
-                <div className="slot-v">{pctNum(selectedSlot.candidateBouncePct)}</div>
-              </div>
-              <div>
-                <div className="slot-k">EMA Gap</div>
-                <div className="slot-v">{pctNum(selectedSlot.candidateEmaGapPct)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Reversal Ticks</div>
-                <div className="slot-v">
-                  {selectedSlot.candidateReversalTicks != null ? selectedSlot.candidateReversalTicks : "—"}
-                </div>
-              </div>
-              <div>
-                <div className="slot-k">Score</div>
-                <div className="slot-v">
-                  {selectedSlot.candidateScore != null ? selectedSlot.candidateScore.toFixed(3) : "—"}
-                </div>
-              </div>
-              <div>
-                <div className="slot-k">Tracked Peak</div>
-                <div className="slot-v">{fmt(selectedSlot.candidatePeakMid)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Tracked Low</div>
-                <div className="slot-v">{fmt(selectedSlot.candidateLowMid)}</div>
-              </div>
-              <div>
-                <div className="slot-k">Spread</div>
-                <div className="slot-v">{pctNum(selectedSlot.nowSpreadPct ?? selectedSlot.candidateSpreadPrevPct)}</div>
-              </div>
-            </div>
-
-            {(selectedSlot.rotationReservationId ||
-              selectedSlot.rotationStage ||
-              selectedSlot.rotationEligibleOut != null ||
-              selectedSlot.rotationEligibleIn != null) && (
-              <>
-                <div className="slot-section">Rotation Snapshot</div>
-
-                <div className="slot-drawer-grid">
-                  <div>
-                    <div className="slot-k">Reservation</div>
-                    <div className="slot-v">{selectedSlot.rotationReservationId ?? "—"}</div>
+            <div className="slot-modal-scroll">
+              <div className="slot-modal-top">
+                <div>
+                  <div className="slot-modal-id">{selectedSlot.id}</div>
+                  <div className="slot-modal-sub">
+                    {slotCoin(selectedSlot)} • {selectedSlot.market ?? "—"} •{" "}
+                    <span className={stateClassName(stateLabel(selectedSlot))}>{stateLabel(selectedSlot)}</span> •{" "}
+                    <span className={stateClassName(trackingLabel(selectedSlot))}>{trackingLabel(selectedSlot)}</span>
                   </div>
-                  <div>
-                    <div className="slot-k">Role</div>
-                    <div className="slot-v">{selectedSlot.rotationRole ?? "—"}</div>
+                </div>
+
+                <div className="slot-modal-meta">
+                  <span className="slot-modal-chip">Esc to close</span>
+                  <span className="slot-modal-chip">Diagnostic Chamber</span>
+                </div>
+              </div>
+
+              <div className="slot-section">Core Metrics</div>
+
+              <div className="slot-modal-grid">
+                <div>
+                  <div className="slot-k">Unit</div>
+                  <div className="slot-v">{moneyAud(selectedSlot.unitAud)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Cycles</div>
+                  <div className="slot-v">{selectedSlot.cycles ?? 0}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Entry</div>
+                  <div className="slot-v">{effectiveEntryLabel(selectedSlot)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Now</div>
+                  <div className="slot-v">{effectiveNowLabel(selectedSlot)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Gross</div>
+                  <div className="slot-v">{pctNum(selectedSlot.grossPct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Net</div>
+                  <div className="slot-v">{pctNum(selectedSlot.netPct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Level</div>
+                  <div className="slot-v">{selectedSlot.level ? `LVL${selectedSlot.level}` : "—"}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Subslot</div>
+                  <div className={`slot-v slot-subslot ${subslotToneClass(selectedSlot)}`}>
+                    {subslotLabel(selectedSlot)}
                   </div>
-                  <div>
-                    <div className="slot-k">Stage</div>
-                    <div className="slot-v">{selectedSlot.rotationStage ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Lock</div>
+                  <div className="slot-v">{lockDisplay(selectedSlot)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Re-entry target</div>
+                  <div className="slot-v">{fmt(selectedSlot.reentryTargetMid)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Exit reason</div>
+                  <div className="slot-v">{selectedSlot.exitReason ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Created</div>
+                  <div className="slot-v">{ageLabel(nowMs - selectedSlot.createdAt)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Last seen</div>
+                  <div className="slot-v">
+                    {selectedSlot.lastSeenAt ? ageLabel(nowMs - selectedSlot.lastSeenAt) : "—"}
                   </div>
-                  <div>
-                    <div className="slot-k">Linked Slot</div>
-                    <div className="slot-v">{selectedSlot.rotationLinkedSlotId ?? "—"}</div>
+                </div>
+              </div>
+
+              <div className="slot-section">Subslot Snapshot</div>
+
+              <div className="slot-modal-grid">
+                <div>
+                  <div className="slot-k">Subslot Role</div>
+                  <div className={`slot-v slot-subslot ${subslotToneClass(selectedSlot)}`}>
+                    {subslotLabel(selectedSlot)}
                   </div>
-                  <div>
-                    <div className="slot-k">Eligible Out</div>
-                    <div className="slot-v">
-                      {selectedSlot.rotationEligibleOut == null ? "—" : selectedSlot.rotationEligibleOut ? "YES" : "NO"}
+                </div>
+                <div>
+                  <div className="slot-k">Subslot State</div>
+                  <div className="slot-v">{selectedSlot.subslotState ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Signal State</div>
+                  <div className="slot-v">{selectedSlot.subslotSignalState ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Requested AUD</div>
+                  <div className="slot-v">{moneyAud(selectedSlot.subslotRequestedAud)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Actual AUD</div>
+                  <div className="slot-v">{moneyAud(selectedSlot.subslotActualAud)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Requested Qty</div>
+                  <div className="slot-v">{fmt(selectedSlot.subslotRequestedCoinQty)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Actual Qty</div>
+                  <div className="slot-v">{fmt(selectedSlot.subslotActualCoinQty)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Submitted Rate</div>
+                  <div className="slot-v">{fmt(selectedSlot.subslotSubmittedRate)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Actual Rate</div>
+                  <div className="slot-v">{fmt(selectedSlot.subslotActualRate)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Subslot Gross</div>
+                  <div className="slot-v">{pctNum(selectedSlot.subslotGrossPct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Subslot Net</div>
+                  <div className="slot-v">{pctNum(selectedSlot.subslotNetPct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Peak Bid</div>
+                  <div className="slot-v">{fmt(selectedSlot.subslotPeakBid)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Drawdown</div>
+                  <div className="slot-v">{pctNum(selectedSlot.subslotDrawdownPct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Exit Reason</div>
+                  <div className="slot-v">{selectedSlot.subslotExitReason ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Profit AUD</div>
+                  <div className="slot-v">{moneyAud(selectedSlot.subslotProfitAud)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Profit %</div>
+                  <div className="slot-v">{pctNum(selectedSlot.subslotProfitPct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Pending Merge</div>
+                  <div className="slot-v">{moneyAud(selectedSlot.subslotPendingMergeAud)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Last Merged</div>
+                  <div className="slot-v">{moneyAud(selectedSlot.subslotLastMergedAud)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Lifetime Profit</div>
+                  <div className="slot-v">{moneyAud(selectedSlot.subslotLifetimeProfitAud)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Lifetime Cycles</div>
+                  <div className="slot-v">{selectedSlot.subslotLifetimeCycles ?? 0}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Last Reconcile</div>
+                  <div className="slot-v">
+                    {selectedSlot.subslotLastReconcileAt
+                      ? ageLabel(nowMs - selectedSlot.subslotLastReconcileAt)
+                      : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Reconcile Note</div>
+                  <div className="slot-v">{selectedSlot.subslotLastReconcileNote ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Last Error</div>
+                  <div className="slot-v">{selectedSlot.subslotLastError ?? "—"}</div>
+                </div>
+              </div>
+
+              <div className="slot-section">Tracking Snapshot</div>
+
+              <div className="slot-modal-grid">
+                <div>
+                  <div className="slot-k">Tracking State</div>
+                  <div className={`slot-v ${stateClassName(trackingLabel(selectedSlot))}`}>
+                    {trackingLabel(selectedSlot)}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Reason</div>
+                  <div className="slot-v">{reasonLabel(selectedSlot.candidateReason)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Drawdown</div>
+                  <div className="slot-v">{pctNum(selectedSlot.candidateDrawdownPct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Bounce</div>
+                  <div className="slot-v">{pctNum(selectedSlot.candidateBouncePct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">EMA Gap</div>
+                  <div className="slot-v">{pctNum(selectedSlot.candidateEmaGapPct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Reversal Ticks</div>
+                  <div className="slot-v">
+                    {selectedSlot.candidateReversalTicks != null ? selectedSlot.candidateReversalTicks : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Score</div>
+                  <div className="slot-v">
+                    {selectedSlot.candidateScore != null ? selectedSlot.candidateScore.toFixed(3) : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Tracked Peak</div>
+                  <div className="slot-v">{fmt(selectedSlot.candidatePeakMid)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Tracked Low</div>
+                  <div className="slot-v">{fmt(selectedSlot.candidateLowMid)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Spread</div>
+                  <div className="slot-v">{pctNum(selectedSlot.nowSpreadPct ?? selectedSlot.candidateSpreadPrevPct)}</div>
+                </div>
+              </div>
+
+              {(selectedSlot.rotationReservationId ||
+                selectedSlot.rotationStage ||
+                selectedSlot.rotationEligibleOut != null ||
+                selectedSlot.rotationEligibleIn != null) && (
+                <>
+                  <div className="slot-section">Rotation Snapshot</div>
+
+                  <div className="slot-modal-grid">
+                    <div>
+                      <div className="slot-k">Reservation</div>
+                      <div className="slot-v">{selectedSlot.rotationReservationId ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Role</div>
+                      <div className="slot-v">{selectedSlot.rotationRole ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Stage</div>
+                      <div className="slot-v">{selectedSlot.rotationStage ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Linked Slot</div>
+                      <div className="slot-v">{selectedSlot.rotationLinkedSlotId ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Eligible Out</div>
+                      <div className="slot-v">
+                        {selectedSlot.rotationEligibleOut == null ? "—" : selectedSlot.rotationEligibleOut ? "YES" : "NO"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Eligible In</div>
+                      <div className="slot-v">
+                        {selectedSlot.rotationEligibleIn == null ? "—" : selectedSlot.rotationEligibleIn ? "YES" : "NO"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Edge Score</div>
+                      <div className="slot-v">{fmt(selectedSlot.rotationEdgeScore)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Released AUD</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.rotationReleasedAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Funding Reserved</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.rotationFundingReservedAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Funding Transferred</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.rotationFundingTransferredAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Reason</div>
+                      <div className="slot-v">{selectedSlot.rotationReason ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Last Error</div>
+                      <div className="slot-v">{selectedSlot.rotationLastError ?? "—"}</div>
                     </div>
                   </div>
-                  <div>
-                    <div className="slot-k">Eligible In</div>
-                    <div className="slot-v">
-                      {selectedSlot.rotationEligibleIn == null ? "—" : selectedSlot.rotationEligibleIn ? "YES" : "NO"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Edge Score</div>
-                    <div className="slot-v">{fmt(selectedSlot.rotationEdgeScore)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Released AUD</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.rotationReleasedAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Funding Reserved</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.rotationFundingReservedAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Funding Transferred</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.rotationFundingTransferredAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Reason</div>
-                    <div className="slot-v">{selectedSlot.rotationReason ?? "—"}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Last Error</div>
-                    <div className="slot-v">{selectedSlot.rotationLastError ?? "—"}</div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {(selectedSlot.topupMode ||
-              selectedSlot.topupLastAppliedAt ||
-              selectedSlot.topupRequestedTargetAud != null) && (
-              <>
-                <div className="slot-section">Top-up Snapshot</div>
-
-                <div className="slot-drawer-grid">
-                  <div>
-                    <div className="slot-k">Mode</div>
-                    <div className="slot-v">{selectedSlot.topupMode ?? "—"}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Requested Target</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.topupRequestedTargetAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Last Target</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.topupLastTargetAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Fallback AUD</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.topupFallbackAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Last Delta</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.topupLastDeltaAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Last Applied</div>
-                    <div className="slot-v">
-                      {selectedSlot.topupLastAppliedAt
-                        ? ageLabel(nowMs - selectedSlot.topupLastAppliedAt)
-                        : "—"}
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {(selectedSlot.entryDrawdownPct != null ||
-              selectedSlot.entryBouncePct != null ||
-              selectedSlot.entryEmaGapPct != null ||
-              selectedSlot.entryScore != null) && (
-              <>
-                <div className="slot-section">Entry Context</div>
-
-                <div className="slot-drawer-grid">
-                  <div>
-                    <div className="slot-k">Entry Drawdown</div>
-                    <div className="slot-v">{pctNum(selectedSlot.entryDrawdownPct)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Entry Bounce</div>
-                    <div className="slot-v">{pctNum(selectedSlot.entryBouncePct)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Entry EMA Gap</div>
-                    <div className="slot-v">{pctNum(selectedSlot.entryEmaGapPct)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Confirm Ticks</div>
-                    <div className="slot-v">
-                      {selectedSlot.entryConfirmTicks != null ? selectedSlot.entryConfirmTicks : "—"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Entry Score</div>
-                    <div className="slot-v">
-                      {selectedSlot.entryScore != null ? selectedSlot.entryScore.toFixed(3) : "—"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Fee Model</div>
-                    <div className="slot-v">{selectedSlot.frictionModel ?? "—"}</div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {(selectedSlot.realizedAt != null ||
-              selectedSlot.entryAud != null ||
-              selectedSlot.exitAud != null ||
-              selectedSlot.profitAud != null ||
-              selectedSlot.profitPct != null) && (
-              <>
-                <div className="slot-section">Realized Proof</div>
-
-                <div className="slot-drawer-grid">
-                  <div>
-                    <div className="slot-k">Entry AUD</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.entryAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Exit AUD</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.exitAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Profit AUD</div>
-                    <div className="slot-v">{moneyAud(selectedSlot.profitAud)}</div>
-                  </div>
-                  <div>
-                    <div className="slot-k">Profit %</div>
-                    <div className="slot-v">{pctNum(selectedSlot.profitPct)}</div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="slot-section">Timeline</div>
-
-            <div className="event-log">
-              {selectedSlotEvents.length ? (
-                selectedSlotEvents.slice(0, 60).map((e) => (
-                  <div className="event-row" key={e.id}>
-                    <div className="event-time">{fmtEventTime(e.at)}</div>
-                    <div className="event-msg">
-                      <span className="event-kind">{e.kind}</span>{" "}
-                      <span className="event-text">{e.msg}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="event-empty">No slot events yet.</div>
+                </>
               )}
-            </div>
 
-            <div className="slot-section">Rules Snapshot</div>
+              {(selectedSlot.topupMode ||
+                selectedSlot.topupLastAppliedAt ||
+                selectedSlot.topupRequestedTargetAud != null) && (
+                <>
+                  <div className="slot-section">Top-up Snapshot</div>
 
-            <div className="slot-rules">
-              <div>Permanent identity: one slot belongs to one fixed coin market.</div>
-              <div>WAITING_ENTRY is the latch before deployment.</div>
-              <div>Deploy / hold / lock / exit decisions remain deterministic.</div>
-              <div>Tactical subslot accounting remains separate until merge on parent reset.</div>
-              <div className="slot-rules-note">
-                This slot is part of the fixed-slot Jeroid ledger, not a selector pool.
+                  <div className="slot-modal-grid">
+                    <div>
+                      <div className="slot-k">Mode</div>
+                      <div className="slot-v">{selectedSlot.topupMode ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Requested Target</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.topupRequestedTargetAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Last Target</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.topupLastTargetAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Fallback AUD</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.topupFallbackAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Last Delta</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.topupLastDeltaAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Last Applied</div>
+                      <div className="slot-v">
+                        {selectedSlot.topupLastAppliedAt
+                          ? ageLabel(nowMs - selectedSlot.topupLastAppliedAt)
+                          : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {(selectedSlot.entryDrawdownPct != null ||
+                selectedSlot.entryBouncePct != null ||
+                selectedSlot.entryEmaGapPct != null ||
+                selectedSlot.entryScore != null) && (
+                <>
+                  <div className="slot-section">Entry Context</div>
+
+                  <div className="slot-modal-grid">
+                    <div>
+                      <div className="slot-k">Entry Drawdown</div>
+                      <div className="slot-v">{pctNum(selectedSlot.entryDrawdownPct)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Entry Bounce</div>
+                      <div className="slot-v">{pctNum(selectedSlot.entryBouncePct)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Entry EMA Gap</div>
+                      <div className="slot-v">{pctNum(selectedSlot.entryEmaGapPct)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Confirm Ticks</div>
+                      <div className="slot-v">
+                        {selectedSlot.entryConfirmTicks != null ? selectedSlot.entryConfirmTicks : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Entry Score</div>
+                      <div className="slot-v">
+                        {selectedSlot.entryScore != null ? selectedSlot.entryScore.toFixed(3) : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Fee Model</div>
+                      <div className="slot-v">{selectedSlot.frictionModel ?? "—"}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {(selectedSlot.realizedAt != null ||
+                selectedSlot.entryAud != null ||
+                selectedSlot.exitAud != null ||
+                selectedSlot.profitAud != null ||
+                selectedSlot.profitPct != null) && (
+                <>
+                  <div className="slot-section">Realized Proof</div>
+
+                  <div className="slot-modal-grid">
+                    <div>
+                      <div className="slot-k">Entry AUD</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.entryAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Exit AUD</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.exitAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Profit AUD</div>
+                      <div className="slot-v">{moneyAud(selectedSlot.profitAud)}</div>
+                    </div>
+                    <div>
+                      <div className="slot-k">Profit %</div>
+                      <div className="slot-v">{pctNum(selectedSlot.profitPct)}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="slot-section">Timeline</div>
+
+              <div className="event-log">
+                {selectedSlotEvents.length ? (
+                  selectedSlotEvents.slice(0, 60).map((e) => (
+                    <div className="event-row" key={e.id}>
+                      <div className="event-time">{fmtEventTime(e.at)}</div>
+                      <div className="event-msg">
+                        <span className="event-kind">{e.kind}</span>{" "}
+                        <span className="event-text">{e.msg}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="event-empty">No slot events yet.</div>
+                )}
+              </div>
+
+              <div className="slot-section">Rules Snapshot</div>
+
+              <div className="slot-rules">
+                <div>Permanent identity: one slot belongs to one fixed coin market.</div>
+                <div>WAITING_ENTRY is the latch before deployment.</div>
+                <div>Deploy / hold / lock / exit decisions remain deterministic.</div>
+                <div>Tactical subslot accounting remains separate until merge on parent reset.</div>
+                <div className="slot-rules-note">
+                  This slot is part of the fixed-slot Jeroid ledger, not a selector pool.
+                </div>
               </div>
             </div>
           </div>
