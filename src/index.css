@@ -4169,267 +4169,551 @@ main{
 
   border-radius: 18px;
 }
-/* =========================
-   GROUND ZERO — TERMINAL CORE
-========================= */
+/* =========================================
+   GROUND ZERO — DIGITAL WORLD PASS
+   Add at very bottom of index.css
+========================================= */
 
-.jal-ground-terminal {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  margin-bottom: 32px;
+/* tighten overall scene */
+.home-wrap{
+  max-width:1100px;
 }
 
-.jal-ground-terminal-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  opacity: 0.8;
-  font-size: 12px;
-  letter-spacing: 0.12em;
+/* make Ground Zero feel like a contained world */
+.jal-ground-zero{
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(1200px 500px at 50% -10%, rgba(0,240,255,.07), transparent 58%),
+    radial-gradient(900px 340px at 50% 100%, rgba(17,241,167,.06), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+  box-shadow:
+    0 0 0 1px rgba(17,241,167,.08) inset,
+    0 0 40px rgba(17,241,167,.08),
+    0 24px 70px rgba(0,0,0,.62);
+  animation:jal-ground-breathe 7s ease-in-out infinite;
 }
 
-.jal-ground-terminal-state {
-  color: var(--accent);
+.jal-ground-zero::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(700px 220px at 50% 0%, rgba(255,255,255,.05), transparent 65%),
+    linear-gradient(180deg, rgba(0,240,255,.035), transparent 24%, transparent 76%, rgba(17,241,167,.03));
+  opacity:.75;
 }
 
-.jal-ground-terminal-core {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 28px;
+.jal-ground-zero::after{
+  content:"";
+  position:absolute;
+  inset:14px;
+  border-radius:calc(var(--r-lg) - 6px);
+  border:1px solid rgba(255,255,255,.04);
+  pointer-events:none;
+  box-shadow:inset 0 0 24px rgba(0,240,255,.03);
 }
 
-/* =========================
-   HERO CENTER BAND (SIGNATURE)
-========================= */
-
-.jal-ground-center-band {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 12px 0 18px;
-  opacity: 0.9;
+@keyframes jal-ground-breathe{
+  0%,100%{
+    box-shadow:
+      0 0 0 1px rgba(17,241,167,.08) inset,
+      0 0 40px rgba(17,241,167,.08),
+      0 24px 70px rgba(0,0,0,.62);
+  }
+  50%{
+    box-shadow:
+      0 0 0 1px rgba(17,241,167,.12) inset,
+      0 0 56px rgba(17,241,167,.12),
+      0 26px 76px rgba(0,0,0,.66);
+  }
 }
 
-.jal-ground-band-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(
-    to right,
+/* stronger terminal arrival */
+.jal-ground-terminal{
+  position:relative;
+  padding-top:10px;
+  padding-bottom:4px;
+  z-index:2;
+}
+
+.jal-ground-terminal-bar{
+  padding-bottom:8px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+.jal-ground-terminal-state{
+  color:var(--green);
+  text-shadow:0 0 10px rgba(17,241,167,.22);
+}
+
+.jal-ground-terminal-core{
+  align-items:start;
+  gap:32px;
+}
+
+.jal-ground-terminal-copy{
+  position:relative;
+}
+
+.jal-ground-mini-label{
+  margin-bottom:8px;
+  font-size:.72rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.68;
+}
+
+.jal-ground-terminal-copy .home-title{
+  font-size:clamp(2.4rem, 5vw, 4rem);
+  line-height:.95;
+  margin-bottom:14px;
+  text-shadow:
+    0 0 18px rgba(255,255,255,.08),
+    0 0 28px rgba(0,240,255,.08);
+}
+
+.jal-ground-terminal-copy .home-lead{
+  font-size:1.18rem;
+  line-height:1.55;
+  max-width:40rem;
+}
+
+.jal-ground-terminal-copy .jal-sublead{
+  max-width:42rem;
+  opacity:.84;
+}
+
+.jal-ground-center-band{
+  margin:10px 0 20px;
+}
+
+.jal-ground-band-line{
+  background:linear-gradient(
+    90deg,
     transparent,
-    var(--accent),
+    rgba(0,240,255,.32),
+    rgba(17,241,167,.36),
     transparent
   );
 }
 
-.jal-ground-band-text {
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: var(--accent);
+.jal-ground-band-text{
+  color:var(--muted);
+  text-shadow:0 0 14px rgba(17,241,167,.14);
 }
 
-/* =========================
-   ACTION STACK (HIERARCHY FIX)
-========================= */
-
-.jal-ground-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
+/* stronger primary path */
+.jal-ground-actions{
+  gap:12px;
+  margin-top:22px;
 }
 
-.jal-ground-actions .button.neon {
-  transform: scale(1.05);
+.jal-ground-actions .button{
+  min-height:50px;
 }
 
-/* =========================
-   IDENTITY NODE PANEL (UPGRADED)
-========================= */
-
-.jal-ground-identity-panel {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255,255,255,0.08);
-  padding: 18px;
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+.jal-ground-actions .button.neon{
+  padding-inline:1.4rem;
+  box-shadow:
+    0 0 0 1px rgba(17,241,167,.16) inset,
+    0 0 22px rgba(17,241,167,.18);
 }
 
-.jal-status-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
+/* identity node becomes a true system panel */
+.jal-ground-identity-panel{
+  position:relative;
+  background:
+    radial-gradient(560px 160px at 50% 0%, rgba(17,241,167,.06), transparent 70%),
+    linear-gradient(180deg, rgba(0,0,0,.34), rgba(0,0,0,.42));
+  border:1px solid rgba(17,241,167,.10);
+  box-shadow:
+    inset 0 0 20px rgba(17,241,167,.04),
+    0 0 0 1px rgba(255,255,255,.03);
 }
 
-.jal-status-label {
-  opacity: 0.6;
+.jal-ground-identity-panel::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border-radius:14px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.03), transparent 26%);
+  opacity:.7;
 }
 
-.jal-status-value {
-  font-weight: 500;
-  text-align: right;
+.jal-status-stack{
+  display:grid;
+  gap:10px;
 }
 
-.jal-ground-node-actions {
-  margin-top: 10px;
+.jal-status-row{
+  display:grid;
+  grid-template-columns:120px 1fr;
+  gap:12px;
+  align-items:start;
+  padding-bottom:8px;
+  border-bottom:1px solid rgba(255,255,255,.04);
 }
 
-/* =========================
-   PROGRESS RAIL (GAME FEEL)
-========================= */
-
-.jal-ground-progress-rail {
-  margin-bottom: 28px;
+.jal-status-row:last-child{
+  border-bottom:0;
+  padding-bottom:0;
 }
 
-.jal-progress-track {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+.jal-status-label{
+  font-size:.8rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  opacity:.58;
 }
 
-.jal-progress-stop {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 10px;
-  padding: 10px;
-  text-align: center;
-  font-size: 11px;
+.jal-status-value{
+  font-weight:600;
+  line-height:1.4;
 }
 
-.jal-progress-step {
-  display: block;
-  font-size: 10px;
-  opacity: 0.6;
+.jal-ground-node-actions{
+  margin-top:12px;
 }
 
-.jal-progress-name {
-  display: block;
-  font-weight: 600;
+/* progress rail becomes more like a traversal strip */
+.jal-ground-progress-rail{
+  position:relative;
+  z-index:2;
+  margin-bottom:30px;
 }
 
-.jal-progress-note {
-  display: block;
-  opacity: 0.6;
+.jal-ground-progress-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
 }
 
-/* STATES */
-
-.state-active {
-  border-color: var(--accent);
-  box-shadow: 0 0 12px rgba(255,255,255,0.08);
+.jal-progress-track{
+  position:relative;
+  gap:14px;
 }
 
-.state-available {
-  border-color: rgba(255,255,255,0.2);
+.jal-progress-track::before{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:50%;
+  height:1px;
+  transform:translateY(-50%);
+  background:linear-gradient(
+    90deg,
+    rgba(255,255,255,.04),
+    rgba(255,255,255,.12),
+    rgba(255,255,255,.04)
+  );
+  z-index:0;
 }
 
-.state-locked {
-  opacity: 0.4;
+.jal-progress-stop{
+  position:relative;
+  z-index:1;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  backdrop-filter:blur(6px);
+  min-height:76px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
 }
 
-/* =========================
-   WORLD MAP — TRUE GRID
-========================= */
-
-.jal-sector-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+.jal-progress-stop.state-active{
+  border-color:rgba(17,241,167,.32);
+  box-shadow:
+    0 0 0 1px rgba(17,241,167,.08) inset,
+    0 0 18px rgba(17,241,167,.10);
 }
 
-.jal-sector-card {
-  background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(255,255,255,0.06);
-  padding: 16px;
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: 0.2s ease;
+.jal-progress-stop.state-available{
+  border-color:rgba(0,240,255,.18);
 }
 
-.jal-sector-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent);
+.jal-progress-stop.state-locked{
+  opacity:.38;
+  filter:saturate(.75);
 }
 
-/* FEATURED (L0 + L1) */
-
-.featured-sector {
-  grid-column: span 2;
-  background: rgba(0,0,0,0.45);
-  border: 1px solid var(--accent);
+/* world map turns into a zone field */
+.jal-world-map{
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(1000px 240px at 50% 0%, rgba(0,240,255,.05), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.01));
 }
 
-/* =========================
-   LEARNING DISTRICT — TRAINING GRID
-========================= */
-
-.jal-learning-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+.jal-world-map::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px);
+  background-size:26px 26px;
+  opacity:.16;
+  mask-image:radial-gradient(80% 70% at 50% 45%, #000 0%, rgba(0,0,0,.55) 65%, transparent 100%);
 }
 
-.jal-learning-card {
-  background: rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.05);
-  padding: 14px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.jal-sector-grid{
+  position:relative;
+  z-index:1;
+  align-items:stretch;
 }
 
-.jal-learning-meta {
-  font-size: 10px;
-  opacity: 0.5;
-  letter-spacing: 0.1em;
+.jal-sector-card{
+  position:relative;
+  min-height:290px;
+  justify-content:space-between;
+  background:
+    radial-gradient(420px 140px at 0% 0%, rgba(0,240,255,.045), transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.34));
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    0 10px 24px rgba(0,0,0,.22);
 }
 
-.jal-learning-actions {
-  margin-top: auto;
+.jal-sector-card:hover{
+  transform:translateY(-3px);
+  border-color:rgba(17,241,167,.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(17,241,167,.05),
+    0 18px 34px rgba(0,0,0,.28),
+    0 0 18px rgba(17,241,167,.08);
 }
 
-/* =========================
-   TERMINAL STRIP (FOOTER REPLACEMENT)
-========================= */
-
-.jal-terminal-strip {
-  margin-top: 30px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  opacity: 0.6;
+.jal-sector-card.featured-sector{
+  min-height:310px;
+  background:
+    radial-gradient(520px 180px at 0% 0%, rgba(17,241,167,.06), transparent 62%),
+    linear-gradient(180deg, rgba(0,0,0,.34), rgba(0,0,0,.42));
+  border-color:rgba(17,241,167,.18);
+  box-shadow:
+    inset 0 0 0 1px rgba(17,241,167,.04),
+    0 20px 40px rgba(0,0,0,.30),
+    0 0 20px rgba(17,241,167,.06);
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
+.jal-sector-card.state-free::after,
+.jal-sector-card.state-active::after,
+.jal-sector-card.state-available::after,
+.jal-sector-card.state-locked::after{
+  position:absolute;
+  top:14px;
+  right:14px;
+  font-size:.64rem;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  opacity:.62;
+}
 
-@media (max-width: 900px) {
-  .jal-ground-terminal-core {
-    grid-template-columns: 1fr;
+.jal-sector-card.state-free::after{
+  content:"Open";
+  color:var(--muted);
+}
+
+.jal-sector-card.state-active::after{
+  content:"Active";
+  color:var(--green);
+}
+
+.jal-sector-card.state-available::after{
+  content:"Available";
+  color:var(--cyan);
+}
+
+.jal-sector-card.state-locked::after{
+  content:"Locked";
+  color:rgba(255,255,255,.48);
+}
+
+.jal-sector-card.state-locked{
+  opacity:.34;
+  filter:grayscale(.65) saturate(.72);
+}
+
+.jal-sector-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+
+.jal-sector-level{
+  font-size:.76rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.68;
+}
+
+.jal-sector-title{
+  margin:.35rem 0 0;
+  font-size:1.9rem;
+  line-height:1.02;
+}
+
+.jal-sector-state{
+  font-size:.78rem;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  opacity:.68;
+  text-align:right;
+}
+
+.jal-sector-copy{
+  margin:0;
+  max-width:28rem;
+  line-height:1.75;
+  opacity:.86;
+}
+
+.jal-sector-actions{
+  margin-top:auto;
+  padding-top:8px;
+}
+
+/* learning district becomes an explorable training zone */
+.jal-learning-district{
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(900px 200px at 50% 0%, rgba(244,200,106,.045), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.022), rgba(255,255,255,.01));
+}
+
+.jal-learning-grid{
+  align-items:stretch;
+}
+
+.jal-learning-card{
+  min-height:235px;
+  background:
+    radial-gradient(340px 120px at 0% 0%, rgba(255,255,255,.035), transparent 65%),
+    linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.28));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
+  transition:
+    transform var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
+}
+
+.jal-learning-card:hover{
+  transform:translateY(-2px);
+  border-color:rgba(244,200,106,.20);
+  box-shadow:
+    0 14px 28px rgba(0,0,0,.22),
+    0 0 16px rgba(244,200,106,.08);
+}
+
+.jal-learning-meta{
+  font-size:.66rem;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+
+.jal-learning-title{
+  margin:0;
+  font-size:1.6rem;
+  line-height:1.08;
+}
+
+.jal-learning-note{
+  margin:0;
+  opacity:.82;
+  line-height:1.7;
+}
+
+/* lower panels feel like support terminals, not page blocks */
+.jal-philosophy-panel,
+.jal-return-hub{
+  background:
+    radial-gradient(500px 120px at 50% 0%, rgba(255,255,255,.03), transparent 65%),
+    linear-gradient(180deg, rgba(255,255,255,.022), rgba(255,255,255,.01));
+}
+
+/* terminal strip becomes true end-of-zone telemetry */
+.jal-terminal-strip{
+  margin-top:26px;
+  padding-top:14px;
+  border-top:1px solid rgba(255,255,255,.06);
+  font-size:.68rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.62;
+}
+
+/* remove website-ending feel on this page */
+.jal-footer{
+  display:none;
+}
+
+/* mobile/world responsiveness */
+@media (max-width:980px){
+  .home-wrap{
+    max-width:100%;
   }
 
-  .jal-sector-grid {
-    grid-template-columns: 1fr;
+  .jal-ground-terminal-core{
+    grid-template-columns:1fr;
+    gap:18px;
   }
 
-  .featured-sector {
-    grid-column: span 1;
+  .jal-ground-terminal-copy .home-title{
+    font-size:clamp(2.2rem, 10vw, 3.2rem);
   }
 
-  .jal-learning-grid {
-    grid-template-columns: 1fr;
+  .jal-sector-grid{
+    grid-template-columns:1fr;
   }
 
-  .jal-progress-track {
-    grid-template-columns: repeat(2, 1fr);
+  .jal-sector-card,
+  .jal-sector-card.featured-sector{
+    min-height:auto;
+  }
+
+  .jal-progress-track{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+
+  .jal-learning-grid{
+    grid-template-columns:1fr;
+  }
+
+  .jal-status-row{
+    grid-template-columns:1fr;
+    gap:4px;
+  }
+}
+
+@media (max-width:640px){
+  .jal-ground-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+  .jal-ground-actions .button,
+  .jal-ground-actions a.button{
+    width:100%;
+  }
+
+  .jal-progress-track{
+    grid-template-columns:1fr;
+  }
+
+  .jal-terminal-strip{
+    flex-direction:column;
+    gap:8px;
   }
 }
