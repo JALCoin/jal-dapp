@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { readLevel1Access } from "../lib/access";
 
 type FreeModule = {
@@ -11,6 +12,13 @@ type FreeModule = {
 
 type SectorState = "active" | "available" | "locked";
 
+type RouteTo =
+  | "/app/home"
+  | "/app/jal-sol"
+  | "/app/jal-sol/level-1"
+  | "/app/nav"
+  | "/app/shop";
+
 type Sector = {
   id: string;
   level: string;
@@ -19,7 +27,7 @@ type Sector = {
   shortState: string;
   description: string;
   actionLabel: string;
-  href?: string;
+  href?: RouteTo;
   featured?: boolean;
 };
 
@@ -62,17 +70,18 @@ const FREE_MODULES: FreeModule[] = [
   },
 ];
 
-function getSectorButtonClass(state: SectorState) {
-  return state === "active" || state === "available"
-    ? "button ghost"
-    : "button ghost";
+function getSectorButtonClass(_: SectorState) {
+  return "button ghost";
 }
 
 export default function JalSolPage() {
+  const navigate = useNavigate();
+  const timerRef = useRef<number | null>(null);
+
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletLabel, setWalletLabel] = useState("Not connected");
   const [level1Unlocked, setLevel1Unlocked] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const access = readLevel1Access();
@@ -88,11 +97,16 @@ export default function JalSolPage() {
   }, []);
 
   useEffect(() => {
-    document.body.classList.toggle("jal-transitioning", isTransitioning);
-    return () => document.body.classList.remove("jal-transitioning");
-  }, [isTransitioning]);
+    return () => {
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   function connectWallet() {
+    if (loading) return;
+
     const existing = window.localStorage.getItem("jal_wallet_label")?.trim();
 
     if (existing) {
@@ -114,18 +128,21 @@ export default function JalSolPage() {
   }
 
   function disconnectWallet() {
+    if (loading) return;
+
     window.localStorage.removeItem("jal_wallet_label");
     setWalletConnected(false);
     setWalletLabel("Not connected");
   }
 
-  function beginRoute(href: string) {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
+  function beginRoute(to: RouteTo) {
+    if (loading) return;
 
-    window.setTimeout(() => {
-      window.location.href = href;
-    }, 420);
+    setLoading(true);
+
+    timerRef.current = window.setTimeout(() => {
+      navigate(to);
+    }, 5000);
   }
 
   const sectors = useMemo<Sector[]>(
@@ -187,8 +204,14 @@ export default function JalSolPage() {
     [level1Unlocked]
   );
 
-  const primaryActionHref = level1Unlocked ? "/app/jal-sol/level-1" : "/app/shop";
-  const primaryActionLabel = level1Unlocked ? "Resume Level 1" : "Unlock Level 1";
+  const primaryActionHref: RouteTo = level1Unlocked
+    ? "/app/jal-sol/level-1"
+    : "/app/shop";
+
+  const primaryActionLabel = level1Unlocked
+    ? "Resume Level 1"
+    : "Unlock Level 1";
+
   const nextGateLabel = level1Unlocked ? "Resume Entry" : "Unlock Level 1";
   const currentAccess = level1Unlocked ? "Level 1 unlocked" : "Ground Zero only";
   const groundStatus = walletConnected ? "Identity recognised" : "Awaiting link";
@@ -197,12 +220,14 @@ export default function JalSolPage() {
     : "Ground Zero session only";
 
   return (
-    <main className="home-shell jal-shell jal-ground-page" aria-label="JAL/SOL Ground Zero">
+    <main
+      className={`home-shell jal-shell jal-ground-page ${
+        loading ? "is-fading" : ""
+      }`}
+      aria-label="JAL/SOL Ground Zero"
+    >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window jal-ground-zero">
-          {/* =========================================
-              ARRIVAL CHAMBER
-          ========================================= */}
           <header className="jal-arrival-chamber" aria-label="Arrival Chamber">
             <div className="jal-ground-terminal-bar">
               <div className="jal-kicker">GROUND ZERO</div>
@@ -210,7 +235,10 @@ export default function JalSolPage() {
             </div>
 
             <div className="jal-arrival-grid">
-              <section className="jal-arrival-copy" aria-label="Ground Zero terminal">
+              <section
+                className="jal-arrival-copy"
+                aria-label="Ground Zero terminal"
+              >
                 <div className="jal-ground-mini-label">WORLD HUB</div>
                 <h1 className="home-title">JAL/SOL</h1>
 
@@ -225,8 +253,9 @@ export default function JalSolPage() {
                 </p>
 
                 <p className="jal-sublead">
-                  Ground Zero is the chamber of recognition. Confirm your position,
-                  view the next gate, and proceed only when the route is clear.
+                  Ground Zero is the chamber of recognition. Confirm your
+                  position, view the next gate, and proceed only when the route
+                  is clear.
                 </p>
 
                 <div className="jal-arrival-actions">
@@ -234,6 +263,7 @@ export default function JalSolPage() {
                     type="button"
                     className="button neon"
                     onClick={() => beginRoute(primaryActionHref)}
+                    disabled={loading}
                   >
                     {primaryActionLabel}
                   </button>
@@ -243,6 +273,7 @@ export default function JalSolPage() {
                       type="button"
                       className="button ghost"
                       onClick={connectWallet}
+                      disabled={loading}
                     >
                       Connect Wallet
                     </button>
@@ -251,18 +282,31 @@ export default function JalSolPage() {
                       type="button"
                       className="button ghost"
                       onClick={disconnectWallet}
+                      disabled={loading}
                     >
                       Disconnect Wallet
                     </button>
                   )}
 
-                  <a className="button ghost" href="#free-learning-district">
+                  <a
+                    className="button ghost"
+                    href="#free-learning-district"
+                    aria-disabled={loading}
+                    onClick={(event) => {
+                      if (loading) event.preventDefault();
+                    }}
+                  >
                     Free Learning
                   </a>
 
-                  <a className="button ghost" href="/app/nav">
+                  <button
+                    type="button"
+                    className="button ghost"
+                    onClick={() => beginRoute("/app/nav")}
+                    disabled={loading}
+                  >
                     System Nav
-                  </a>
+                  </button>
                 </div>
 
                 <div className="jal-arrival-note">
@@ -272,7 +316,10 @@ export default function JalSolPage() {
                 </div>
               </section>
 
-              <aside className="jal-ground-identity-panel jal-identity-console" aria-label="Identity Node">
+              <aside
+                className="jal-ground-identity-panel jal-identity-console"
+                aria-label="Identity Node"
+              >
                 <div className="jal-bay-head">
                   <div className="jal-bay-title">Identity Node</div>
                   <div className="jal-bay-note">
@@ -308,9 +355,13 @@ export default function JalSolPage() {
                 </div>
 
                 <div className="jal-identity-focus">
-                  <div className="jal-identity-focus-label">Current Position</div>
+                  <div className="jal-identity-focus-label">
+                    Current Position
+                  </div>
                   <div className="jal-identity-focus-value">
-                    {level1Unlocked ? "Ground Zero / Entry Open" : "Ground Zero / Entry Awaiting Unlock"}
+                    {level1Unlocked
+                      ? "Ground Zero / Entry Open"
+                      : "Ground Zero / Entry Awaiting Unlock"}
                   </div>
                 </div>
 
@@ -319,6 +370,7 @@ export default function JalSolPage() {
                     type="button"
                     className="button ghost"
                     onClick={() => beginRoute("/app/shop")}
+                    disabled={loading}
                   >
                     Access Store
                   </button>
@@ -326,7 +378,10 @@ export default function JalSolPage() {
               </aside>
             </div>
 
-            <section className="jal-ground-progress-rail jal-progress-spine" aria-label="Progress Rail">
+            <section
+              className="jal-ground-progress-rail jal-progress-spine"
+              aria-label="Progress Rail"
+            >
               <div className="jal-ground-progress-head">
                 <div className="jal-bay-title">Progress Spine</div>
                 <div className="jal-bay-note">Visible route</div>
@@ -372,13 +427,15 @@ export default function JalSolPage() {
             </section>
           </header>
 
-          {/* =========================================
-              ROUTE FIELD
-          ========================================= */}
-          <section className="jal-route-field jal-bay jal-bay-wide" aria-label="Route Field">
+          <section
+            className="jal-route-field jal-bay jal-bay-wide"
+            aria-label="Route Field"
+          >
             <div className="jal-bay-head">
               <div className="jal-bay-title">Route Field</div>
-              <div className="jal-bay-note">Visible world / gated distance</div>
+              <div className="jal-bay-note">
+                Visible world / gated distance
+              </div>
             </div>
 
             <p className="jal-note">
@@ -396,7 +453,9 @@ export default function JalSolPage() {
                 >
                   <div className="jal-route-sector-head">
                     <div className="jal-route-sector-level">{sector.level}</div>
-                    <div className="jal-route-sector-state">{sector.shortState}</div>
+                    <div className="jal-route-sector-state">
+                      {sector.shortState}
+                    </div>
                   </div>
 
                   <h3 className="jal-route-sector-title">{sector.title}</h3>
@@ -408,6 +467,7 @@ export default function JalSolPage() {
                         type="button"
                         className={getSectorButtonClass(sector.state)}
                         onClick={() => beginRoute(sector.href!)}
+                        disabled={loading}
                       >
                         {sector.actionLabel}
                       </button>
@@ -427,9 +487,6 @@ export default function JalSolPage() {
             </div>
           </section>
 
-          {/* =========================================
-              STILLNESS DISTRICT
-          ========================================= */}
           <section
             id="free-learning-district"
             className="jal-learning-district jal-bay jal-bay-wide"
@@ -441,7 +498,8 @@ export default function JalSolPage() {
             </div>
 
             <p className="jal-note">
-              Learning remains open. Read before movement. Understand before action.
+              Learning remains open. Read before movement. Understand before
+              action.
             </p>
 
             <div className="jal-learning-grid">
@@ -453,11 +511,20 @@ export default function JalSolPage() {
 
                   <div className="jal-learning-actions">
                     {module.href ? (
-                      <a className="button ghost" href={module.href}>
+                      <button
+                        type="button"
+                        className="button ghost"
+                        onClick={() => beginRoute(module.href as RouteTo)}
+                        disabled={loading}
+                      >
                         {module.cta}
-                      </a>
+                      </button>
                     ) : (
-                      <button type="button" className="button ghost">
+                      <button
+                        type="button"
+                        className="button ghost"
+                        disabled={loading}
+                      >
                         {module.cta}
                       </button>
                     )}
@@ -467,9 +534,6 @@ export default function JalSolPage() {
             </div>
           </section>
 
-          {/* =========================================
-              SUPPORT STRIP
-          ========================================= */}
           <section className="jal-ground-support">
             <section className="jal-bay jal-philosophy-panel">
               <div className="jal-bay-head">
@@ -496,14 +560,20 @@ export default function JalSolPage() {
               </p>
 
               <div className="jal-bay-actions">
-                <a className="button ghost" href="/app/home">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => beginRoute("/app/home")}
+                  disabled={loading}
+                >
                   Return to App Home
-                </a>
+                </button>
 
                 <button
                   type="button"
                   className="button ghost"
                   onClick={() => beginRoute("/app/shop")}
+                  disabled={loading}
                 >
                   View Paid Access Layers
                 </button>
@@ -518,6 +588,17 @@ export default function JalSolPage() {
           </div>
         </section>
       </div>
+
+      {loading && (
+        <div
+          className="loading-screen"
+          role="status"
+          aria-label="Loading"
+          aria-live="polite"
+        >
+          <img className="loading-logo" src="/JALSOL1.gif" alt="" />
+        </div>
+      )}
     </main>
   );
 }

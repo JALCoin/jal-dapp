@@ -4896,3 +4896,92 @@ body.jal-transitioning .jal-ground-page{
     gap:8px;
   }
 }
+/* =========================================
+   JAL/SOL — GROUND ZERO LOADING STATE
+   Matches Landing loading transition
+========================================= */
+
+.jal-ground-page{
+  position:relative;
+}
+
+.jal-ground-page.is-fading .jal-ground-zero{
+  opacity:.22;
+  transform:scale(.988);
+  filter:blur(2px) brightness(.82);
+  transition:
+    opacity .45s ease,
+    transform .45s ease,
+    filter .45s ease;
+}
+
+.jal-ground-page:not(.is-fading) .jal-ground-zero{
+  opacity:1;
+  transform:scale(1);
+  filter:none;
+  transition:
+    opacity .45s ease,
+    transform .45s ease,
+    filter .45s ease;
+}
+
+/* keep overlay above everything on JalSol */
+.jal-ground-page .loading-screen{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:grid;
+  place-items:center;
+  background:
+    radial-gradient(circle at center, rgba(8,16,24,.72) 0%, rgba(3,8,14,.92) 58%, rgba(0,0,0,.97) 100%);
+  backdrop-filter:blur(10px);
+}
+
+.jal-ground-page .loading-logo{
+  width:min(32vw, 220px);
+  height:auto;
+  object-fit:contain;
+  filter:
+    drop-shadow(0 0 18px rgba(17,241,167,.18))
+    drop-shadow(0 0 34px rgba(0,240,255,.12));
+  animation:jal-ground-loading-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes jal-ground-loading-pulse{
+  0%,100%{
+    transform:scale(.985);
+    opacity:.86;
+  }
+  50%{
+    transform:scale(1.02);
+    opacity:1;
+  }
+}
+
+/* freeze interaction while loading */
+.jal-ground-page.is-fading .jal-ground-zero,
+.jal-ground-page.is-fading .jal-ground-zero *{
+  pointer-events:none;
+}
+
+/* disabled action styling during transition */
+.jal-ground-page .button:disabled,
+.jal-ground-page button:disabled{
+  opacity:.58;
+  cursor:not-allowed;
+  filter:saturate(.7);
+}
+
+/* keep anchor buttons visually stable if aria-disabled is applied */
+.jal-ground-page a.button[aria-disabled="true"]{
+  opacity:.58;
+  pointer-events:none;
+}
+
+/* optional: slightly quiet the pulsing CTA while page is transitioning */
+.jal-ground-page.is-fading .jal-arrival-actions .button.neon{
+  animation:none;
+  box-shadow:
+    0 0 0 1px rgba(17,241,167,.10) inset,
+    0 0 8px rgba(17,241,167,.08);
+}
