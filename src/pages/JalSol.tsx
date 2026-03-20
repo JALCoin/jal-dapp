@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { readLevel1Access, clearLevel1Access } from "../lib/access";
+import { clearLevel1Access, readLevel1Access } from "../lib/access";
 
 export default function JalSolLevel1() {
   const [ready, setReady] = useState(false);
@@ -22,8 +22,9 @@ export default function JalSolLevel1() {
           <section className="card machine-surface panel-frame jal-window">
             <div className="jal-hero">
               <div className="jal-kicker">LEVEL 1</div>
-              <h1 className="home-title">Verifying</h1>
-              <p className="home-lead">Checking access...</p>
+              <h1 className="home-title">Verifying Access</h1>
+              <p className="home-lead">Checking your passage from Level 0...</p>
+              <p className="jal-sublead">Hold position. Correct order comes first.</p>
             </div>
           </section>
         </div>
@@ -40,7 +41,7 @@ export default function JalSolLevel1() {
             <h1 className="home-title">Entry</h1>
 
             <p className="home-lead">
-              This is your first controlled movement into the system.
+              This is your first controlled movement into the market.
             </p>
 
             <p className="jal-sublead">
@@ -56,7 +57,8 @@ export default function JalSolLevel1() {
               </div>
 
               <p className="jal-note">
-                You need a fiat → crypto entry point.
+                You need a centralised entry point to convert fiat into crypto.
+                This is not the final destination. It is only the bridge.
               </p>
 
               <div className="jal-bay-actions">
@@ -78,7 +80,8 @@ export default function JalSolLevel1() {
               </div>
 
               <p className="jal-note">
-                You do not control assets until they are in your wallet.
+                If it stays on an exchange, it is not fully under your control.
+                Your wallet is where responsibility begins.
               </p>
 
               <div className="jal-bay-actions">
@@ -100,7 +103,8 @@ export default function JalSolLevel1() {
               </div>
 
               <p className="jal-note">
-                Move a small amount first. Learn the process, not the size.
+                Move a small amount first. Do not test confidence with size.
+                Test the process with precision.
               </p>
             </section>
 
@@ -111,14 +115,27 @@ export default function JalSolLevel1() {
               </div>
 
               <p className="jal-note">
-                Your first move is not about profit. It is about correctness.
+                Your first move is not about winning. It is about proving you
+                can move correctly without confusion.
+              </p>
+            </section>
+
+            <section className="jal-bay jal-bay-wide">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Step 5 — Position</div>
+                <div className="jal-bay-note">Awareness</div>
+              </div>
+
+              <p className="jal-note">
+                Once you understand exchange, wallet, and transfer, you stop
+                behaving like a spectator. You begin acting with structure.
               </p>
             </section>
 
             <section className="jal-bay">
               <div className="jal-bay-actions">
                 <a className="button ghost" href="/app/jal-sol">
-                  Back to JAL/SOL
+                  Back to Level 0
                 </a>
 
                 <button
