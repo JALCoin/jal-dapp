@@ -4250,14 +4250,6 @@ body.jal-transitioning .jal-ground-page{
   text-shadow:0 0 10px rgba(17,241,167,.26);
 }
 
-.jal-arrival-grid{
-  display:grid;
-  grid-template-columns:minmax(0, 1.25fr) minmax(320px, .75fr);
-  gap:22px;
-  align-items:start;
-  margin-bottom:24px;
-}
-
 .jal-arrival-copy{
   position:relative;
   min-height:100%;
@@ -5060,9 +5052,27 @@ body.jal-transitioning .jal-ground-page{
   opacity:0.45;
   margin-top:6px;
 }
-.jal-lead{
-  margin-top:14px;
-  max-width:520px;
-  font-size:0.95rem;
-  opacity:0.8;
+.jal-arrival-stack{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  width:100%;
+}
+.center-hero-block{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+
+  max-width:720px;
+  margin:0 auto;
+
+  padding-top:20px;
+}
+.jal-arrival-grid{
+  width:100%;
+  margin-top:28px;
+
+  display:grid;
+  grid-template-columns:1fr;
 }

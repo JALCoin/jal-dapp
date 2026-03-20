@@ -108,7 +108,6 @@ export default function JalSolPage() {
     if (loading) return;
 
     const existing = window.localStorage.getItem("jal_wallet_label")?.trim();
-
     if (existing) {
       setWalletConnected(true);
       setWalletLabel(existing);
@@ -129,7 +128,6 @@ export default function JalSolPage() {
 
   function disconnectWallet() {
     if (loading) return;
-
     window.localStorage.removeItem("jal_wallet_label");
     setWalletConnected(false);
     setWalletLabel("Not connected");
@@ -139,7 +137,6 @@ export default function JalSolPage() {
     if (loading) return;
 
     setLoading(true);
-
     timerRef.current = window.setTimeout(() => {
       navigate(to);
     }, 5000);
@@ -234,18 +231,15 @@ export default function JalSolPage() {
               <div className="jal-ground-terminal-state">SYSTEM ONLINE</div>
             </div>
 
-            <div className="jal-arrival-grid">
-              <section className="jal-arrival-copy center-hero-block"
-              
+            <div className="jal-arrival-stack">
+              <section
+                className="jal-arrival-copy center-hero-block"
                 aria-label="Ground Zero terminal"
               >
-<div className="jal-hero-center">
-
-  <h1 className="jal-worldhub">WORLD HUB</h1>
-
-  <div className="jal-terminal-label">CENTRAL TERMINAL</div>
-
-</div>
+                <div className="jal-hero-center">
+                  <h1 className="jal-worldhub">WORLD HUB</h1>
+                  <div className="jal-terminal-label">CENTRAL TERMINAL</div>
+                </div>
 
                 <p className="home-lead">
                   Enter in order. Identity first. Movement second.
@@ -315,66 +309,68 @@ export default function JalSolPage() {
                 </div>
               </section>
 
-              <aside
-                className="jal-ground-identity-panel jal-identity-console"
-                aria-label="Identity Node"
-              >
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">Identity Node</div>
-                  <div className="jal-bay-note">
-                    {walletConnected ? "Linked" : "Offline"}
-                  </div>
-                </div>
-
-                <div className="jal-status-stack">
-                  <div className="jal-status-row">
-                    <span className="jal-status-label">Wallet</span>
-                    <span className="jal-status-value">{walletLabel}</span>
+              <div className="jal-arrival-identity-row">
+                <aside
+                  className="jal-ground-identity-panel jal-identity-console"
+                  aria-label="Identity Node"
+                >
+                  <div className="jal-bay-head">
+                    <div className="jal-bay-title">Identity Node</div>
+                    <div className="jal-bay-note">
+                      {walletConnected ? "Linked" : "Offline"}
+                    </div>
                   </div>
 
-                  <div className="jal-status-row">
-                    <span className="jal-status-label">Ground Status</span>
-                    <span className="jal-status-value">{groundStatus}</span>
+                  <div className="jal-status-stack">
+                    <div className="jal-status-row">
+                      <span className="jal-status-label">Wallet</span>
+                      <span className="jal-status-value">{walletLabel}</span>
+                    </div>
+
+                    <div className="jal-status-row">
+                      <span className="jal-status-label">Ground Status</span>
+                      <span className="jal-status-value">{groundStatus}</span>
+                    </div>
+
+                    <div className="jal-status-row">
+                      <span className="jal-status-label">Current Access</span>
+                      <span className="jal-status-value">{currentAccess}</span>
+                    </div>
+
+                    <div className="jal-status-row">
+                      <span className="jal-status-label">Next Gate</span>
+                      <span className="jal-status-value">{nextGateLabel}</span>
+                    </div>
+
+                    <div className="jal-status-row">
+                      <span className="jal-status-label">Session State</span>
+                      <span className="jal-status-value">{sessionState}</span>
+                    </div>
                   </div>
 
-                  <div className="jal-status-row">
-                    <span className="jal-status-label">Current Access</span>
-                    <span className="jal-status-value">{currentAccess}</span>
+                  <div className="jal-identity-focus">
+                    <div className="jal-identity-focus-label">
+                      Current Position
+                    </div>
+                    <div className="jal-identity-focus-value">
+                      {level1Unlocked
+                        ? "Ground Zero / Entry Open"
+                        : "Ground Zero / Entry Awaiting Unlock"}
+                    </div>
                   </div>
 
-                  <div className="jal-status-row">
-                    <span className="jal-status-label">Next Gate</span>
-                    <span className="jal-status-value">{nextGateLabel}</span>
+                  <div className="jal-ground-node-actions">
+                    <button
+                      type="button"
+                      className="button ghost"
+                      onClick={() => beginRoute("/app/shop")}
+                      disabled={loading}
+                    >
+                      Access Store
+                    </button>
                   </div>
-
-                  <div className="jal-status-row">
-                    <span className="jal-status-label">Session State</span>
-                    <span className="jal-status-value">{sessionState}</span>
-                  </div>
-                </div>
-
-                <div className="jal-identity-focus">
-                  <div className="jal-identity-focus-label">
-                    Current Position
-                  </div>
-                  <div className="jal-identity-focus-value">
-                    {level1Unlocked
-                      ? "Ground Zero / Entry Open"
-                      : "Ground Zero / Entry Awaiting Unlock"}
-                  </div>
-                </div>
-
-                <div className="jal-ground-node-actions">
-                  <button
-                    type="button"
-                    className="button ghost"
-                    onClick={() => beginRoute("/app/shop")}
-                    disabled={loading}
-                  >
-                    Access Store
-                  </button>
-                </div>
-              </aside>
+                </aside>
+              </div>
             </div>
 
             <section
