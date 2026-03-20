@@ -15,9 +15,11 @@ type NavTo =
 function NavOverlay({
   onSelect,
   onClose,
+  disabled,
 }: {
   onSelect: (to: NavTo) => void;
   onClose: () => void;
+  disabled: boolean;
 }) {
   return (
     <>
@@ -25,6 +27,7 @@ function NavOverlay({
         className="nav-overlay-backdrop"
         aria-label="Close navigation"
         onClick={onClose}
+        disabled={disabled}
       />
 
       <section
@@ -34,29 +37,59 @@ function NavOverlay({
         aria-label="Navigation"
       >
         <div className="nav-overlay-top">
-          <button className="nav-back" type="button" onClick={onClose}>
+          <button
+            className="nav-back"
+            type="button"
+            onClick={onClose}
+            disabled={disabled}
+          >
             Back
           </button>
         </div>
 
         <div className="nav-overlay-body">
-          <button type="button" className="nav-pill" onClick={() => onSelect("/app/home")}>
+          <button
+            type="button"
+            className="nav-pill"
+            onClick={() => onSelect("/app/home")}
+            disabled={disabled}
+          >
             HOME
           </button>
 
-          <button type="button" className="nav-pill" onClick={() => onSelect("/app/jal-sol")}>
+          <button
+            type="button"
+            className="nav-pill"
+            onClick={() => onSelect("/app/jal-sol")}
+            disabled={disabled}
+          >
             JAL/SOL
           </button>
 
-          <button type="button" className="nav-pill" onClick={() => onSelect("/app/engine")}>
+          <button
+            type="button"
+            className="nav-pill"
+            onClick={() => onSelect("/app/engine")}
+            disabled={disabled}
+          >
             $JAL~Engine
           </button>
 
-          <button type="button" className="nav-pill" onClick={() => onSelect("/app/about")}>
+          <button
+            type="button"
+            className="nav-pill"
+            onClick={() => onSelect("/app/about")}
+            disabled={disabled}
+          >
             ABOUT JAL
           </button>
 
-          <button type="button" className="nav-pill" onClick={() => onSelect("/app/shop")}>
+          <button
+            type="button"
+            className="nav-pill"
+            onClick={() => onSelect("/app/shop")}
+            disabled={disabled}
+          >
             SHOP
           </button>
         </div>
@@ -88,12 +121,23 @@ export default function Landing({ mode }: LandingProps) {
     return () => document.body.removeAttribute("data-nav-open");
   }, [mode]);
 
-  const enter = () => {
+  const showLoadingThenNavigate = (to: NavTo | "/app/nav") => {
+    if (loading) return;
+
     setLoading(true);
+
     window.setTimeout(() => {
       setLoading(false);
-      navigate("/app/nav");
+      navigate(to);
     }, 5000);
+  };
+
+  const enter = () => {
+    showLoadingThenNavigate("/app/nav");
+  };
+
+  const handleNavSelect = (to: NavTo) => {
+    showLoadingThenNavigate(to);
   };
 
   if (mode === "entry") {
@@ -128,11 +172,28 @@ export default function Landing({ mode }: LandingProps) {
   }
 
   return (
-    <main className="landing-blank" aria-label="JAL/SOL">
-      <NavOverlay
-        onSelect={(to) => navigate(to)}
-        onClose={() => navigate("/app/home")}
-      />
+    <main
+      className={`landing-blank ${loading ? "is-fading" : ""}`}
+      aria-label="JAL/SOL"
+    >
+      {!loading && (
+        <NavOverlay
+          onSelect={handleNavSelect}
+          onClose={() => navigate("/app/home")}
+          disabled={loading}
+        />
+      )}
+
+      {loading && (
+        <div
+          className="loading-screen"
+          role="status"
+          aria-label="Loading"
+          aria-live="polite"
+        >
+          <img className="loading-logo" src="/JALSOL1.gif" alt="" />
+        </div>
+      )}
     </main>
   );
 }
