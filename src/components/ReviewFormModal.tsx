@@ -46,7 +46,7 @@ export default function ReviewFormModal({
       }
 
       if (!orderEmail.trim() || !orderId.trim()) {
-        setError("Purchase verification is required. Enter your order email and Stripe Session ID.");
+        setError("Purchase verification is required. Enter your order email and receipt number.");
         return;
       }
 
@@ -187,23 +187,23 @@ export default function ReviewFormModal({
           />
         </div>
 
-        <div className="review-field">
-          <label className="review-label" htmlFor="review-order-id">
-            Stripe Session ID
-          </label>
-          <input
-            id="review-order-id"
-            className="review-input"
-            value={orderId}
-            onChange={(e) => setOrderId(e.target.value)}
-            placeholder="cs_test_... or cs_live_..."
-            maxLength={120}
-            disabled={submitting}
-          />
-          <div className="review-upload-count">
-            Reviews are only available to customers with a completed purchase.
-          </div>
-        </div>
+<div className="review-field">
+  <label className="review-label" htmlFor="review-order-id">
+    Receipt Number
+  </label>
+  <input
+    id="review-order-id"
+    className="review-input"
+    value={orderId}
+    onChange={(e) => setOrderId(e.target.value)}
+    placeholder="Enter the receipt number from your Stripe email"
+    maxLength={120}
+    disabled={submitting}
+  />
+  <div className="review-upload-count">
+    Reviews are only available to customers with a completed purchase.
+  </div>
+</div>
 
         <div className="review-field">
           <label className="review-label" htmlFor="review-images">

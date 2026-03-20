@@ -21,14 +21,14 @@ export async function verifyPurchaseForReview(
   if (!email || !orderId || !productId) {
     return {
       isVerified: false,
-      reason: "Order email, order ID, and product are required.",
+      reason: "Order email, receipt number, and product are required.",
     };
   }
 
   const { data, error } = await supabase
     .from("orders")
-    .select("stripe_session_id, customer_email, product_id, status")
-    .eq("stripe_session_id", orderId)
+    .select("receipt_number, customer_email, product_id, status")
+    .eq("receipt_number", orderId)
     .eq("customer_email", email)
     .eq("product_id", productId)
     .eq("status", "paid")
