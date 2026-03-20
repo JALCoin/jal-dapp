@@ -4169,3 +4169,267 @@ main{
 
   border-radius: 18px;
 }
+/* =========================
+   GROUND ZERO — TERMINAL CORE
+========================= */
+
+.jal-ground-terminal {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin-bottom: 32px;
+}
+
+.jal-ground-terminal-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  opacity: 0.8;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
+.jal-ground-terminal-state {
+  color: var(--accent);
+}
+
+.jal-ground-terminal-core {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 28px;
+}
+
+/* =========================
+   HERO CENTER BAND (SIGNATURE)
+========================= */
+
+.jal-ground-center-band {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 18px;
+  opacity: 0.9;
+}
+
+.jal-ground-band-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--accent),
+    transparent
+  );
+}
+
+.jal-ground-band-text {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+/* =========================
+   ACTION STACK (HIERARCHY FIX)
+========================= */
+
+.jal-ground-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.jal-ground-actions .button.neon {
+  transform: scale(1.05);
+}
+
+/* =========================
+   IDENTITY NODE PANEL (UPGRADED)
+========================= */
+
+.jal-ground-identity-panel {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 18px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.jal-status-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.jal-status-label {
+  opacity: 0.6;
+}
+
+.jal-status-value {
+  font-weight: 500;
+  text-align: right;
+}
+
+.jal-ground-node-actions {
+  margin-top: 10px;
+}
+
+/* =========================
+   PROGRESS RAIL (GAME FEEL)
+========================= */
+
+.jal-ground-progress-rail {
+  margin-bottom: 28px;
+}
+
+.jal-progress-track {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.jal-progress-stop {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  font-size: 11px;
+}
+
+.jal-progress-step {
+  display: block;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.jal-progress-name {
+  display: block;
+  font-weight: 600;
+}
+
+.jal-progress-note {
+  display: block;
+  opacity: 0.6;
+}
+
+/* STATES */
+
+.state-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(255,255,255,0.08);
+}
+
+.state-available {
+  border-color: rgba(255,255,255,0.2);
+}
+
+.state-locked {
+  opacity: 0.4;
+}
+
+/* =========================
+   WORLD MAP — TRUE GRID
+========================= */
+
+.jal-sector-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.jal-sector-card {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 16px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: 0.2s ease;
+}
+
+.jal-sector-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+/* FEATURED (L0 + L1) */
+
+.featured-sector {
+  grid-column: span 2;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid var(--accent);
+}
+
+/* =========================
+   LEARNING DISTRICT — TRAINING GRID
+========================= */
+
+.jal-learning-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.jal-learning-card {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 14px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jal-learning-meta {
+  font-size: 10px;
+  opacity: 0.5;
+  letter-spacing: 0.1em;
+}
+
+.jal-learning-actions {
+  margin-top: auto;
+}
+
+/* =========================
+   TERMINAL STRIP (FOOTER REPLACEMENT)
+========================= */
+
+.jal-terminal-strip {
+  margin-top: 30px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 900px) {
+  .jal-ground-terminal-core {
+    grid-template-columns: 1fr;
+  }
+
+  .jal-sector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .featured-sector {
+    grid-column: span 1;
+  }
+
+  .jal-learning-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jal-progress-track {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
