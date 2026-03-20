@@ -25,14 +25,11 @@ export async function verifyPurchaseForReview(
     };
   }
 
-  const { data, error } = await supabase
-    .from("orders")
-    .select("receipt_number, customer_email, product_id, status")
-    .eq("receipt_number", orderId)
-    .eq("customer_email", email)
-    .eq("product_id", productId)
-    .eq("status", "paid")
-    .limit(1);
+  const { data, error } = await supabase.rpc("verify_review_purchase", {
+    p_order_email: email,
+    p_receipt_number: orderId,
+    p_product_id: productId,
+  });
 
   if (error) {
     console.error("verifyPurchaseForReview error:", error.message);
@@ -42,9 +39,7 @@ export async function verifyPurchaseForReview(
     };
   }
 
-  const row = Array.isArray(data) ? data[0] : null;
-
-  if (!row) {
+  if (!data) {
     return {
       isVerified: false,
       reason: "No matching paid order found.",
