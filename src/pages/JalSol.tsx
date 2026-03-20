@@ -9,11 +9,13 @@ type FreeModule = {
   href?: string;
 };
 
+type SectorState = "free" | "available" | "locked" | "active";
+
 type Sector = {
   id: string;
   level: string;
   title: string;
-  state: "free" | "available" | "locked" | "active";
+  state: SectorState;
   note: string;
   description: string;
   actionLabel: string;
@@ -59,6 +61,11 @@ const FREE_MODULES: FreeModule[] = [
     cta: "View Drill",
   },
 ];
+
+function getSectorButtonClass(state: SectorState) {
+  if (state === "active") return "button neon";
+  return "button ghost";
+}
 
 export default function JalSolPage() {
   const [walletConnected, setWalletConnected] = useState(false);
@@ -114,7 +121,7 @@ export default function JalSolPage() {
         state: "active",
         note: "Current hub",
         description:
-          "The main terminal. Orientation, free learning, access control, and system return point.",
+          "The central terminal. Orientation, identity, access control, free learning, and return-point clarity.",
         actionLabel: "Current Sector",
         featured: true,
       },
@@ -137,7 +144,7 @@ export default function JalSolPage() {
         state: "locked",
         note: "Locked sector",
         description:
-          "Transfer routes, wallet behavior, and asset movement between points of control.",
+          "Transfer routes, wallet behaviour, and asset movement between points of control.",
         actionLabel: "Locked",
       },
       {
@@ -147,7 +154,7 @@ export default function JalSolPage() {
         state: "locked",
         note: "Locked sector",
         description:
-          "DEX behavior, swaps, slippage awareness, and execution without chaos.",
+          "DEX behaviour, swaps, slippage awareness, and execution without chaos.",
         actionLabel: "Locked",
       },
       {
@@ -164,9 +171,15 @@ export default function JalSolPage() {
     [level1Unlocked]
   );
 
-  const nextGateLabel = level1Unlocked ? "Resume Entry" : "Unlock Level 1";
+  const primaryActionHref = level1Unlocked ? "/app/jal-sol/level-1" : "/app/shop";
+  const primaryActionLabel = level1Unlocked ? "Resume Level 1" : "Unlock Level 1";
+
   const groundStatus = walletConnected ? "Identity recognised" : "Awaiting link";
-  const sessionState = level1Unlocked ? "Level 1 session stored" : "Ground Zero session only";
+  const currentAccess = level1Unlocked ? "Level 1 unlocked" : "Ground Zero only";
+  const nextGateLabel = level1Unlocked ? "Resume Entry" : "Unlock Level 1";
+  const sessionState = level1Unlocked
+    ? "Level 1 session stored"
+    : "Ground Zero session only";
 
   return (
     <main className="home-shell jal-shell" aria-label="JAL/SOL Ground Zero">
@@ -179,40 +192,31 @@ export default function JalSolPage() {
             </div>
 
             <div className="jal-ground-terminal-core">
-              <section className="jal-ground-terminal-copy">
+              <section className="jal-ground-terminal-copy" aria-label="Ground Zero terminal">
                 <div className="jal-ground-mini-label">WORLD HUB</div>
                 <h1 className="home-title">JAL/SOL</h1>
 
-                <div className="jal-ground-center-band">
+                <div className="jal-ground-center-band" aria-hidden="true">
                   <div className="jal-ground-band-line" />
                   <div className="jal-ground-band-text">CENTRAL TERMINAL</div>
                   <div className="jal-ground-band-line" />
                 </div>
 
                 <p className="home-lead">
-                  The entrance terminal to a digital open world where identity,
-                  access, and value begin to take form.
+                  A controlled digital environment where identity, access, and
+                  value begin in the correct order.
                 </p>
 
                 <p className="jal-sublead">
-                  Learn the rules for free. Unlock each level to proceed.
-                  Return here to re-orient, resume access, and move correctly.
+                  Ground Zero is the main return terminal. Learn the basics for
+                  free, confirm your current state, and move forward only when
+                  the next gate is clear.
                 </p>
 
                 <div className="jal-ground-actions">
-                  <button
-                    type="button"
-                    className="button neon"
-                    onClick={() => {
-                      if (level1Unlocked) {
-                        window.location.href = "/app/jal-sol/level-1";
-                        return;
-                      }
-                      window.location.href = "/app/shop";
-                    }}
-                  >
-                    {level1Unlocked ? "Resume Level 1" : "Unlock Level 1"}
-                  </button>
+                  <a className="button neon" href={primaryActionHref}>
+                    {primaryActionLabel}
+                  </a>
 
                   {!walletConnected ? (
                     <button
@@ -242,7 +246,10 @@ export default function JalSolPage() {
                 </div>
               </section>
 
-              <aside className="jal-ground-identity-panel" aria-label="Identity Node">
+              <aside
+                className="jal-ground-identity-panel"
+                aria-label="Identity Node"
+              >
                 <div className="jal-bay-head">
                   <div className="jal-bay-title">Identity Node</div>
                   <div className="jal-bay-note">
@@ -263,9 +270,7 @@ export default function JalSolPage() {
 
                   <div className="jal-status-row">
                     <span className="jal-status-label">Current Access</span>
-                    <span className="jal-status-value">
-                      {level1Unlocked ? "Level 1 unlocked" : "Ground Zero only"}
-                    </span>
+                    <span className="jal-status-value">{currentAccess}</span>
                   </div>
 
                   <div className="jal-status-row">
@@ -288,7 +293,10 @@ export default function JalSolPage() {
             </div>
           </header>
 
-          <section className="jal-ground-progress-rail" aria-label="Progress Rail">
+          <section
+            className="jal-ground-progress-rail"
+            aria-label="Progress Rail"
+          >
             <div className="jal-ground-progress-head">
               <div className="jal-bay-title">Progress Rail</div>
               <div className="jal-bay-note">District progression</div>
@@ -301,7 +309,11 @@ export default function JalSolPage() {
                 <span className="jal-progress-note">Active</span>
               </div>
 
-              <div className={`jal-progress-stop ${level1Unlocked ? "state-active" : "state-available"}`}>
+              <div
+                className={`jal-progress-stop ${
+                  level1Unlocked ? "state-active" : "state-available"
+                }`}
+              >
                 <span className="jal-progress-step">L1</span>
                 <span className="jal-progress-name">Entry</span>
                 <span className="jal-progress-note">
@@ -333,14 +345,22 @@ export default function JalSolPage() {
             <section className="jal-bay jal-bay-wide jal-world-map">
               <div className="jal-bay-head">
                 <div className="jal-bay-title">World Map</div>
-                <div className="jal-bay-note">Sector access grid</div>
+                <div className="jal-bay-note">Sector progression</div>
               </div>
+
+              <p className="jal-note">
+                Ground Zero is the active hub. Entry is the next accessible
+                district. All later sectors remain visible so progression feels
+                real before it is unlocked.
+              </p>
 
               <div className="jal-sector-grid">
                 {sectors.map((sector) => (
                   <article
                     key={sector.id}
-                    className={`jal-sector-card state-${sector.state}${sector.featured ? " featured-sector" : ""}`}
+                    className={`jal-sector-card state-${sector.state}${
+                      sector.featured ? " featured-sector" : ""
+                    }`}
                   >
                     <div className="jal-sector-top">
                       <div>
@@ -354,11 +374,19 @@ export default function JalSolPage() {
 
                     <div className="jal-sector-actions">
                       {sector.href ? (
-                        <a className="button ghost" href={sector.href}>
+                        <a
+                          className={getSectorButtonClass(sector.state)}
+                          href={sector.href}
+                        >
                           {sector.actionLabel}
                         </a>
                       ) : (
-                        <button type="button" className="button ghost" disabled>
+                        <button
+                          type="button"
+                          className="button ghost"
+                          disabled
+                          aria-disabled="true"
+                        >
                           {sector.actionLabel}
                         </button>
                       )}
@@ -378,8 +406,8 @@ export default function JalSolPage() {
               </div>
 
               <p className="jal-note">
-                Ground Zero stays open. Anyone can learn the basics here before
-                deciding whether to move deeper into the system.
+                This district stays open. Learning begins here before paid
+                progression begins. Stillness first. Movement second.
               </p>
 
               <div className="jal-learning-grid">
@@ -412,22 +440,23 @@ export default function JalSolPage() {
               </div>
 
               <p className="jal-note">
-                JAL/SOL is a path of structured progression. People do not lose
-                because they never move. They lose because they move without
-                order. Here, identity is shaped through correct action and value
-                is accumulated through repeated alignment.
+                JAL/SOL is not built around random access. It is built around
+                progression. People do not fail because they never move. They
+                fail because they move without order. Here, identity is formed
+                through repeated correct action.
               </p>
             </section>
 
             <section className="jal-bay jal-return-hub">
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Return Hub</div>
-                <div className="jal-bay-note">Resume point</div>
+                <div className="jal-bay-note">Persistent zone</div>
               </div>
 
               <p className="jal-note">
-                Ground Zero is the persistent zone you return to when you need
-                to reconnect, check access, and decide your next move.
+                Return here whenever clarity is needed. Reconnect your wallet,
+                check your access, review the map, and choose the next correct
+                move.
               </p>
 
               <div className="jal-bay-actions">
