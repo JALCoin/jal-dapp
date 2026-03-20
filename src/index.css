@@ -5025,3 +5025,44 @@ body.jal-transitioning .jal-ground-page{
 .jal-footer-meta{
   display:none;
 }
+.terminal-hero{
+  padding:48px 20px 36px;
+  border-bottom:1px solid rgba(0,255,200,0.08);
+}
+.jal-system-line{
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  max-width:720px;
+  margin-bottom:12px;
+
+  font-size:0.7rem;
+  letter-spacing:0.18em;
+  opacity:0.6;
+}
+.jal-status{
+  color:#00ffc8;
+  text-shadow:0 0 8px rgba(0,255,200,0.4);
+}
+.jal-worldhub{
+  font-size:clamp(36px, 6vw, 64px);
+  letter-spacing:0.22em;
+
+  text-shadow:
+    0 0 18px rgba(0,255,200,0.2),
+    0 0 40px rgba(0,255,200,0.1);
+}
+.jal-terminal-label{
+  font-size:0.65rem;
+  letter-spacing:0.28em;
+  opacity:0.45;
+  margin-top:6px;
+}
+.jal-lead{
+  margin-top:14px;
+  max-width:520px;
+  font-size:0.95rem;
+  opacity:0.8;
+}

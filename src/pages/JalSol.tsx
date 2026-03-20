@@ -224,7 +224,7 @@ export default function JalSolPage() {
       className={`home-shell jal-shell jal-ground-page ${
         loading ? "is-fading" : ""
       }`}
-      aria-label="JAL/SOL Ground Zero"
+      aria-label="Ground Zero"
     >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window jal-ground-zero">
@@ -235,18 +235,17 @@ export default function JalSolPage() {
             </div>
 
             <div className="jal-arrival-grid">
-              <section
-                className="jal-arrival-copy"
+              <section className="jal-arrival-copy center-hero-block"
+              
                 aria-label="Ground Zero terminal"
               >
-                <div className="jal-ground-mini-label">WORLD HUB</div>
-                <h1 className="home-title">JAL/SOL</h1>
+<div className="jal-hero-center">
 
-                <div className="jal-ground-center-band" aria-hidden="true">
-                  <div className="jal-ground-band-line" />
-                  <div className="jal-ground-band-text">CENTRAL TERMINAL</div>
-                  <div className="jal-ground-band-line" />
-                </div>
+  <h1 className="jal-worldhub">WORLD HUB</h1>
+
+  <div className="jal-terminal-label">CENTRAL TERMINAL</div>
+
+</div>
 
                 <p className="home-lead">
                   Enter in order. Identity first. Movement second.
