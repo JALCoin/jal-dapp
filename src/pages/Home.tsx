@@ -9,10 +9,21 @@ function fmtTime(d: Date) {
   return `${hh}:${mm}:${ss}`;
 }
 
+type HomeModule = {
+  kicker: string;
+  title: string;
+  desc: string;
+  tags: string[];
+  featured?: boolean;
+  tone?: "green" | "gold" | "cyan";
+  onOpen: () => void;
+};
+
 export default function Home() {
   const navigate = useNavigate();
 
   const [now, setNow] = useState(() => fmtTime(new Date()));
+
   useEffect(() => {
     const id = window.setInterval(() => setNow(fmtTime(new Date())), 1000);
     return () => window.clearInterval(id);
@@ -33,42 +44,46 @@ export default function Home() {
     []
   );
 
-  const modules = useMemo(
+  const modules = useMemo<HomeModule[]>(
     () => [
       {
         kicker: "DISCOVER",
         title: "JALSOL",
         desc:
-          "Entrance into token generation and webapp creation — the on-ramp into the cryptocurrency market through JALSOL utility.",
+          "Entrance into token generation and webapp creation — the on-ramp into cryptocurrency utility through JALSOL.",
         tags: ["Token Generation", "ATA", "Minting", "Utility"],
-        onOpen: () => navigate("/app/token"),
+        featured: true,
+        tone: "gold",
+        onOpen: () => navigate("/app/jal-sol"),
       },
       {
         kicker: "LIVE CONSOLE",
         title: "$JAL~Engine",
-        desc: "Live market interface. Structured Jeroid deployment.",
-        tags: ["Market Snapshot", "Indicators", "Deploy Jeroids", "Execution Logs"],
+        desc: "Live market interface, structured Jeroid deployment, and machine-state visibility.",
+        tags: ["Market Snapshot", "Deploy Jeroids", "Execution Logs"],
+        tone: "green",
         onOpen: () => navigate("/app/engine"),
       },
       {
         kicker: "CRAFT + DIGITAL",
         title: "Shop",
-        desc: "Physical + digital products — the hub for online sales and releases.",
-        tags: ["Etsy", "Relics", "Digital Items"],
+        desc: "Physical and digital releases — the storefront for acquisition, support, and access.",
+        tags: ["Relics", "Digital Items", "Access"],
+        tone: "cyan",
         onOpen: () => navigate("/app/shop"),
       },
       {
         kicker: "PACKAGED BUILD",
         title: "Inventory",
-        desc: "Your downloadable system modules — packaged builds, purchase access, and inventory browsing.",
+        desc: "Your downloadable system modules, purchases, and release inventory.",
         tags: ["View", "Purchase", "Downloads"],
         onOpen: () => navigate("/app/inventory"),
       },
       {
         kicker: "CONFIG LAYER",
         title: "Settings",
-        desc: "API keys, preferences, environment configuration.",
-        tags: ["CoinSpot API", "RO/Full", "Session", "Risk Params (future)"],
+        desc: "Environment controls, API configuration, preferences, and future machine parameters.",
+        tags: ["CoinSpot API", "RO / Full", "Session", "Risk Params"],
         onOpen: () => navigate("/app/settings"),
       },
     ],
@@ -76,7 +91,7 @@ export default function Home() {
   );
 
   return (
-    <main className="home-shell" aria-label="Home">
+    <main className="home-shell home-console-shell" aria-label="Home">
       <div className="home-wrap">
         <section
           className="terminal-bar panel-frame machine-surface home-topbar"
@@ -92,38 +107,72 @@ export default function Home() {
           </div>
 
           <div className="terminal-right">
-            <span className="terminal-auth is-ro">HOME: MODULES</span>
+            <span className="terminal-auth is-ro">ROUTING CONSOLE</span>
           </div>
         </section>
 
-        <section className="card home-hero machine-surface panel-frame" aria-label="JAL System">
-          <div className="home-kicker">JAL SYSTEM • ONLINE</div>
-
-          <h1 className="home-title">jalsol.com</h1>
-
-          <p className="home-lead">
-            <strong>Terminal for Solana utility.</strong> Token generation, structured market
-            execution, and deployable systems — governed by order of processing.
-          </p>
-
-          <p className="home-lead">
-            Founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical Metal Engineer
-            • Digital Creator.
-          </p>
-
-          <div className="home-links" aria-label="Links">
-            {links.map((l) => (
-              <a key={l.label} className="chip" href={l.href} target="_blank" rel="noreferrer">
-                {l.label}
-              </a>
-            ))}
+        <section
+          className="card machine-surface panel-frame home-console-hero"
+          aria-label="JALSOL command hub"
+        >
+          <div className="home-console-hero-bg" aria-hidden="true">
+            <img className="home-console-hero-logo" src="/JALSOL1.gif" alt="" />
           </div>
 
-          <div className="home-primary" aria-label="Note">
-            <div className="home-primary-note">
-              <span>Nothing here is urgent.</span> This homepage is the routing console. Each bay
-              below opens a system module.
+          <div className="home-console-hero-foreground">
+            <div className="home-console-copy">
+              <div className="home-kicker">JAL SYSTEM • ONLINE</div>
+
+              <h1 className="home-title">Command Home</h1>
+
+              <p className="home-lead">
+                <strong>Central routing console for JALSOL.</strong> Navigate utility,
+                market execution, shop access, inventory, and system configuration from one
+                controlled surface.
+              </p>
+
+              <p className="home-console-sublead">
+                This is not the sales layer. This is the internal command hub. Choose the
+                correct module, move in order, and return here whenever direction is needed.
+              </p>
+
+              <div className="home-links" aria-label="External links">
+                {links.map((l) => (
+                  <a
+                    key={l.label}
+                    className="chip"
+                    href={l.href}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {l.label}
+                  </a>
+                ))}
+              </div>
             </div>
+
+            <aside className="home-console-side" aria-label="System identity">
+              <div className="home-console-side-card">
+                <div className="home-console-side-kicker">SYSTEM ID</div>
+                <div className="home-console-side-title">jalsol.com</div>
+                <div className="home-console-side-copy">
+                  Founded by <strong>Jeremy Aaron Lugg</strong>
+                  <br />
+                  Sol-Trader • Mechanical Metal Engineer • Digital Creator
+                </div>
+              </div>
+
+              <div className="home-console-side-card">
+                <div className="home-console-side-kicker">OPERATING NOTE</div>
+                <div className="home-console-side-copy">
+                  Nothing here is urgent.
+                  <br />
+                  This page is the module hub.
+                  <br />
+                  Each bay below opens a system layer.
+                </div>
+              </div>
+            </aside>
           </div>
         </section>
 
@@ -137,40 +186,50 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="card module-window machine-surface panel-frame" aria-label="Modules">
-          <div className="module-bg" aria-hidden="true">
-            <img className="module-bg-logo" src="/JALSOL1.gif" alt="" />
+        <section
+          className="card machine-surface panel-frame home-modules-window"
+          aria-label="System modules"
+        >
+          <div className="home-modules-head">
+            <div>
+              <div className="home-kicker">MODULE ARRAY</div>
+              <h2 className="home-modules-title">Select a route</h2>
+              <p className="home-modules-lead">
+                Each module opens a different operational layer of the JALSOL system.
+              </p>
+            </div>
           </div>
 
-          <div className="module-foreground">
-            <div className="module-stack" role="list" aria-label="System modules">
-              {modules.map((m) => (
-                <button
-                  key={m.title}
-                  type="button"
-                  className="module-card"
-                  onClick={m.onOpen}
-                  role="listitem"
-                  aria-label={`Open ${m.title}`}
-                >
-                  <div className="module-card-top">
-                    <div className="module-kicker">{m.kicker}</div>
-                    <div className="module-name">{m.title}</div>
-                    <div className="module-desc">{m.desc}</div>
-                  </div>
+          <div className="home-modules-grid" role="list" aria-label="System module list">
+            {modules.map((m) => (
+              <button
+                key={m.title}
+                type="button"
+                className={`home-module-card ${m.featured ? "is-featured" : ""} ${
+                  m.tone ? `tone-${m.tone}` : ""
+                }`}
+                onClick={m.onOpen}
+                role="listitem"
+                aria-label={`Open ${m.title}`}
+              >
+                <div className="home-module-top">
+                  <div className="home-module-kicker">{m.kicker}</div>
+                  <div className="home-module-title">{m.title}</div>
+                </div>
 
-                  <div className="module-tags" aria-label={`${m.title} tags`}>
-                    {m.tags.map((t) => (
-                      <span key={t} className="module-tag">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
+                <p className="home-module-desc">{m.desc}</p>
 
-                  <div className="module-open">OPEN →</div>
-                </button>
-              ))}
-            </div>
+                <div className="home-module-tags" aria-label={`${m.title} tags`}>
+                  {m.tags.map((t) => (
+                    <span key={t} className="home-module-tag">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="home-module-open">OPEN →</div>
+              </button>
+            ))}
           </div>
         </section>
       </div>
