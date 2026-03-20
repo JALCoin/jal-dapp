@@ -4981,73 +4981,47 @@ body.jal-transitioning .jal-ground-page{
     0 0 8px rgba(17,241,167,.08);
 }
 /* =========================================
-   GLOBAL SYSTEM FOOTER NAV
+   JAL/SOL — SIMPLE FOOTER
 ========================================= */
 
-.jal-system-footer{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
-  z-index:1000;
-  padding:.6rem 1rem;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(4,12,18,.92) 100%);
-  border-top:1px solid rgba(0,255,200,.08);
-  backdrop-filter:blur(8px);
+.jal-footer{
+  margin-top:32px;
+  padding:0 0 18px;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  position:static;
 }
 
-.jal-system-footer-inner{
+.jal-footer-inner{
   max-width:1200px;
   margin:0 auto;
+  padding:0 16px;
   display:flex;
+  justify-content:center;
   align-items:center;
-  justify-content:space-between;
-  gap:1rem;
 }
 
-.jal-system-footer-left{
+.jal-footer-links{
   display:flex;
-  gap:1rem;
-  font-size:.65rem;
-  letter-spacing:.12em;
-  opacity:.7;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:18px;
 }
 
-.jal-system-footer-center{
-  font-size:.7rem;
+.jal-footer-links a{
+  color:rgba(185, 205, 220, 0.68);
+  text-decoration:none;
+  font-size:.74rem;
   letter-spacing:.14em;
-  opacity:.85;
+  text-transform:uppercase;
+  transition:color .2s ease, opacity .2s ease;
 }
 
-.jal-system-footer-right{
-  display:flex;
-  gap:.4rem;
+.jal-footer-links a:hover{
+  color:rgba(255,255,255,.92);
 }
 
-.jal-system-footer-right button{
-  background:none;
-  border:none;
-  color:rgba(180,220,240,.7);
-  font-size:.7rem;
-  letter-spacing:.12em;
-  cursor:pointer;
-  padding:.25rem .45rem;
-  transition:.2s ease;
-}
-
-.jal-system-footer-right button:hover{
-  color:#11f1a7;
-  text-shadow:0 0 6px rgba(17,241,167,.3);
-}
-
-.home-shell{
-  padding-bottom:72px;
-}
-
-@media (max-width:720px){
-  .jal-system-footer-inner{
-    flex-direction:column;
-    align-items:flex-start;
-  }
+.jal-footer-meta{
+  display:none;
 }
