@@ -9,14 +9,14 @@ type FreeModule = {
   href?: string;
 };
 
-type SectorState = "free" | "available" | "locked" | "active";
+type SectorState = "active" | "available" | "locked";
 
 type Sector = {
   id: string;
   level: string;
   title: string;
   state: SectorState;
-  note: string;
+  shortState: string;
   description: string;
   actionLabel: string;
   href?: string;
@@ -63,14 +63,16 @@ const FREE_MODULES: FreeModule[] = [
 ];
 
 function getSectorButtonClass(state: SectorState) {
-  if (state === "active") return "button neon";
-  return "button ghost";
+  return state === "active" || state === "available"
+    ? "button ghost"
+    : "button ghost";
 }
 
 export default function JalSolPage() {
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletLabel, setWalletLabel] = useState("Not connected");
   const [level1Unlocked, setLevel1Unlocked] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     const access = readLevel1Access();
@@ -84,6 +86,11 @@ export default function JalSolPage() {
       setWalletLabel(rememberedWallet);
     }
   }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle("jal-transitioning", isTransitioning);
+    return () => document.body.classList.remove("jal-transitioning");
+  }, [isTransitioning]);
 
   function connectWallet() {
     const existing = window.localStorage.getItem("jal_wallet_label")?.trim();
@@ -112,59 +119,68 @@ export default function JalSolPage() {
     setWalletLabel("Not connected");
   }
 
+  function beginRoute(href: string) {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+
+    window.setTimeout(() => {
+      window.location.href = href;
+    }, 420);
+  }
+
   const sectors = useMemo<Sector[]>(
     () => [
       {
         id: "ground-zero",
-        level: "LEVEL 0",
+        level: "L0",
         title: "Ground Zero",
         state: "active",
-        note: "Current hub",
+        shortState: "Active hub",
         description:
-          "The central terminal. Orientation, identity, access control, free learning, and return-point clarity.",
-        actionLabel: "Current Sector",
+          "Arrival, recognition, orientation, and return-point clarity.",
+        actionLabel: "Current Position",
         featured: true,
       },
       {
         id: "level-1",
-        level: "LEVEL 1",
+        level: "L1",
         title: "Entry",
         state: level1Unlocked ? "active" : "available",
-        note: level1Unlocked ? "Access granted" : "Paid unlock",
+        shortState: level1Unlocked ? "Unlocked" : "Next gate",
         description:
-          "Your first controlled movement into the system. Exchange, wallet, custody, and first correct actions.",
-        actionLabel: level1Unlocked ? "Resume Level 1" : "Unlock Level 1",
+          "Exchange, custody, wallet order, and first controlled movement.",
+        actionLabel: level1Unlocked ? "Resume Entry" : "Unlock Level 1",
         href: level1Unlocked ? "/app/jal-sol/level-1" : "/app/shop",
         featured: true,
       },
       {
         id: "level-2",
-        level: "LEVEL 2",
+        level: "L2",
         title: "Movement",
         state: "locked",
-        note: "Locked sector",
+        shortState: "Distant",
         description:
-          "Transfer routes, wallet behaviour, and asset movement between points of control.",
+          "Transfer routes, wallet behaviour, and movement between points of control.",
         actionLabel: "Locked",
       },
       {
         id: "level-3",
-        level: "LEVEL 3",
+        level: "L3",
         title: "Execution",
         state: "locked",
-        note: "Locked sector",
+        shortState: "Distant",
         description:
-          "DEX behaviour, swaps, slippage awareness, and execution without chaos.",
+          "DEX behaviour, swaps, slippage awareness, and action without chaos.",
         actionLabel: "Locked",
       },
       {
         id: "level-4",
-        level: "LEVEL 4",
+        level: "L4",
         title: "Structure",
         state: "locked",
-        note: "Locked sector",
+        shortState: "Distant",
         description:
-          "System intent, value accumulation, and identity formed through repeated correct action.",
+          "Identity, value accumulation, and repeated alignment over time.",
         actionLabel: "Locked",
       },
     ],
@@ -173,26 +189,28 @@ export default function JalSolPage() {
 
   const primaryActionHref = level1Unlocked ? "/app/jal-sol/level-1" : "/app/shop";
   const primaryActionLabel = level1Unlocked ? "Resume Level 1" : "Unlock Level 1";
-
-  const groundStatus = walletConnected ? "Identity recognised" : "Awaiting link";
-  const currentAccess = level1Unlocked ? "Level 1 unlocked" : "Ground Zero only";
   const nextGateLabel = level1Unlocked ? "Resume Entry" : "Unlock Level 1";
+  const currentAccess = level1Unlocked ? "Level 1 unlocked" : "Ground Zero only";
+  const groundStatus = walletConnected ? "Identity recognised" : "Awaiting link";
   const sessionState = level1Unlocked
-    ? "Level 1 session stored"
+    ? "Entry session stored"
     : "Ground Zero session only";
 
   return (
-    <main className="home-shell jal-shell" aria-label="JAL/SOL Ground Zero">
+    <main className="home-shell jal-shell jal-ground-page" aria-label="JAL/SOL Ground Zero">
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window jal-ground-zero">
-          <header className="jal-ground-terminal">
+          {/* =========================================
+              ARRIVAL CHAMBER
+          ========================================= */}
+          <header className="jal-arrival-chamber" aria-label="Arrival Chamber">
             <div className="jal-ground-terminal-bar">
               <div className="jal-kicker">GROUND ZERO</div>
               <div className="jal-ground-terminal-state">SYSTEM ONLINE</div>
             </div>
 
-            <div className="jal-ground-terminal-core">
-              <section className="jal-ground-terminal-copy" aria-label="Ground Zero terminal">
+            <div className="jal-arrival-grid">
+              <section className="jal-arrival-copy" aria-label="Ground Zero terminal">
                 <div className="jal-ground-mini-label">WORLD HUB</div>
                 <h1 className="home-title">JAL/SOL</h1>
 
@@ -203,20 +221,22 @@ export default function JalSolPage() {
                 </div>
 
                 <p className="home-lead">
-                  A controlled digital environment where identity, access, and
-                  value begin in the correct order.
+                  Enter in order. Identity first. Movement second.
                 </p>
 
                 <p className="jal-sublead">
-                  Ground Zero is the main return terminal. Learn the basics for
-                  free, confirm your current state, and move forward only when
-                  the next gate is clear.
+                  Ground Zero is the chamber of recognition. Confirm your position,
+                  view the next gate, and proceed only when the route is clear.
                 </p>
 
-                <div className="jal-ground-actions">
-                  <a className="button neon" href={primaryActionHref}>
+                <div className="jal-arrival-actions">
+                  <button
+                    type="button"
+                    className="button neon"
+                    onClick={() => beginRoute(primaryActionHref)}
+                  >
                     {primaryActionLabel}
-                  </a>
+                  </button>
 
                   {!walletConnected ? (
                     <button
@@ -244,12 +264,15 @@ export default function JalSolPage() {
                     System Nav
                   </a>
                 </div>
+
+                <div className="jal-arrival-note">
+                  <span>INTEGRITY UNDER PRESSURE</span>
+                  <span>AWARENESS BEFORE MOVEMENT</span>
+                  <span>IDENTITY THROUGH TIME</span>
+                </div>
               </section>
 
-              <aside
-                className="jal-ground-identity-panel"
-                aria-label="Identity Node"
-              >
+              <aside className="jal-ground-identity-panel jal-identity-console" aria-label="Identity Node">
                 <div className="jal-bay-head">
                   <div className="jal-bay-title">Identity Node</div>
                   <div className="jal-bay-note">
@@ -284,155 +307,170 @@ export default function JalSolPage() {
                   </div>
                 </div>
 
+                <div className="jal-identity-focus">
+                  <div className="jal-identity-focus-label">Current Position</div>
+                  <div className="jal-identity-focus-value">
+                    {level1Unlocked ? "Ground Zero / Entry Open" : "Ground Zero / Entry Awaiting Unlock"}
+                  </div>
+                </div>
+
                 <div className="jal-ground-node-actions">
-                  <a className="button ghost" href="/app/shop">
+                  <button
+                    type="button"
+                    className="button ghost"
+                    onClick={() => beginRoute("/app/shop")}
+                  >
                     Access Store
-                  </a>
+                  </button>
                 </div>
               </aside>
             </div>
+
+            <section className="jal-ground-progress-rail jal-progress-spine" aria-label="Progress Rail">
+              <div className="jal-ground-progress-head">
+                <div className="jal-bay-title">Progress Spine</div>
+                <div className="jal-bay-note">Visible route</div>
+              </div>
+
+              <div className="jal-progress-track">
+                <div className="jal-progress-stop state-active">
+                  <span className="jal-progress-step">L0</span>
+                  <span className="jal-progress-name">Ground Zero</span>
+                  <span className="jal-progress-note">Active</span>
+                </div>
+
+                <div
+                  className={`jal-progress-stop ${
+                    level1Unlocked ? "state-active" : "state-available"
+                  }`}
+                >
+                  <span className="jal-progress-step">L1</span>
+                  <span className="jal-progress-name">Entry</span>
+                  <span className="jal-progress-note">
+                    {level1Unlocked ? "Unlocked" : "Next"}
+                  </span>
+                </div>
+
+                <div className="jal-progress-stop state-locked">
+                  <span className="jal-progress-step">L2</span>
+                  <span className="jal-progress-name">Movement</span>
+                  <span className="jal-progress-note">Locked</span>
+                </div>
+
+                <div className="jal-progress-stop state-locked">
+                  <span className="jal-progress-step">L3</span>
+                  <span className="jal-progress-name">Execution</span>
+                  <span className="jal-progress-note">Locked</span>
+                </div>
+
+                <div className="jal-progress-stop state-locked">
+                  <span className="jal-progress-step">L4</span>
+                  <span className="jal-progress-name">Structure</span>
+                  <span className="jal-progress-note">Locked</span>
+                </div>
+              </div>
+            </section>
           </header>
 
-          <section
-            className="jal-ground-progress-rail"
-            aria-label="Progress Rail"
-          >
-            <div className="jal-ground-progress-head">
-              <div className="jal-bay-title">Progress Rail</div>
-              <div className="jal-bay-note">District progression</div>
+          {/* =========================================
+              ROUTE FIELD
+          ========================================= */}
+          <section className="jal-route-field jal-bay jal-bay-wide" aria-label="Route Field">
+            <div className="jal-bay-head">
+              <div className="jal-bay-title">Route Field</div>
+              <div className="jal-bay-note">Visible world / gated distance</div>
             </div>
 
-            <div className="jal-progress-track">
-              <div className="jal-progress-stop state-active">
-                <span className="jal-progress-step">L0</span>
-                <span className="jal-progress-name">Ground Zero</span>
-                <span className="jal-progress-note">Active</span>
-              </div>
+            <p className="jal-note">
+              Ground Zero is near. Entry is the next accessible gate. All later
+              sectors remain visible, but distant.
+            </p>
 
-              <div
-                className={`jal-progress-stop ${
-                  level1Unlocked ? "state-active" : "state-available"
-                }`}
-              >
-                <span className="jal-progress-step">L1</span>
-                <span className="jal-progress-name">Entry</span>
-                <span className="jal-progress-note">
-                  {level1Unlocked ? "Unlocked" : "Available"}
-                </span>
-              </div>
+            <div className="jal-route-map">
+              {sectors.map((sector) => (
+                <article
+                  key={sector.id}
+                  className={`jal-route-sector state-${sector.state}${
+                    sector.featured ? " featured-sector" : ""
+                  }`}
+                >
+                  <div className="jal-route-sector-head">
+                    <div className="jal-route-sector-level">{sector.level}</div>
+                    <div className="jal-route-sector-state">{sector.shortState}</div>
+                  </div>
 
-              <div className="jal-progress-stop state-locked">
-                <span className="jal-progress-step">L2</span>
-                <span className="jal-progress-name">Movement</span>
-                <span className="jal-progress-note">Locked</span>
-              </div>
+                  <h3 className="jal-route-sector-title">{sector.title}</h3>
+                  <p className="jal-route-sector-copy">{sector.description}</p>
 
-              <div className="jal-progress-stop state-locked">
-                <span className="jal-progress-step">L3</span>
-                <span className="jal-progress-name">Execution</span>
-                <span className="jal-progress-note">Locked</span>
-              </div>
-
-              <div className="jal-progress-stop state-locked">
-                <span className="jal-progress-step">L4</span>
-                <span className="jal-progress-name">Structure</span>
-                <span className="jal-progress-note">Locked</span>
-              </div>
+                  <div className="jal-route-sector-actions">
+                    {sector.href ? (
+                      <button
+                        type="button"
+                        className={getSectorButtonClass(sector.state)}
+                        onClick={() => beginRoute(sector.href!)}
+                      >
+                        {sector.actionLabel}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="button ghost"
+                        disabled
+                        aria-disabled="true"
+                      >
+                        {sector.actionLabel}
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ))}
             </div>
           </section>
 
-          <div className="jal-grid jal-ground-layout">
-            <section className="jal-bay jal-bay-wide jal-world-map">
-              <div className="jal-bay-head">
-                <div className="jal-bay-title">World Map</div>
-                <div className="jal-bay-note">Sector progression</div>
-              </div>
+          {/* =========================================
+              STILLNESS DISTRICT
+          ========================================= */}
+          <section
+            id="free-learning-district"
+            className="jal-learning-district jal-bay jal-bay-wide"
+            aria-label="Free Learning District"
+          >
+            <div className="jal-bay-head">
+              <div className="jal-bay-title">Stillness District</div>
+              <div className="jal-bay-note">Open training zone</div>
+            </div>
 
-              <p className="jal-note">
-                Ground Zero is the active hub. Entry is the next accessible
-                district. All later sectors remain visible so progression feels
-                real before it is unlocked.
-              </p>
+            <p className="jal-note">
+              Learning remains open. Read before movement. Understand before action.
+            </p>
 
-              <div className="jal-sector-grid">
-                {sectors.map((sector) => (
-                  <article
-                    key={sector.id}
-                    className={`jal-sector-card state-${sector.state}${
-                      sector.featured ? " featured-sector" : ""
-                    }`}
-                  >
-                    <div className="jal-sector-top">
-                      <div>
-                        <div className="jal-sector-level">{sector.level}</div>
-                        <h3 className="jal-sector-title">{sector.title}</h3>
-                      </div>
-                      <div className="jal-sector-state">{sector.note}</div>
-                    </div>
+            <div className="jal-learning-grid">
+              {FREE_MODULES.map((module) => (
+                <article key={module.id} className="jal-learning-card">
+                  <div className="jal-learning-meta">OPEN MODULE</div>
+                  <h3 className="jal-learning-title">{module.title}</h3>
+                  <p className="jal-learning-note">{module.note}</p>
 
-                    <p className="jal-sector-copy">{sector.description}</p>
+                  <div className="jal-learning-actions">
+                    {module.href ? (
+                      <a className="button ghost" href={module.href}>
+                        {module.cta}
+                      </a>
+                    ) : (
+                      <button type="button" className="button ghost">
+                        {module.cta}
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
 
-                    <div className="jal-sector-actions">
-                      {sector.href ? (
-                        <a
-                          className={getSectorButtonClass(sector.state)}
-                          href={sector.href}
-                        >
-                          {sector.actionLabel}
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          className="button ghost"
-                          disabled
-                          aria-disabled="true"
-                        >
-                          {sector.actionLabel}
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section
-              id="free-learning-district"
-              className="jal-bay jal-bay-wide jal-learning-district"
-            >
-              <div className="jal-bay-head">
-                <div className="jal-bay-title">Free Learning District</div>
-                <div className="jal-bay-note">Training zone</div>
-              </div>
-
-              <p className="jal-note">
-                This district stays open. Learning begins here before paid
-                progression begins. Stillness first. Movement second.
-              </p>
-
-              <div className="jal-learning-grid">
-                {FREE_MODULES.map((module) => (
-                  <article key={module.id} className="jal-learning-card">
-                    <div className="jal-learning-meta">OPEN MODULE</div>
-                    <h3 className="jal-learning-title">{module.title}</h3>
-                    <p className="jal-learning-note">{module.note}</p>
-
-                    <div className="jal-learning-actions">
-                      {module.href ? (
-                        <a className="button ghost" href={module.href}>
-                          {module.cta}
-                        </a>
-                      ) : (
-                        <button type="button" className="button ghost">
-                          {module.cta}
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-
+          {/* =========================================
+              SUPPORT STRIP
+          ========================================= */}
+          <section className="jal-ground-support">
             <section className="jal-bay jal-philosophy-panel">
               <div className="jal-bay-head">
                 <div className="jal-bay-title">System Intent</div>
@@ -440,10 +478,9 @@ export default function JalSolPage() {
               </div>
 
               <p className="jal-note">
-                JAL/SOL is not built around random access. It is built around
-                progression. People do not fail because they never move. They
-                fail because they move without order. Here, identity is formed
-                through repeated correct action.
+                JAL/SOL is not random access. It is progression under pressure.
+                Awareness produces correct movement. Repeated correct movement
+                produces value and identity over time.
               </p>
             </section>
 
@@ -454,21 +491,25 @@ export default function JalSolPage() {
               </div>
 
               <p className="jal-note">
-                Return here whenever clarity is needed. Reconnect your wallet,
-                check your access, review the map, and choose the next correct
-                move.
+                Return here whenever clarity is needed. Reconnect, review state,
+                confirm access, and choose the next correct move.
               </p>
 
               <div className="jal-bay-actions">
                 <a className="button ghost" href="/app/home">
                   Return to App Home
                 </a>
-                <a className="button ghost" href="/app/shop">
+
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => beginRoute("/app/shop")}
+                >
                   View Paid Access Layers
-                </a>
+                </button>
               </div>
             </section>
-          </div>
+          </section>
 
           <div className="jal-terminal-strip" aria-hidden="true">
             <span>GROUND ZERO ACTIVE</span>
