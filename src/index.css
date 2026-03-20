@@ -4806,11 +4806,6 @@ body.jal-transitioning .jal-ground-page{
   opacity:.62;
 }
 
-/* ---------- GROUND ZERO FOOTER RULE ---------- */
-.jal-footer{
-  display:none;
-}
-
 /* ---------- RESPONSIVE ---------- */
 @media (max-width:1180px){
   .jal-arrival-grid{
@@ -4986,56 +4981,51 @@ body.jal-transitioning .jal-ground-page{
     0 0 8px rgba(17,241,167,.08);
 }
 /* =========================================
-   SYSTEM FOOTER (APP)
+   GLOBAL SYSTEM FOOTER NAV
 ========================================= */
 
 .jal-system-footer{
   position:fixed;
-  bottom:0;
   left:0;
-  width:100%;
+  right:0;
+  bottom:0;
   z-index:1000;
-
   padding:.6rem 1rem;
-
   background:
-    linear-gradient(
-      180deg,
-      rgba(0,0,0,0) 0%,
-      rgba(4,12,18,.92) 100%
-    );
-
+    linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(4,12,18,.92) 100%);
   border-top:1px solid rgba(0,255,200,.08);
   backdrop-filter:blur(8px);
 }
 
-.jal-footer-inner{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+.jal-system-footer-inner{
   max-width:1200px;
   margin:0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
   gap:1rem;
 }
 
-.jal-footer-left{
+.jal-system-footer-left{
+  display:flex;
+  gap:1rem;
   font-size:.65rem;
   letter-spacing:.12em;
   opacity:.7;
 }
 
-.jal-footer-center{
+.jal-system-footer-center{
   font-size:.7rem;
   letter-spacing:.14em;
   opacity:.85;
 }
 
-.jal-footer-right{
+.jal-system-footer-right{
   display:flex;
   gap:.4rem;
 }
 
-.jal-footer-right button{
+.jal-system-footer-right button{
   background:none;
   border:none;
   color:rgba(180,220,240,.7);
@@ -5046,12 +5036,18 @@ body.jal-transitioning .jal-ground-page{
   transition:.2s ease;
 }
 
-.jal-footer-right button:hover{
+.jal-system-footer-right button:hover{
   color:#11f1a7;
   text-shadow:0 0 6px rgba(17,241,167,.3);
 }
 
-/* prevent overlap */
 .home-shell{
-  padding-bottom:70px;
+  padding-bottom:72px;
+}
+
+@media (max-width:720px){
+  .jal-system-footer-inner{
+    flex-direction:column;
+    align-items:flex-start;
+  }
 }
