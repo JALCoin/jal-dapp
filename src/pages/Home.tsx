@@ -72,26 +72,26 @@ export default function Home() {
     () => [
       {
         level: "L0",
-        title: "Awareness",
-        desc: "Learn how wallets, exchanges, Solana, and custody actually work before movement begins.",
-        route: "/app/jal-sol",
+        title: "Disclosure",
+        desc: "Identity, authorship, intent, and visible system direction are established before entry begins.",
+        route: "/app/home",
       },
       {
         level: "L1",
-        title: "Entry",
-        desc: "Move from observer to participant through a guided first step and controlled transaction flow.",
-        route: "/app/shop",
+        title: "Controlled Entry",
+        desc: "JAL/SOL moves the user from observation into guided participation and first irreversible action.",
+        route: "/app/jal-sol",
       },
       {
         level: "L2",
         title: "Creation",
-        desc: "Build a token, attach direction, and move from user into builder.",
+        desc: "The system expands from participant behaviour into owned assets, token creation, and utility formation.",
         route: "/app/jal-sol",
       },
       {
         level: "L3+",
-        title: "Execution",
-        desc: "Structured visibility, machine logic, identity, and deterministic operation.",
+        title: "Execution & Expansion",
+        desc: "Machine logic, structured visibility, and future custom domain deployment extend the system outward.",
         route: "/app/engine",
       },
     ],
@@ -108,7 +108,7 @@ export default function Home() {
         tone: "gold",
         previewTitle: "World Hub → Awareness → Controlled Entry",
         previewDesc:
-          "This is the beginning of the path. It explains the system, frames the user correctly, and removes noise before action.",
+          "This is the visible entry layer: framing, disclosure, awareness, and the first controlled step into the system.",
         previewImage: "/JALSOL1.gif",
         tags: ["Awareness", "Entry", "Progression", "Build Path"],
         route: "/app/jal-sol",
@@ -121,7 +121,7 @@ export default function Home() {
         tone: "green",
         previewTitle: "Execution Layer",
         previewDesc:
-          "Slots, state changes, machine progression, and event visibility sit here. This is where system logic becomes observable.",
+          "Slots, machine state, public behaviour, and proof of structure sit here. This is where system logic becomes observable.",
         previewImage: "/JALSOL1.gif",
         tags: ["Jeroids", "Lifecycle", "Event Log", "Public State"],
         route: "/app/engine",
@@ -134,7 +134,7 @@ export default function Home() {
         tone: "cyan",
         previewTitle: "Owned Access Surface",
         previewDesc:
-          "A stored layer for what has been obtained, released, or unlocked inside the JALSOL environment.",
+          "A stored layer for what has been obtained, released, or unlocked inside the wider JALSOL environment.",
         previewImage: "/JALSOL1.gif",
         tags: ["Downloads", "Access", "Releases", "Modules"],
         route: "/app/inventory",
@@ -147,7 +147,7 @@ export default function Home() {
         tone: "cyan",
         previewTitle: "System Control Surface",
         previewDesc:
-          "Preferences, future machine parameters, and operational adjustments live here.",
+          "Preferences, environment controls, and future operational adjustments live here.",
         previewImage: "/JALSOL1.gif",
         tags: ["Preferences", "Control", "Environment", "Config"],
         route: "/app/settings",
@@ -160,7 +160,7 @@ export default function Home() {
         tone: "gold",
         previewTitle: "Featured Releases",
         previewDesc:
-          "This route stays selective. It points toward featured access instead of trying to explain the entire system at once.",
+          "Selected access paths, support releases, and future packaged outputs tied to the wider JALSOL build.",
         previewImage: "/JALSOL1.gif",
         tags: ["Access", "Support", "Featured", "Drops"],
         dropdown: {
@@ -209,8 +209,8 @@ export default function Home() {
           </div>
         </section>
 
-<section
-  className="card machine-surface panel-frame home-console-hero jal-command-surface"
+        <section
+          className="card machine-surface panel-frame home-console-hero jal-command-surface"
           aria-label="JALSOL command home"
         >
           <div className="home-console-hero-bg" aria-hidden="true">
@@ -221,20 +221,21 @@ export default function Home() {
             <div className="home-console-copy">
               <div className="home-kicker">JAL SYSTEM • COMMAND SURFACE</div>
 
-              <h1 className="home-title">This is the system home.</h1>
+              <h1 className="home-title">
+                This domain discloses the source and visible architecture of JALSOL.
+              </h1>
 
               <p className="home-lead">
-                <strong>Home is not the onboarding layer.</strong> It is the
-                command layer. This page exists to show the full structure of
-                JALSOL at a higher altitude before the user steps into a more
-                specific state.
+                <strong>Built and operated by Jeremy Aaron Lugg.</strong> This is not a generic
+                brand page. It is the identity, direction, and visible system layer of a digital
+                environment designed to appreciate through structure.
               </p>
 
               <p className="home-console-sublead">
-                From here, the path becomes clear: JAL/SOL is the world hub and
-                controlled entry layer, the Engine is deterministic execution,
-                and the remaining surfaces support access, storage, and future
-                configuration.
+                What is shown here is intentional: authorship, movement, and system vision. What
+                remains protected sits beneath the visible layer. JAL/SOL begins controlled entry.
+                The Engine proves structured behaviour. The remaining surfaces expand access,
+                storage, and future deployment.
               </p>
             </div>
 
@@ -243,26 +244,24 @@ export default function Home() {
               aria-label="System identity and intent"
             >
               <div className="home-console-side-card home-identity-card">
-                <div className="home-console-side-kicker">SYSTEM AUTHOR</div>
+                <div className="home-console-side-kicker">SOURCE</div>
                 <div className="home-console-side-title">Jeremy Aaron Lugg</div>
                 <div className="home-console-side-copy">
                   Mechanical Engineer • Digital Creator
                 </div>
                 <p className="home-identity-desc">
-                  Builder of JALSOL — a progression environment designed to move
-                  people from awareness into ownership, then into structure,
-                  execution, and independent systems.
+                  The visible operator and originating source of JALSOL — a layered digital system
+                  built to move from awareness into ownership, then into structure, execution, and
+                  expansion.
                 </p>
               </div>
 
               <div className="home-console-side-card home-vision-card">
-                <div className="home-console-side-kicker">SYSTEM POSITION</div>
+                <div className="home-console-side-kicker">INTENT</div>
                 <div className="home-console-side-copy">
-                  Home explains the total architecture.
-                  <br />
-                  JAL/SOL begins the journey.
-                  <br />
-                  $JAL~Engine proves structured behaviour.
+                  To build a domain that appreciates through order, reveals its direction in
+                  layers, and becomes a source structure for future custom systems built from the
+                  same foundation.
                 </div>
               </div>
             </aside>
@@ -275,11 +274,11 @@ export default function Home() {
         >
           <div className="home-roadmap-head">
             <div>
-              <div className="home-kicker">SYSTEM ROADMAP</div>
-              <h2 className="home-modules-title">Order of movement</h2>
+              <div className="home-kicker">VISIBLE ARCHITECTURE</div>
+              <h2 className="home-modules-title">System roadmap</h2>
               <p className="home-modules-lead">
-                The point here is not to show everything at once. The point is to
-                show where each layer sits and what it changes.
+                This is not only a path of movement. It is the visible staging of the wider system
+                and the public-facing architecture of what JALSOL becomes.
               </p>
             </div>
           </div>
@@ -307,7 +306,11 @@ export default function Home() {
                   {content}
                 </button>
               ) : (
-                <article key={step.level} className="home-roadmap-card" role="listitem">
+                <article
+                  key={step.level}
+                  className="home-roadmap-card"
+                  role="listitem"
+                >
                   {content}
                 </article>
               );
@@ -316,12 +319,60 @@ export default function Home() {
         </section>
 
         <section
-          className="card machine-surface panel-frame home-donate-bar"
-          aria-label="Donate SOL"
+          className="card machine-surface panel-frame home-support-window"
+          aria-label="Support the source"
         >
-          <div className="home-donate-copy">
-            Donate SOL and support the project:{" "}
-            <strong>3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2</strong>
+          <div className="home-support-head">
+            <div>
+              <div className="home-kicker">SUPPORT THE SOURCE</div>
+              <h2 className="home-modules-title">Back the system as it expands</h2>
+              <p className="home-modules-lead">
+                JALSOL is being built as a visible, authored system. Support can be made through
+                selected store contributions or by direct SOL donation.
+              </p>
+            </div>
+          </div>
+
+          <div className="home-support-grid">
+            <article className="home-support-card">
+              <div className="home-support-card-kicker">Store Support</div>
+              <h3 className="home-support-card-title">
+                Support through featured contributions
+              </h3>
+              <p className="home-support-card-copy">
+                Use the Shop to access support releases, donation tiers, and future packaged system
+                outputs tied to the wider JALSOL build.
+              </p>
+
+              <div className="home-support-actions">
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => beginRoute("/app/shop", "shop")}
+                  disabled={loading}
+                >
+                  Open Shop Support
+                </button>
+              </div>
+            </article>
+
+            <article className="home-support-card">
+              <div className="home-support-card-kicker">Direct SOL</div>
+              <h3 className="home-support-card-title">
+                Support the build directly on-chain
+              </h3>
+              <p className="home-support-card-copy">
+                Direct SOL contributions help fund system development, interface refinement,
+                infrastructure, and future domain expansion.
+              </p>
+
+              <div className="home-support-wallet">
+                <span className="home-support-wallet-label">SOL Address</span>
+                <code className="home-support-wallet-code">
+                  3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2
+                </code>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -329,15 +380,15 @@ export default function Home() {
 
         <section
           className="card machine-surface panel-frame home-route-window"
-          aria-label="System routes"
+          aria-label="Visible system surfaces"
         >
           <div className="home-modules-head">
             <div>
-              <div className="home-kicker">ROUTE ARRAY</div>
-              <h2 className="home-modules-title">Choose a system state</h2>
+              <div className="home-kicker">VISIBLE SURFACES</div>
+              <h2 className="home-modules-title">Access the visible layers</h2>
               <p className="home-modules-lead">
-                Each route should feel like a different state of the same system,
-                not a disconnected page.
+                These are not disconnected pages. They are active surfaces of the same authored
+                system: entry, execution, storage, configuration, and selected releases.
               </p>
             </div>
           </div>
