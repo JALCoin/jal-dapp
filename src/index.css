@@ -5324,7 +5324,7 @@ button.home-route-band{
     url("/COVER.png") center / cover no-repeat;
 
   opacity:.18; /* adjust strength */
-  filter: blur(2px) saturate(1.1);
+  filter: blur(0.5px) saturate(1.1);
   transform: scale(1.08); /* prevents edge clipping */
 }
 
