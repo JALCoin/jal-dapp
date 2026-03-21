@@ -7,15 +7,25 @@ type RouteTo =
   | "/app/jal-sol"
   | "/app/jal-sol/level-1"
   | "/app/nav"
-  | "/app/shop";
+  | "/app/shop"
+  | "/app/create-token";
 
-type LevelCard = {
+type GateCard = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  line: string;
+  note: string;
+  route: RouteTo;
+  style: "observe" | "enter" | "build";
+};
+
+type SystemStage = {
   id: string;
   level: string;
   title: string;
-  identity: string;
-  message: string;
-  state: "open" | "available" | "locked";
+  state: "current" | "available" | "locked";
+  description: string;
 };
 
 type OpenModule = {
@@ -28,22 +38,22 @@ const OPEN_MODULES: OpenModule[] = [
   {
     id: "what-is-crypto",
     title: "What crypto actually is",
-    note: "A simple explanation of digital value, ownership, wallets, and on-chain movement.",
+    note: "Digital value, wallets, ownership, and what moving on-chain really means.",
   },
   {
     id: "cex-dex",
     title: "CEX vs DEX",
-    note: "The difference between centralised onboarding and self-directed execution.",
+    note: "The difference between guided entry points and direct self-custody interaction.",
   },
   {
     id: "wallets-custody",
     title: "Wallets and custody",
-    note: "Why control matters, what can go wrong, and what self-custody actually means.",
+    note: "Why control matters, where people fail, and how to think about responsibility.",
   },
   {
     id: "solana-basics",
     title: "Solana basics",
-    note: "Accounts, transactions, fees, speed, and how movement happens in the network.",
+    note: "Accounts, fees, transactions, speed, and how the system actually moves.",
   },
 ];
 
@@ -71,80 +81,108 @@ export default function JalSolPage() {
     if (loading) return;
 
     setLoading(true);
+
     timerRef.current = window.setTimeout(() => {
       navigate(to);
-    }, 1200);
+    }, 950);
   }
 
-  const primaryActionHref: RouteTo = level1Unlocked
+  const primaryRoute: RouteTo = level1Unlocked
     ? "/app/jal-sol/level-1"
     : "/app/shop";
 
-  const primaryActionLabel = level1Unlocked
-    ? "Continue Your Progress"
-    : "Enter The System";
-
-  const secondaryActionLabel = level1Unlocked
-    ? "Resume Entry"
-    : "View The Path";
-
-  const levels = useMemo<LevelCard[]>(
+  const gateCards = useMemo<GateCard[]>(
     () => [
       {
-        id: "l0",
-        level: "L0",
+        id: "observe",
+        eyebrow: "Gate 01",
+        title: "Observe",
+        line: "Learn before acting.",
+        note: "Start with awareness. See how wallets, exchanges, custody, and Solana fit together before risking confusion.",
+        route: "/app/jal-sol",
+        style: "observe",
+      },
+      {
+        id: "enter",
+        eyebrow: "Gate 02",
+        title: level1Unlocked ? "Resume Entry" : "Enter",
+        line: "Take your first controlled step.",
+        note: level1Unlocked
+          ? "Your Level 1 path is active. Continue the movement you already started."
+          : "Move from passive observation into real action through the first guided progression layer.",
+        route: primaryRoute,
+        style: "enter",
+      },
+      {
+        id: "build",
+        eyebrow: "Gate 03",
+        title: "Build",
+        line: "Create your own system.",
+        note: "Use the token creation pathway to move from participant to creator and form your own functional asset.",
+        route: "/app/nav",
+        style: "build",
+      },
+    ],
+    [level1Unlocked, primaryRoute]
+  );
+
+  const stages = useMemo<SystemStage[]>(
+    () => [
+      {
+        id: "world-hub",
+        level: "0.5",
+        title: "World Hub",
+        state: "current",
+        description: "First contact. Direction replaces urgency.",
+      },
+      {
+        id: "awareness",
+        level: "0",
         title: "Awareness",
-        identity: "Observer",
-        message: "You see the system.",
-        state: "open",
+        state: "current",
+        description: "Understand movement before committing to it.",
       },
       {
-        id: "l1",
-        level: "L1",
-        title: "Activation",
-        identity: "Participant",
-        message: "You enter through real action.",
-        state: level1Unlocked ? "open" : "available",
+        id: "entry",
+        level: "1",
+        title: "Controlled Entry",
+        state: level1Unlocked ? "current" : "available",
+        description: "First correct action through guided onboarding.",
       },
       {
-        id: "l2",
-        level: "L2",
-        title: "Control",
-        identity: "Controller",
-        message: "You stop moving randomly.",
+        id: "creation",
+        level: "2",
+        title: "Creation",
         state: "locked",
+        description: "Shift from consumer to creator.",
       },
       {
-        id: "l3",
-        level: "L3",
-        title: "Market Entry",
-        identity: "Operator",
-        message: "You interact without fear.",
+        id: "identity",
+        level: "3",
+        title: "Identity + Utility",
         state: "locked",
+        description: "Attach meaning, structure, and use to assets.",
       },
       {
-        id: "l4",
-        level: "L4",
-        title: "System Build",
-        identity: "System",
-        message: "Rules replace reaction.",
+        id: "market",
+        level: "4",
+        title: "Market Structure",
         state: "locked",
+        description: "Replace reaction with rule-based interaction.",
       },
       {
-        id: "l5",
-        level: "L5",
-        title: "Automation",
-        identity: "Machine",
-        message: "The system runs without you.",
+        id: "engine",
+        level: "5",
+        title: "Deterministic Execution",
         state: "locked",
+        description: "Visible system logic replaces emotional behaviour.",
       },
       {
-        id: "l6",
-        level: "L6",
-        title: "Identity Economy",
-        identity: "Asset",
-        message: "You become an economic entity.",
+        id: "deployment",
+        level: "6",
+        title: "Deployment",
         state: "locked",
+        description: "Independent user-owned systems replicate outward.",
       },
     ],
     [level1Unlocked]
@@ -152,189 +190,223 @@ export default function JalSolPage() {
 
   return (
     <main
-      className={`home-shell jal-shell ${loading ? "jal-ground-page is-fading" : ""}`}
-      aria-label="JAL/SOL"
+      className={`home-shell jal-shell jal-ground-page ${
+        loading ? "is-fading" : ""
+      }`}
+      aria-label="JAL/SOL World Hub"
     >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
-          <section className="jal-hero" aria-label="JAL/SOL hero">
+          <section className="jal-hero jal-world-hero" aria-label="World Hub hero">
             <div className="jal-hero-top">
-              <div className="jal-kicker">JAL/SOL</div>
-              <div className="jal-status" aria-label="System state">
+              <div className="jal-kicker">JAL/SOL • WORLD HUB</div>
+
+              <div className="jal-status" aria-label="System status">
                 <span className="jal-status-dot" />
-                <span className="jal-status-text">System Path Active</span>
+                <span className="jal-status-text">Nothing Here Is Urgent</span>
               </div>
             </div>
 
-            <h1 className="home-title">
-              You are not entering crypto.
-              <br />
-              You are entering a system.
-            </h1>
+            <div className="jal-hero-center">
+              <p className="jal-world-pretitle">Entry point into controlled movement</p>
 
-            <p className="home-lead">
-              Most people enter markets with no structure, no controlled path,
-              and no idea what state they are really in.
-            </p>
+              <h1 className="home-title">
+                You are not browsing a website.
+                <br />
+                You are stepping into a system.
+              </h1>
 
-            <p className="jal-sublead">
-              JAL/SOL is a progression system that takes a person from awareness
-              to action, from action to control, and from control to ownership.
-              The endpoint is not more information. The endpoint is becoming a
-              self-operating financial system with its own economic identity.
-            </p>
+              <p className="home-lead">
+                JAL/SOL is an order-of-processing environment for digital value.
+                It takes a person from awareness to action, from action to creation,
+                from creation to structure, and from structure to independent systems.
+              </p>
+
+              <p className="jal-sublead">
+                Start by choosing a direction. Observe the system. Enter it
+                correctly. Or build inside it. Each path changes what becomes
+                visible next.
+              </p>
+            </div>
+
+            <div className="jal-arrival-note" aria-label="Core principles">
+              <span>HOPE → WILL → FAITH → REACTION → EVALUATION → ADAPTATION</span>
+              <span>ORDER BEFORE OUTCOME</span>
+              <span>STRUCTURE OVER HYPE</span>
+            </div>
 
             <div className="jal-links">
               <button
                 type="button"
                 className="button neon"
-                onClick={() => beginRoute(primaryActionHref)}
+                onClick={() => beginRoute(primaryRoute)}
                 disabled={loading}
               >
-                {primaryActionLabel}
+                {level1Unlocked ? "Continue Progress" : "Enter The System"}
               </button>
 
               <a
                 className="button ghost"
-                href="#jal-path-preview"
+                href="#jal-gates"
                 aria-disabled={loading}
                 onClick={(event) => {
                   if (loading) event.preventDefault();
                 }}
               >
-                {secondaryActionLabel}
+                Choose A Path
               </a>
 
               <button
                 type="button"
                 className="button ghost"
-                onClick={() => beginRoute("/app/nav")}
+                onClick={() => beginRoute("/app/home")}
                 disabled={loading}
               >
-                System Nav
+                Return To App Home
               </button>
-            </div>
-
-            <div className="jal-arrival-note">
-              <span>CONFUSION REMOVED</span>
-              <span>ORDER BEFORE OUTCOME</span>
-              <span>OWNERSHIP THROUGH PROGRESSION</span>
-            </div>
-          </section>
-
-          <section className="jal-bay jal-bay-wide" aria-label="System explanation">
-            <div className="jal-bay-head">
-              <div className="jal-bay-title">What JAL/SOL Is</div>
-              <div className="jal-bay-note">Progression-based entry system</div>
-            </div>
-
-            <p className="jal-note">
-              This is not a random crypto course and it is not a hype funnel.
-              Each level exists to remove one human limitation at a time.
-            </p>
-
-            <div className="jal-bullets">
-              <article className="jal-bullet">
-                <div className="jal-bullet-k">L0 → L2</div>
-                <div className="jal-bullet-v">
-                  Remove confusion, inaction, and disorder. Learn what is real,
-                  make your first movement, and gain control.
-                </div>
-              </article>
-
-              <article className="jal-bullet">
-                <div className="jal-bullet-k">L3 → L4</div>
-                <div className="jal-bullet-v">
-                  Remove fear and emotion. Interact with markets properly and
-                  build a repeatable system instead of reacting blindly.
-                </div>
-              </article>
-
-              <article className="jal-bullet">
-                <div className="jal-bullet-k">L5 → L6</div>
-                <div className="jal-bullet-v">
-                  Remove time and dependency. Automate execution and attach
-                  economic identity through token-based ownership.
-                </div>
-              </article>
             </div>
           </section>
 
           <section
-            id="jal-path-preview"
+            id="jal-gates"
             className="jal-bay jal-bay-wide"
-            aria-label="Path preview"
+            aria-label="Three entry gates"
           >
             <div className="jal-bay-head">
-              <div className="jal-bay-title">The Path</div>
-              <div className="jal-bay-note">Visible progression</div>
+              <div className="jal-bay-title">Three Entry Gates</div>
+              <div className="jal-bay-note">Choose your direction of movement</div>
             </div>
 
             <p className="jal-note">
-              You do not learn this system from the outside. You move through it
-              level by level.
+              This system begins by removing indecision. You do not need to see
+              everything at once. You need to choose the correct next movement.
+            </p>
+
+            <div className="jal-gate-grid">
+              {gateCards.map((gate) => (
+                <article
+                  key={gate.id}
+                  className={`jal-gate-card jal-gate-card--${gate.style}`}
+                >
+                  <div className="jal-gate-top">
+                    <span className="jal-gate-eyebrow">{gate.eyebrow}</span>
+                  </div>
+
+                  <h2 className="jal-gate-title">{gate.title}</h2>
+                  <p className="jal-gate-line">{gate.line}</p>
+                  <p className="jal-gate-note">{gate.note}</p>
+
+                  <div className="jal-gate-actions">
+                    <button
+                      type="button"
+                      className={`button ${
+                        gate.style === "enter" ? "gold" : "ghost"
+                      }`}
+                      onClick={() => beginRoute(gate.route)}
+                      disabled={loading}
+                    >
+                      {gate.title}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="jal-bay jal-bay-wide" aria-label="System definition">
+            <div className="jal-bay-head">
+              <div className="jal-bay-title">What This Actually Is</div>
+              <div className="jal-bay-note">Controlled progression system</div>
+            </div>
+
+            <p className="jal-note">
+              JAL/SOL is not a random course, a simple token tool, or a noisy
+              trading page. It is a progression framework designed to move a user
+              from observer to participant, from participant to creator, and from
+              creator to structured operator.
+            </p>
+
+            <div className="jal-bullets">
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">Observe</div>
+                <div className="jal-bullet-v">
+                  Learn the foundations: wallets, custody, exchanges, Solana,
+                  and why movement matters more than hype.
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">Enter</div>
+                <div className="jal-bullet-v">
+                  Execute the first correct movement through guided onboarding,
+                  wallet connection, and real interaction.
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">Build</div>
+                <div className="jal-bullet-v">
+                  Create assets, attach utility, connect identity, and progress
+                  toward deterministic system execution.
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section className="jal-bay jal-bay-wide" aria-label="Visible progression">
+            <div className="jal-bay-head">
+              <div className="jal-bay-title">Visible Progression</div>
+              <div className="jal-bay-note">The path does not reveal itself all at once</div>
+            </div>
+
+            <p className="jal-note">
+              Every layer exists to remove a different form of human weakness:
+              confusion, hesitation, fear, randomness, and dependency.
             </p>
 
             <div className="jal-level-rail">
-              {levels.map((item) => {
+              {stages.map((stage) => {
                 const stateClass =
-                  item.state === "open"
+                  stage.state === "current"
                     ? "is-open"
-                    : item.state === "available"
+                    : stage.state === "available"
                     ? "is-paid"
                     : "is-locked";
 
                 const stateLabel =
-                  item.state === "open"
+                  stage.state === "current"
                     ? "Visible"
-                    : item.state === "available"
+                    : stage.state === "available"
                     ? "Next"
                     : "Locked";
 
                 return (
-                  <article key={item.id} className={`jal-level-card ${stateClass}`}>
+                  <article key={stage.id} className={`jal-level-card ${stateClass}`}>
                     <div className="jal-level-top">
-                      <div className="jal-level-number">{item.level}</div>
+                      <div className="jal-level-number">L{stage.level}</div>
                       <div className={`jal-level-state ${stateClass}`}>
                         {stateLabel}
                       </div>
                     </div>
 
-                    <h3 className="jal-level-title">{item.title}</h3>
-                    <p className="jal-level-price">{item.identity}</p>
-                    <p className="jal-level-outcome">{item.message}</p>
-                    <p className="jal-level-body">
-                      {item.level === "L0" &&
-                        "See the structure before committing to it."}
-                      {item.level === "L1" &&
-                        "Cross from observation into real on-chain action."}
-                      {item.level === "L2" &&
-                        "Gain structure over wallet flow and capital movement."}
-                      {item.level === "L3" &&
-                        "Learn how to operate inside the market itself."}
-                      {item.level === "L4" &&
-                        "Build rules so behaviour stops controlling outcomes."}
-                      {item.level === "L5" &&
-                        "Deploy a machine-layer built for consistent execution."}
-                      {item.level === "L6" &&
-                        "Attach system identity through token and ecosystem presence."}
-                    </p>
+                    <h3 className="jal-level-title">{stage.title}</h3>
+                    <p className="jal-level-outcome">{stage.description}</p>
                   </article>
                 );
               })}
             </div>
           </section>
 
-          <section className="jal-grid" aria-label="Open modules and commitment">
+          <section className="jal-grid" aria-label="Open learning and first paid gate">
             <section className="jal-bay">
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Open Knowledge</div>
-                <div className="jal-bay-note">Free entry material</div>
+                <div className="jal-bay-note">Free awareness layer</div>
               </div>
 
               <p className="jal-note">
-                Before anyone pays, they should understand the basics of where
-                value moves, how wallets work, and why order matters.
+                Before paid progression begins, the basics remain visible.
+                Awareness is the first stabiliser in the system.
               </p>
 
               <div className="jal-steps">
@@ -349,26 +421,27 @@ export default function JalSolPage() {
 
             <section className="jal-bay">
               <div className="jal-bay-head">
-                <div className="jal-bay-title">Why Entry Exists</div>
-                <div className="jal-bay-note">The first irreversible state</div>
+                <div className="jal-bay-title">First Irreversible State</div>
+                <div className="jal-bay-note">Why Level 1 exists</div>
               </div>
 
               <p className="jal-note">
-                Entry is the first paid gate because most people never move past
-                passive observation. They read, scroll, react, and stay outside.
+                The first paid gate is not about locking information. It is about
+                creating a real movement that changes the user’s relationship to
+                the system.
               </p>
 
               <p className="jal-lock-text">
-                JAL/SOL starts by forcing a real action. A wallet. A purchase. A
-                first transfer. A movement that changes your relationship to the
-                system.
+                A wallet. A first transaction. A first controlled transfer.
+                Entry exists because passive observation does not create
+                ownership.
               </p>
 
               <div className="jal-bay-actions">
                 <button
                   type="button"
                   className="button gold"
-                  onClick={() => beginRoute(primaryActionHref)}
+                  onClick={() => beginRoute(primaryRoute)}
                   disabled={loading}
                 >
                   {level1Unlocked ? "Resume Entry" : "Enter The System"}
@@ -386,23 +459,61 @@ export default function JalSolPage() {
             </section>
           </section>
 
-          <section className="jal-bay jal-bay-wide" aria-label="Final conversion">
+          <section className="jal-bay jal-bay-wide" aria-label="System endpoint">
             <div className="jal-bay-head">
-              <div className="jal-bay-title">The Decision</div>
-              <div className="jal-bay-note">Observer or participant</div>
+              <div className="jal-bay-title">Where This Leads</div>
+              <div className="jal-bay-note">Engine → identity → replication</div>
             </div>
 
             <p className="jal-note">
-              You already understand enough to know what this is. The difference
-              now is whether you stay outside it, or move into it in the correct
-              order.
+              The endpoint is not endless education. The endpoint is structured
+              operation: token creation, identity-linked utility, visible machine
+              logic, and eventually the deployment of independent systems tied
+              back to JAL/SOL.
+            </p>
+
+            <div className="jal-bullets">
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">Layer 2</div>
+                <div className="jal-bullet-v">
+                  Create a functional token and move from user to builder.
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">Layer 5</div>
+                <div className="jal-bullet-v">
+                  Access deterministic execution through visible state, rules,
+                  slots, and system logic.
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">Layer 6</div>
+                <div className="jal-bullet-v">
+                  Expand into user-owned domains and replicated structures that
+                  trace back to the source system.
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section className="jal-bay jal-bay-wide" aria-label="Final choice">
+            <div className="jal-bay-head">
+              <div className="jal-bay-title">Choose The Next Movement</div>
+              <div className="jal-bay-note">Observer, participant, or builder</div>
+            </div>
+
+            <p className="jal-note">
+              You do not need more noise. You need correct order. Start where
+              your state is true, then move properly.
             </p>
 
             <div className="jal-bay-actions">
               <button
                 type="button"
                 className="button neon"
-                onClick={() => beginRoute(primaryActionHref)}
+                onClick={() => beginRoute(primaryRoute)}
                 disabled={loading}
               >
                 {level1Unlocked ? "Continue Your Progress" : "Enter The System"}
@@ -411,10 +522,10 @@ export default function JalSolPage() {
               <button
                 type="button"
                 className="button ghost"
-                onClick={() => beginRoute("/app/home")}
+                onClick={() => beginRoute("/app/nav")}
                 disabled={loading}
               >
-                Return to App Home
+                Open System Nav
               </button>
             </div>
           </section>
@@ -425,8 +536,8 @@ export default function JalSolPage() {
         <div
           className="loading-screen"
           role="status"
-          aria-label="Loading"
           aria-live="polite"
+          aria-label="Loading"
         >
           <img className="loading-logo" src="/JALSOL1.gif" alt="" />
         </div>
