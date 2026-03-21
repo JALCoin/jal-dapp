@@ -47,20 +47,23 @@ export default function Home() {
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        window.clearTimeout(timerRef.current);
-      }
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      document.body.style.pointerEvents = "";
     };
   }, []);
 
   function beginRoute(route: string, id?: string) {
     if (loading) return;
+
     if (id) setActiveRoute(id);
     setLoading(true);
+    document.body.style.pointerEvents = "none";
 
     timerRef.current = window.setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "auto" });
       navigate(route);
-    }, 900);
+      document.body.style.pointerEvents = "";
+    }, 1200);
   }
 
   const networkLabel = "MAINNET";
@@ -70,25 +73,25 @@ export default function Home() {
       {
         level: "L0",
         title: "Awareness",
-        desc: "Understand wallets, exchanges, Solana, and movement before action.",
+        desc: "Learn how wallets, exchanges, Solana, and custody actually work before movement begins.",
         route: "/app/jal-sol",
       },
       {
         level: "L1",
         title: "Entry",
-        desc: "Take the first controlled step into the system through guided progression.",
+        desc: "Move from observer to participant through a guided first step and controlled transaction flow.",
         route: "/app/shop",
       },
       {
         level: "L2",
         title: "Creation",
-        desc: "Create your own token, attach utility, and move from participant to builder.",
+        desc: "Build a token, attach direction, and move from user into builder.",
         route: "/app/jal-sol",
       },
       {
         level: "L3+",
         title: "Execution",
-        desc: "Operate structured systems, machine logic, and market visibility with discipline.",
+        desc: "Structured visibility, machine logic, identity, and deterministic operation.",
         route: "/app/engine",
       },
     ],
@@ -99,73 +102,82 @@ export default function Home() {
     () => [
       {
         id: "jalsol",
-        kicker: "DISCOVER + BUILD",
-        title: "JALSOL",
-        desc: "Entry into awareness, onboarding, token creation, and the first layers of digital ownership.",
+        kicker: "OBSERVE • ENTER • BUILD",
+        title: "JAL/SOL World Hub",
+        desc: "The onboarding world of the wider system. This is where curiosity is converted into direction, and direction becomes controlled movement.",
         tone: "gold",
-        previewTitle: "World Hub → Entry → Creation",
+        previewTitle: "World Hub → Awareness → Controlled Entry",
         previewDesc:
-          "Hover reveals the pathway into the JALSOL system. This is where a user moves from understanding into controlled build capability.",
+          "This is the beginning of the path. It explains the system, frames the user correctly, and removes noise before action.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Awareness", "Entry", "Token Creation", "Utility"],
+        tags: ["Awareness", "Entry", "Progression", "Build Path"],
         route: "/app/jal-sol",
       },
       {
         id: "engine",
-        kicker: "LIVE EXECUTION",
+        kicker: "DETERMINISTIC EXECUTION",
         title: "$JAL~Engine",
-        desc: "Market interface, structured deployment, public state visibility, and deterministic machine logic.",
+        desc: "Visible state, slot lifecycle, event logs, telemetry, and machine truth. This is not theory. This is system behaviour made public.",
         tone: "green",
-        previewTitle: "Execution Surface",
+        previewTitle: "Execution Layer",
         previewDesc:
-          "Visible state, slots, events, tracking, and machine behaviour. This is the execution layer of the wider JALSOL system.",
+          "Slots, state changes, machine progression, and event visibility sit here. This is where system logic becomes observable.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Market Snapshot", "Jeroids", "Machine State", "Events"],
+        tags: ["Jeroids", "Lifecycle", "Event Log", "Public State"],
         route: "/app/engine",
       },
       {
         id: "inventory",
-        kicker: "PACKAGED ACCESS",
+        kicker: "PACKAGED SYSTEM OUTPUTS",
         title: "Inventory",
-        desc: "Downloadable modules, acquired releases, access layers, and stored system outputs.",
+        desc: "A future storage layer for acquired releases, downloads, unlocked modules, and controlled system assets.",
         tone: "cyan",
-        previewTitle: "Owned System Assets",
+        previewTitle: "Owned Access Surface",
         previewDesc:
-          "A structured access bay for what has been acquired, unlocked, or packaged for controlled use.",
+          "A stored layer for what has been obtained, released, or unlocked inside the JALSOL environment.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Downloads", "Access", "Inventory", "Releases"],
+        tags: ["Downloads", "Access", "Releases", "Modules"],
         route: "/app/inventory",
       },
       {
         id: "settings",
-        kicker: "CONFIG LAYER",
+        kicker: "CONFIGURATION LAYER",
         title: "Settings",
-        desc: "Environment controls, future machine parameters, and configuration logic for controlled operation.",
+        desc: "Environment controls, future system preferences, and deeper configuration for personalised operation.",
         tone: "cyan",
-        previewTitle: "Configuration Surface",
+        previewTitle: "System Control Surface",
         previewDesc:
-          "Session controls, API intent, preferences, and deeper system parameters live here.",
+          "Preferences, future machine parameters, and operational adjustments live here.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Session", "Preferences", "Config", "Control"],
+        tags: ["Preferences", "Control", "Environment", "Config"],
         route: "/app/settings",
       },
       {
         id: "shop",
-        kicker: "FEATURED SHOP",
+        kicker: "FEATURED ACCESS",
         title: "Shop",
-        desc: "A dropdown-only layer for featured releases, support items, and selected access products.",
+        desc: "A lightweight featured layer for selected releases, access products, and support items tied to the wider system.",
         tone: "gold",
         previewTitle: "Featured Releases",
         previewDesc:
-          "This band stays lightweight. On interaction it reveals selected featured items only, not the full storefront grid.",
+          "This route stays selective. It points toward featured access instead of trying to explain the entire system at once.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Featured", "Support", "Drops", "Access"],
+        tags: ["Access", "Support", "Featured", "Drops"],
         dropdown: {
           label: "Featured items",
           items: [
-            { title: "Featured Item 01", note: "Undecided placeholder." },
-            { title: "Featured Item 02", note: "Undecided placeholder." },
-            { title: "Featured Item 03", note: "Undecided placeholder." },
+            {
+              title: "Level 1 Access",
+              note: "The first guided movement into the system.",
+            },
+            {
+              title: "Support Releases",
+              note: "Selected items that help fund expansion of JALSOL.",
+            },
+            {
+              title: "Future System Packs",
+              note: "Packaged modules, downloads, and guided releases.",
+            },
           ],
         },
       },
@@ -193,13 +205,13 @@ export default function Home() {
           </div>
 
           <div className="terminal-right">
-            <span className="terminal-auth is-ro">ROUTING CONSOLE</span>
+            <span className="terminal-auth is-ro">COMMAND HOME</span>
           </div>
         </section>
 
         <section
           className="card machine-surface panel-frame home-console-hero"
-          aria-label="JALSOL command hub"
+          aria-label="JALSOL command home"
         >
           <div className="home-console-hero-bg" aria-hidden="true">
             <img className="home-console-hero-logo" src="/JALSOL1.gif" alt="" />
@@ -207,25 +219,29 @@ export default function Home() {
 
           <div className="home-console-hero-foreground home-console-hero-foreground--identity">
             <div className="home-console-copy">
-              <div className="home-kicker">JAL SYSTEM • ONLINE</div>
+              <div className="home-kicker">JAL SYSTEM • COMMAND SURFACE</div>
 
-              <h1 className="home-title">Command Home</h1>
+              <h1 className="home-title">This is the system home.</h1>
 
               <p className="home-lead">
-                <strong>Central routing console for JALSOL.</strong> This is the
-                internal point of clarity for the system — who built it, what it
-                is for, and where each layer leads next.
+                <strong>Home is not the onboarding layer.</strong> It is the
+                command layer. This page exists to show the full structure of
+                JALSOL at a higher altitude before the user steps into a more
+                specific state.
               </p>
 
               <p className="home-console-sublead">
-                JALSOL is a structured progression environment for digital value.
-                It begins with awareness, moves through controlled entry, expands
-                into creation, and advances toward execution, identity, and
-                independent systems.
+                From here, the path becomes clear: JAL/SOL is the world hub and
+                controlled entry layer, the Engine is deterministic execution,
+                and the remaining surfaces support access, storage, and future
+                configuration.
               </p>
             </div>
 
-            <aside className="home-console-side" aria-label="System identity and intent">
+            <aside
+              className="home-console-side"
+              aria-label="System identity and intent"
+            >
               <div className="home-console-side-card home-identity-card">
                 <div className="home-console-side-kicker">SYSTEM AUTHOR</div>
                 <div className="home-console-side-title">Jeremy Aaron Lugg</div>
@@ -233,19 +249,20 @@ export default function Home() {
                   Mechanical Engineer • Digital Creator
                 </div>
                 <p className="home-identity-desc">
-                  Builder of JALSOL — a system designed to move people from
-                  awareness into ownership, then into structure and execution.
+                  Builder of JALSOL — a progression environment designed to move
+                  people from awareness into ownership, then into structure,
+                  execution, and independent systems.
                 </p>
               </div>
 
               <div className="home-console-side-card home-vision-card">
-                <div className="home-console-side-kicker">SYSTEM INTENT</div>
+                <div className="home-console-side-kicker">SYSTEM POSITION</div>
                 <div className="home-console-side-copy">
-                  JALSOL is not just a website or utility surface.
+                  Home explains the total architecture.
                   <br />
-                  It is a roadmap for entering digital value correctly.
+                  JAL/SOL begins the journey.
                   <br />
-                  Every layer reduces noise and increases controlled movement.
+                  $JAL~Engine proves structured behaviour.
                 </div>
               </div>
             </aside>
@@ -259,10 +276,10 @@ export default function Home() {
           <div className="home-roadmap-head">
             <div>
               <div className="home-kicker">SYSTEM ROADMAP</div>
-              <h2 className="home-modules-title">Clarity of movement</h2>
+              <h2 className="home-modules-title">Order of movement</h2>
               <p className="home-modules-lead">
-                Static enough to explain the path, clickable enough to move
-                through it.
+                The point here is not to show everything at once. The point is to
+                show where each layer sits and what it changes.
               </p>
             </div>
           </div>
@@ -317,10 +334,10 @@ export default function Home() {
           <div className="home-modules-head">
             <div>
               <div className="home-kicker">ROUTE ARRAY</div>
-              <h2 className="home-modules-title">Select a system layer</h2>
+              <h2 className="home-modules-title">Choose a system state</h2>
               <p className="home-modules-lead">
-                Full-width route bands now replace the card grid. Each band
-                carries a clearer decision and reveals more of its layer on hover.
+                Each route should feel like a different state of the same system,
+                not a disconnected page.
               </p>
             </div>
           </div>
@@ -373,9 +390,7 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className="home-route-open">
-                        {band.dropdown.label} ↓
-                      </div>
+                      <div className="home-route-open">{band.dropdown.label} ↓</div>
                     </summary>
 
                     <div className="home-route-dropdown">
@@ -425,9 +440,7 @@ export default function Home() {
                   >
                     <div className="home-route-preview-overlay">
                       <div className="home-route-preview-kicker">Preview</div>
-                      <div className="home-route-preview-title">
-                        {band.previewTitle}
-                      </div>
+                      <div className="home-route-preview-title">{band.previewTitle}</div>
                       <p className="home-route-preview-desc">{band.previewDesc}</p>
                     </div>
                   </div>
