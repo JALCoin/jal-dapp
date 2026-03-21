@@ -209,8 +209,8 @@ export default function Home() {
           </div>
         </section>
 
-        <section
-          className="card machine-surface panel-frame home-console-hero"
+<section
+  className="card machine-surface panel-frame home-console-hero jal-command-surface"
           aria-label="JALSOL command home"
         >
           <div className="home-console-hero-bg" aria-hidden="true">

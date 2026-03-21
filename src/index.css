@@ -5303,3 +5303,39 @@ button.home-route-band{
 .home-console-shell .home-wrap{
   transition:opacity .45s ease, transform .45s ease, filter .45s ease;
 }
+/* =========================
+   JAL COMMAND SURFACE BG
+========================= */
+
+.jal-command-surface{
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Background image layer */
+.jal-command-surface::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-2;
+
+  background:
+    url("/COVER.png") center / cover no-repeat;
+
+  opacity:.18; /* adjust strength */
+  filter: blur(8px) saturate(1.1);
+  transform: scale(1.08); /* prevents edge clipping */
+}
+
+/* Gradient overlay (keeps your UI readable) */
+.jal-command-surface::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+
+  background:
+    radial-gradient(circle at 30% 20%, rgba(17,241,167,.08), transparent 60%),
+    linear-gradient(180deg, rgba(3,8,14,.65), rgba(0,0,0,.85));
+}
