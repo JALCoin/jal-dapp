@@ -4229,3 +4229,178 @@ a.button[aria-disabled="true"]{
     height:8px;
   }
 }
+/* =========================================
+   ENGINE MOBILE FIX — TRUE IDLE COLLAPSE
+   Put at very bottom of index.css
+========================================= */
+
+@media (max-width:760px){
+
+  .engine-status-rail{
+    padding:14px;
+    gap:12px;
+  }
+
+  .engine-carousel-controls{
+    justify-content:space-between;
+    gap:8px;
+  }
+
+  .engine-carousel-controls .button{
+    min-height:56px;
+    min-width:84px;
+    padding:.8rem .9rem;
+  }
+
+  .engine-carousel-counter{
+    min-width:auto;
+    font-size:.9rem;
+  }
+
+  .engine-carousel-card{
+    padding:14px;
+    gap:10px;
+    border-radius:20px;
+  }
+
+  .engine-carousel-card-top{
+    gap:8px;
+  }
+
+  .engine-carousel-id{
+    font-size:.72rem;
+  }
+
+  .engine-carousel-coin{
+    font-size:1rem;
+  }
+
+  .engine-carousel-coin span{
+    margin-left:6px;
+    font-size:.78rem;
+  }
+
+  .engine-carousel-grid{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:8px;
+  }
+
+  .engine-carousel-metric{
+    padding:10px;
+    border-radius:12px;
+  }
+
+  .engine-carousel-k{
+    font-size:.64rem;
+  }
+
+  .engine-carousel-v{
+    margin-top:4px;
+    font-size:.92rem;
+    line-height:1.2;
+    word-break:break-word;
+  }
+
+  .engine-carousel-foot{
+    gap:6px;
+    font-size:.78rem;
+    line-height:1.45;
+  }
+
+  .engine-carousel-dots{
+    margin-top:2px;
+    gap:6px;
+  }
+
+  .engine-carousel-dot{
+    width:8px;
+    height:8px;
+  }
+
+  /* ---------- TRUE FIX: collapse idle subslot ---------- */
+
+  .engine-subslot{
+    padding:10px;
+    gap:8px;
+    border-radius:14px;
+  }
+
+  .engine-subslot-head{
+    align-items:center;
+    gap:8px;
+  }
+
+  .engine-subslot-title{
+    font-size:.74rem;
+  }
+
+  .engine-subslot-state{
+    font-size:.74rem;
+  }
+
+  .engine-subslot-grid{
+    gap:8px;
+  }
+
+  .engine-subslot-item{
+    padding:8px 10px;
+    min-height:0;
+  }
+
+  .engine-subslot-k{
+    font-size:.62rem;
+  }
+
+  .engine-subslot-v{
+    font-size:.82rem;
+    margin-top:4px;
+  }
+
+  /* when subslot is idle/muted, collapse the empty internals */
+  .engine-subslot.is-muted{
+    padding:10px 12px;
+    gap:0;
+    opacity:.72;
+  }
+
+  .engine-subslot.is-muted .engine-subslot-grid{
+    display:none;
+  }
+
+  .engine-subslot.is-muted .engine-subslot-head{
+    margin:0;
+  }
+
+  /* tighten the info row below metrics */
+  .engine-carousel-foot{
+    margin-top:-2px;
+  }
+}
+
+@media (max-width:640px){
+  .engine-carousel-controls .button{
+    min-height:52px;
+    min-width:76px;
+  }
+
+  .engine-carousel-card{
+    padding:13px;
+    gap:9px;
+  }
+
+  .engine-carousel-grid{
+    gap:7px;
+  }
+
+  .engine-carousel-metric{
+    padding:9px;
+  }
+
+  .engine-subslot{
+    padding:9px 10px;
+  }
+
+  .engine-subslot.is-muted{
+    padding:9px 10px;
+  }
+}

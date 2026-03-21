@@ -615,13 +615,20 @@ function subslotToneClass(s: SlotRow) {
   if (sub === "BUY_SUBMITTED") return "is-deploying";
   if (sub === "ACTIVE") return "is-holding";
   if (sub === "SELL_SUBMITTED") return "is-exiting";
-  if (sub === "CLOSED") return "is-neutral";
+
+  if (sub === "CLOSED") return "is-muted";
 
   if (signal === "REVERSAL_CONFIRMING") return "is-deploying";
   if (signal === "BOUNCE_SEEN" || signal === "TRACKING") return "is-tracking";
   if (signal === "NO_MARKET") return "is-muted";
 
-  return "is-neutral";
+  return "is-muted";
+}
+function isIdleSubslot(s: SlotRow) {
+  const sub = String(s.subslotState || "").toUpperCase();
+  const signal = String(s.subslotSignalState || "").toUpperCase();
+
+  return !sub || sub === "CLOSED" || (!signal || signal === "NO_MARKET");
 }
 
 function subslotSummaryRows(s: SlotRow, nowMs: number) {
@@ -1306,40 +1313,42 @@ export default function Engine() {
                         <span>View Details</span>
                       </div>
 
-                      <div className={`engine-subslot ${subslotToneClass(carouselSlot)}`}>
-                        <div className="engine-subslot-head">
-                          <span className="engine-subslot-title">{subslotLabel(carouselSlot)}</span>
-                          <span className="engine-subslot-state">
-                            {carouselSlot.subslotState ?? carouselSlot.subslotSignalState ?? "—"}
-                          </span>
-                        </div>
+<div className={`engine-subslot ${subslotToneClass(carouselSlot)}`}>
+  <div className="engine-subslot-head">
+    <span className="engine-subslot-title">{subslotLabel(carouselSlot)}</span>
+    <span className="engine-subslot-state">
+      {carouselSlot.subslotState ?? carouselSlot.subslotSignalState ?? "—"}
+    </span>
+  </div>
 
-                        <div className="engine-subslot-grid">
-                          <div className="engine-subslot-item">
-                            <div className="engine-subslot-k">Subslot Net</div>
-                            <div className="engine-subslot-v">{pctNum(carouselSlot.subslotNetPct)}</div>
-                          </div>
+  {!isIdleSubslot(carouselSlot) ? (
+    <div className="engine-subslot-grid">
+      <div className="engine-subslot-item">
+        <div className="engine-subslot-k">Subslot Net</div>
+        <div className="engine-subslot-v">{pctNum(carouselSlot.subslotNetPct)}</div>
+      </div>
 
-                          <div className="engine-subslot-item">
-                            <div className="engine-subslot-k">Profit AUD</div>
-                            <div className="engine-subslot-v">{moneyAud(carouselSlot.subslotProfitAud)}</div>
-                          </div>
+      <div className="engine-subslot-item">
+        <div className="engine-subslot-k">Profit AUD</div>
+        <div className="engine-subslot-v">{moneyAud(carouselSlot.subslotProfitAud)}</div>
+      </div>
 
-                          <div className="engine-subslot-item">
-                            <div className="engine-subslot-k">Pending Merge</div>
-                            <div className="engine-subslot-v">{moneyAud(carouselSlot.subslotPendingMergeAud)}</div>
-                          </div>
+      <div className="engine-subslot-item">
+        <div className="engine-subslot-k">Pending Merge</div>
+        <div className="engine-subslot-v">{moneyAud(carouselSlot.subslotPendingMergeAud)}</div>
+      </div>
 
-                          <div className="engine-subslot-item">
-                            <div className="engine-subslot-k">Last Reconcile</div>
-                            <div className="engine-subslot-v">
-                              {carouselSlot.subslotLastReconcileAt
-                                ? ageLabel(nowMs - carouselSlot.subslotLastReconcileAt)
-                                : "—"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+      <div className="engine-subslot-item">
+        <div className="engine-subslot-k">Last Reconcile</div>
+        <div className="engine-subslot-v">
+          {carouselSlot.subslotLastReconcileAt
+            ? ageLabel(nowMs - carouselSlot.subslotLastReconcileAt)
+            : "—"}
+        </div>
+      </div>
+    </div>
+  ) : null}
+</div>
                     </button>
 
                     <div
