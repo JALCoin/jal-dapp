@@ -2956,6 +2956,45 @@ a.button[aria-disabled="true"]{
   word-break:break-word;
 }
 
+/* =========================
+   DOTS — FIX POSITIONING
+========================= */
+
+.engine-carousel-dots{
+  margin-top:6px;
+  padding-bottom:2px;
+  gap:6px;
+}
+
+.engine-carousel-dot{
+  width:8px;
+  height:8px;
+}
+
+/* =========================
+   MOBILE — MAIN FIX
+========================= */
+
+@media (max-width:640px){
+
+  .engine-carousel-card{
+    padding:14px;
+    gap:10px;
+  }
+
+  .engine-carousel-grid{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+
+  .engine-subslot{
+    padding:8px;
+  }
+
+  .engine-carousel-dots{
+    margin-top:4px;
+  }
+}
+
 /* =========================================
    CAPTURE CARDS
 ========================================= */
@@ -4092,5 +4131,101 @@ a.button[aria-disabled="true"]{
 
   .num{
     text-align:left;
+  }
+}
+/* =========================================
+   ENGINE UI — FINAL MOBILE DENSITY FIX
+   Must stay below main engine rules
+========================================= */
+
+.engine-carousel-card{
+  padding:16px;
+  gap:12px;
+}
+
+.engine-carousel-grid{
+  gap:8px;
+}
+
+.engine-carousel-metric{
+  padding:10px;
+  border-radius:12px;
+}
+
+.engine-carousel-v{
+  margin-top:4px;
+}
+
+.engine-carousel-foot{
+  gap:6px;
+  font-size:.8rem;
+}
+
+.engine-subslot{
+  padding:10px;
+  gap:8px;
+  border-radius:14px;
+}
+
+.engine-subslot.is-muted{
+  opacity:.6;
+  padding:8px;
+}
+
+.engine-subslot-grid{
+  gap:8px;
+}
+
+.engine-subslot-item{
+  padding:8px 10px;
+}
+
+.engine-carousel-dots{
+  margin-top:6px;
+  padding-bottom:2px;
+  gap:6px;
+}
+
+.engine-carousel-dot{
+  width:8px;
+  height:8px;
+}
+
+@media (max-width:640px){
+  .engine-carousel-card{
+    padding:14px;
+    gap:10px;
+  }
+
+  .engine-carousel-grid{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:8px;
+  }
+
+  .engine-carousel-metric{
+    padding:9px;
+  }
+
+  .engine-subslot{
+    padding:8px;
+    gap:8px;
+  }
+
+  .engine-subslot-grid{
+    gap:8px;
+  }
+
+  .engine-subslot-item{
+    padding:8px 9px;
+  }
+
+  .engine-carousel-dots{
+    margin-top:4px;
+    gap:6px;
+  }
+
+  .engine-carousel-dot{
+    width:8px;
+    height:8px;
   }
 }
