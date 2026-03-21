@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function fmtTime(d: Date) {
@@ -23,6 +23,7 @@ type RouteBand = {
   tone?: "green" | "gold" | "cyan";
   previewTitle: string;
   previewDesc: string;
+  previewImage?: string;
   tags: string[];
   route?: string;
   dropdown?: {
@@ -33,13 +34,34 @@ type RouteBand = {
 
 export default function Home() {
   const navigate = useNavigate();
+  const timerRef = useRef<number | null>(null);
 
   const [now, setNow] = useState(() => fmtTime(new Date()));
+  const [loading, setLoading] = useState(false);
+  const [activeRoute, setActiveRoute] = useState<string | null>(null);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(fmtTime(new Date())), 1000);
     return () => window.clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  function beginRoute(route: string, id?: string) {
+    if (loading) return;
+    if (id) setActiveRoute(id);
+    setLoading(true);
+
+    timerRef.current = window.setTimeout(() => {
+      navigate(route);
+    }, 900);
+  }
 
   const networkLabel = "MAINNET";
 
@@ -84,6 +106,7 @@ export default function Home() {
         previewTitle: "World Hub → Entry → Creation",
         previewDesc:
           "Hover reveals the pathway into the JALSOL system. This is where a user moves from understanding into controlled build capability.",
+        previewImage: "/JALSOL1.gif",
         tags: ["Awareness", "Entry", "Token Creation", "Utility"],
         route: "/app/jal-sol",
       },
@@ -96,6 +119,7 @@ export default function Home() {
         previewTitle: "Execution Surface",
         previewDesc:
           "Visible state, slots, events, tracking, and machine behaviour. This is the execution layer of the wider JALSOL system.",
+        previewImage: "/JALSOL1.gif",
         tags: ["Market Snapshot", "Jeroids", "Machine State", "Events"],
         route: "/app/engine",
       },
@@ -108,6 +132,7 @@ export default function Home() {
         previewTitle: "Owned System Assets",
         previewDesc:
           "A structured access bay for what has been acquired, unlocked, or packaged for controlled use.",
+        previewImage: "/JALSOL1.gif",
         tags: ["Downloads", "Access", "Inventory", "Releases"],
         route: "/app/inventory",
       },
@@ -120,6 +145,7 @@ export default function Home() {
         previewTitle: "Configuration Surface",
         previewDesc:
           "Session controls, API intent, preferences, and deeper system parameters live here.",
+        previewImage: "/JALSOL1.gif",
         tags: ["Session", "Preferences", "Config", "Control"],
         route: "/app/settings",
       },
@@ -132,6 +158,7 @@ export default function Home() {
         previewTitle: "Featured Releases",
         previewDesc:
           "This band stays lightweight. On interaction it reveals selected featured items only, not the full storefront grid.",
+        previewImage: "/JALSOL1.gif",
         tags: ["Featured", "Support", "Drops", "Access"],
         dropdown: {
           label: "Featured items",
@@ -147,7 +174,10 @@ export default function Home() {
   );
 
   return (
-    <main className="home-shell home-console-shell" aria-label="Home">
+    <main
+      className={`home-shell home-console-shell ${loading ? "is-fading" : ""}`}
+      aria-label="Home"
+    >
       <div className="home-wrap">
         <section
           className="terminal-bar panel-frame machine-surface home-topbar"
@@ -253,7 +283,7 @@ export default function Home() {
                   key={step.level}
                   type="button"
                   className="home-roadmap-card"
-                  onClick={() => navigate(step.route!)}
+                  onClick={() => beginRoute(step.route!, step.level)}
                   role="listitem"
                   aria-label={`Open ${step.title}`}
                 >
@@ -290,8 +320,7 @@ export default function Home() {
               <h2 className="home-modules-title">Select a system layer</h2>
               <p className="home-modules-lead">
                 Full-width route bands now replace the card grid. Each band
-                carries a clearer decision and reveals more of its layer on
-                hover.
+                carries a clearer decision and reveals more of its layer on hover.
               </p>
             </div>
           </div>
@@ -299,12 +328,13 @@ export default function Home() {
           <div className="home-route-stack" role="list" aria-label="System route list">
             {routeBands.map((band) => {
               const bandTone = band.tone ? `tone-${band.tone}` : "";
+              const activeClass = activeRoute === band.id ? "active" : "";
 
               if (band.dropdown) {
                 return (
                   <details
                     key={band.id}
-                    className={`home-route-band home-route-band--dropdown ${bandTone}`}
+                    className={`home-route-band home-route-band--dropdown ${bandTone} ${activeClass}`}
                     role="listitem"
                   >
                     <summary className="home-route-summary">
@@ -321,14 +351,26 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className="home-route-preview" aria-hidden="true">
-                        <div className="home-route-preview-kicker">Preview</div>
-                        <div className="home-route-preview-title">
-                          {band.previewTitle}
+                      <div
+                        className="home-route-preview has-image"
+                        aria-hidden="true"
+                        style={
+                          band.previewImage
+                            ? {
+                                ["--preview-image" as string]: `url("${band.previewImage}")`,
+                              }
+                            : undefined
+                        }
+                      >
+                        <div className="home-route-preview-overlay">
+                          <div className="home-route-preview-kicker">Preview</div>
+                          <div className="home-route-preview-title">
+                            {band.previewTitle}
+                          </div>
+                          <p className="home-route-preview-desc">
+                            {band.previewDesc}
+                          </p>
                         </div>
-                        <p className="home-route-preview-desc">
-                          {band.previewDesc}
-                        </p>
                       </div>
 
                       <div className="home-route-open">
@@ -352,8 +394,8 @@ export default function Home() {
                 <button
                   key={band.id}
                   type="button"
-                  className={`home-route-band ${bandTone}`}
-                  onClick={() => band.route && navigate(band.route)}
+                  className={`home-route-band ${bandTone} ${activeClass}`}
+                  onClick={() => band.route && beginRoute(band.route, band.id)}
                   role="listitem"
                   aria-label={`Open ${band.title}`}
                 >
@@ -370,12 +412,24 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="home-route-preview" aria-hidden="true">
-                    <div className="home-route-preview-kicker">Preview</div>
-                    <div className="home-route-preview-title">
-                      {band.previewTitle}
+                  <div
+                    className="home-route-preview has-image"
+                    aria-hidden="true"
+                    style={
+                      band.previewImage
+                        ? {
+                            ["--preview-image" as string]: `url("${band.previewImage}")`,
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className="home-route-preview-overlay">
+                      <div className="home-route-preview-kicker">Preview</div>
+                      <div className="home-route-preview-title">
+                        {band.previewTitle}
+                      </div>
+                      <p className="home-route-preview-desc">{band.previewDesc}</p>
                     </div>
-                    <p className="home-route-preview-desc">{band.previewDesc}</p>
                   </div>
 
                   <div className="home-route-open">OPEN →</div>
@@ -385,6 +439,17 @@ export default function Home() {
           </div>
         </section>
       </div>
+
+      {loading && (
+        <div
+          className="loading-screen"
+          role="status"
+          aria-live="polite"
+          aria-label="Loading"
+        >
+          <img className="loading-logo" src="/JALSOL1.gif" alt="" />
+        </div>
+      )}
     </main>
   );
 }
