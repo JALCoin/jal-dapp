@@ -39,6 +39,7 @@ export default function Home() {
   const [now, setNow] = useState(() => fmtTime(new Date()));
   const [loading, setLoading] = useState(false);
   const [activeRoute, setActiveRoute] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(fmtTime(new Date())), 1000);
@@ -64,6 +65,14 @@ export default function Home() {
       navigate(route);
       document.body.style.pointerEvents = "";
     }, 1200);
+  }
+
+  const solAddress = "3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2";
+
+  function copyAddress() {
+    navigator.clipboard.writeText(solAddress);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
   }
 
   const networkLabel = "MAINNET";
@@ -318,63 +327,70 @@ export default function Home() {
           </div>
         </section>
 
-        <section
-          className="card machine-surface panel-frame home-support-window"
-          aria-label="Support the source"
+<section
+  className="card machine-surface panel-frame home-support-window"
+  aria-label="Support the source"
+>
+  <div className="home-support-head">
+    <div>
+      <div className="home-kicker">SUPPORT THE SOURCE</div>
+      <h2 className="home-modules-title">Fuel the system as it expands</h2>
+      <p className="home-modules-lead">
+        JALSOL is a live, authored system. What is visible here is actively being built and extended.
+        Support feeds directly into its progression — from interface refinement to infrastructure,
+        releases, and future system deployment.
+      </p>
+    </div>
+  </div>
+
+  <div className="home-support-grid">
+    
+    <article className="home-support-card">
+      <div className="home-support-card-kicker">STRUCTURED SUPPORT</div>
+      <h3 className="home-support-card-title">
+        Contribute through the system
+      </h3>
+      <p className="home-support-card-copy">
+        Use the Shop to access support releases, guided entry layers, and future system modules.
+        This path feeds directly into the structured expansion of JALSOL.
+      </p>
+
+      <div className="home-support-actions">
+        <button
+          type="button"
+          className="button gold"
+          onClick={() => beginRoute("/app/shop", "shop")}
+          disabled={loading}
         >
-          <div className="home-support-head">
-            <div>
-              <div className="home-kicker">SUPPORT THE SOURCE</div>
-              <h2 className="home-modules-title">Back the system as it expands</h2>
-              <p className="home-modules-lead">
-                JALSOL is being built as a visible, authored system. Support can be made through
-                selected store contributions or by direct SOL donation.
-              </p>
-            </div>
-          </div>
+          Open Support Layer
+        </button>
+      </div>
+    </article>
 
-          <div className="home-support-grid">
-            <article className="home-support-card">
-              <div className="home-support-card-kicker">Store Support</div>
-              <h3 className="home-support-card-title">
-                Support through featured contributions
-              </h3>
-              <p className="home-support-card-copy">
-                Use the Shop to access support releases, donation tiers, and future packaged system
-                outputs tied to the wider JALSOL build.
-              </p>
+    <article className="home-support-card">
+      <div className="home-support-card-kicker">DIRECT INPUT</div>
+      <h3 className="home-support-card-title">
+        Support the source on-chain
+      </h3>
+      <p className="home-support-card-copy">
+        Direct SOL contributions act as raw input into development, infrastructure,
+        and expansion across future JALSOL domains built from this source.
+      </p>
 
-              <div className="home-support-actions">
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={() => beginRoute("/app/shop", "shop")}
-                  disabled={loading}
-                >
-                  Open Shop Support
-                </button>
-              </div>
-            </article>
+      <div className="home-support-wallet">
+        <span className="home-support-wallet-label">SOL ADDRESS</span>
+        <button
+          type="button"
+          className={`home-support-wallet-code ${copied ? "is-copied" : ""}`}
+          onClick={copyAddress}
+        >
+          {copied ? "Copied ✓" : solAddress}
+        </button>
+      </div>
+    </article>
 
-            <article className="home-support-card">
-              <div className="home-support-card-kicker">Direct SOL</div>
-              <h3 className="home-support-card-title">
-                Support the build directly on-chain
-              </h3>
-              <p className="home-support-card-copy">
-                Direct SOL contributions help fund system development, interface refinement,
-                infrastructure, and future domain expansion.
-              </p>
-
-              <div className="home-support-wallet">
-                <span className="home-support-wallet-label">SOL Address</span>
-                <code className="home-support-wallet-code">
-                  3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2
-                </code>
-              </div>
-            </article>
-          </div>
-        </section>
+  </div>
+</section>
 
         <div className="home-flow-divider" aria-hidden="true" />
 
