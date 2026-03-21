@@ -9,6 +9,11 @@ export default function Footer() {
           <Link to="/privacy">Privacy</Link>
           <Link to="/disclaimer">Disclaimer</Link>
         </nav>
+
+        <div className="jal-footer-identity">
+          <span>Operated by Jeremy Aaron Lugg</span>
+          <span>ABN 35 780 648 234</span>
+        </div>
       </div>
     </footer>
   );

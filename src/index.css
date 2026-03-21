@@ -1759,8 +1759,9 @@ a.button[aria-disabled="true"]{
   margin:0 auto;
   padding:0 16px;
   display:flex;
-  justify-content:center;
+  flex-direction:column;
   align-items:center;
+  gap:10px;
 }
 
 .jal-footer-links{
@@ -1781,6 +1782,20 @@ a.button[aria-disabled="true"]{
 
 .jal-footer-links a:hover{
   color:rgba(255,255,255,.92);
+}
+
+.jal-footer-identity{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  font-size:.68rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:rgba(185,205,220,.45);
+  border-top:1px solid rgba(255,255,255,.05);
+  padding-top:10px;
+  margin-top:6px;
 }
 
 .jal-footer-meta{
