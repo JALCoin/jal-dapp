@@ -59,6 +59,7 @@ function getViewportSize() {
   }
 
   const vv = window.visualViewport;
+
   return {
     width: Math.round(vv?.width ?? window.innerWidth),
     height: Math.round(vv?.height ?? window.innerHeight),
@@ -90,30 +91,24 @@ export default function TokenFitGame({
   const lastFrameRef = useRef<number | null>(null);
   const spawnTimerRef = useRef(0);
   const nextPipeIdRef = useRef(1);
-  const mountedRef = useRef(false);
+  const lastRenderRef = useRef(0);
 
   const scoreRef = useRef(0);
   const gameStateRef = useRef<TokenFitState>("idle");
   const tokenYRef = useRef(BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
   const velocityRef = useRef(0);
   const pipesRef = useRef<Pipe[]>([]);
-  const lastRenderRef = useRef(0);
 
   const scrollLockRef = useRef<{
     bodyPosition: string;
     bodyTop: string;
+    bodyLeft: string;
+    bodyRight: string;
     bodyWidth: string;
     bodyOverflow: string;
     htmlOverflow: string;
     scrollY: number;
   } | null>(null);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -212,14 +207,15 @@ export default function TokenFitGame({
   }, [resetWorld]);
 
   useEffect(() => {
-    if (!isFullscreen || typeof document === "undefined" || typeof window === "undefined") {
-      return;
-    }
+    if (!isFullscreen || typeof document === "undefined" || typeof window === "undefined") return;
 
     const scrollY = window.scrollY;
+
     scrollLockRef.current = {
       bodyPosition: document.body.style.position,
       bodyTop: document.body.style.top,
+      bodyLeft: document.body.style.left,
+      bodyRight: document.body.style.right,
       bodyWidth: document.body.style.width,
       bodyOverflow: document.body.style.overflow,
       htmlOverflow: document.documentElement.style.overflow,
@@ -230,6 +226,8 @@ export default function TokenFitGame({
     document.body.style.overflow = "hidden";
     document.body.style.position = "fixed";
     document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
     document.body.style.width = "100%";
 
     return () => {
@@ -240,6 +238,8 @@ export default function TokenFitGame({
       document.body.style.overflow = prev.bodyOverflow;
       document.body.style.position = prev.bodyPosition;
       document.body.style.top = prev.bodyTop;
+      document.body.style.left = prev.bodyLeft;
+      document.body.style.right = prev.bodyRight;
       document.body.style.width = prev.bodyWidth;
 
       window.scrollTo(0, prev.scrollY);
@@ -250,28 +250,23 @@ export default function TokenFitGame({
   useEffect(() => {
     function updateSceneScale() {
       const { width: viewportWidth, height: viewportHeight } = getViewportSize();
-
       const isPortraitNow = viewportHeight > viewportWidth;
+
       setViewportMode(isPortraitNow ? "portrait" : "landscape");
 
-      const horizontalPadding = isFullscreen ? 8 : 20;
-      const verticalPadding = isFullscreen ? 8 : 20;
+      const outerPadX = isFullscreen ? 10 : 0;
+      const outerPadY = isFullscreen ? 10 : 0;
 
-      const availableWidth = Math.max(280, viewportWidth - horizontalPadding * 2);
-      const availableHeight = isFullscreen
-        ? Math.max(260, viewportHeight - verticalPadding * 2)
-        : Math.min(isPortraitNow ? 520 : 460, Math.max(280, viewportHeight * 0.56));
+      const availableWidth = Math.max(280, viewportWidth - outerPadX * 2);
+      const availableHeight = Math.max(260, viewportHeight - outerPadY * 2);
 
-      const targetBaseWidth = isPortraitNow ? 720 : BASE_GAME_WIDTH;
-      const targetBaseHeight = BASE_GAME_HEIGHT;
-
-      const scaleX = availableWidth / targetBaseWidth;
-      const scaleY = availableHeight / targetBaseHeight;
+      const scaleX = availableWidth / BASE_GAME_WIDTH;
+      const scaleY = availableHeight / BASE_GAME_HEIGHT;
       const nextScale = Math.min(scaleX, scaleY, 1);
 
       setSceneScale(nextScale);
-      setSceneWidth(Math.round(targetBaseWidth * nextScale));
-      setSceneHeight(Math.round(targetBaseHeight * nextScale));
+      setSceneWidth(Math.round(BASE_GAME_WIDTH * nextScale));
+      setSceneHeight(Math.round(BASE_GAME_HEIGHT * nextScale));
     }
 
     updateSceneScale();
@@ -323,13 +318,11 @@ export default function TokenFitGame({
   }, [closeTrial, flap, isFullscreen]);
 
   const showCompactEntry = !isFullscreen && gameState === "idle";
-
   const isPortrait = viewportMode === "portrait";
 
-  const responsiveBaseWidth = isPortrait ? 720 : BASE_GAME_WIDTH;
-  const responsiveTokenX = isPortrait ? 132 : TOKEN_X;
-  const responsivePipeWidth = isPortrait ? 82 : PIPE_WIDTH;
-  const responsivePipeGap = isPortrait ? 176 : PIPE_GAP;
+  const responsiveTokenX = isPortrait ? 144 : TOKEN_X;
+  const responsivePipeWidth = isPortrait ? 84 : PIPE_WIDTH;
+  const responsivePipeGap = isPortrait ? 178 : PIPE_GAP;
   const responsivePipeSpeed = isPortrait ? 2.15 : PIPE_SPEED;
 
   useEffect(() => {
@@ -384,7 +377,7 @@ export default function TokenFitGame({
 
         pipesRef.current.push({
           id: nextPipeIdRef.current++,
-          x: responsiveBaseWidth + 40,
+          x: BASE_GAME_WIDTH + 40,
           gapY,
           scored: false,
         });
@@ -409,7 +402,7 @@ export default function TokenFitGame({
 
           return nextPipe;
         })
-        .filter((pipe) => pipe.x + responsivePipeWidth > -40);
+        .filter((pipe) => pipe.x + responsivePipeWidth > -60);
 
       pipesRef.current = updatedPipes;
 
@@ -432,16 +425,7 @@ export default function TokenFitGame({
         rafRef.current = null;
       }
     };
-  }, [
-    endGame,
-    gameState,
-    minScore,
-    responsiveBaseWidth,
-    responsivePipeGap,
-    responsivePipeSpeed,
-    responsivePipeWidth,
-    responsiveTokenX,
-  ]);
+  }, [endGame, gameState, minScore, responsivePipeGap, responsivePipeSpeed, responsivePipeWidth, responsiveTokenX]);
 
   useEffect(() => {
     if (gameState !== "playing") return;
@@ -484,28 +468,9 @@ export default function TokenFitGame({
   const hudGap = isSmallViewport ? 6 : 10;
   const hudPad = isSmallViewport ? "7px 9px" : "10px 14px";
   const hudFont = isSmallViewport ? 11 : 14;
-  const hudStatWidth = isSmallViewport ? 74 : 102;
+  const hudStatWidth = isSmallViewport ? 70 : 102;
   const hudStatValue = isSmallViewport ? 16 : 24;
   const overlayCardWidth = isSmallViewport ? "92%" : 420;
-
-  const shellStyle = isFullscreen
-    ? ({
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        background: "rgba(2,8,16,0.985)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "8px",
-        overscrollBehavior: "none",
-        touchAction: "none",
-        WebkitTapHighlightColor: "transparent",
-      } as const)
-    : ({
-        position: "relative",
-        width: "100%",
-      } as const);
 
   const scenePress = (event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -514,9 +479,9 @@ export default function TokenFitGame({
   };
 
   const gameView = (
-    <div style={shellStyle} aria-label="JAL's Trials Token Fit">
+    <div className="jal-tokenfit-shell" aria-label="JAL's Trials Token Fit">
       {!isFullscreen && (
-        <>
+        <div className="jal-tokenfit-inline-head">
           <div className="jal-bay-head">
             <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
             <div className="jal-bay-note">{statusText}</div>
@@ -526,538 +491,530 @@ export default function TokenFitGame({
             Keep the token stable under movement. Tap the screen or press Space to lift. Reach at
             least <strong>{minScore}</strong> points to unlock the trial.
           </p>
-        </>
+        </div>
       )}
 
-      <div
-        role="button"
-        tabIndex={0}
-        aria-label="Token Fit play area"
-        onPointerDown={scenePress}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            flap();
-          }
-        }}
-        style={{
-          position: "relative",
-          width: `${sceneWidth}px`,
-          height: `${sceneHeight}px`,
-          margin: "0 auto",
-          cursor: "pointer",
-          userSelect: "none",
-          WebkitUserSelect: "none",
-          WebkitTapHighlightColor: "transparent",
-          WebkitTouchCallout: "none",
-          touchAction: "none",
-          outline: "none",
-          maxWidth: "100%",
-          maxHeight: "100%",
-        }}
-      >
+      <div className={isFullscreen ? "jal-tokenfit-fullscreen" : "jal-tokenfit-stage-wrap"}>
         <div
+          role="button"
+          tabIndex={0}
+          aria-label="Token Fit play area"
+          onPointerDown={scenePress}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              flap();
+            }
+          }}
+          className="jal-tokenfit-scene-frame"
           style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            width: `${responsiveBaseWidth}px`,
-            height: `${BASE_GAME_HEIGHT}px`,
-            transform: `scale(${sceneScale})`,
-            transformOrigin: "top left",
-            overflow: "hidden",
-            borderRadius: isFullscreen ? "22px" : "28px",
-            border: "1px solid rgba(255,255,255,0.12)",
-            background:
-              "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
-            boxShadow:
-              "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
+            width: `${sceneWidth}px`,
+            height: `${sceneHeight}px`,
           }}
         >
           <div
             style={{
               position: "absolute",
-              inset: 0,
+              left: 0,
+              top: 0,
+              width: `${BASE_GAME_WIDTH}px`,
+              height: `${BASE_GAME_HEIGHT}px`,
+              transform: `scale(${sceneScale})`,
+              transformOrigin: "top left",
+              overflow: "hidden",
+              borderRadius: isFullscreen ? "22px" : "28px",
+              border: "1px solid rgba(255,255,255,0.12)",
               background:
-                "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 22%, rgba(0,255,180,0.03) 70%, rgba(0,0,0,0.18) 100%)",
-            }}
-          />
-
-          <div
-            style={{
-              position: "absolute",
-              left: hudSide,
-              top: hudTop,
-              display: "flex",
-              gap: hudGap,
-              alignItems: "center",
-              zIndex: 5,
-              maxWidth: `calc(100% - ${hudSide * 2}px - ${hudStatWidth * 2 + hudGap * 3}px)`,
+                "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
+              boxShadow:
+                "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
             }}
           >
             <div
               style={{
-                padding: hudPad,
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(5, 14, 22, 0.72)",
-                color: "#f6fffb",
-                fontSize: hudFont,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                whiteSpace: "nowrap",
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 22%, rgba(0,255,180,0.03) 70%, rgba(0,0,0,0.18) 100%)",
+              }}
+            />
+
+            <div
+              style={{
+                position: "absolute",
+                left: hudSide,
+                top: hudTop,
+                display: "flex",
+                gap: hudGap,
+                alignItems: "center",
+                zIndex: 5,
+                maxWidth: `calc(100% - ${hudSide * 2}px - ${hudStatWidth * 2 + hudGap * 3}px)`,
               }}
             >
-              JAL’s Trials
-            </div>
-
-            {!isSmallViewport && (
               <div
                 style={{
                   padding: hudPad,
                   borderRadius: 14,
                   border: "1px solid rgba(255,255,255,0.1)",
-                  background: "rgba(5, 14, 22, 0.72)",
-                  color: "#c7fce8",
+                  background: "rgba(5,14,22,0.72)",
+                  color: "#f6fffb",
                   fontSize: hudFont,
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
                   whiteSpace: "nowrap",
                 }}
               >
-                Token Fit
+                JAL’s Trials
               </div>
-            )}
-          </div>
 
-          <div
-            style={{
-              position: "absolute",
-              right: hudSide,
-              top: hudTop,
-              display: "flex",
-              gap: hudGap,
-              alignItems: "stretch",
-              zIndex: 5,
-            }}
-          >
-            <div
-              style={{
-                minWidth: hudStatWidth,
-                padding: hudPad,
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(5, 14, 22, 0.72)",
-                color: "#ffffff",
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 10,
-                  opacity: 0.7,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Score
-              </div>
-              <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>{score}</div>
+              {!isSmallViewport && (
+                <div
+                  style={{
+                    padding: hudPad,
+                    borderRadius: 14,
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "rgba(5,14,22,0.72)",
+                    color: "#c7fce8",
+                    fontSize: hudFont,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Token Fit
+                </div>
+              )}
             </div>
 
             <div
               style={{
-                minWidth: hudStatWidth,
-                padding: hudPad,
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(5, 14, 22, 0.72)",
-                color: "#ffffff",
-                textAlign: "center",
+                position: "absolute",
+                right: hudSide,
+                top: hudTop,
+                display: "flex",
+                gap: hudGap,
+                alignItems: "stretch",
+                zIndex: 5,
               }}
             >
               <div
                 style={{
-                  fontSize: 10,
-                  opacity: 0.7,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Best
-              </div>
-              <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>{highScore}</div>
-            </div>
-
-            {isFullscreen && (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  closeTrial();
-                }}
-                style={{
+                  minWidth: hudStatWidth,
                   padding: hudPad,
                   borderRadius: 14,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(8, 18, 28, 0.82)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(5,14,22,0.72)",
                   color: "#ffffff",
-                  fontSize: hudFont,
-                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    opacity: 0.7,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Score
+                </div>
+                <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>{score}</div>
+              </div>
+
+              <div
+                style={{
+                  minWidth: hudStatWidth,
+                  padding: hudPad,
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(5,14,22,0.72)",
+                  color: "#ffffff",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    opacity: 0.7,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Best
+                </div>
+                <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>{highScore}</div>
+              </div>
+
+              {isFullscreen && (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    closeTrial();
+                  }}
+                  style={{
+                    padding: hudPad,
+                    borderRadius: 14,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(8,18,28,0.82)",
+                    color: "#ffffff",
+                    fontSize: hudFont,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  Exit
+                </button>
+              )}
+            </div>
+
+            {pipes.map((pipe) => {
+              const topPipeHeight = pipe.gapY - responsivePipeGap / 2;
+              const bottomPipeY = pipe.gapY + responsivePipeGap / 2;
+              const bottomPipeHeight = BASE_GAME_HEIGHT - FLOOR_HEIGHT - bottomPipeY;
+
+              return (
+                <div key={pipe.id}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: pipe.x,
+                      top: 0,
+                      width: responsivePipeWidth,
+                      height: topPipeHeight,
+                      borderRadius: "0 0 20px 20px",
+                      background:
+                        "linear-gradient(180deg, rgba(0,255,180,0.16), rgba(0,255,180,0.08) 20%, rgba(10,24,24,0.92) 100%)",
+                      border: "1px solid rgba(0,255,180,0.22)",
+                      boxShadow: "0 0 18px rgba(0,255,180,0.09)",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: pipe.x - 8,
+                      top: topPipeHeight - 20,
+                      width: responsivePipeWidth + 16,
+                      height: 20,
+                      borderRadius: 12,
+                      background: "rgba(0,255,180,0.16)",
+                      border: "1px solid rgba(0,255,180,0.2)",
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: pipe.x,
+                      top: bottomPipeY,
+                      width: responsivePipeWidth,
+                      height: bottomPipeHeight,
+                      borderRadius: "20px 20px 0 0",
+                      background:
+                        "linear-gradient(180deg, rgba(10,24,24,0.92), rgba(0,255,180,0.08) 80%, rgba(0,255,180,0.16) 100%)",
+                      border: "1px solid rgba(0,255,180,0.22)",
+                      boxShadow: "0 0 18px rgba(0,255,180,0.09)",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: pipe.x - 8,
+                      top: bottomPipeY,
+                      width: responsivePipeWidth + 16,
+                      height: 20,
+                      borderRadius: 12,
+                      background: "rgba(0,255,180,0.16)",
+                      border: "1px solid rgba(0,255,180,0.2)",
+                    }}
+                  />
+                </div>
+              );
+            })}
+
+            <div
+              style={{
+                position: "absolute",
+                left: responsiveTokenX,
+                top: tokenY,
+                width: TOKEN_SIZE,
+                height: TOKEN_SIZE,
+                transform: `rotate(${tokenRotation}deg)`,
+                transformOrigin: "center center",
+                borderRadius: "50%",
+                background:
+                  "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.92), rgba(227,205,112,0.95) 20%, rgba(170,120,32,0.96) 58%, rgba(70,40,8,1) 100%)",
+                boxShadow:
+                  "0 0 22px rgba(255,208,92,0.45), inset 0 1px 5px rgba(255,255,255,0.42), inset 0 -4px 10px rgba(30,16,2,0.5)",
+                zIndex: 4,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 7,
+                  borderRadius: "50%",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: FLOOR_HEIGHT,
+                height: 1,
+                background: "rgba(255,255,255,0.08)",
+              }}
+            />
+
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: FLOOR_HEIGHT,
+                background:
+                  "linear-gradient(180deg, rgba(13,22,18,0.96), rgba(7,13,10,1) 65%, rgba(3,6,5,1) 100%)",
+                borderTop: "1px solid rgba(255,255,255,0.08)",
+              }}
+            />
+
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 0,
+                height: CEILING_HEIGHT,
+                background: "rgba(255,255,255,0.05)",
+              }}
+            />
+
+            {gameState === "countdown" && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  background: "rgba(2,8,16,0.34)",
+                  zIndex: 6,
+                }}
+              >
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: isSmallViewport ? "18px 22px" : "22px 30px",
+                    borderRadius: 24,
+                    background: "rgba(4,12,18,0.88)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    boxShadow: "0 0 22px rgba(0,255,180,0.08)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 14,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      opacity: 0.72,
+                      marginBottom: 10,
+                      color: "#c7fce8",
+                    }}
+                  >
+                    Prepare
+                  </div>
+                  <div
+                    style={{
+                      fontSize: isSmallViewport ? 56 : 72,
+                      lineHeight: 1,
+                      fontWeight: 800,
+                      color: "#ffffff",
+                    }}
+                  >
+                    {countdown}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(gameState === "gameover" || gameState === "passed") && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  background: "rgba(2,8,16,0.44)",
+                  zIndex: 6,
+                  padding: 20,
+                }}
+              >
+                <div
+                  style={{
+                    width: overlayCardWidth,
+                    maxWidth: "100%",
+                    textAlign: "center",
+                    padding: isSmallViewport ? "22px 18px" : "28px 26px",
+                    borderRadius: 24,
+                    background: "rgba(4,12,18,0.9)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    boxShadow: "0 0 24px rgba(0,255,180,0.08)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 14,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      opacity: 0.72,
+                      marginBottom: 10,
+                      color: gameState === "passed" ? "#c7fce8" : "#ffd8d8",
+                    }}
+                  >
+                    {gameState === "passed" ? "Trial Complete" : "Trial Failed"}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: isSmallViewport ? 26 : 34,
+                      fontWeight: 800,
+                      lineHeight: 1.1,
+                      color: "#ffffff",
+                      marginBottom: 12,
+                    }}
+                  >
+                    {gameState === "passed"
+                      ? "Alignment confirmed."
+                      : "The token fell out of fit."}
+                  </div>
+
+                  <p
+                    style={{
+                      margin: "0 0 16px",
+                      fontSize: 15,
+                      lineHeight: 1.5,
+                      color: "rgba(255,255,255,0.82)",
+                    }}
+                  >
+                    Score: <strong>{score}</strong> · Required: <strong>{minScore}</strong> · Best:{" "}
+                    <strong>{highScore}</strong>
+                  </p>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        resetWorld();
+                        setGameState("countdown");
+                      }}
+                      style={{
+                        minWidth: isSmallViewport ? 120 : 140,
+                        padding: "12px 18px",
+                        borderRadius: 14,
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(255,255,255,0.06)",
+                        color: "#ffffff",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        WebkitTapHighlightColor: "transparent",
+                      }}
+                    >
+                      Retry
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        closeTrial();
+                      }}
+                      style={{
+                        minWidth: isSmallViewport ? 120 : 140,
+                        padding: "12px 18px",
+                        borderRadius: 14,
+                        border: "1px solid rgba(0,255,180,0.22)",
+                        background: "rgba(0,255,180,0.08)",
+                        color: "#d9fff1",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        WebkitTapHighlightColor: "transparent",
+                      }}
+                    >
+                      Leave Trial
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {gameState === "playing" && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  bottom: isSmallViewport ? 84 : 98,
+                  transform: "translateX(-50%)",
+                  padding: isSmallViewport ? "8px 12px" : "10px 16px",
+                  borderRadius: 999,
+                  background: "rgba(4,12,18,0.66)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  color: "rgba(255,255,255,0.8)",
+                  fontSize: isSmallViewport ? 11 : 13,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  zIndex: 5,
                   whiteSpace: "nowrap",
+                }}
+              >
+                {isPortrait ? "Tap screen or Lift button" : "Tap screen or press space"}
+              </div>
+            )}
+
+            {gameState === "playing" && isPortrait && (
+              <button
+                type="button"
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  flap();
+                }}
+                style={{
+                  position: "absolute",
+                  right: 24,
+                  bottom: 96,
+                  width: 92,
+                  height: 92,
+                  borderRadius: "50%",
+                  border: "1px solid rgba(0,255,180,0.28)",
+                  background: "rgba(0,255,180,0.10)",
+                  color: "#d9fff1",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  boxShadow: "0 0 24px rgba(0,255,180,0.12)",
+                  zIndex: 7,
+                  cursor: "pointer",
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                Exit
+                Lift
               </button>
             )}
           </div>
-
-          {pipes.map((pipe) => {
-            const topPipeHeight = pipe.gapY - responsivePipeGap / 2;
-            const bottomPipeY = pipe.gapY + responsivePipeGap / 2;
-            const bottomPipeHeight = BASE_GAME_HEIGHT - FLOOR_HEIGHT - bottomPipeY;
-
-            return (
-              <div key={pipe.id}>
-                <div
-                  style={{
-                    position: "absolute",
-                    left: pipe.x,
-                    top: 0,
-                    width: responsivePipeWidth,
-                    height: topPipeHeight,
-                    borderRadius: "0 0 20px 20px",
-                    background:
-                      "linear-gradient(180deg, rgba(0,255,180,0.16), rgba(0,255,180,0.08) 20%, rgba(10,24,24,0.92) 100%)",
-                    border: "1px solid rgba(0,255,180,0.22)",
-                    boxShadow: "0 0 18px rgba(0,255,180,0.09)",
-                  }}
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    left: pipe.x - 8,
-                    top: topPipeHeight - 20,
-                    width: responsivePipeWidth + 16,
-                    height: 20,
-                    borderRadius: 12,
-                    background: "rgba(0,255,180,0.16)",
-                    border: "1px solid rgba(0,255,180,0.2)",
-                  }}
-                />
-
-                <div
-                  style={{
-                    position: "absolute",
-                    left: pipe.x,
-                    top: bottomPipeY,
-                    width: responsivePipeWidth,
-                    height: bottomPipeHeight,
-                    borderRadius: "20px 20px 0 0",
-                    background:
-                      "linear-gradient(180deg, rgba(10,24,24,0.92), rgba(0,255,180,0.08) 80%, rgba(0,255,180,0.16) 100%)",
-                    border: "1px solid rgba(0,255,180,0.22)",
-                    boxShadow: "0 0 18px rgba(0,255,180,0.09)",
-                  }}
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    left: pipe.x - 8,
-                    top: bottomPipeY,
-                    width: responsivePipeWidth + 16,
-                    height: 20,
-                    borderRadius: 12,
-                    background: "rgba(0,255,180,0.16)",
-                    border: "1px solid rgba(0,255,180,0.2)",
-                  }}
-                />
-              </div>
-            );
-          })}
-
-          <div
-            style={{
-              position: "absolute",
-              left: responsiveTokenX,
-              top: tokenY,
-              width: TOKEN_SIZE,
-              height: TOKEN_SIZE,
-              transform: `rotate(${tokenRotation}deg)`,
-              transformOrigin: "center center",
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.92), rgba(227,205,112,0.95) 20%, rgba(170,120,32,0.96) 58%, rgba(70,40,8,1) 100%)",
-              boxShadow:
-                "0 0 22px rgba(255,208,92,0.45), inset 0 1px 5px rgba(255,255,255,0.42), inset 0 -4px 10px rgba(30,16,2,0.5)",
-              zIndex: 4,
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                inset: 7,
-                borderRadius: "50%",
-                border: "1px solid rgba(255,255,255,0.25)",
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: FLOOR_HEIGHT,
-              height: 1,
-              background: "rgba(255,255,255,0.08)",
-            }}
-          />
-
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: FLOOR_HEIGHT,
-              background:
-                "linear-gradient(180deg, rgba(13,22,18,0.96), rgba(7,13,10,1) 65%, rgba(3,6,5,1) 100%)",
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-            }}
-          />
-
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: 0,
-              height: CEILING_HEIGHT,
-              background: "rgba(255,255,255,0.05)",
-            }}
-          />
-
-          {gameState === "countdown" && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "grid",
-                placeItems: "center",
-                background: "rgba(2, 8, 16, 0.34)",
-                zIndex: 6,
-              }}
-            >
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: isSmallViewport ? "18px 22px" : "22px 30px",
-                  borderRadius: 24,
-                  background: "rgba(4,12,18,0.88)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  boxShadow: "0 0 22px rgba(0,255,180,0.08)",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 14,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    opacity: 0.72,
-                    marginBottom: 10,
-                    color: "#c7fce8",
-                  }}
-                >
-                  Prepare
-                </div>
-                <div
-                  style={{
-                    fontSize: isSmallViewport ? 56 : 72,
-                    lineHeight: 1,
-                    fontWeight: 800,
-                    color: "#ffffff",
-                  }}
-                >
-                  {countdown}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {(gameState === "gameover" || gameState === "passed") && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "grid",
-                placeItems: "center",
-                background: "rgba(2, 8, 16, 0.44)",
-                zIndex: 6,
-                padding: 20,
-              }}
-            >
-              <div
-                style={{
-                  width: overlayCardWidth,
-                  maxWidth: "100%",
-                  textAlign: "center",
-                  padding: isSmallViewport ? "22px 18px" : "28px 26px",
-                  borderRadius: 24,
-                  background: "rgba(4,12,18,0.9)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  boxShadow: "0 0 24px rgba(0,255,180,0.08)",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 14,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    opacity: 0.72,
-                    marginBottom: 10,
-                    color: gameState === "passed" ? "#c7fce8" : "#ffd8d8",
-                  }}
-                >
-                  {gameState === "passed" ? "Trial Complete" : "Trial Failed"}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: isSmallViewport ? 26 : 34,
-                    fontWeight: 800,
-                    lineHeight: 1.1,
-                    color: "#ffffff",
-                    marginBottom: 12,
-                  }}
-                >
-                  {gameState === "passed"
-                    ? "Alignment confirmed."
-                    : "The token fell out of fit."}
-                </div>
-
-                <p
-                  style={{
-                    margin: "0 0 16px",
-                    fontSize: 15,
-                    lineHeight: 1.5,
-                    color: "rgba(255,255,255,0.82)",
-                  }}
-                >
-                  Score: <strong>{score}</strong> · Required: <strong>{minScore}</strong> · Best:{" "}
-                  <strong>{highScore}</strong>
-                </p>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: 12,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      resetWorld();
-                      setGameState("countdown");
-                    }}
-                    style={{
-                      minWidth: isSmallViewport ? 120 : 140,
-                      padding: "12px 18px",
-                      borderRadius: 14,
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      background: "rgba(255,255,255,0.06)",
-                      color: "#ffffff",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    Retry
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      closeTrial();
-                    }}
-                    style={{
-                      minWidth: isSmallViewport ? 120 : 140,
-                      padding: "12px 18px",
-                      borderRadius: 14,
-                      border: "1px solid rgba(0,255,180,0.22)",
-                      background: "rgba(0,255,180,0.08)",
-                      color: "#d9fff1",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    Leave Trial
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {gameState === "playing" && (
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                bottom: isSmallViewport ? 84 : 98,
-                transform: "translateX(-50%)",
-                padding: isSmallViewport ? "8px 12px" : "10px 16px",
-                borderRadius: 999,
-                background: "rgba(4,12,18,0.66)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                color: "rgba(255,255,255,0.8)",
-                fontSize: isSmallViewport ? 11 : 13,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                zIndex: 5,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {isPortrait ? "Tap screen or Lift button" : "Tap screen or press space"}
-            </div>
-          )}
-
-          {gameState === "playing" && isPortrait && (
-            <button
-              type="button"
-              onPointerDown={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                flap();
-              }}
-              style={{
-                position: "absolute",
-                right: 24,
-                bottom: 96,
-                width: 92,
-                height: 92,
-                borderRadius: "50%",
-                border: "1px solid rgba(0,255,180,0.28)",
-                background: "rgba(0,255,180,0.10)",
-                color: "#d9fff1",
-                fontSize: 14,
-                fontWeight: 800,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                boxShadow: "0 0 24px rgba(0,255,180,0.12)",
-                zIndex: 7,
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              Lift
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -1075,6 +1032,14 @@ export default function TokenFitGame({
           Keep the token stable under movement. Reach at least <strong>{minScore}</strong> points to
           complete the trial.
         </p>
+
+        <div className="jal-trial-preview">
+          <div className="jal-trial-preview-badge">Trial 01</div>
+          <div className="jal-trial-preview-title">Hold alignment under pressure.</div>
+          <div className="jal-trial-preview-line">
+            Your token stays in motion. Your job is not panic. Your job is fit.
+          </div>
+        </div>
 
         <div className="jal-trial-grid">
           <article className="jal-trial-card">
