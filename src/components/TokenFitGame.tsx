@@ -396,11 +396,7 @@ export default function TokenFitGame({
   }, [gameState, step, stopAnimation]);
 
   const liftToken = useCallback(() => {
-    if (
-      stateRef.current === "idle" ||
-      stateRef.current === "gameover" ||
-      stateRef.current === "passed"
-    ) {
+    if (stateRef.current === "idle") {
       beginPlaying();
       return;
     }
@@ -435,11 +431,11 @@ export default function TokenFitGame({
   }, [stopAnimation, stopCountdown]);
 
   const statusText = useMemo(() => {
-    if (gameState === "idle") return "Ready";
-    if (gameState === "countdown") return "Starting";
-    if (gameState === "playing") return "Playing";
-    if (gameState === "passed") return "Passed";
-    return "Game Over";
+    if (gameState === "idle") return "Trial Available";
+    if (gameState === "countdown") return "Stabilising";
+    if (gameState === "playing") return "Trial Active";
+    if (gameState === "passed") return "Condition Met";
+    return "Control Lost";
   }, [gameState]);
 
   const canContinue = tokenFitPassed || gameState === "passed";
@@ -459,7 +455,12 @@ export default function TokenFitGame({
 
   return (
     <div aria-label="JAL's Trials Token Fit" style={shellStyle}>
-      <div style={{ width: isFullscreen ? "100%" : undefined, maxWidth: isFullscreen ? "1120px" : undefined }}>
+      <div
+        style={{
+          width: isFullscreen ? "100%" : undefined,
+          maxWidth: isFullscreen ? "1120px" : undefined,
+        }}
+      >
         <div className="jal-bay-head">
           <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
           <div className="jal-bay-note">{statusText}</div>
@@ -474,7 +475,11 @@ export default function TokenFitGame({
           role="button"
           tabIndex={0}
           aria-label="Token Fit game area"
-          onClick={liftToken}
+          onClick={(event) => {
+            const target = event.target as HTMLElement;
+            if (target.closest("button")) return;
+            liftToken();
+          }}
           onKeyDown={(event) => {
             if (event.key === " " || event.key === "Enter") {
               event.preventDefault();
@@ -574,7 +579,7 @@ export default function TokenFitGame({
               position: "absolute",
               insetInline: 0,
               top: 0,
-              height: `${maskPercent(CEILING_HEIGHT / BASE_GAME_HEIGHT)}`,
+              height: maskPercent(CEILING_HEIGHT / BASE_GAME_HEIGHT),
               background: "rgba(255,255,255,0.05)",
               borderBottom: "1px solid rgba(255,255,255,0.07)",
             }}
@@ -585,7 +590,7 @@ export default function TokenFitGame({
               position: "absolute",
               insetInline: 0,
               bottom: 0,
-              height: `${maskPercent(FLOOR_HEIGHT / BASE_GAME_HEIGHT)}`,
+              height: maskPercent(FLOOR_HEIGHT / BASE_GAME_HEIGHT),
               background:
                 "linear-gradient(180deg, rgba(16,22,32,0.7), rgba(0,255,180,0.14))",
               borderTop: "1px solid rgba(0,255,180,0.12)",
@@ -602,8 +607,7 @@ export default function TokenFitGame({
                 inset: 0,
                 display: "grid",
                 placeItems: "center",
-                background:
-                  "linear-gradient(180deg, rgba(2,8,16,0.30), rgba(2,8,16,0.68))",
+                background: "linear-gradient(180deg, rgba(2,8,16,0.30), rgba(2,8,16,0.68))",
                 zIndex: 6,
                 padding: "1.5rem",
                 textAlign: "center",
@@ -627,7 +631,14 @@ export default function TokenFitGame({
                     className="jal-bay-actions"
                     style={{ justifyContent: "center", marginTop: "1rem" }}
                   >
-                    <button type="button" className="button neon" onClick={beginPlaying}>
+                    <button
+                      type="button"
+                      className="button neon"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        beginPlaying();
+                      }}
+                    >
                       Start Trial
                     </button>
                   </div>
@@ -663,12 +674,26 @@ export default function TokenFitGame({
                     className="jal-bay-actions"
                     style={{ justifyContent: "center", marginTop: "1rem" }}
                   >
-                    <button type="button" className="button neon" onClick={beginPlaying}>
+                    <button
+                      type="button"
+                      className="button neon"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        beginPlaying();
+                      }}
+                    >
                       Try Again
                     </button>
 
                     {isFullscreen && (
-                      <button type="button" className="button ghost" onClick={closeFullscreen}>
+                      <button
+                        type="button"
+                        className="button ghost"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          closeFullscreen();
+                        }}
+                      >
                         Exit Fullscreen
                       </button>
                     )}
@@ -696,12 +721,26 @@ export default function TokenFitGame({
                     className="jal-bay-actions"
                     style={{ justifyContent: "center", marginTop: "1rem" }}
                   >
-                    <button type="button" className="button ghost" onClick={beginPlaying}>
+                    <button
+                      type="button"
+                      className="button ghost"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        beginPlaying();
+                      }}
+                    >
                       Play Again
                     </button>
 
                     {isFullscreen && (
-                      <button type="button" className="button gold" onClick={closeFullscreen}>
+                      <button
+                        type="button"
+                        className="button gold"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          closeFullscreen();
+                        }}
+                      >
                         Return To Gate
                       </button>
                     )}
