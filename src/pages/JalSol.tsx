@@ -357,51 +357,39 @@ export default function JalSolPage() {
               visible progression belongs to the user’s chosen path.
             </p>
 
-            <div className="jal-gate-grid">
-              {gateCards.map((gate) => {
-                const isActive = activeGate === gate.id;
+<div className="jal-gate-grid">
+  {gateCards.map((gate) => {
+    const isActive = activeGate === gate.id;
 
-                return (
-                  <article
-                    key={gate.id}
-                    className={`jal-gate-card jal-gate-card--${gate.style} ${
-                      isActive ? "is-active" : ""
-                    }`}
-                  >
-                    <div className="jal-gate-top">
-                      <span className="jal-gate-eyebrow">{gate.eyebrow}</span>
-                    </div>
+    return (
+      <article
+        key={gate.id}
+        className={`jal-gate-card jal-gate-card--${gate.style} ${isActive ? "is-active" : ""}`}
+        onMouseEnter={() => setActiveGate(gate.id)}
+      >
+        <div className="jal-gate-top">
+          <span className="jal-gate-eyebrow">{gate.eyebrow}</span>
+        </div>
 
-                    <h2 className="jal-gate-title">{gate.title}</h2>
-                    <p className="jal-gate-line">{gate.line}</p>
-                    <p className="jal-gate-note">{gate.note}</p>
-                    <p className="jal-lock-text">{gate.outcome}</p>
+        <h2 className="jal-gate-title">{gate.title}</h2>
+        <p className="jal-gate-line">{gate.line}</p>
+        <p className="jal-gate-note">{gate.note}</p>
+        <p className="jal-lock-text">{gate.outcome}</p>
 
-                    <div className="jal-gate-actions">
-                      <button
-                        type="button"
-                        className={`button ${
-                          gate.style === "enter" ? "gold" : isActive ? "neon" : "ghost"
-                        }`}
-                        onClick={() => setActiveGate(gate.id)}
-                        disabled={loading}
-                      >
-                        {isActive ? "Selected" : `Select ${gate.title}`}
-                      </button>
-
-                      <button
-                        type="button"
-                        className="button ghost"
-                        onClick={() => beginRoute(gate.route)}
-                        disabled={loading}
-                      >
-                        Open Gate
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+        <div className="jal-gate-actions">
+          <button
+            type="button"
+            className={`button ${gate.style === "enter" ? "gold" : isActive ? "neon" : "ghost"}`}
+            onClick={() => beginRoute(gate.route)}
+            disabled={loading}
+          >
+            Open {gate.title}
+          </button>
+        </div>
+      </article>
+    );
+  })}
+</div>
           </section>
 
           <section className="jal-bay jal-bay-wide" aria-label="Gate interpretation">
