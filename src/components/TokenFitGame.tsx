@@ -17,8 +17,8 @@ type Pipe = {
 
 const STORAGE_KEY = "jal_token_fit_high_score";
 
-const GAME_WIDTH = 960;
-const GAME_HEIGHT = 540;
+const BASE_GAME_WIDTH = 960;
+const BASE_GAME_HEIGHT = 540;
 
 const TOKEN_SIZE = 42;
 const TOKEN_X = 220;
@@ -53,6 +53,10 @@ function setStoredHighScore(score: number): void {
   window.localStorage.setItem(STORAGE_KEY, String(score));
 }
 
+function maskPercent(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
 export default function TokenFitGame({
   minScore,
   onPass,
@@ -60,25 +64,26 @@ export default function TokenFitGame({
 }: TokenFitGameProps) {
   const animationRef = useRef<number | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const stateRef = useRef<TokenFitState>("idle");
   const passTriggeredRef = useRef(false);
   const nextPipeIdRef = useRef(1);
 
-  const [gameState, setGameState] = useState<TokenFitState>("idle");
-  const [countdown, setCountdown] = useState(COUNTDOWN_START);
-  const [tokenY, setTokenY] = useState(GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
-  const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
-  const [pipes, setPipes] = useState<Pipe[]>([]);
-  const [tokenFitPassed, setTokenFitPassed] = useState(false);
+  const tokenRef = useRef<HTMLDivElement | null>(null);
+  const pipesLayerRef = useRef<HTMLDivElement | null>(null);
 
   const velocityRef = useRef(0);
-  const tokenYRef = useRef(GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
+  const tokenYRef = useRef(BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
   const scoreRef = useRef(0);
   const highScoreRef = useRef(0);
   const pipesRef = useRef<Pipe[]>([]);
-  const lastSpawnXRef = useRef(GAME_WIDTH + 120);
+  const lastSpawnXRef = useRef(BASE_GAME_WIDTH + 120);
+
+  const [gameState, setGameState] = useState<TokenFitState>("idle");
+  const [countdown, setCountdown] = useState(COUNTDOWN_START);
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const [tokenFitPassed, setTokenFitPassed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const stored = getStoredHighScore();
@@ -90,24 +95,91 @@ export default function TokenFitGame({
     stateRef.current = gameState;
   }, [gameState]);
 
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isFullscreen]);
+
+  const renderToken = useCallback(() => {
+    if (!tokenRef.current) return;
+
+    tokenRef.current.style.left = `${TOKEN_X}px`;
+    tokenRef.current.style.top = `${tokenYRef.current}px`;
+    tokenRef.current.style.transform = `rotate(${clamp(
+      velocityRef.current * 4,
+      -18,
+      22
+    )}deg)`;
+  }, []);
+
+  const renderPipes = useCallback(() => {
+    const layer = pipesLayerRef.current;
+    if (!layer) return;
+
+    layer.innerHTML = "";
+
+    for (const pipe of pipesRef.current) {
+      const gapTop = pipe.gapY - PIPE_GAP / 2;
+      const gapBottom = pipe.gapY + PIPE_GAP / 2;
+      const topHeight = Math.max(0, gapTop - CEILING_HEIGHT);
+      const bottomHeight = Math.max(0, BASE_GAME_HEIGHT - FLOOR_HEIGHT - gapBottom);
+
+      const topPipe = document.createElement("div");
+      topPipe.style.position = "absolute";
+      topPipe.style.left = `${pipe.x}px`;
+      topPipe.style.top = `${CEILING_HEIGHT}px`;
+      topPipe.style.width = `${PIPE_WIDTH}px`;
+      topPipe.style.height = `${topHeight}px`;
+      topPipe.style.borderRadius = "18px";
+      topPipe.style.background =
+        "linear-gradient(180deg, rgba(8,18,28,0.95), rgba(0,255,180,0.16))";
+      topPipe.style.border = "1px solid rgba(0,255,180,0.18)";
+      topPipe.style.boxShadow =
+        "inset 0 0 18px rgba(0,255,180,0.08), 0 0 12px rgba(0,255,180,0.08)";
+
+      const bottomPipe = document.createElement("div");
+      bottomPipe.style.position = "absolute";
+      bottomPipe.style.left = `${pipe.x}px`;
+      bottomPipe.style.top = `${gapBottom}px`;
+      bottomPipe.style.width = `${PIPE_WIDTH}px`;
+      bottomPipe.style.height = `${bottomHeight}px`;
+      bottomPipe.style.borderRadius = "18px";
+      bottomPipe.style.background =
+        "linear-gradient(180deg, rgba(0,255,180,0.16), rgba(8,18,28,0.95))";
+      bottomPipe.style.border = "1px solid rgba(0,255,180,0.18)";
+      bottomPipe.style.boxShadow =
+        "inset 0 0 18px rgba(0,255,180,0.08), 0 0 12px rgba(0,255,180,0.08)";
+
+      layer.appendChild(topPipe);
+      layer.appendChild(bottomPipe);
+    }
+  }, []);
+
   const resetRunState = useCallback(() => {
-    const startY = GAME_HEIGHT / 2 - TOKEN_SIZE / 2;
-    const firstX = GAME_WIDTH + 120;
+    const startY = BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2;
+    const firstX = BASE_GAME_WIDTH + 120;
     const secondX = firstX + PIPE_SPAWN_DISTANCE;
     const minGapY = CEILING_HEIGHT + SAFE_MARGIN + PIPE_GAP / 2;
-    const maxGapY = GAME_HEIGHT - FLOOR_HEIGHT - SAFE_MARGIN - PIPE_GAP / 2;
+    const maxGapY = BASE_GAME_HEIGHT - FLOOR_HEIGHT - SAFE_MARGIN - PIPE_GAP / 2;
 
-    const initialPipes: Pipe[] = [
+    pipesRef.current = [
       {
         id: nextPipeIdRef.current++,
         x: firstX,
-        gapY: GAME_HEIGHT / 2,
+        gapY: BASE_GAME_HEIGHT / 2,
         scored: false,
       },
       {
         id: nextPipeIdRef.current++,
         x: secondX,
-        gapY: clamp(GAME_HEIGHT / 2 - 40, minGapY, maxGapY),
+        gapY: clamp(BASE_GAME_HEIGHT / 2 - 40, minGapY, maxGapY),
         scored: false,
       },
     ];
@@ -115,15 +187,14 @@ export default function TokenFitGame({
     velocityRef.current = 0;
     tokenYRef.current = startY;
     scoreRef.current = 0;
-    pipesRef.current = initialPipes;
     lastSpawnXRef.current = secondX;
     passTriggeredRef.current = false;
 
-    setTokenY(startY);
     setScore(0);
-    setPipes(initialPipes);
-    setTokenFitPassed((prev) => prev);
-  }, []);
+
+    renderToken();
+    renderPipes();
+  }, [renderPipes, renderToken]);
 
   const stopAnimation = useCallback(() => {
     if (animationRef.current !== null) {
@@ -155,6 +226,7 @@ export default function TokenFitGame({
       if (passed) {
         setTokenFitPassed(true);
         setGameState("passed");
+
         if (!passTriggeredRef.current) {
           passTriggeredRef.current = true;
           onPass(finalScore, nextHighScore);
@@ -170,12 +242,12 @@ export default function TokenFitGame({
 
   const spawnPipe = useCallback(() => {
     const minGapY = CEILING_HEIGHT + SAFE_MARGIN + PIPE_GAP / 2;
-    const maxGapY = GAME_HEIGHT - FLOOR_HEIGHT - SAFE_MARGIN - PIPE_GAP / 2;
+    const maxGapY = BASE_GAME_HEIGHT - FLOOR_HEIGHT - SAFE_MARGIN - PIPE_GAP / 2;
 
     const previousGapY =
       pipesRef.current.length > 0
         ? pipesRef.current[pipesRef.current.length - 1].gapY
-        : GAME_HEIGHT / 2;
+        : BASE_GAME_HEIGHT / 2;
 
     const drift = (Math.random() - 0.5) * 120;
     const gapY = clamp(previousGapY + drift, minGapY, maxGapY);
@@ -189,7 +261,6 @@ export default function TokenFitGame({
 
     lastSpawnXRef.current = newPipe.x;
     pipesRef.current = [...pipesRef.current, newPipe];
-    setPipes(pipesRef.current);
   }, []);
 
   const step = useCallback(() => {
@@ -203,7 +274,8 @@ export default function TokenFitGame({
     const tokenLeft = TOKEN_X;
     const tokenRight = TOKEN_X + TOKEN_SIZE;
 
-    if (tokenTop <= CEILING_HEIGHT || tokenBottom >= GAME_HEIGHT - FLOOR_HEIGHT) {
+    if (tokenTop <= CEILING_HEIGHT || tokenBottom >= BASE_GAME_HEIGHT - FLOOR_HEIGHT) {
+      renderToken();
       endRun(false);
       return;
     }
@@ -224,13 +296,14 @@ export default function TokenFitGame({
     const furthestX = updatedPipes[updatedPipes.length - 1]?.x ?? 0;
     lastSpawnXRef.current = furthestX;
 
-    if (GAME_WIDTH - furthestX >= PIPE_SPAWN_DISTANCE) {
+    if (BASE_GAME_WIDTH - furthestX >= PIPE_SPAWN_DISTANCE) {
       pipesRef.current = updatedPipes;
       spawnPipe();
       updatedPipes = pipesRef.current;
     }
 
     let scoreChanged = false;
+    let didCrash = false;
 
     updatedPipes = updatedPipes.map((pipe) => {
       const gapTop = pipe.gapY - PIPE_GAP / 2;
@@ -243,7 +316,7 @@ export default function TokenFitGame({
       const hitsBottomPipe = tokenBottom > gapBottom;
 
       if (overlapsX && (hitsTopPipe || hitsBottomPipe)) {
-        endRun(false);
+        didCrash = true;
         return pipe;
       }
 
@@ -257,8 +330,14 @@ export default function TokenFitGame({
     });
 
     pipesRef.current = updatedPipes;
-    setTokenY(tokenYRef.current);
-    setPipes(updatedPipes);
+
+    renderToken();
+    renderPipes();
+
+    if (didCrash) {
+      endRun(false);
+      return;
+    }
 
     if (scoreChanged) {
       setScore(scoreRef.current);
@@ -270,13 +349,19 @@ export default function TokenFitGame({
     }
 
     animationRef.current = window.requestAnimationFrame(step);
-  }, [endRun, minScore, spawnPipe]);
+  }, [endRun, minScore, renderPipes, renderToken, spawnPipe]);
 
   const beginPlaying = useCallback(() => {
     resetRunState();
     setCountdown(COUNTDOWN_START);
+    setIsFullscreen(true);
     setGameState("countdown");
   }, [resetRunState]);
+
+  const closeFullscreen = useCallback(() => {
+    if (stateRef.current === "playing" || stateRef.current === "countdown") return;
+    setIsFullscreen(false);
+  }, []);
 
   useEffect(() => {
     if (gameState !== "countdown") {
@@ -311,7 +396,11 @@ export default function TokenFitGame({
   }, [gameState, step, stopAnimation]);
 
   const liftToken = useCallback(() => {
-    if (stateRef.current === "idle" || stateRef.current === "gameover" || stateRef.current === "passed") {
+    if (
+      stateRef.current === "idle" ||
+      stateRef.current === "gameover" ||
+      stateRef.current === "passed"
+    ) {
       beginPlaying();
       return;
     }
@@ -333,9 +422,15 @@ export default function TokenFitGame({
   }, [liftToken]);
 
   useEffect(() => {
+    renderToken();
+    renderPipes();
+  }, [renderPipes, renderToken]);
+
+  useEffect(() => {
     return () => {
       stopAnimation();
       stopCountdown();
+      document.body.style.overflow = "";
     };
   }, [stopAnimation, stopCountdown]);
 
@@ -349,271 +444,288 @@ export default function TokenFitGame({
 
   const canContinue = tokenFitPassed || gameState === "passed";
 
+  const shellStyle = isFullscreen
+    ? {
+        position: "fixed" as const,
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(2,8,16,0.96)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "12px",
+      }
+    : undefined;
+
   return (
-    <section className="jal-bay jal-bay-wide" aria-label="JAL's Trials Token Fit">
-      <div className="jal-bay-head">
-        <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
-        <div className="jal-bay-note">{statusText}</div>
-      </div>
-
-      <p className="jal-note">
-        Keep the token stable under movement. Tap the screen or press Space to lift. Reach at
-        least <strong>{minScore}</strong> points to unlock the trial.
-      </p>
-
-      <div
-        ref={containerRef}
-        role="button"
-        tabIndex={0}
-        aria-label="Token Fit game area"
-        onClick={liftToken}
-        onKeyDown={(event) => {
-          if (event.key === " " || event.key === "Enter") {
-            event.preventDefault();
-            liftToken();
-          }
-        }}
-        style={{
-          position: "relative",
-          width: "100%",
-          maxWidth: `${GAME_WIDTH}px`,
-          height: `${GAME_HEIGHT}px`,
-          margin: "1rem auto 0",
-          overflow: "hidden",
-          borderRadius: "28px",
-          border: "1px solid rgba(255,255,255,0.12)",
-          background:
-            "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
-          boxShadow:
-            "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
-          cursor: "pointer",
-          userSelect: "none",
-        }}
-      >
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-            opacity: 0.22,
-            pointerEvents: "none",
-          }}
-        />
-
-        <div
-          style={{
-            position: "absolute",
-            top: "18px",
-            left: "18px",
-            display: "flex",
-            gap: "12px",
-            flexWrap: "wrap",
-            zIndex: 5,
-          }}
-        >
-          <div className="button ghost" style={{ pointerEvents: "none" }}>
-            Score: {score}
-          </div>
-          <div className="button ghost" style={{ pointerEvents: "none" }}>
-            High Score: {highScore}
-          </div>
-          <div className="button ghost" style={{ pointerEvents: "none" }}>
-            Minimum: {minScore}
-          </div>
+    <div aria-label="JAL's Trials Token Fit" style={shellStyle}>
+      <div style={{ width: isFullscreen ? "100%" : undefined, maxWidth: isFullscreen ? "1120px" : undefined }}>
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
+          <div className="jal-bay-note">{statusText}</div>
         </div>
 
-        {pipes.map((pipe) => {
-          const topHeight = pipe.gapY - PIPE_GAP / 2 - CEILING_HEIGHT;
-          const bottomY = pipe.gapY + PIPE_GAP / 2;
-          const bottomHeight = GAME_HEIGHT - FLOOR_HEIGHT - bottomY;
-
-          return (
-            <div key={pipe.id}>
-              <div
-                style={{
-                  position: "absolute",
-                  left: `${pipe.x}px`,
-                  top: `${CEILING_HEIGHT}px`,
-                  width: `${PIPE_WIDTH}px`,
-                  height: `${Math.max(0, topHeight)}px`,
-                  borderRadius: "18px",
-                  background:
-                    "linear-gradient(180deg, rgba(8,18,28,0.95), rgba(0,255,180,0.16))",
-                  border: "1px solid rgba(0,255,180,0.18)",
-                  boxShadow:
-                    "inset 0 0 18px rgba(0,255,180,0.08), 0 0 12px rgba(0,255,180,0.08)",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  left: `${pipe.x}px`,
-                  top: `${bottomY}px`,
-                  width: `${PIPE_WIDTH}px`,
-                  height: `${Math.max(0, bottomHeight)}px`,
-                  borderRadius: "18px",
-                  background:
-                    "linear-gradient(180deg, rgba(0,255,180,0.16), rgba(8,18,28,0.95))",
-                  border: "1px solid rgba(0,255,180,0.18)",
-                  boxShadow:
-                    "inset 0 0 18px rgba(0,255,180,0.08), 0 0 12px rgba(0,255,180,0.08)",
-                }}
-              />
-            </div>
-          );
-        })}
+        <p className="jal-note">
+          Keep the token stable under movement. Tap the screen or press Space to lift. Reach at
+          least <strong>{minScore}</strong> points to unlock the trial.
+        </p>
 
         <div
-          aria-hidden="true"
+          role="button"
+          tabIndex={0}
+          aria-label="Token Fit game area"
+          onClick={liftToken}
+          onKeyDown={(event) => {
+            if (event.key === " " || event.key === "Enter") {
+              event.preventDefault();
+              liftToken();
+            }
+          }}
           style={{
-            position: "absolute",
-            left: `${TOKEN_X}px`,
-            top: `${tokenY}px`,
-            width: `${TOKEN_SIZE}px`,
-            height: `${TOKEN_SIZE}px`,
-            borderRadius: "999px",
-            display: "grid",
-            placeItems: "center",
-            fontSize: "0.82rem",
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            color: "#081118",
+            position: "relative",
+            width: "min(100vw - 24px, 960px)",
+            height: "min(100vh - 80px, 540px)",
+            maxWidth: `${BASE_GAME_WIDTH}px`,
+            margin: "1rem auto 0",
+            overflow: "hidden",
+            borderRadius: "28px",
+            border: "1px solid rgba(255,255,255,0.12)",
             background:
-              "radial-gradient(circle at 35% 30%, rgba(255,245,180,1), rgba(255,214,92,0.95) 48%, rgba(193,133,20,0.96) 100%)",
-            border: "1px solid rgba(255,255,255,0.35)",
+              "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
             boxShadow:
-              "0 0 16px rgba(255,214,92,0.42), inset 0 0 10px rgba(255,255,255,0.26)",
-            transform: `rotate(${clamp(velocityRef.current * 4, -18, 22)}deg)`,
-            transition: gameState === "playing" ? "none" : "transform 140ms ease",
-            zIndex: 4,
+              "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
+            cursor: "pointer",
+            userSelect: "none",
           }}
         >
-          JAL
-        </div>
-
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            insetInline: 0,
-            top: 0,
-            height: `${CEILING_HEIGHT}px`,
-            background: "rgba(255,255,255,0.05)",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
-          }}
-        />
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            insetInline: 0,
-            bottom: 0,
-            height: `${FLOOR_HEIGHT}px`,
-            background:
-              "linear-gradient(180deg, rgba(16,22,32,0.7), rgba(0,255,180,0.14))",
-            borderTop: "1px solid rgba(0,255,180,0.12)",
-          }}
-        />
-
-        {(gameState === "idle" ||
-          gameState === "countdown" ||
-          gameState === "gameover" ||
-          gameState === "passed") && (
           <div
+            aria-hidden="true"
             style={{
               position: "absolute",
               inset: 0,
-              display: "grid",
-              placeItems: "center",
-              background: "linear-gradient(180deg, rgba(2,8,16,0.30), rgba(2,8,16,0.68))",
-              zIndex: 6,
-              padding: "1.5rem",
-              textAlign: "center",
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
+              backgroundSize: "48px 48px",
+              opacity: 0.22,
+              pointerEvents: "none",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "18px",
+              left: "18px",
+              display: "flex",
+              gap: "12px",
+              flexWrap: "wrap",
+              zIndex: 5,
             }}
           >
-            {gameState === "idle" && (
-              <div style={{ maxWidth: "620px" }}>
-                <div className="jal-kicker">TRIAL READY</div>
-                <h3 className="home-title" style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}>
-                  Token Fit
-                </h3>
-                <p className="jal-note">
-                  Hold the JAL token in controlled motion. Tap or press Space to lift.Pass through the structure and reach the minimum score to complete the Token Fit trial.
-                </p>
-                <div className="jal-bay-actions" style={{ justifyContent: "center", marginTop: "1rem" }}>
-                  <button type="button" className="button neon" onClick={beginPlaying}>
-                    Start Trial
-                  </button>
-                </div>
-              </div>
-            )}
+            <div className="button ghost" style={{ pointerEvents: "none" }}>
+              Score: {score}
+            </div>
+            <div className="button ghost" style={{ pointerEvents: "none" }}>
+              High Score: {highScore}
+            </div>
+            <div className="button ghost" style={{ pointerEvents: "none" }}>
+              Minimum: {minScore}
+            </div>
+          </div>
 
-            {gameState === "countdown" && (
-              <div>
-                <div className="jal-kicker">STABILISE</div>
-                <h3 className="home-title" style={{ fontSize: "clamp(2.2rem, 8vw, 5rem)" }}>
-                  {countdown > 0 ? countdown : "GO"}
-                </h3>
-              </div>
-            )}
+          <div
+            ref={pipesLayerRef}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+            }}
+          />
 
-            {gameState === "gameover" && (
-              <div style={{ maxWidth: "620px" }}>
-                <div className="jal-kicker">LOSS OF CONTROL</div>
-                <h3 className="home-title" style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}>
-                  Game Over
-                </h3>
-                <p className="jal-note">
-                  Score: <strong>{score}</strong> · High Score: <strong>{highScore}</strong>
-                </p>
-                <p className="jal-lock-text">
-                  Minimum required to pass: {minScore}
-                </p>
-                <div className="jal-bay-actions" style={{ justifyContent: "center", marginTop: "1rem" }}>
-                  <button type="button" className="button neon" onClick={beginPlaying}>
-                    Try Again
-                  </button>
-                </div>
-              </div>
-            )}
+          <div
+            ref={tokenRef}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              width: `${TOKEN_SIZE}px`,
+              height: `${TOKEN_SIZE}px`,
+              borderRadius: "999px",
+              display: "grid",
+              placeItems: "center",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              color: "#081118",
+              background:
+                "radial-gradient(circle at 35% 30%, rgba(255,245,180,1), rgba(255,214,92,0.95) 48%, rgba(193,133,20,0.96) 100%)",
+              border: "1px solid rgba(255,255,255,0.35)",
+              boxShadow:
+                "0 0 16px rgba(255,214,92,0.42), inset 0 0 10px rgba(255,255,255,0.26)",
+              zIndex: 4,
+            }}
+          >
+            JAL
+          </div>
 
-            {gameState === "passed" && (
-              <div style={{ maxWidth: "620px" }}>
-                <div className="jal-kicker">TRIAL PASSED</div>
-                <h3 className="home-title" style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}>
-                  Gate Condition Met
-                </h3>
-                <p className="jal-note">
-                  Score: <strong>{score}</strong> · High Score: <strong>{highScore}</strong>
-                </p>
-                <p className="jal-lock-text">
-                  You reached the minimum score of {minScore}. Token Fit is now complete for this Observe run.
-                </p>
-                <div className="jal-bay-actions" style={{ justifyContent: "center", marginTop: "1rem" }}>
-                  <button type="button" className="button ghost" onClick={beginPlaying}>
-                    Play Again
-                  </button>
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              insetInline: 0,
+              top: 0,
+              height: `${maskPercent(CEILING_HEIGHT / BASE_GAME_HEIGHT)}`,
+              background: "rgba(255,255,255,0.05)",
+              borderBottom: "1px solid rgba(255,255,255,0.07)",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              insetInline: 0,
+              bottom: 0,
+              height: `${maskPercent(FLOOR_HEIGHT / BASE_GAME_HEIGHT)}`,
+              background:
+                "linear-gradient(180deg, rgba(16,22,32,0.7), rgba(0,255,180,0.14))",
+              borderTop: "1px solid rgba(0,255,180,0.12)",
+            }}
+          />
+
+          {(gameState === "idle" ||
+            gameState === "countdown" ||
+            gameState === "gameover" ||
+            gameState === "passed") && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "grid",
+                placeItems: "center",
+                background:
+                  "linear-gradient(180deg, rgba(2,8,16,0.30), rgba(2,8,16,0.68))",
+                zIndex: 6,
+                padding: "1.5rem",
+                textAlign: "center",
+              }}
+            >
+              {gameState === "idle" && (
+                <div style={{ maxWidth: "620px" }}>
+                  <div className="jal-kicker">TRIAL READY</div>
+                  <h3
+                    className="home-title"
+                    style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}
+                  >
+                    Token Fit
+                  </h3>
+                  <p className="jal-note">
+                    Hold the JAL token in controlled motion. Tap or press Space to lift. Pass
+                    through the structure and reach the minimum score to complete the Token Fit
+                    trial.
+                  </p>
+                  <div
+                    className="jal-bay-actions"
+                    style={{ justifyContent: "center", marginTop: "1rem" }}
+                  >
+                    <button type="button" className="button neon" onClick={beginPlaying}>
+                      Start Trial
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {gameState === "countdown" && (
+                <div>
+                  <div className="jal-kicker">STABILISE</div>
+                  <h3
+                    className="home-title"
+                    style={{ fontSize: "clamp(2.2rem, 8vw, 5rem)" }}
+                  >
+                    {countdown > 0 ? countdown : "GO"}
+                  </h3>
+                </div>
+              )}
+
+              {gameState === "gameover" && (
+                <div style={{ maxWidth: "620px" }}>
+                  <div className="jal-kicker">LOSS OF CONTROL</div>
+                  <h3
+                    className="home-title"
+                    style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}
+                  >
+                    Game Over
+                  </h3>
+                  <p className="jal-note">
+                    Score: <strong>{score}</strong> · High Score: <strong>{highScore}</strong>
+                  </p>
+                  <p className="jal-lock-text">Minimum required to pass: {minScore}</p>
+                  <div
+                    className="jal-bay-actions"
+                    style={{ justifyContent: "center", marginTop: "1rem" }}
+                  >
+                    <button type="button" className="button neon" onClick={beginPlaying}>
+                      Try Again
+                    </button>
+
+                    {isFullscreen && (
+                      <button type="button" className="button ghost" onClick={closeFullscreen}>
+                        Exit Fullscreen
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {gameState === "passed" && (
+                <div style={{ maxWidth: "620px" }}>
+                  <div className="jal-kicker">TRIAL PASSED</div>
+                  <h3
+                    className="home-title"
+                    style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}
+                  >
+                    Token Fit Complete
+                  </h3>
+                  <p className="jal-note">
+                    Score: <strong>{score}</strong> · High Score: <strong>{highScore}</strong>
+                  </p>
+                  <p className="jal-lock-text">
+                    You reached the minimum score of {minScore}. Token Fit is now complete for this
+                    Observe run.
+                  </p>
+                  <div
+                    className="jal-bay-actions"
+                    style={{ justifyContent: "center", marginTop: "1rem" }}
+                  >
+                    <button type="button" className="button ghost" onClick={beginPlaying}>
+                      Play Again
+                    </button>
+
+                    {isFullscreen && (
+                      <button type="button" className="button gold" onClick={closeFullscreen}>
+                        Return To Gate
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {!isFullscreen && (
+          <div className="jal-bay-actions" style={{ marginTop: "1rem" }}>
+            <div className="button ghost" style={{ pointerEvents: "none" }}>
+              Current Score: {score}
+            </div>
+            <div className="button ghost" style={{ pointerEvents: "none" }}>
+              High Score: {highScore}
+            </div>
+            <div className="button ghost" style={{ pointerEvents: "none" }}>
+              Trial Pass: {canContinue ? "Unlocked" : "Locked"}
+            </div>
           </div>
         )}
       </div>
-
-      <div className="jal-bay-actions" style={{ marginTop: "1rem" }}>
-        <div className="button ghost" style={{ pointerEvents: "none" }}>
-          Current Score: {score}
-        </div>
-        <div className="button ghost" style={{ pointerEvents: "none" }}>
-          High Score: {highScore}
-        </div>
-        <div className="button ghost" style={{ pointerEvents: "none" }}>
-          Trial Pass: {canContinue ? "Unlocked" : "Locked"}
-        </div>
-      </div>
-    </section>
+    </div>
   );
 }
