@@ -84,6 +84,7 @@ export default function TokenFitGame({
   const [sceneScale, setSceneScale] = useState(1);
   const [sceneWidth, setSceneWidth] = useState(BASE_GAME_WIDTH);
   const [sceneHeight, setSceneHeight] = useState(BASE_GAME_HEIGHT);
+  const [viewportMode, setViewportMode] = useState<"portrait" | "landscape">("landscape");
 
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
@@ -250,22 +251,27 @@ export default function TokenFitGame({
     function updateSceneScale() {
       const { width: viewportWidth, height: viewportHeight } = getViewportSize();
 
-      const horizontalPadding = isFullscreen ? 8 : 24;
+      const isPortraitNow = viewportHeight > viewportWidth;
+      setViewportMode(isPortraitNow ? "portrait" : "landscape");
+
+      const horizontalPadding = isFullscreen ? 8 : 20;
       const verticalPadding = isFullscreen ? 8 : 20;
-      const reservedUiHeight = isFullscreen ? 8 : 0;
 
       const availableWidth = Math.max(280, viewportWidth - horizontalPadding * 2);
       const availableHeight = isFullscreen
-        ? Math.max(220, viewportHeight - verticalPadding * 2 - reservedUiHeight)
-        : Math.min(460, Math.max(260, viewportHeight * 0.48));
+        ? Math.max(260, viewportHeight - verticalPadding * 2)
+        : Math.min(isPortraitNow ? 520 : 460, Math.max(280, viewportHeight * 0.56));
 
-      const scaleX = availableWidth / BASE_GAME_WIDTH;
-      const scaleY = availableHeight / BASE_GAME_HEIGHT;
+      const targetBaseWidth = isPortraitNow ? 720 : BASE_GAME_WIDTH;
+      const targetBaseHeight = BASE_GAME_HEIGHT;
+
+      const scaleX = availableWidth / targetBaseWidth;
+      const scaleY = availableHeight / targetBaseHeight;
       const nextScale = Math.min(scaleX, scaleY, 1);
 
       setSceneScale(nextScale);
-      setSceneWidth(Math.round(BASE_GAME_WIDTH * nextScale));
-      setSceneHeight(Math.round(BASE_GAME_HEIGHT * nextScale));
+      setSceneWidth(Math.round(targetBaseWidth * nextScale));
+      setSceneHeight(Math.round(targetBaseHeight * nextScale));
     }
 
     updateSceneScale();
@@ -316,6 +322,16 @@ export default function TokenFitGame({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeTrial, flap, isFullscreen]);
 
+  const showCompactEntry = !isFullscreen && gameState === "idle";
+
+  const isPortrait = viewportMode === "portrait";
+
+  const responsiveBaseWidth = isPortrait ? 720 : BASE_GAME_WIDTH;
+  const responsiveTokenX = isPortrait ? 132 : TOKEN_X;
+  const responsivePipeWidth = isPortrait ? 82 : PIPE_WIDTH;
+  const responsivePipeGap = isPortrait ? 176 : PIPE_GAP;
+  const responsivePipeSpeed = isPortrait ? 2.15 : PIPE_SPEED;
+
   useEffect(() => {
     if (gameState !== "playing") {
       if (rafRef.current) {
@@ -359,15 +375,16 @@ export default function TokenFitGame({
       if (spawnTimerRef.current >= PIPE_SPAWN_EVERY) {
         spawnTimerRef.current = 0;
 
-        const gapPaddingTop = 80;
-        const gapPaddingBottom = 110;
-        const minGapY = gapPaddingTop + PIPE_GAP / 2;
-        const maxGapY = BASE_GAME_HEIGHT - FLOOR_HEIGHT - gapPaddingBottom - PIPE_GAP / 2;
+        const gapPaddingTop = 76;
+        const gapPaddingBottom = 104;
+        const minGapY = gapPaddingTop + responsivePipeGap / 2;
+        const maxGapY =
+          BASE_GAME_HEIGHT - FLOOR_HEIGHT - gapPaddingBottom - responsivePipeGap / 2;
         const gapY = Math.random() * (maxGapY - minGapY) + minGapY;
 
         pipesRef.current.push({
           id: nextPipeIdRef.current++,
-          x: BASE_GAME_WIDTH + 40,
+          x: responsiveBaseWidth + 40,
           gapY,
           scored: false,
         });
@@ -375,10 +392,10 @@ export default function TokenFitGame({
 
       const updatedPipes = pipesRef.current
         .map((pipe) => {
-          const nextX = pipe.x - PIPE_SPEED * frameScale;
+          const nextX = pipe.x - responsivePipeSpeed * frameScale;
           let nextPipe = { ...pipe, x: nextX };
 
-          if (!pipe.scored && nextX + PIPE_WIDTH < TOKEN_X) {
+          if (!pipe.scored && nextX + responsivePipeWidth < responsiveTokenX) {
             nextPipe = { ...nextPipe, scored: true };
 
             const nextScore = scoreRef.current + 1;
@@ -392,7 +409,7 @@ export default function TokenFitGame({
 
           return nextPipe;
         })
-        .filter((pipe) => pipe.x + PIPE_WIDTH > -40);
+        .filter((pipe) => pipe.x + responsivePipeWidth > -40);
 
       pipesRef.current = updatedPipes;
 
@@ -415,32 +432,41 @@ export default function TokenFitGame({
         rafRef.current = null;
       }
     };
-  }, [endGame, gameState, minScore]);
+  }, [
+    endGame,
+    gameState,
+    minScore,
+    responsiveBaseWidth,
+    responsivePipeGap,
+    responsivePipeSpeed,
+    responsivePipeWidth,
+    responsiveTokenX,
+  ]);
 
   useEffect(() => {
     if (gameState !== "playing") return;
 
-    const tokenLeft = TOKEN_X;
-    const tokenRight = TOKEN_X + TOKEN_SIZE;
+    const tokenLeft = responsiveTokenX;
+    const tokenRight = responsiveTokenX + TOKEN_SIZE;
     const tokenTop = tokenY;
     const tokenBottom = tokenY + TOKEN_SIZE;
 
     for (const pipe of pipes) {
       const pipeLeft = pipe.x;
-      const pipeRight = pipe.x + PIPE_WIDTH;
+      const pipeRight = pipe.x + responsivePipeWidth;
 
       const withinX = tokenRight > pipeLeft && tokenLeft < pipeRight;
       if (!withinX) continue;
 
-      const gapTop = pipe.gapY - PIPE_GAP / 2;
-      const gapBottom = pipe.gapY + PIPE_GAP / 2;
+      const gapTop = pipe.gapY - responsivePipeGap / 2;
+      const gapBottom = pipe.gapY + responsivePipeGap / 2;
 
       if (tokenTop < gapTop || tokenBottom > gapBottom) {
         endGame("gameover");
         return;
       }
     }
-  }, [endGame, gameState, pipes, tokenY]);
+  }, [endGame, gameState, pipes, tokenY, responsivePipeGap, responsivePipeWidth, responsiveTokenX]);
 
   const statusText = useMemo(() => {
     if (gameState === "passed") return "Trial Complete";
@@ -449,8 +475,6 @@ export default function TokenFitGame({
     if (gameState === "playing") return "In Motion";
     return "Trial Available";
   }, [gameState]);
-
-  const showCompactEntry = !isFullscreen && gameState === "idle";
 
   const tokenRotation = clamp(velocity * 4.5, -28, 60);
 
@@ -476,6 +500,7 @@ export default function TokenFitGame({
         padding: "8px",
         overscrollBehavior: "none",
         touchAction: "none",
+        WebkitTapHighlightColor: "transparent",
       } as const)
     : ({
         position: "relative",
@@ -523,6 +548,8 @@ export default function TokenFitGame({
           cursor: "pointer",
           userSelect: "none",
           WebkitUserSelect: "none",
+          WebkitTapHighlightColor: "transparent",
+          WebkitTouchCallout: "none",
           touchAction: "none",
           outline: "none",
           maxWidth: "100%",
@@ -534,7 +561,7 @@ export default function TokenFitGame({
             position: "absolute",
             left: 0,
             top: 0,
-            width: `${BASE_GAME_WIDTH}px`,
+            width: `${responsiveBaseWidth}px`,
             height: `${BASE_GAME_HEIGHT}px`,
             transform: `scale(${sceneScale})`,
             transformOrigin: "top left",
@@ -678,6 +705,7 @@ export default function TokenFitGame({
                   fontSize: hudFont,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
+                  WebkitTapHighlightColor: "transparent",
                 }}
               >
                 Exit
@@ -686,8 +714,8 @@ export default function TokenFitGame({
           </div>
 
           {pipes.map((pipe) => {
-            const topPipeHeight = pipe.gapY - PIPE_GAP / 2;
-            const bottomPipeY = pipe.gapY + PIPE_GAP / 2;
+            const topPipeHeight = pipe.gapY - responsivePipeGap / 2;
+            const bottomPipeY = pipe.gapY + responsivePipeGap / 2;
             const bottomPipeHeight = BASE_GAME_HEIGHT - FLOOR_HEIGHT - bottomPipeY;
 
             return (
@@ -697,7 +725,7 @@ export default function TokenFitGame({
                     position: "absolute",
                     left: pipe.x,
                     top: 0,
-                    width: PIPE_WIDTH,
+                    width: responsivePipeWidth,
                     height: topPipeHeight,
                     borderRadius: "0 0 20px 20px",
                     background:
@@ -711,7 +739,7 @@ export default function TokenFitGame({
                     position: "absolute",
                     left: pipe.x - 8,
                     top: topPipeHeight - 20,
-                    width: PIPE_WIDTH + 16,
+                    width: responsivePipeWidth + 16,
                     height: 20,
                     borderRadius: 12,
                     background: "rgba(0,255,180,0.16)",
@@ -724,7 +752,7 @@ export default function TokenFitGame({
                     position: "absolute",
                     left: pipe.x,
                     top: bottomPipeY,
-                    width: PIPE_WIDTH,
+                    width: responsivePipeWidth,
                     height: bottomPipeHeight,
                     borderRadius: "20px 20px 0 0",
                     background:
@@ -738,7 +766,7 @@ export default function TokenFitGame({
                     position: "absolute",
                     left: pipe.x - 8,
                     top: bottomPipeY,
-                    width: PIPE_WIDTH + 16,
+                    width: responsivePipeWidth + 16,
                     height: 20,
                     borderRadius: 12,
                     background: "rgba(0,255,180,0.16)",
@@ -752,7 +780,7 @@ export default function TokenFitGame({
           <div
             style={{
               position: "absolute",
-              left: TOKEN_X,
+              left: responsiveTokenX,
               top: tokenY,
               width: TOKEN_SIZE,
               height: TOKEN_SIZE,
@@ -945,6 +973,7 @@ export default function TokenFitGame({
                       color: "#ffffff",
                       fontWeight: 700,
                       cursor: "pointer",
+                      WebkitTapHighlightColor: "transparent",
                     }}
                   >
                     Retry
@@ -965,6 +994,7 @@ export default function TokenFitGame({
                       color: "#d9fff1",
                       fontWeight: 700,
                       cursor: "pointer",
+                      WebkitTapHighlightColor: "transparent",
                     }}
                   >
                     Leave Trial
@@ -993,59 +1023,91 @@ export default function TokenFitGame({
                 whiteSpace: "nowrap",
               }}
             >
-              Tap or press space to lift
+              {isPortrait ? "Tap screen or Lift button" : "Tap screen or press space"}
             </div>
+          )}
+
+          {gameState === "playing" && isPortrait && (
+            <button
+              type="button"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                flap();
+              }}
+              style={{
+                position: "absolute",
+                right: 24,
+                bottom: 96,
+                width: 92,
+                height: 92,
+                borderRadius: "50%",
+                border: "1px solid rgba(0,255,180,0.28)",
+                background: "rgba(0,255,180,0.10)",
+                color: "#d9fff1",
+                fontSize: 14,
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                boxShadow: "0 0 24px rgba(0,255,180,0.12)",
+                zIndex: 7,
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              Lift
+            </button>
           )}
         </div>
       </div>
     </div>
   );
 
-if (showCompactEntry) {
-  return (
-    <div className="jal-trial-entry" aria-label="JAL's Trials Token Fit">
-      <div className="jal-bay-head">
-        <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
-        <div className="jal-bay-note">Trial Available</div>
+  if (showCompactEntry) {
+    return (
+      <div className="jal-trial-entry" aria-label="JAL's Trials Token Fit">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
+          <div className="jal-bay-note">Trial Available</div>
+        </div>
+
+        <p className="jal-trial-note">
+          Keep the token stable under movement. Reach at least <strong>{minScore}</strong> points to
+          complete the trial.
+        </p>
+
+        <div className="jal-trial-grid">
+          <article className="jal-trial-card">
+            <div className="jal-trial-k">Control</div>
+            <div className="jal-trial-v">Tap screen to lift. Desktop also supports Space.</div>
+          </article>
+
+          <article className="jal-trial-card">
+            <div className="jal-trial-k">Threshold</div>
+            <div className="jal-trial-v">Minimum required score: {minScore}</div>
+          </article>
+
+          <article className="jal-trial-card">
+            <div className="jal-trial-k">Best</div>
+            <div className="jal-trial-v">High Score: {highScore}</div>
+          </article>
+        </div>
+
+        <div className="jal-trial-actions">
+          <button
+            type="button"
+            className="button neon"
+            onClick={(event) => {
+              event.stopPropagation();
+              beginPlaying();
+            }}
+          >
+            Start Trial
+          </button>
+        </div>
       </div>
-
-      <p className="jal-trial-note">
-        Keep the token stable under movement. Reach at least <strong>{minScore}</strong> points to
-        complete the trial.
-      </p>
-
-      <div className="jal-trial-grid">
-        <article className="jal-trial-card">
-          <div className="jal-trial-k">Control</div>
-          <div className="jal-trial-v">Tap screen or press Space to lift.</div>
-        </article>
-
-        <article className="jal-trial-card">
-          <div className="jal-trial-k">Threshold</div>
-          <div className="jal-trial-v">Minimum required score: {minScore}</div>
-        </article>
-
-        <article className="jal-trial-card">
-          <div className="jal-trial-k">Best</div>
-          <div className="jal-trial-v">High Score: {highScore}</div>
-        </article>
-      </div>
-
-      <div className="jal-trial-actions">
-        <button
-          type="button"
-          className="button neon"
-          onClick={(event) => {
-            event.stopPropagation();
-            beginPlaying();
-          }}
-        >
-          Start Trial
-        </button>
-      </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (isFullscreen && typeof document !== "undefined") {
     return createPortal(gameView, document.body);

@@ -5935,3 +5935,18 @@ button.home-route-band{
     min-width:0;
   }
 }
+.jal-trial-entry,
+.jal-trial-entry *{
+  -webkit-tap-highlight-color: transparent;
+}
+
+.jal-trial-entry button,
+.jal-trial-entry .button{
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button,
+[role="button"]{
+  -webkit-tap-highlight-color: transparent;
+}
