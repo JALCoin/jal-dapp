@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type TokenFitGameProps = {
   minScore: number;
@@ -129,9 +130,7 @@ export default function TokenFitGame({
   const flap = useCallback(() => {
     if (gameStateRef.current === "countdown") return;
 
-    if (gameStateRef.current === "idle") {
-      return;
-    }
+    if (gameStateRef.current === "idle") return;
 
     if (gameStateRef.current === "gameover" || gameStateRef.current === "passed") {
       resetWorld();
@@ -150,51 +149,51 @@ export default function TokenFitGame({
     setGameState("countdown");
   }, [resetWorld]);
 
-useEffect(() => {
-  if (!isFullscreen) {
-    document.documentElement.style.overflow = "";
-    document.body.style.overflow = "";
-    return;
-  }
+  useEffect(() => {
+    if (!isFullscreen) {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+      return;
+    }
 
-  const previousHtmlOverflow = document.documentElement.style.overflow;
-  const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
 
-  document.documentElement.style.overflow = "hidden";
-  document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
 
-  return () => {
-    document.documentElement.style.overflow = previousHtmlOverflow;
-    document.body.style.overflow = previousBodyOverflow;
-  };
-}, [isFullscreen]);
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [isFullscreen]);
 
-useEffect(() => {
-  function updateSceneScale() {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+  useEffect(() => {
+    function updateSceneScale() {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
-    const horizontalPadding = isFullscreen ? 12 : 32;
-    const verticalPadding = isFullscreen ? 12 : 32;
+      const horizontalPadding = isFullscreen ? 12 : 32;
+      const verticalPadding = isFullscreen ? 12 : 32;
 
-    const availableWidth = Math.max(260, viewportWidth - horizontalPadding);
-    const availableHeight = isFullscreen
-      ? Math.max(260, viewportHeight - verticalPadding)
-      : Math.min(420, viewportHeight * 0.5);
+      const availableWidth = Math.max(260, viewportWidth - horizontalPadding);
+      const availableHeight = isFullscreen
+        ? Math.max(260, viewportHeight - verticalPadding)
+        : Math.min(420, viewportHeight * 0.5);
 
-    const scaleX = availableWidth / BASE_GAME_WIDTH;
-    const scaleY = availableHeight / BASE_GAME_HEIGHT;
-    const nextScale = Math.min(scaleX, scaleY, 1);
+      const scaleX = availableWidth / BASE_GAME_WIDTH;
+      const scaleY = availableHeight / BASE_GAME_HEIGHT;
+      const nextScale = Math.min(scaleX, scaleY, 1);
 
-    setSceneScale(nextScale);
-    setSceneWidth(BASE_GAME_WIDTH * nextScale);
-    setSceneHeight(BASE_GAME_HEIGHT * nextScale);
-  }
+      setSceneScale(nextScale);
+      setSceneWidth(BASE_GAME_WIDTH * nextScale);
+      setSceneHeight(BASE_GAME_HEIGHT * nextScale);
+    }
 
-  updateSceneScale();
-  window.addEventListener("resize", updateSceneScale);
-  return () => window.removeEventListener("resize", updateSceneScale);
-}, [isFullscreen]);
+    updateSceneScale();
+    window.addEventListener("resize", updateSceneScale);
+    return () => window.removeEventListener("resize", updateSceneScale);
+  }, [isFullscreen]);
 
   useEffect(() => {
     if (gameState !== "countdown") return;
@@ -285,7 +284,6 @@ useEffect(() => {
         const gapPaddingBottom = 110;
         const minGapY = gapPaddingTop + PIPE_GAP / 2;
         const maxGapY = BASE_GAME_HEIGHT - FLOOR_HEIGHT - gapPaddingBottom - PIPE_GAP / 2;
-
         const gapY = Math.random() * (maxGapY - minGapY) + minGapY;
 
         setPipes((prev) => [
@@ -385,7 +383,10 @@ useEffect(() => {
         justifyContent: "center",
         padding: "8px",
       }
-    : undefined;
+    : {
+        position: "relative" as const,
+        width: "100%",
+      };
 
   const tokenRotation = clamp(velocity * 4.5, -28, 60);
 
@@ -394,64 +395,15 @@ useEffect(() => {
     flap();
   };
 
-  if (showCompactEntry) {
-    return (
-      <div aria-label="JAL's Trials Token Fit">
-        <div className="jal-bay-head">
-          <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
-          <div className="jal-bay-note">Trial Available</div>
-        </div>
+  const closeTrial = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    setIsFullscreen(false);
+    setGameState("idle");
+    resetWorld();
+  };
 
-        <p className="jal-note">
-          Keep the token stable under movement. Reach at least <strong>{minScore}</strong> points to
-          complete the trial.
-        </p>
-
-        <div className="jal-bullets">
-          <article className="jal-bullet">
-            <div className="jal-bullet-k">Control</div>
-            <div className="jal-bullet-v">Tap screen or press Space to lift.</div>
-          </article>
-
-          <article className="jal-bullet">
-            <div className="jal-bullet-k">Threshold</div>
-            <div className="jal-bullet-v">Minimum required score: {minScore}</div>
-          </article>
-
-          <article className="jal-bullet">
-            <div className="jal-bullet-k">Best</div>
-            <div className="jal-bullet-v">High Score: {highScore}</div>
-          </article>
-        </div>
-
-        <div className="jal-bay-actions" style={{ marginTop: "1rem" }}>
-          <button
-            type="button"
-            className="button neon"
-            onClick={(event) => {
-              event.stopPropagation();
-              beginPlaying();
-            }}
-          >
-            Start Trial
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-return (
-  <div
-    style={
-      isFullscreen
-        ? shellStyle
-        : {
-            position: "relative",
-            width: "100%",
-          }
-    }
-    aria-label="JAL's Trials Token Fit"
-  >
+  const gameView = (
+    <div style={shellStyle} aria-label="JAL's Trials Token Fit">
       {!isFullscreen && (
         <>
           <div className="jal-bay-head">
@@ -578,7 +530,14 @@ return (
                 textAlign: "center",
               }}
             >
-              <div style={{ fontSize: 11, opacity: 0.7, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  opacity: 0.7,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
                 Score
               </div>
               <div style={{ fontSize: 24, fontWeight: 700 }}>{score}</div>
@@ -595,7 +554,14 @@ return (
                 textAlign: "center",
               }}
             >
-              <div style={{ fontSize: 11, opacity: 0.7, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  opacity: 0.7,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
                 Best
               </div>
               <div style={{ fontSize: 24, fontWeight: 700 }}>{highScore}</div>
@@ -604,14 +570,7 @@ return (
             {isFullscreen && (
               <button
                 type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setIsFullscreen(false);
-                  if (gameState === "playing" || gameState === "countdown") {
-                    setGameState("idle");
-                    resetWorld();
-                  }
-                }}
+                onClick={closeTrial}
                 style={{
                   padding: "0 16px",
                   borderRadius: 14,
@@ -893,12 +852,7 @@ return (
 
                   <button
                     type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setIsFullscreen(false);
-                      setGameState("idle");
-                      resetWorld();
-                    }}
+                    onClick={closeTrial}
                     style={{
                       minWidth: 140,
                       padding: "12px 18px",
@@ -942,4 +896,56 @@ return (
       </div>
     </div>
   );
+
+  if (showCompactEntry) {
+    return (
+      <div aria-label="JAL's Trials Token Fit">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
+          <div className="jal-bay-note">Trial Available</div>
+        </div>
+
+        <p className="jal-note">
+          Keep the token stable under movement. Reach at least <strong>{minScore}</strong> points to
+          complete the trial.
+        </p>
+
+        <div className="jal-bullets">
+          <article className="jal-bullet">
+            <div className="jal-bullet-k">Control</div>
+            <div className="jal-bullet-v">Tap screen or press Space to lift.</div>
+          </article>
+
+          <article className="jal-bullet">
+            <div className="jal-bullet-k">Threshold</div>
+            <div className="jal-bullet-v">Minimum required score: {minScore}</div>
+          </article>
+
+          <article className="jal-bullet">
+            <div className="jal-bullet-k">Best</div>
+            <div className="jal-bullet-v">High Score: {highScore}</div>
+          </article>
+        </div>
+
+        <div className="jal-bay-actions" style={{ marginTop: "1rem" }}>
+          <button
+            type="button"
+            className="button neon"
+            onClick={(event) => {
+              event.stopPropagation();
+              beginPlaying();
+            }}
+          >
+            Start Trial
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isFullscreen && typeof document !== "undefined") {
+    return createPortal(gameView, document.body);
+  }
+
+  return gameView;
 }
