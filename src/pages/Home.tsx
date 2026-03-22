@@ -8,11 +8,20 @@ function fmtTime(d: Date) {
   return `${hh}:${mm}:${ss}`;
 }
 
-type RoadmapStep = {
+type EntryGate = {
+  id: string;
+  title: string;
+  subtitle: string;
+  desc: string;
+  mapsTo: string;
+  tone?: "green" | "gold" | "cyan";
+  route: string;
+};
+
+type ProgressStep = {
   level: string;
   title: string;
   desc: string;
-  route?: string;
 };
 
 type RouteBand = {
@@ -77,31 +86,60 @@ export default function Home() {
 
   const networkLabel = "MAINNET";
 
-  const roadmap = useMemo<RoadmapStep[]>(
+  const entryGates = useMemo<EntryGate[]>(
+    () => [
+      {
+        id: "observe",
+        title: "Observe",
+        subtitle: "Learn before acting",
+        desc: "Start with disclosure, awareness, exchanges, wallets, custody, and foundational system logic before confusing motion with progress.",
+        mapsTo: "Maps to Disclosure + Awareness",
+        tone: "cyan",
+        route: "/app/jal-sol",
+      },
+      {
+        id: "enter",
+        title: "Enter",
+        subtitle: "Take the first controlled step",
+        desc: "Move from passive understanding into guided participation and the first irreversible action inside the system.",
+        mapsTo: "Maps to Controlled Entry",
+        tone: "gold",
+        route: "/app/jal-sol",
+      },
+      {
+        id: "build",
+        title: "Build",
+        subtitle: "Create your own system",
+        desc: "Progress beyond entry into ownership, token creation, utility, identity, execution, and eventual outward deployment.",
+        mapsTo: "Maps to Creation → Execution",
+        tone: "green",
+        route: "/app/jal-sol",
+      },
+    ],
+    []
+  );
+
+  const progressSteps = useMemo<ProgressStep[]>(
     () => [
       {
         level: "L0",
         title: "Disclosure",
-        desc: "Identity, authorship, intent, and visible system direction are established before entry begins.",
-        route: "/app/home",
+        desc: "Identity, authorship, intent, and system direction are revealed before movement begins.",
       },
       {
         level: "L1",
         title: "Controlled Entry",
-        desc: "JAL/SOL moves the user from observation into guided participation and first irreversible action.",
-        route: "/app/jal-sol",
+        desc: "The first irreversible movement changes the user from observer into participant.",
       },
       {
         level: "L2",
         title: "Creation",
-        desc: "The system expands from participant behaviour into owned assets, token creation, and utility formation.",
-        route: "/app/jal-sol",
+        desc: "The system expands from use into owned assets, token creation, and utility formation.",
       },
       {
         level: "L3+",
         title: "Execution & Expansion",
-        desc: "Machine logic, structured visibility, and future custom domain deployment extend the system outward.",
-        route: "/app/engine",
+        desc: "Machine structure, public visibility, and future domain deployment extend the system outward.",
       },
     ],
     []
@@ -246,18 +284,33 @@ export default function Home() {
                 The Engine proves structured behaviour. The remaining surfaces expand access,
                 storage, and future deployment.
               </p>
+
+              <div className="jal-links">
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => beginRoute("/app/jal-sol", "jalsol-entry")}
+                  disabled={loading}
+                >
+                  Enter JAL/SOL
+                </button>
+
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => beginRoute("/app/engine", "engine")}
+                  disabled={loading}
+                >
+                  View Engine
+                </button>
+              </div>
             </div>
 
-            <aside
-              className="home-console-side"
-              aria-label="System identity and intent"
-            >
+            <aside className="home-console-side" aria-label="System identity and intent">
               <div className="home-console-side-card home-identity-card">
                 <div className="home-console-side-kicker">SOURCE</div>
                 <div className="home-console-side-title">Jeremy Aaron Lugg</div>
-                <div className="home-console-side-copy">
-                  Mechanical Engineer • Digital Creator
-                </div>
+                <div className="home-console-side-copy">Mechanical Engineer • Digital Creator</div>
                 <p className="home-identity-desc">
                   The visible operator and originating source of JALSOL — a layered digital system
                   built to move from awareness into ownership, then into structure, execution, and
@@ -279,118 +332,123 @@ export default function Home() {
 
         <section
           className="card machine-surface panel-frame home-roadmap-window"
-          aria-label="JALSOL roadmap"
+          aria-label="Visible entry structure"
         >
           <div className="home-roadmap-head">
             <div>
-              <div className="home-kicker">VISIBLE ARCHITECTURE</div>
-              <h2 className="home-modules-title">System roadmap</h2>
+              <div className="home-kicker">VISIBLE ENTRY STRUCTURE</div>
+              <h2 className="home-modules-title">Three gates, one progression path</h2>
               <p className="home-modules-lead">
-                This is not only a path of movement. It is the visible staging of the wider system
-                and the public-facing architecture of what JALSOL becomes.
+                Home does not ask the user to choose a level. It reveals the structure first, then
+                routes that person into JAL/SOL where the three gates define direction of movement.
               </p>
             </div>
           </div>
 
-          <div className="home-roadmap-grid" role="list" aria-label="Roadmap steps">
-            {roadmap.map((step) => {
-              const content = (
-                <>
-                  <div className="home-roadmap-level">{step.level}</div>
-                  <div className="home-roadmap-title">{step.title}</div>
-                  <p className="home-roadmap-desc">{step.desc}</p>
-                  <div className="home-roadmap-open">OPEN →</div>
-                </>
-              );
-
-              return step.route ? (
-                <button
-                  key={step.level}
-                  type="button"
-                  className="home-roadmap-card"
-                  onClick={() => beginRoute(step.route!, step.level)}
-                  role="listitem"
-                  aria-label={`Open ${step.title}`}
-                >
-                  {content}
-                </button>
-              ) : (
-                <article
-                  key={step.level}
-                  className="home-roadmap-card"
-                  role="listitem"
-                >
-                  {content}
-                </article>
-              );
-            })}
+          <div className="home-roadmap-grid" role="list" aria-label="Entry gates">
+            {entryGates.map((gate) => (
+              <button
+                key={gate.id}
+                type="button"
+                className={`home-roadmap-card tone-${gate.tone ?? "cyan"}`}
+                onClick={() => beginRoute(gate.route, gate.id)}
+                role="listitem"
+                aria-label={`Open ${gate.title}`}
+              >
+                <div className="home-roadmap-level">{gate.title.toUpperCase()}</div>
+                <div className="home-roadmap-title">{gate.subtitle}</div>
+                <p className="home-roadmap-desc">{gate.desc}</p>
+                <div className="home-roadmap-open">{gate.mapsTo}</div>
+              </button>
+            ))}
           </div>
         </section>
 
-<section
-  className="card machine-surface panel-frame home-support-window"
-  aria-label="Support the source"
->
-  <div className="home-support-head">
-    <div>
-      <div className="home-kicker">SUPPORT THE SOURCE</div>
-      <h2 className="home-modules-title">Fuel the system as it expands</h2>
-      <p className="home-modules-lead">
-        JALSOL is a live, authored system. What is visible here is actively being built and extended.
-        Support feeds directly into its progression — from interface refinement to infrastructure,
-        releases, and future system deployment.
-      </p>
-    </div>
-  </div>
-
-  <div className="home-support-grid">
-    
-    <article className="home-support-card">
-      <div className="home-support-card-kicker">STRUCTURED SUPPORT</div>
-      <h3 className="home-support-card-title">
-        Contribute through the system
-      </h3>
-      <p className="home-support-card-copy">
-        Use the Shop to access support releases, guided entry layers, and future system modules.
-        This path feeds directly into the structured expansion of JALSOL.
-      </p>
-
-      <div className="home-support-actions">
-        <button
-          type="button"
-          className="button gold"
-          onClick={() => beginRoute("/app/shop", "shop")}
-          disabled={loading}
+        <section
+          className="card machine-surface panel-frame home-roadmap-window"
+          aria-label="Visible progression architecture"
         >
-          Open Support Layer
-        </button>
-      </div>
-    </article>
+          <div className="home-roadmap-head">
+            <div>
+              <div className="home-kicker">VISIBLE PROGRESSION</div>
+              <h2 className="home-modules-title">State progression in public view</h2>
+              <p className="home-modules-lead">
+                These are not primary choices on Home. They are the visible progression positions
+                the wider system moves through once direction has been selected.
+              </p>
+            </div>
+          </div>
 
-    <article className="home-support-card">
-      <div className="home-support-card-kicker">DIRECT INPUT</div>
-      <h3 className="home-support-card-title">
-        Support the source on-chain
-      </h3>
-      <p className="home-support-card-copy">
-        Direct SOL contributions act as raw input into development, infrastructure,
-        and expansion across future JALSOL domains built from this source.
-      </p>
+          <div className="home-roadmap-grid" role="list" aria-label="Progression steps">
+            {progressSteps.map((step) => (
+              <article key={step.level} className="home-roadmap-card" role="listitem">
+                <div className="home-roadmap-level">{step.level}</div>
+                <div className="home-roadmap-title">{step.title}</div>
+                <p className="home-roadmap-desc">{step.desc}</p>
+                <div className="home-roadmap-open">VISIBLE →</div>
+              </article>
+            ))}
+          </div>
+        </section>
 
-      <div className="home-support-wallet">
-        <span className="home-support-wallet-label">SOL ADDRESS</span>
-        <button
-          type="button"
-          className={`home-support-wallet-code ${copied ? "is-copied" : ""}`}
-          onClick={copyAddress}
+        <section
+          className="card machine-surface panel-frame home-support-window"
+          aria-label="Support the source"
         >
-          {copied ? "Copied ✓" : solAddress}
-        </button>
-      </div>
-    </article>
+          <div className="home-support-head">
+            <div>
+              <div className="home-kicker">SUPPORT THE SOURCE</div>
+              <h2 className="home-modules-title">Fuel the system as it expands</h2>
+              <p className="home-modules-lead">
+                JALSOL is a live, authored system. What is visible here is actively being built and
+                extended. Support feeds directly into its progression — from interface refinement to
+                infrastructure, releases, and future system deployment.
+              </p>
+            </div>
+          </div>
 
-  </div>
-</section>
+          <div className="home-support-grid">
+            <article className="home-support-card">
+              <div className="home-support-card-kicker">STRUCTURED SUPPORT</div>
+              <h3 className="home-support-card-title">Contribute through the system</h3>
+              <p className="home-support-card-copy">
+                Use the Shop to access support releases, guided entry layers, and future system
+                modules. This path feeds directly into the structured expansion of JALSOL.
+              </p>
+
+              <div className="home-support-actions">
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => beginRoute("/app/shop", "shop")}
+                  disabled={loading}
+                >
+                  Open Support Layer
+                </button>
+              </div>
+            </article>
+
+            <article className="home-support-card">
+              <div className="home-support-card-kicker">DIRECT INPUT</div>
+              <h3 className="home-support-card-title">Support the source on-chain</h3>
+              <p className="home-support-card-copy">
+                Direct SOL contributions act as raw input into development, infrastructure, and
+                expansion across future JALSOL domains built from this source.
+              </p>
+
+              <div className="home-support-wallet">
+                <span className="home-support-wallet-label">SOL ADDRESS</span>
+                <button
+                  type="button"
+                  className={`home-support-wallet-code ${copied ? "is-copied" : ""}`}
+                  onClick={copyAddress}
+                >
+                  {copied ? "Copied ✓" : solAddress}
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
 
         <div className="home-flow-divider" aria-hidden="true" />
 
@@ -448,12 +506,8 @@ export default function Home() {
                       >
                         <div className="home-route-preview-overlay">
                           <div className="home-route-preview-kicker">Preview</div>
-                          <div className="home-route-preview-title">
-                            {band.previewTitle}
-                          </div>
-                          <p className="home-route-preview-desc">
-                            {band.previewDesc}
-                          </p>
+                          <div className="home-route-preview-title">{band.previewTitle}</div>
+                          <p className="home-route-preview-desc">{band.previewDesc}</p>
                         </div>
                       </div>
 
