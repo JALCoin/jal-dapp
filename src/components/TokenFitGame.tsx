@@ -81,9 +81,6 @@ export default function TokenFitGame({
   const scoreRef = useRef(0);
   const gameStateRef = useRef<TokenFitState>("idle");
 
-  const scrollYRef = useRef(0);
-  const hasOpenedOnceRef = useRef(false);
-
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
@@ -153,70 +150,51 @@ export default function TokenFitGame({
     setGameState("countdown");
   }, [resetWorld]);
 
-  useEffect(() => {
-    if (!isFullscreen) {
-      document.body.style.overflow = "";
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.left = "";
-      document.body.style.right = "";
-      document.body.style.width = "";
+useEffect(() => {
+  if (!isFullscreen) {
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+    return;
+  }
 
-      if (hasOpenedOnceRef.current) {
-        window.scrollTo({ top: scrollYRef.current, behavior: "auto" });
-      }
-      return;
-    }
+  const previousHtmlOverflow = document.documentElement.style.overflow;
+  const previousBodyOverflow = document.body.style.overflow;
 
-    hasOpenedOnceRef.current = true;
-    scrollYRef.current = window.scrollY;
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
 
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollYRef.current}px`;
-    document.body.style.left = "0";
-    document.body.style.right = "0";
-    document.body.style.width = "100%";
+  return () => {
+    document.documentElement.style.overflow = previousHtmlOverflow;
+    document.body.style.overflow = previousBodyOverflow;
+  };
+}, [isFullscreen]);
 
-    window.scrollTo({ top: 0, behavior: "auto" });
+useEffect(() => {
+  function updateSceneScale() {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
 
-    return () => {
-      document.body.style.overflow = "";
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.left = "";
-      document.body.style.right = "";
-      document.body.style.width = "";
-      window.scrollTo({ top: scrollYRef.current, behavior: "auto" });
-    };
-  }, [isFullscreen]);
+    const horizontalPadding = isFullscreen ? 12 : 32;
+    const verticalPadding = isFullscreen ? 12 : 32;
 
-  useEffect(() => {
-    function updateSceneScale() {
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
+    const availableWidth = Math.max(260, viewportWidth - horizontalPadding);
+    const availableHeight = isFullscreen
+      ? Math.max(260, viewportHeight - verticalPadding)
+      : Math.min(420, viewportHeight * 0.5);
 
-      const horizontalPadding = isFullscreen ? 16 : 40;
-      const verticalPadding = isFullscreen ? 16 : 40;
+    const scaleX = availableWidth / BASE_GAME_WIDTH;
+    const scaleY = availableHeight / BASE_GAME_HEIGHT;
+    const nextScale = Math.min(scaleX, scaleY, 1);
 
-      const availableWidth = Math.max(280, viewportWidth - horizontalPadding);
-      const availableHeight = isFullscreen
-        ? Math.max(320, viewportHeight - verticalPadding)
-        : Math.min(420, viewportHeight * 0.52);
+    setSceneScale(nextScale);
+    setSceneWidth(BASE_GAME_WIDTH * nextScale);
+    setSceneHeight(BASE_GAME_HEIGHT * nextScale);
+  }
 
-      const scaleX = availableWidth / BASE_GAME_WIDTH;
-      const scaleY = availableHeight / BASE_GAME_HEIGHT;
-      const nextScale = Math.min(scaleX, scaleY, 1);
-
-      setSceneScale(nextScale);
-      setSceneWidth(BASE_GAME_WIDTH * nextScale);
-      setSceneHeight(BASE_GAME_HEIGHT * nextScale);
-    }
-
-    updateSceneScale();
-    window.addEventListener("resize", updateSceneScale);
-    return () => window.removeEventListener("resize", updateSceneScale);
-  }, [isFullscreen]);
+  updateSceneScale();
+  window.addEventListener("resize", updateSceneScale);
+  return () => window.removeEventListener("resize", updateSceneScale);
+}, [isFullscreen]);
 
   useEffect(() => {
     if (gameState !== "countdown") return;
@@ -462,8 +440,18 @@ export default function TokenFitGame({
     );
   }
 
-  return (
-    <div style={shellStyle} aria-label="JAL's Trials Token Fit">
+return (
+  <div
+    style={
+      isFullscreen
+        ? shellStyle
+        : {
+            position: "relative",
+            width: "100%",
+          }
+    }
+    aria-label="JAL's Trials Token Fit"
+  >
       {!isFullscreen && (
         <>
           <div className="jal-bay-head">
