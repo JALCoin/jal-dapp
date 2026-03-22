@@ -11,6 +11,7 @@ type LearnCard = {
   id: "wallets" | "custody" | "cex-dex" | "solana";
   title: string;
   body: string[];
+  contribution: string;
 };
 
 type ObserveStepId =
@@ -26,6 +27,25 @@ type ObserveStep = {
   id: ObserveStepId;
   label: string;
   note: string;
+};
+
+type ObserveAccessState = {
+  passed: boolean;
+  score: number;
+  completedAt: number;
+  completedIso: string;
+  gate: "observe";
+  nextGate: "enter";
+  signals: {
+    orientation: boolean;
+    filter: boolean;
+    truth: boolean;
+    wallets: boolean;
+    custody: boolean;
+    cexDex: boolean;
+    solana: boolean;
+    stillness: boolean;
+  };
 };
 
 const OBSERVE_STORAGE_KEY = "jal_observe_complete_v1";
@@ -77,6 +97,7 @@ const LEARN_CARDS: LearnCard[] = [
       "It controls the keys that authorise movement on a network.",
       "Whoever controls the keys controls the assets.",
     ],
+    contribution: "Proves the user touched the control layer before entry.",
   },
   {
     id: "custody",
@@ -86,6 +107,7 @@ const LEARN_CARDS: LearnCard[] = [
       "On an exchange, more of that burden sits with the platform.",
       "In self-custody, accuracy and responsibility move toward the user.",
     ],
+    contribution: "Proves the user understands that responsibility changes with control.",
   },
   {
     id: "cex-dex",
@@ -95,6 +117,7 @@ const LEARN_CARDS: LearnCard[] = [
       "A decentralised exchange is more direct and less forgiving.",
       "The difference is not hype. It is control, responsibility, and interaction style.",
     ],
+    contribution: "Proves the user has seen the difference between guided entry and direct interaction.",
   },
   {
     id: "solana",
@@ -104,6 +127,7 @@ const LEARN_CARDS: LearnCard[] = [
       "Transactions change account state on-chain.",
       "Speed lowers friction, but it can also increase the consequence of rushed action.",
     ],
+    contribution: "Proves the user has seen the network context before taking action.",
   },
 ];
 
@@ -121,6 +145,7 @@ export default function JalSolObserve() {
   const currentStep = OBSERVE_STEPS[stepIndex];
   const isLastStep = stepIndex === OBSERVE_STEPS.length - 1;
   const structureComplete = openedCards.length === LEARN_CARDS.length;
+  const useCompactHeader = stepIndex > 0;
 
   useEffect(() => {
     return () => {
@@ -177,7 +202,19 @@ export default function JalSolObserve() {
     if (loading || nextDisabled) return;
 
     if (isLastStep) {
-      localStorage.setItem(OBSERVE_STORAGE_KEY, "true");
+      if (!level8Passed) return;
+
+      const payload: ObserveAccessState = {
+        passed: true,
+        score: level8Score,
+        completedAt: Date.now(),
+        completedIso: new Date().toISOString(),
+        gate: "observe",
+        nextGate: "enter",
+        signals: level8Signals,
+      };
+
+      localStorage.setItem(OBSERVE_STORAGE_KEY, JSON.stringify(payload));
       beginRoute("/app/jal-sol/enter");
       return;
     }
@@ -189,14 +226,57 @@ export default function JalSolObserve() {
     setOpenedCards((prev) => (prev.includes(cardId) ? prev : [...prev, cardId]));
   }
 
+  const level8Signals = useMemo(
+    () => ({
+      orientation: stepIndex >= 1,
+      filter: stepIndex >= 2,
+      truth: stepIndex >= 3,
+      wallets: openedCards.includes("wallets"),
+      custody: openedCards.includes("custody"),
+      cexDex: openedCards.includes("cex-dex"),
+      solana: openedCards.includes("solana"),
+      stillness: stillnessAccepted,
+    }),
+    [stepIndex, openedCards, stillnessAccepted]
+  );
+
+  const level8Score = useMemo(
+    () => Object.values(level8Signals).filter(Boolean).length,
+    [level8Signals]
+  );
+
+  const level8Passed = level8Score === 8;
+
   const nextDisabled = useMemo(() => {
     if (!canContinue) return true;
     if (currentStep.id === "structure" && !structureComplete) return true;
     if (currentStep.id === "stillness" && !stillnessAccepted) return true;
+    if (currentStep.id === "observer" && !level8Passed) return true;
     return false;
-  }, [canContinue, currentStep.id, structureComplete, stillnessAccepted]);
+  }, [
+    canContinue,
+    currentStep.id,
+    structureComplete,
+    stillnessAccepted,
+    level8Passed,
+  ]);
 
   const progressText = `${stepIndex + 1} / ${OBSERVE_STEPS.length}`;
+
+  const frameContribution =
+    currentStep.id === "orientation"
+      ? "Contribution to Gate 02: removes pressure before action."
+      : currentStep.id === "filter"
+      ? "Contribution to Gate 02: rejects unstable entry models."
+      : currentStep.id === "truth"
+      ? "Contribution to Gate 02: replaces hype with correct framing."
+      : currentStep.id === "structure"
+      ? "Contribution to Gate 02: proves minimum primitive contact."
+      : currentStep.id === "transaction"
+      ? "Contribution to Gate 02: confirms transaction finality before movement."
+      : currentStep.id === "stillness"
+      ? "Contribution to Gate 02: confirms calm before irreversible entry."
+      : "Contribution to Gate 02: readiness state confirmed.";
 
   return (
     <main
@@ -205,7 +285,10 @@ export default function JalSolObserve() {
     >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
-          <section className="jal-hero jal-world-hero" aria-label="Observe gate hero">
+          <section
+            className={`jal-hero jal-world-hero ${useCompactHeader ? "jal-observe-hero--compact" : ""}`}
+            aria-label="Observe gate hero"
+          >
             <div className="jal-hero-top">
               <div className="jal-kicker">JAL/SOL • GATE 01</div>
 
@@ -224,16 +307,24 @@ export default function JalSolObserve() {
                 Move later.
               </h1>
 
-              <p className="home-lead">
-                This gate is not for action. It is for stabilisation. The user is slowed down,
-                misinformation is removed, and the environment becomes understandable before any
-                irreversible step is introduced.
-              </p>
+              {!useCompactHeader ? (
+                <>
+                  <p className="home-lead">
+                    This gate is not for action. It is for stabilisation. The user is slowed down,
+                    misinformation is removed, and the environment becomes understandable before any
+                    irreversible step is introduced.
+                  </p>
 
-              <p className="jal-sublead">
-                The goal is simple: turn an unaware visitor into an informed observer. No hype. No
-                pressure. No “buy now” behaviour.
-              </p>
+                  <p className="jal-sublead">
+                    The goal is simple: turn an unaware visitor into an informed observer. No hype.
+                    No pressure. No “buy now” behaviour.
+                  </p>
+                </>
+              ) : (
+                <p className="jal-sublead">
+                  {currentStep.label} active. Gate 01 is still conditioning the user before Entry.
+                </p>
+              )}
             </div>
 
             <div className="jal-arrival-note" aria-label="Observe principles">
@@ -286,6 +377,76 @@ export default function JalSolObserve() {
             </div>
           </section>
 
+          <section className="jal-bay jal-bay-wide" aria-label="Observe readiness signals">
+            <div className="jal-bay-head">
+              <div className="jal-bay-title">Level 8 Access Test</div>
+              <div className="jal-bay-note">{level8Score} / 8 ready</div>
+            </div>
+
+            <p className="jal-note">
+              Gate 02 should only open after the minimum Observe signals are present. This is not a
+              knowledge quiz. It is a readiness check.
+            </p>
+
+            <div className="jal-bullets">
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">01 Orientation</div>
+                <div className="jal-bullet-v">
+                  {level8Signals.orientation ? "Complete" : "Pending"}
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">02 Filter</div>
+                <div className="jal-bullet-v">
+                  {level8Signals.filter ? "Complete" : "Pending"}
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">03 Truth</div>
+                <div className="jal-bullet-v">
+                  {level8Signals.truth ? "Complete" : "Pending"}
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">04 Wallets</div>
+                <div className="jal-bullet-v">
+                  {level8Signals.wallets ? "Touched" : "Pending"}
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">05 Custody</div>
+                <div className="jal-bullet-v">
+                  {level8Signals.custody ? "Touched" : "Pending"}
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">06 CEX vs DEX</div>
+                <div className="jal-bullet-v">
+                  {level8Signals.cexDex ? "Touched" : "Pending"}
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">07 Solana</div>
+                <div className="jal-bullet-v">
+                  {level8Signals.solana ? "Touched" : "Pending"}
+                </div>
+              </article>
+
+              <article className="jal-bullet">
+                <div className="jal-bullet-k">08 Stillness</div>
+                <div className="jal-bullet-v">
+                  {level8Signals.stillness ? "Confirmed" : "Pending"}
+                </div>
+              </article>
+            </div>
+          </section>
+
           <section className="jal-bay jal-bay-wide" aria-label="Observe current frame">
             {currentStep.id === "orientation" && (
               <>
@@ -300,9 +461,7 @@ export default function JalSolObserve() {
                   action is even considered.
                 </p>
 
-                <p className="jal-lock-text">
-                  This is preparation, not participation.
-                </p>
+                <p className="jal-lock-text">This is preparation, not participation.</p>
 
                 <div className="jal-bullets">
                   <article className="jal-bullet">
@@ -349,9 +508,7 @@ export default function JalSolObserve() {
 
                   <div>
                     <strong>“More movement means more opportunity.”</strong>
-                    <span className="jal-step-sub">
-                      Noise is not structure.
-                    </span>
+                    <span className="jal-step-sub">Noise is not structure.</span>
                   </div>
 
                   <div>
@@ -453,6 +610,7 @@ export default function JalSolObserve() {
                                 {line}
                               </p>
                             ))}
+                            <p className="jal-lock-text">{card.contribution}</p>
                           </>
                         )}
                       </section>
@@ -575,8 +733,18 @@ export default function JalSolObserve() {
                     </div>
                   </article>
                 </div>
+
+                <p className="jal-lock-text">
+                  {level8Passed
+                    ? "Level 8 readiness reached. Gate 02 can now open."
+                    : "Level 8 readiness not yet complete. Finish the missing signals before proceeding."}
+                </p>
               </>
             )}
+
+            <div className="jal-bay-actions" style={{ marginTop: "1rem" }}>
+              <div className="jal-lock-text">{frameContribution}</div>
+            </div>
           </section>
 
           <section className="jal-bay jal-bay-wide" aria-label="Observe controls">
@@ -584,11 +752,6 @@ export default function JalSolObserve() {
               <div className="jal-bay-title">Sequence Controls</div>
               <div className="jal-bay-note">Gate 01 progression</div>
             </div>
-
-            <p className="jal-note">
-              This page should feel like a controlled slide sequence. One frame at a time. Calm
-              pacing. Clear transition into the next state.
-            </p>
 
             <div className="jal-bay-actions">
               <button
