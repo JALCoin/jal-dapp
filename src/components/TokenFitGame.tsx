@@ -21,14 +21,14 @@ const BASE_GAME_WIDTH = 960;
 const BASE_GAME_HEIGHT = 540;
 
 const TOKEN_SIZE = 42;
-const TOKEN_X = 220;
+const TOKEN_X = 180;
 
-const GRAVITY = 0.38;
-const JUMP_FORCE = -6.2;
+const GRAVITY = 0.34;
+const JUMP_FORCE = -5.9;
 
 const PIPE_WIDTH = 82;
-const PIPE_GAP = 170;
-const PIPE_SPEED = 2.6;
+const PIPE_GAP = 190;
+const PIPE_SPEED = 2.3;
 const PIPE_SPAWN_DISTANCE = 280;
 
 const FLOOR_HEIGHT = 28;
@@ -84,6 +84,7 @@ export default function TokenFitGame({
   const [highScore, setHighScore] = useState(0);
   const [tokenFitPassed, setTokenFitPassed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [sceneScale, setSceneScale] = useState(1);
 
   useEffect(() => {
     const stored = getStoredHighScore();
@@ -105,6 +106,30 @@ export default function TokenFitGame({
     return () => {
       document.body.style.overflow = "";
     };
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    function updateSceneScale() {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      const maxWidth = isFullscreen
+        ? viewportWidth
+        : Math.min(viewportWidth - 48, BASE_GAME_WIDTH);
+
+      const maxHeight = isFullscreen
+        ? viewportHeight
+        : Math.min(viewportHeight * 0.72, BASE_GAME_HEIGHT);
+
+      const scaleX = maxWidth / BASE_GAME_WIDTH;
+      const scaleY = maxHeight / BASE_GAME_HEIGHT;
+
+      setSceneScale(clamp(Math.min(scaleX, scaleY, 1), 0.32, 1));
+    }
+
+    updateSceneScale();
+    window.addEventListener("resize", updateSceneScale);
+    return () => window.removeEventListener("resize", updateSceneScale);
   }, [isFullscreen]);
 
   const renderToken = useCallback(() => {
@@ -445,31 +470,39 @@ export default function TokenFitGame({
         position: "fixed" as const,
         inset: 0,
         zIndex: 9999,
-        background: "rgba(2,8,16,0.96)",
+        background: "rgba(2,8,16,0.98)",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "12px",
+        alignItems: "stretch",
+        justifyContent: "stretch",
+        padding: "0",
       }
     : undefined;
+
+  const sceneWidth = BASE_GAME_WIDTH * sceneScale;
+  const sceneHeight = BASE_GAME_HEIGHT * sceneScale;
 
   return (
     <div aria-label="JAL's Trials Token Fit" style={shellStyle}>
       <div
         style={{
           width: isFullscreen ? "100%" : undefined,
-          maxWidth: isFullscreen ? "1120px" : undefined,
+          maxWidth: isFullscreen ? "100%" : undefined,
+          height: isFullscreen ? "100%" : undefined,
         }}
       >
-        <div className="jal-bay-head">
-          <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
-          <div className="jal-bay-note">{statusText}</div>
-        </div>
+        {!isFullscreen && (
+          <>
+            <div className="jal-bay-head">
+              <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
+              <div className="jal-bay-note">{statusText}</div>
+            </div>
 
-        <p className="jal-note">
-          Keep the token stable under movement. Tap the screen or press Space to lift. Reach at
-          least <strong>{minScore}</strong> points to unlock the trial.
-        </p>
+            <p className="jal-note">
+              Keep the token stable under movement. Tap the screen or press Space to lift. Reach at
+              least <strong>{minScore}</strong> points to unlock the trial.
+            </p>
+          </>
+        )}
 
         <div
           role="button"
@@ -488,267 +521,299 @@ export default function TokenFitGame({
           }}
           style={{
             position: "relative",
-            width: "min(100vw - 24px, 960px)",
-            height: "min(100vh - 80px, 540px)",
-            maxWidth: `${BASE_GAME_WIDTH}px`,
-            margin: "1rem auto 0",
-            overflow: "hidden",
-            borderRadius: "28px",
-            border: "1px solid rgba(255,255,255,0.12)",
-            background:
-              "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
-            boxShadow:
-              "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
+            width: `${sceneWidth}px`,
+            height: `${sceneHeight}px`,
+            margin: isFullscreen ? "0 auto" : "1rem auto 0",
             cursor: "pointer",
             userSelect: "none",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "flex-start",
           }}
         >
           <div
-            aria-hidden="true"
             style={{
               position: "absolute",
-              inset: 0,
-              backgroundImage:
-                "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
-              backgroundSize: "48px 48px",
-              opacity: 0.22,
-              pointerEvents: "none",
-            }}
-          />
-
-          <div
-            style={{
-              position: "absolute",
-              top: "18px",
-              left: "18px",
-              display: "flex",
-              gap: "12px",
-              flexWrap: "wrap",
-              zIndex: 5,
-            }}
-          >
-            <div className="button ghost" style={{ pointerEvents: "none" }}>
-              Score: {score}
-            </div>
-            <div className="button ghost" style={{ pointerEvents: "none" }}>
-              High Score: {highScore}
-            </div>
-            <div className="button ghost" style={{ pointerEvents: "none" }}>
-              Minimum: {minScore}
-            </div>
-          </div>
-
-          <div
-            ref={pipesLayerRef}
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              inset: 0,
-              pointerEvents: "none",
-            }}
-          />
-
-          <div
-            ref={tokenRef}
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              width: `${TOKEN_SIZE}px`,
-              height: `${TOKEN_SIZE}px`,
-              borderRadius: "999px",
-              display: "grid",
-              placeItems: "center",
-              fontSize: "0.82rem",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              color: "#081118",
-              background:
-                "radial-gradient(circle at 35% 30%, rgba(255,245,180,1), rgba(255,214,92,0.95) 48%, rgba(193,133,20,0.96) 100%)",
-              border: "1px solid rgba(255,255,255,0.35)",
-              boxShadow:
-                "0 0 16px rgba(255,214,92,0.42), inset 0 0 10px rgba(255,255,255,0.26)",
-              zIndex: 4,
-            }}
-          >
-            JAL
-          </div>
-
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              insetInline: 0,
+              left: 0,
               top: 0,
-              height: maskPercent(CEILING_HEIGHT / BASE_GAME_HEIGHT),
-              background: "rgba(255,255,255,0.05)",
-              borderBottom: "1px solid rgba(255,255,255,0.07)",
-            }}
-          />
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              insetInline: 0,
-              bottom: 0,
-              height: maskPercent(FLOOR_HEIGHT / BASE_GAME_HEIGHT),
+              width: `${BASE_GAME_WIDTH}px`,
+              height: `${BASE_GAME_HEIGHT}px`,
+              transform: `scale(${sceneScale})`,
+              transformOrigin: "top left",
+              overflow: "hidden",
+              borderRadius: "28px",
+              border: "1px solid rgba(255,255,255,0.12)",
               background:
-                "linear-gradient(180deg, rgba(16,22,32,0.7), rgba(0,255,180,0.14))",
-              borderTop: "1px solid rgba(0,255,180,0.12)",
+                "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
+              boxShadow:
+                "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
             }}
-          />
-
-          {(gameState === "idle" ||
-            gameState === "countdown" ||
-            gameState === "gameover" ||
-            gameState === "passed") && (
+          >
             <div
+              aria-hidden="true"
               style={{
                 position: "absolute",
                 inset: 0,
-                display: "grid",
-                placeItems: "center",
-                background: "linear-gradient(180deg, rgba(2,8,16,0.30), rgba(2,8,16,0.68))",
-                zIndex: 6,
-                padding: "1.5rem",
-                textAlign: "center",
+                backgroundImage:
+                  "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
+                backgroundSize: "48px 48px",
+                opacity: 0.22,
+                pointerEvents: "none",
+              }}
+            />
+
+            <div
+              style={{
+                position: "absolute",
+                top: "18px",
+                left: "18px",
+                display: "flex",
+                gap: "12px",
+                flexWrap: "wrap",
+                zIndex: 5,
               }}
             >
-              {gameState === "idle" && (
-                <div style={{ maxWidth: "620px" }}>
-                  <div className="jal-kicker">TRIAL READY</div>
-                  <h3
-                    className="home-title"
-                    style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}
-                  >
-                    Token Fit
-                  </h3>
-                  <p className="jal-note">
-                    Hold the JAL token in controlled motion. Tap or press Space to lift. Pass
-                    through the structure and reach the minimum score to complete the Token Fit
-                    trial.
-                  </p>
-                  <div
-                    className="jal-bay-actions"
-                    style={{ justifyContent: "center", marginTop: "1rem" }}
-                  >
-                    <button
-                      type="button"
-                      className="button neon"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        beginPlaying();
-                      }}
+              <div className="button ghost" style={{ pointerEvents: "none" }}>
+                Score: {score}
+              </div>
+              <div className="button ghost" style={{ pointerEvents: "none" }}>
+                High Score: {highScore}
+              </div>
+              <div className="button ghost" style={{ pointerEvents: "none" }}>
+                Minimum: {minScore}
+              </div>
+            </div>
+
+            {isFullscreen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "18px",
+                  right: "18px",
+                  zIndex: 7,
+                  display: "flex",
+                  gap: "10px",
+                }}
+              >
+                <div className="button ghost" style={{ pointerEvents: "none" }}>
+                  {statusText}
+                </div>
+              </div>
+            )}
+
+            <div
+              ref={pipesLayerRef}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+              }}
+            />
+
+            <div
+              ref={tokenRef}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                width: `${TOKEN_SIZE}px`,
+                height: `${TOKEN_SIZE}px`,
+                borderRadius: "999px",
+                display: "grid",
+                placeItems: "center",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                color: "#081118",
+                background:
+                  "radial-gradient(circle at 35% 30%, rgba(255,245,180,1), rgba(255,214,92,0.95) 48%, rgba(193,133,20,0.96) 100%)",
+                border: "1px solid rgba(255,255,255,0.35)",
+                boxShadow:
+                  "0 0 16px rgba(255,214,92,0.42), inset 0 0 10px rgba(255,255,255,0.26)",
+                zIndex: 4,
+              }}
+            >
+              JAL
+            </div>
+
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                insetInline: 0,
+                top: 0,
+                height: maskPercent(CEILING_HEIGHT / BASE_GAME_HEIGHT),
+                background: "rgba(255,255,255,0.05)",
+                borderBottom: "1px solid rgba(255,255,255,0.07)",
+              }}
+            />
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                insetInline: 0,
+                bottom: 0,
+                height: maskPercent(FLOOR_HEIGHT / BASE_GAME_HEIGHT),
+                background:
+                  "linear-gradient(180deg, rgba(16,22,32,0.7), rgba(0,255,180,0.14))",
+                borderTop: "1px solid rgba(0,255,180,0.12)",
+              }}
+            />
+
+            {(gameState === "idle" ||
+              gameState === "countdown" ||
+              gameState === "gameover" ||
+              gameState === "passed") && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  background:
+                    "linear-gradient(180deg, rgba(2,8,16,0.30), rgba(2,8,16,0.68))",
+                  zIndex: 6,
+                  padding: "1.5rem",
+                  textAlign: "center",
+                }}
+              >
+                {gameState === "idle" && (
+                  <div style={{ maxWidth: "620px" }}>
+                    <div className="jal-kicker">TRIAL READY</div>
+                    <h3
+                      className="home-title"
+                      style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}
                     >
-                      Start Trial
-                    </button>
+                      Token Fit
+                    </h3>
+                    <p className="jal-note">
+                      Hold the JAL token in controlled motion. Tap or press Space to lift. Pass
+                      through the structure and reach the minimum score to complete the Token Fit
+                      trial.
+                    </p>
+                    <div
+                      className="jal-bay-actions"
+                      style={{ justifyContent: "center", marginTop: "1rem" }}
+                    >
+                      <button
+                        type="button"
+                        className="button neon"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          beginPlaying();
+                        }}
+                      >
+                        Start Trial
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {gameState === "countdown" && (
-                <div>
-                  <div className="jal-kicker">STABILISE</div>
-                  <h3
-                    className="home-title"
-                    style={{ fontSize: "clamp(2.2rem, 8vw, 5rem)" }}
-                  >
-                    {countdown > 0 ? countdown : "GO"}
-                  </h3>
-                </div>
-              )}
-
-              {gameState === "gameover" && (
-                <div style={{ maxWidth: "620px" }}>
-                  <div className="jal-kicker">LOSS OF CONTROL</div>
-                  <h3
-                    className="home-title"
-                    style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}
-                  >
-                    Game Over
-                  </h3>
-                  <p className="jal-note">
-                    Score: <strong>{score}</strong> · High Score: <strong>{highScore}</strong>
-                  </p>
-                  <p className="jal-lock-text">Minimum required to pass: {minScore}</p>
-                  <div
-                    className="jal-bay-actions"
-                    style={{ justifyContent: "center", marginTop: "1rem" }}
-                  >
-                    <button
-                      type="button"
-                      className="button neon"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        beginPlaying();
-                      }}
+                {gameState === "countdown" && (
+                  <div>
+                    <div className="jal-kicker">STABILISE</div>
+                    <h3
+                      className="home-title"
+                      style={{ fontSize: "clamp(2.2rem, 8vw, 5rem)" }}
                     >
-                      Try Again
-                    </button>
+                      {countdown > 0 ? countdown : "GO"}
+                    </h3>
+                  </div>
+                )}
 
-                    {isFullscreen && (
+                {gameState === "gameover" && (
+                  <div style={{ maxWidth: "620px" }}>
+                    <div className="jal-kicker">LOSS OF CONTROL</div>
+                    <h3
+                      className="home-title"
+                      style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}
+                    >
+                      Game Over
+                    </h3>
+                    <p className="jal-note">
+                      Score: <strong>{score}</strong> · High Score: <strong>{highScore}</strong>
+                    </p>
+                    <p className="jal-lock-text">Minimum required to pass: {minScore}</p>
+                    <div
+                      className="jal-bay-actions"
+                      style={{ justifyContent: "center", marginTop: "1rem" }}
+                    >
+                      <button
+                        type="button"
+                        className="button neon"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          beginPlaying();
+                        }}
+                      >
+                        Try Again
+                      </button>
+
+                      {isFullscreen && (
+                        <button
+                          type="button"
+                          className="button ghost"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            closeFullscreen();
+                          }}
+                        >
+                          Exit Fullscreen
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {gameState === "passed" && (
+                  <div style={{ maxWidth: "620px" }}>
+                    <div className="jal-kicker">TRIAL PASSED</div>
+                    <h3
+                      className="home-title"
+                      style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}
+                    >
+                      Token Fit Complete
+                    </h3>
+                    <p className="jal-note">
+                      Score: <strong>{score}</strong> · High Score: <strong>{highScore}</strong>
+                    </p>
+                    <p className="jal-lock-text">
+                      You reached the minimum score of {minScore}. Token Fit is now complete for
+                      this Observe run.
+                    </p>
+                    <div
+                      className="jal-bay-actions"
+                      style={{ justifyContent: "center", marginTop: "1rem" }}
+                    >
                       <button
                         type="button"
                         className="button ghost"
                         onClick={(event) => {
                           event.stopPropagation();
-                          closeFullscreen();
+                          beginPlaying();
                         }}
                       >
-                        Exit Fullscreen
+                        Play Again
                       </button>
-                    )}
-                  </div>
-                </div>
-              )}
 
-              {gameState === "passed" && (
-                <div style={{ maxWidth: "620px" }}>
-                  <div className="jal-kicker">TRIAL PASSED</div>
-                  <h3
-                    className="home-title"
-                    style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)" }}
-                  >
-                    Token Fit Complete
-                  </h3>
-                  <p className="jal-note">
-                    Score: <strong>{score}</strong> · High Score: <strong>{highScore}</strong>
-                  </p>
-                  <p className="jal-lock-text">
-                    You reached the minimum score of {minScore}. Token Fit is now complete for this
-                    Observe run.
-                  </p>
-                  <div
-                    className="jal-bay-actions"
-                    style={{ justifyContent: "center", marginTop: "1rem" }}
-                  >
-                    <button
-                      type="button"
-                      className="button ghost"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        beginPlaying();
-                      }}
-                    >
-                      Play Again
-                    </button>
-
-                    {isFullscreen && (
-                      <button
-                        type="button"
-                        className="button gold"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          closeFullscreen();
-                        }}
-                      >
-                        Return To Gate
-                      </button>
-                    )}
+                      {isFullscreen && (
+                        <button
+                          type="button"
+                          className="button gold"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            closeFullscreen();
+                          }}
+                        >
+                          Return To Gate
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {!isFullscreen && (
