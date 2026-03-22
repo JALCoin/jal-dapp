@@ -5851,3 +5851,87 @@ button.home-route-band{
 .jal-gate-actions .button{
   width:100%;
 }
+/* =========================================
+   JAL'S TRIALS — TOKEN FIT
+========================================= */
+
+.jal-trial-entry{
+  display:grid;
+  gap:1rem;
+}
+
+.jal-trial-note{
+  margin:0;
+  max-width:64ch;
+  line-height:1.7;
+  opacity:.84;
+}
+
+.jal-trial-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:.9rem;
+}
+
+.jal-trial-card{
+  position:relative;
+  overflow:hidden;
+  padding:1rem;
+  border-radius:1rem;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(560px 120px at 50% 0%, rgba(0,255,180,.05), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.012));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    0 12px 26px rgba(0,0,0,.22);
+}
+
+.jal-trial-card::after{
+  content:"";
+  position:absolute;
+  inset:auto 0 0 0;
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(0,255,180,.35), transparent);
+  opacity:.65;
+}
+
+.jal-trial-k{
+  font-size:.72rem;
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  opacity:.66;
+  margin-bottom:.42rem;
+}
+
+.jal-trial-v{
+  font-size:.94rem;
+  line-height:1.62;
+  color:rgba(231,255,247,.9);
+}
+
+.jal-trial-actions{
+  display:flex;
+  gap:.75rem;
+  flex-wrap:wrap;
+  margin-top:.2rem;
+}
+
+.jal-trial-actions .button{
+  min-width:180px;
+}
+
+@media (max-width:760px){
+  .jal-trial-grid{
+    grid-template-columns:1fr;
+  }
+
+  .jal-trial-actions{
+    flex-direction:column;
+  }
+
+  .jal-trial-actions .button{
+    width:100%;
+    min-width:0;
+  }
+}

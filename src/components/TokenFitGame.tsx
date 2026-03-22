@@ -53,6 +53,18 @@ function saveHighScore(score: number) {
   window.localStorage.setItem(STORAGE_KEY, String(score));
 }
 
+function getViewportSize() {
+  if (typeof window === "undefined") {
+    return { width: BASE_GAME_WIDTH, height: BASE_GAME_HEIGHT };
+  }
+
+  const vv = window.visualViewport;
+  return {
+    width: Math.round(vv?.width ?? window.innerWidth),
+    height: Math.round(vv?.height ?? window.innerHeight),
+  };
+}
+
 export default function TokenFitGame({
   minScore,
   onPass,
@@ -66,7 +78,6 @@ export default function TokenFitGame({
 
   const [tokenY, setTokenY] = useState(BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
   const [velocity, setVelocity] = useState(0);
-
   const [pipes, setPipes] = useState<Pipe[]>([]);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
 
@@ -76,16 +87,32 @@ export default function TokenFitGame({
 
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
-  const spawnTimerRef = useRef<number>(0);
+  const spawnTimerRef = useRef(0);
   const nextPipeIdRef = useRef(1);
+  const mountedRef = useRef(false);
 
   const scoreRef = useRef(0);
   const gameStateRef = useRef<TokenFitState>("idle");
   const tokenYRef = useRef(BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
   const velocityRef = useRef(0);
-
   const pipesRef = useRef<Pipe[]>([]);
   const lastRenderRef = useRef(0);
+
+  const scrollLockRef = useRef<{
+    bodyPosition: string;
+    bodyTop: string;
+    bodyWidth: string;
+    bodyOverflow: string;
+    htmlOverflow: string;
+    scrollY: number;
+  } | null>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -95,41 +122,44 @@ export default function TokenFitGame({
     scoreRef.current = score;
   }, [score]);
 
-useEffect(() => {
-  tokenYRef.current = tokenY;
-}, [tokenY]);
+  useEffect(() => {
+    tokenYRef.current = tokenY;
+  }, [tokenY]);
 
-useEffect(() => {
-  velocityRef.current = velocity;
-}, [velocity]);
+  useEffect(() => {
+    velocityRef.current = velocity;
+  }, [velocity]);
 
-useEffect(() => {
-  pipesRef.current = pipes;
-}, [pipes]);
+  useEffect(() => {
+    pipesRef.current = pipes;
+  }, [pipes]);
 
   const resetWorld = useCallback(() => {
+    const startY = BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2;
+
     setScore(0);
     scoreRef.current = 0;
 
-    velocityRef.current = 0;
-    tokenYRef.current = BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2;
-    pipesRef.current = [];
-    lastRenderRef.current = 0;
-
     setVelocity(0);
-    setTokenY(BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
+    velocityRef.current = 0;
+
+    setTokenY(startY);
+    tokenYRef.current = startY;
+
     setPipes([]);
+    pipesRef.current = [];
+
     setCountdown(COUNTDOWN_SECONDS);
+
     lastFrameRef.current = null;
     spawnTimerRef.current = 0;
     nextPipeIdRef.current = 1;
+    lastRenderRef.current = 0;
   }, []);
 
   const endGame = useCallback(
     (nextState: "gameover" | "passed") => {
-      if (gameStateRef.current === "gameover" || gameStateRef.current === "passed") {
-        return;
-      }
+      if (gameStateRef.current === "gameover" || gameStateRef.current === "passed") return;
 
       const finalScore = scoreRef.current;
       const nextHighScore = Math.max(highScore, finalScore);
@@ -151,17 +181,18 @@ useEffect(() => {
   );
 
   const flap = useCallback(() => {
-    if (gameStateRef.current === "countdown") return;
+    const current = gameStateRef.current;
 
-    if (gameStateRef.current === "idle") return;
+    if (current === "idle") return;
+    if (current === "countdown") return;
 
-    if (gameStateRef.current === "gameover" || gameStateRef.current === "passed") {
+    if (current === "gameover" || current === "passed") {
       resetWorld();
       setGameState("countdown");
       return;
     }
 
-    if (gameStateRef.current === "playing") {
+    if (current === "playing") {
       velocityRef.current = JUMP_FORCE;
       setVelocity(JUMP_FORCE);
     }
@@ -173,54 +204,85 @@ useEffect(() => {
     setGameState("countdown");
   }, [resetWorld]);
 
+  const closeTrial = useCallback(() => {
+    setIsFullscreen(false);
+    setGameState("idle");
+    resetWorld();
+  }, [resetWorld]);
+
   useEffect(() => {
-    if (!isFullscreen) {
-      document.documentElement.style.overflow = "";
-      document.body.style.overflow = "";
+    if (!isFullscreen || typeof document === "undefined" || typeof window === "undefined") {
       return;
     }
 
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-    const previousBodyOverflow = document.body.style.overflow;
+    const scrollY = window.scrollY;
+    scrollLockRef.current = {
+      bodyPosition: document.body.style.position,
+      bodyTop: document.body.style.top,
+      bodyWidth: document.body.style.width,
+      bodyOverflow: document.body.style.overflow,
+      htmlOverflow: document.documentElement.style.overflow,
+      scrollY,
+    };
 
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
 
     return () => {
-      document.documentElement.style.overflow = previousHtmlOverflow;
-      document.body.style.overflow = previousBodyOverflow;
+      const prev = scrollLockRef.current;
+      if (!prev) return;
+
+      document.documentElement.style.overflow = prev.htmlOverflow;
+      document.body.style.overflow = prev.bodyOverflow;
+      document.body.style.position = prev.bodyPosition;
+      document.body.style.top = prev.bodyTop;
+      document.body.style.width = prev.bodyWidth;
+
+      window.scrollTo(0, prev.scrollY);
+      scrollLockRef.current = null;
     };
   }, [isFullscreen]);
 
-useEffect(() => {
-  function updateSceneScale() {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+  useEffect(() => {
+    function updateSceneScale() {
+      const { width: viewportWidth, height: viewportHeight } = getViewportSize();
 
-    const horizontalPadding = isFullscreen ? 10 : 28;
-    const verticalPadding = isFullscreen ? 10 : 28;
+      const horizontalPadding = isFullscreen ? 8 : 24;
+      const verticalPadding = isFullscreen ? 8 : 20;
+      const reservedUiHeight = isFullscreen ? 8 : 0;
 
-    const hudAllowance = isFullscreen ? 20 : 0;
+      const availableWidth = Math.max(280, viewportWidth - horizontalPadding * 2);
+      const availableHeight = isFullscreen
+        ? Math.max(220, viewportHeight - verticalPadding * 2 - reservedUiHeight)
+        : Math.min(460, Math.max(260, viewportHeight * 0.48));
 
-    const availableWidth = Math.max(240, viewportWidth - horizontalPadding);
-    const availableHeight = isFullscreen
-      ? Math.max(220, viewportHeight - verticalPadding - hudAllowance)
-      : Math.min(420, viewportHeight * 0.48);
+      const scaleX = availableWidth / BASE_GAME_WIDTH;
+      const scaleY = availableHeight / BASE_GAME_HEIGHT;
+      const nextScale = Math.min(scaleX, scaleY, 1);
 
-    const scaleX = availableWidth / BASE_GAME_WIDTH;
-    const scaleY = availableHeight / BASE_GAME_HEIGHT;
+      setSceneScale(nextScale);
+      setSceneWidth(Math.round(BASE_GAME_WIDTH * nextScale));
+      setSceneHeight(Math.round(BASE_GAME_HEIGHT * nextScale));
+    }
 
-    const nextScale = Math.min(scaleX, scaleY, 1);
+    updateSceneScale();
 
-    setSceneScale(nextScale);
-    setSceneWidth(Math.round(BASE_GAME_WIDTH * nextScale));
-    setSceneHeight(Math.round(BASE_GAME_HEIGHT * nextScale));
-  }
+    const vv = window.visualViewport;
+    window.addEventListener("resize", updateSceneScale);
+    window.addEventListener("orientationchange", updateSceneScale);
+    vv?.addEventListener("resize", updateSceneScale);
+    vv?.addEventListener("scroll", updateSceneScale);
 
-  updateSceneScale();
-  window.addEventListener("resize", updateSceneScale);
-  return () => window.removeEventListener("resize", updateSceneScale);
-}, [isFullscreen]);
+    return () => {
+      window.removeEventListener("resize", updateSceneScale);
+      window.removeEventListener("orientationchange", updateSceneScale);
+      vv?.removeEventListener("resize", updateSceneScale);
+      vv?.removeEventListener("scroll", updateSceneScale);
+    };
+  }, [isFullscreen]);
 
   useEffect(() => {
     if (gameState !== "countdown") return;
@@ -246,17 +308,13 @@ useEffect(() => {
 
       if (event.code === "Escape" && isFullscreen) {
         event.preventDefault();
-        setIsFullscreen(false);
-        if (gameStateRef.current === "playing" || gameStateRef.current === "countdown") {
-          setGameState("idle");
-          resetWorld();
-        }
+        closeTrial();
       }
     }
 
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, { passive: false });
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [flap, isFullscreen, resetWorld]);
+  }, [closeTrial, flap, isFullscreen]);
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -293,10 +351,8 @@ useEffect(() => {
         endGame("gameover");
       }
 
-velocityRef.current = nextVelocity;
-tokenYRef.current = nextY;
-
-const nowRender = performance.now();
+      velocityRef.current = nextVelocity;
+      tokenYRef.current = nextY;
 
       spawnTimerRef.current += deltaMs;
 
@@ -309,42 +365,44 @@ const nowRender = performance.now();
         const maxGapY = BASE_GAME_HEIGHT - FLOOR_HEIGHT - gapPaddingBottom - PIPE_GAP / 2;
         const gapY = Math.random() * (maxGapY - minGapY) + minGapY;
 
-pipesRef.current.push({
-  id: nextPipeIdRef.current++,
-  x: BASE_GAME_WIDTH + 40,
-  gapY,
-  scored: false,
-});
+        pipesRef.current.push({
+          id: nextPipeIdRef.current++,
+          x: BASE_GAME_WIDTH + 40,
+          gapY,
+          scored: false,
+        });
       }
 
-const updatedPipes = pipesRef.current
-  .map((pipe) => {
-    const nextX = pipe.x - PIPE_SPEED * frameScale;
-    let nextPipe = { ...pipe, x: nextX };
+      const updatedPipes = pipesRef.current
+        .map((pipe) => {
+          const nextX = pipe.x - PIPE_SPEED * frameScale;
+          let nextPipe = { ...pipe, x: nextX };
 
-    if (!pipe.scored && nextX + PIPE_WIDTH < TOKEN_X) {
-      nextPipe = { ...nextPipe, scored: true };
-      const nextScore = scoreRef.current + 1;
-      scoreRef.current = nextScore;
-      setScore(nextScore);
+          if (!pipe.scored && nextX + PIPE_WIDTH < TOKEN_X) {
+            nextPipe = { ...nextPipe, scored: true };
 
-      if (nextScore >= minScore) {
-        endGame("passed");
+            const nextScore = scoreRef.current + 1;
+            scoreRef.current = nextScore;
+            setScore(nextScore);
+
+            if (nextScore >= minScore) {
+              endGame("passed");
+            }
+          }
+
+          return nextPipe;
+        })
+        .filter((pipe) => pipe.x + PIPE_WIDTH > -40);
+
+      pipesRef.current = updatedPipes;
+
+      const nowRender = performance.now();
+      if (nowRender - lastRenderRef.current > 33) {
+        lastRenderRef.current = nowRender;
+        setVelocity(velocityRef.current);
+        setTokenY(tokenYRef.current);
+        setPipes([...pipesRef.current]);
       }
-    }
-
-    return nextPipe;
-  })
-  .filter((pipe) => pipe.x + PIPE_WIDTH > -40);
-
-pipesRef.current = updatedPipes;
-
-if (nowRender - lastRenderRef.current > 50) {
-  lastRenderRef.current = nowRender;
-  setVelocity(velocityRef.current);
-  setTokenY(tokenYRef.current);
-  setPipes([...pipesRef.current]);
-}
 
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -377,10 +435,7 @@ if (nowRender - lastRenderRef.current > 50) {
       const gapTop = pipe.gapY - PIPE_GAP / 2;
       const gapBottom = pipe.gapY + PIPE_GAP / 2;
 
-      const hitsTop = tokenTop < gapTop;
-      const hitsBottom = tokenBottom > gapBottom;
-
-      if (hitsTop || hitsBottom) {
+      if (tokenTop < gapTop || tokenBottom > gapBottom) {
         endGame("gameover");
         return;
       }
@@ -397,9 +452,21 @@ if (nowRender - lastRenderRef.current > 50) {
 
   const showCompactEntry = !isFullscreen && gameState === "idle";
 
+  const tokenRotation = clamp(velocity * 4.5, -28, 60);
+
+  const isSmallViewport = sceneScale < 0.72;
+  const hudTop = isSmallViewport ? 12 : 22;
+  const hudSide = isSmallViewport ? 12 : 24;
+  const hudGap = isSmallViewport ? 6 : 10;
+  const hudPad = isSmallViewport ? "7px 9px" : "10px 14px";
+  const hudFont = isSmallViewport ? 11 : 14;
+  const hudStatWidth = isSmallViewport ? 74 : 102;
+  const hudStatValue = isSmallViewport ? 16 : 24;
+  const overlayCardWidth = isSmallViewport ? "92%" : 420;
+
   const shellStyle = isFullscreen
-    ? {
-        position: "fixed" as const,
+    ? ({
+        position: "fixed",
         inset: 0,
         zIndex: 9999,
         background: "rgba(2,8,16,0.985)",
@@ -407,32 +474,18 @@ if (nowRender - lastRenderRef.current > 50) {
         alignItems: "center",
         justifyContent: "center",
         padding: "8px",
-      }
-    : {
-        position: "relative" as const,
+        overscrollBehavior: "none",
+        touchAction: "none",
+      } as const)
+    : ({
+        position: "relative",
         width: "100%",
-      };
+      } as const);
 
-  const tokenRotation = clamp(velocity * 4.5, -28, 60);
-  const isSmallViewport = sceneScale < 0.72;
-  const hudTop = isSmallViewport ? 16 : 26;
-  const hudSide = isSmallViewport ? 16 : 36;
-  const hudGap = isSmallViewport ? 8 : 12;
-  const hudPad = isSmallViewport ? "8px 10px" : "10px 14px";
-  const hudFont = isSmallViewport ? 12 : 15;
-  const hudStatWidth = isSmallViewport ? 88 : 108;
-  const hudStatValue = isSmallViewport ? 18 : 24;
-
-  const handleScenePress = (event: React.MouseEvent | React.TouchEvent) => {
+  const scenePress = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
     event.stopPropagation();
     flap();
-  };
-
-  const closeTrial = (event?: React.MouseEvent) => {
-    event?.stopPropagation();
-    setIsFullscreen(false);
-    setGameState("idle");
-    resetWorld();
   };
 
   const gameView = (
@@ -454,8 +507,8 @@ if (nowRender - lastRenderRef.current > 50) {
       <div
         role="button"
         tabIndex={0}
-        onClick={handleScenePress}
-        onTouchStart={handleScenePress}
+        aria-label="Token Fit play area"
+        onPointerDown={scenePress}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -469,8 +522,11 @@ if (nowRender - lastRenderRef.current > 50) {
           margin: "0 auto",
           cursor: "pointer",
           userSelect: "none",
-          touchAction: "manipulation",
+          WebkitUserSelect: "none",
+          touchAction: "none",
           outline: "none",
+          maxWidth: "100%",
+          maxHeight: "100%",
         }}
       >
         <div
@@ -483,7 +539,7 @@ if (nowRender - lastRenderRef.current > 50) {
             transform: `scale(${sceneScale})`,
             transformOrigin: "top left",
             overflow: "hidden",
-            borderRadius: "28px",
+            borderRadius: isFullscreen ? "22px" : "28px",
             border: "1px solid rgba(255,255,255,0.12)",
             background:
               "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
@@ -509,6 +565,7 @@ if (nowRender - lastRenderRef.current > 50) {
               gap: hudGap,
               alignItems: "center",
               zIndex: 5,
+              maxWidth: `calc(100% - ${hudSide * 2}px - ${hudStatWidth * 2 + hudGap * 3}px)`,
             }}
           >
             <div
@@ -521,51 +578,56 @@ if (nowRender - lastRenderRef.current > 50) {
                 fontSize: hudFont,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
+                whiteSpace: "nowrap",
               }}
             >
               JAL’s Trials
             </div>
 
-<div
-  style={{
-    padding: hudPad,
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(5, 14, 22, 0.72)",
-    color: "#c7fce8",
-    fontSize: hudFont,
-    letterSpacing: "0.06em",
-    textTransform: "uppercase",
-  }}
->
-  Token Fit
-</div>
-          </div>
-
-<div
-  style={{
-    position: "absolute",
-    right: hudSide,
-    top: hudTop,
-    display: "flex",
-    gap: hudGap,
-    zIndex: 5,
-  }}
->
-<div
-  style={{
-    minWidth: hudStatWidth,
-    padding: hudPad,
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(5, 14, 22, 0.72)",
-    color: "#ffffff",
-    textAlign: "center",
-  }}
->
+            {!isSmallViewport && (
               <div
                 style={{
-                  fontSize: 11,
+                  padding: hudPad,
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(5, 14, 22, 0.72)",
+                  color: "#c7fce8",
+                  fontSize: hudFont,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Token Fit
+              </div>
+            )}
+          </div>
+
+          <div
+            style={{
+              position: "absolute",
+              right: hudSide,
+              top: hudTop,
+              display: "flex",
+              gap: hudGap,
+              alignItems: "stretch",
+              zIndex: 5,
+            }}
+          >
+            <div
+              style={{
+                minWidth: hudStatWidth,
+                padding: hudPad,
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(5, 14, 22, 0.72)",
+                color: "#ffffff",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10,
                   opacity: 0.7,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
@@ -576,20 +638,20 @@ if (nowRender - lastRenderRef.current > 50) {
               <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>{score}</div>
             </div>
 
-<div
-  style={{
-    minWidth: hudStatWidth,
-    padding: hudPad,
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(5, 14, 22, 0.72)",
-    color: "#ffffff",
-    textAlign: "center",
-  }}
->
+            <div
+              style={{
+                minWidth: hudStatWidth,
+                padding: hudPad,
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(5, 14, 22, 0.72)",
+                color: "#ffffff",
+                textAlign: "center",
+              }}
+            >
               <div
                 style={{
-                  fontSize: 11,
+                  fontSize: 10,
                   opacity: 0.7,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
@@ -603,7 +665,10 @@ if (nowRender - lastRenderRef.current > 50) {
             {isFullscreen && (
               <button
                 type="button"
-                onClick={closeTrial}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  closeTrial();
+                }}
                 style={{
                   padding: hudPad,
                   borderRadius: 14,
@@ -612,6 +677,7 @@ if (nowRender - lastRenderRef.current > 50) {
                   color: "#ffffff",
                   fontSize: hudFont,
                   cursor: "pointer",
+                  whiteSpace: "nowrap",
                 }}
               >
                 Exit
@@ -759,7 +825,7 @@ if (nowRender - lastRenderRef.current > 50) {
               <div
                 style={{
                   textAlign: "center",
-                  padding: "22px 30px",
+                  padding: isSmallViewport ? "18px 22px" : "22px 30px",
                   borderRadius: 24,
                   background: "rgba(4,12,18,0.88)",
                   border: "1px solid rgba(255,255,255,0.1)",
@@ -780,7 +846,7 @@ if (nowRender - lastRenderRef.current > 50) {
                 </div>
                 <div
                   style={{
-                    fontSize: 72,
+                    fontSize: isSmallViewport ? 56 : 72,
                     lineHeight: 1,
                     fontWeight: 800,
                     color: "#ffffff",
@@ -801,14 +867,15 @@ if (nowRender - lastRenderRef.current > 50) {
                 placeItems: "center",
                 background: "rgba(2, 8, 16, 0.44)",
                 zIndex: 6,
+                padding: 20,
               }}
             >
               <div
                 style={{
-                  width: 420,
-                  maxWidth: "90%",
+                  width: overlayCardWidth,
+                  maxWidth: "100%",
                   textAlign: "center",
-                  padding: "28px 26px",
+                  padding: isSmallViewport ? "22px 18px" : "28px 26px",
                   borderRadius: 24,
                   background: "rgba(4,12,18,0.9)",
                   border: "1px solid rgba(255,255,255,0.1)",
@@ -830,7 +897,7 @@ if (nowRender - lastRenderRef.current > 50) {
 
                 <div
                   style={{
-                    fontSize: 34,
+                    fontSize: isSmallViewport ? 26 : 34,
                     fontWeight: 800,
                     lineHeight: 1.1,
                     color: "#ffffff",
@@ -870,7 +937,7 @@ if (nowRender - lastRenderRef.current > 50) {
                       setGameState("countdown");
                     }}
                     style={{
-                      minWidth: 140,
+                      minWidth: isSmallViewport ? 120 : 140,
                       padding: "12px 18px",
                       borderRadius: 14,
                       border: "1px solid rgba(255,255,255,0.12)",
@@ -885,9 +952,12 @@ if (nowRender - lastRenderRef.current > 50) {
 
                   <button
                     type="button"
-                    onClick={closeTrial}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      closeTrial();
+                    }}
                     style={{
-                      minWidth: 140,
+                      minWidth: isSmallViewport ? 120 : 140,
                       padding: "12px 18px",
                       borderRadius: 14,
                       border: "1px solid rgba(0,255,180,0.22)",
@@ -909,17 +979,18 @@ if (nowRender - lastRenderRef.current > 50) {
               style={{
                 position: "absolute",
                 left: "50%",
-                bottom: 98,
+                bottom: isSmallViewport ? 84 : 98,
                 transform: "translateX(-50%)",
-                padding: "10px 16px",
+                padding: isSmallViewport ? "8px 12px" : "10px 16px",
                 borderRadius: 999,
                 background: "rgba(4,12,18,0.66)",
                 border: "1px solid rgba(255,255,255,0.08)",
                 color: "rgba(255,255,255,0.8)",
-                fontSize: 13,
+                fontSize: isSmallViewport ? 11 : 13,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
                 zIndex: 5,
+                whiteSpace: "nowrap",
               }}
             >
               Tap or press space to lift
@@ -930,51 +1001,51 @@ if (nowRender - lastRenderRef.current > 50) {
     </div>
   );
 
-  if (showCompactEntry) {
-    return (
-      <div aria-label="JAL's Trials Token Fit">
-        <div className="jal-bay-head">
-          <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
-          <div className="jal-bay-note">Trial Available</div>
-        </div>
-
-        <p className="jal-note">
-          Keep the token stable under movement. Reach at least <strong>{minScore}</strong> points to
-          complete the trial.
-        </p>
-
-        <div className="jal-bullets">
-          <article className="jal-bullet">
-            <div className="jal-bullet-k">Control</div>
-            <div className="jal-bullet-v">Tap screen or press Space to lift.</div>
-          </article>
-
-          <article className="jal-bullet">
-            <div className="jal-bullet-k">Threshold</div>
-            <div className="jal-bullet-v">Minimum required score: {minScore}</div>
-          </article>
-
-          <article className="jal-bullet">
-            <div className="jal-bullet-k">Best</div>
-            <div className="jal-bullet-v">High Score: {highScore}</div>
-          </article>
-        </div>
-
-        <div className="jal-bay-actions" style={{ marginTop: "1rem" }}>
-          <button
-            type="button"
-            className="button neon"
-            onClick={(event) => {
-              event.stopPropagation();
-              beginPlaying();
-            }}
-          >
-            Start Trial
-          </button>
-        </div>
+if (showCompactEntry) {
+  return (
+    <div className="jal-trial-entry" aria-label="JAL's Trials Token Fit">
+      <div className="jal-bay-head">
+        <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
+        <div className="jal-bay-note">Trial Available</div>
       </div>
-    );
-  }
+
+      <p className="jal-trial-note">
+        Keep the token stable under movement. Reach at least <strong>{minScore}</strong> points to
+        complete the trial.
+      </p>
+
+      <div className="jal-trial-grid">
+        <article className="jal-trial-card">
+          <div className="jal-trial-k">Control</div>
+          <div className="jal-trial-v">Tap screen or press Space to lift.</div>
+        </article>
+
+        <article className="jal-trial-card">
+          <div className="jal-trial-k">Threshold</div>
+          <div className="jal-trial-v">Minimum required score: {minScore}</div>
+        </article>
+
+        <article className="jal-trial-card">
+          <div className="jal-trial-k">Best</div>
+          <div className="jal-trial-v">High Score: {highScore}</div>
+        </article>
+      </div>
+
+      <div className="jal-trial-actions">
+        <button
+          type="button"
+          className="button neon"
+          onClick={(event) => {
+            event.stopPropagation();
+            beginPlaying();
+          }}
+        >
+          Start Trial
+        </button>
+      </div>
+    </div>
+  );
+}
 
   if (isFullscreen && typeof document !== "undefined") {
     return createPortal(gameView, document.body);
