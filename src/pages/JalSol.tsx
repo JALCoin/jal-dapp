@@ -5,10 +5,12 @@ import { readLevel1Access } from "../lib/access";
 type RouteTo =
   | "/app/home"
   | "/app/jal-sol"
+  | "/app/jal-sol/observe"
+  | "/app/jal-sol/enter"
+  | "/app/jal-sol/build"
   | "/app/jal-sol/level-1"
-  | "/app/nav"
   | "/app/shop"
-  | "/app/create-token"
+  | "/app/token"
   | "/app/engine";
 
 type GateId = "observe" | "enter" | "build";
@@ -94,8 +96,9 @@ export default function JalSolPage() {
     }, 1200);
   }
 
-  const enterRoute: RouteTo = level1Unlocked ? "/app/jal-sol/level-1" : "/app/shop";
-  const buildRoute: RouteTo = level1Unlocked ? "/app/nav" : "/app/shop";
+  const observeRoute: RouteTo = "/app/jal-sol/observe";
+  const enterRoute: RouteTo = "/app/jal-sol/enter";
+  const buildRoute: RouteTo = "/app/jal-sol/build";
 
   const gateCards = useMemo<GateCard[]>(
     () => [
@@ -106,13 +109,13 @@ export default function JalSolPage() {
         line: "Understand the system before irreversible movement.",
         note: "Start with disclosure, awareness, exchanges, wallets, custody, and system logic before confusing motion with progress.",
         outcome: "Leads into Awareness (no irreversible action)",
-        route: "/app/jal-sol",
+        route: observeRoute,
         style: "observe",
       },
       {
         id: "enter",
         eyebrow: "Gate 02",
-        title: level1Unlocked ? "Resume Entry" : "Enter",
+        title: "Enter",
         line: "Complete the first irreversible action.",
         note: level1Unlocked
           ? "Your Level 1 path is already active. Return directly to the guided entry state you previously unlocked."
@@ -136,7 +139,7 @@ export default function JalSolPage() {
         style: "build",
       },
     ],
-    [level1Unlocked, enterRoute, buildRoute]
+    [level1Unlocked]
   );
 
   const stages = useMemo<SystemStage[]>(
@@ -221,14 +224,10 @@ export default function JalSolPage() {
 
   const activeGateButtonLabel =
     activeGate === "observe"
-      ? "Stay In Awareness"
+      ? "Open Observe Gate"
       : activeGate === "enter"
-      ? level1Unlocked
-        ? "Resume Controlled Entry"
-        : "Start Controlled Entry"
-      : level1Unlocked
-      ? "Move Toward Creation"
-      : "Unlock Entry First";
+      ? "Open Enter Gate"
+      : "Open Build Gate";
 
   return (
     <main
@@ -389,6 +388,15 @@ export default function JalSolPage() {
                       >
                         {isActive ? "Selected" : `Select ${gate.title}`}
                       </button>
+
+                      <button
+                        type="button"
+                        className="button ghost"
+                        onClick={() => beginRoute(gate.route)}
+                        disabled={loading}
+                      >
+                        Open Gate
+                      </button>
                     </div>
                   </article>
                 );
@@ -464,8 +472,8 @@ export default function JalSolPage() {
 
                 if (belongsToGate) {
                   if (stage.level === "1") {
-                    stateClass = level1Unlocked ? "is-open" : "is-paid";
-                    stateLabel = level1Unlocked ? "Active" : "Next";
+                    stateClass = "is-paid";
+                    stateLabel = "Gate 02";
                   } else if (activeGate === "observe") {
                     stateClass = "is-open";
                     stateLabel = "Visible";
@@ -535,10 +543,10 @@ export default function JalSolPage() {
                 <button
                   type="button"
                   className="button gold"
-                  onClick={() => beginRoute(enterRoute)}
+                  onClick={() => beginRoute("/app/jal-sol/enter")}
                   disabled={loading}
                 >
-                  {level1Unlocked ? "Resume Entry" : "Start Controlled Entry"}
+                  Open Enter Gate
                 </button>
 
                 <button
