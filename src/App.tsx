@@ -17,6 +17,9 @@ import ShopPage from "./pages/Shop";
 import JalSolPage from "./pages/JalSol";
 import JalSolSuccess from "./pages/JalSolSuccess";
 import JalSolLevel1 from "./pages/JalSolLevel1";
+import JalSolObserve from "./pages/JalSolObserve";
+import JalSolEnter from "./pages/JalSolEnter";
+import JalSolBuild from "./pages/JalSolBuild";
 import Footer from "./components/Footer";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -167,24 +170,35 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
           />
 
           <SidebarSection
+            title="JAL/SOL"
+            onClose={onClose}
+            items={[
+              { to: "/app/jal-sol", label: "World Hub" },
+              { to: "/app/jal-sol/observe", label: "Gate 1 — Observe" },
+              { to: "/app/jal-sol/enter", label: "Gate 2 — Enter" },
+              { to: "/app/jal-sol/build", label: "Gate 3 — Build" },
+              { to: "/app/jal-sol/level-1", label: "Level 1" },
+            ]}
+          />
+
+          <SidebarSection
             title="Utility"
             onClose={onClose}
             items={[
-              { to: "/app/jal-sol", label: "JAL/SOL" },
               { to: "/app/token", label: "Token Generation" },
               { to: "/app/raydium", label: "Raydium / Liquidity" },
             ]}
           />
 
-<SidebarSection
-  title="Store"
-  onClose={onClose}
-  items={[
-    { to: "/app/shop", label: "Shop" },
-    { to: "/app/track", label: "Track Order" },
-    { to: "/app/inventory", label: "Inventory" },
-  ]}
-/>
+          <SidebarSection
+            title="Store"
+            onClose={onClose}
+            items={[
+              { to: "/app/shop", label: "Shop" },
+              { to: "/app/track", label: "Track Order" },
+              { to: "/app/inventory", label: "Inventory" },
+            ]}
+          />
 
           <SidebarSection
             title="System"
@@ -258,6 +272,7 @@ function AppShell() {
         setMenuOpen(false);
         return;
       }
+
       if (navOverlayOpen) navigate("/app/home", { replace: true });
     };
 
@@ -293,7 +308,11 @@ function AppShell() {
 
         <Route path="shop" element={<ShopPage />} />
         <Route path="track" element={<TrackPage />} />
+
         <Route path="jal-sol" element={<JalSolPage />} />
+        <Route path="jal-sol/observe" element={<JalSolObserve />} />
+        <Route path="jal-sol/enter" element={<JalSolEnter />} />
+        <Route path="jal-sol/build" element={<JalSolBuild />} />
         <Route path="jal-sol/success" element={<JalSolSuccess />} />
         <Route path="jal-sol/level-1" element={<JalSolLevel1 />} />
 
