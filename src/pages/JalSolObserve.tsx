@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import TokenFitGame from "../components/TokenFitGame";
 
 type RouteTo =
   | "/app/home"
@@ -22,6 +23,7 @@ type ObserveStepId =
   | "transaction"
   | "stillness"
   | "test"
+  | "token-fit"
   | "observer";
 
 type ObserveStep = {
@@ -41,6 +43,10 @@ type ObserveAccessState = {
   passed: boolean;
   score: number;
   total: number;
+  quizPassed: boolean;
+  tokenFitPassed: boolean;
+  tokenFitScore: number;
+  tokenFitHighScore: number;
   completedAt: number;
   completedIso: string;
   gate: "observe";
@@ -49,6 +55,7 @@ type ObserveAccessState = {
 
 const OBSERVE_STORAGE_KEY = "jal_observe_complete_v1";
 const PASS_MARK = 4;
+const MIN_TOKEN_FIT_SCORE = 12;
 
 const OBSERVE_STEPS: ObserveStep[] = [
   {
@@ -81,10 +88,15 @@ const OBSERVE_STEPS: ObserveStep[] = [
     label: "Stillness",
     note: "No urgency enters Gate 02.",
   },
-  {
+    {
     id: "test",
     label: "Test",
     note: "Confirm understanding before entry.",
+  },
+  {
+    id: "token-fit",
+    label: "Token Fit",
+    note: "Prove control under movement.",
   },
   {
     id: "observer",
@@ -200,6 +212,9 @@ export default function JalSolObserve() {
     q4: null,
   });
   const [testSubmitted, setTestSubmitted] = useState(false);
+  const [tokenFitPassed, setTokenFitPassed] = useState(false);
+  const [tokenFitScore, setTokenFitScore] = useState(0);
+  const [tokenFitHighScore, setTokenFitHighScore] = useState(0);
 
   const currentStep = OBSERVE_STEPS[stepIndex];
   const isLastStep = stepIndex === OBSERVE_STEPS.length - 1;
@@ -291,6 +306,7 @@ export default function JalSolObserve() {
     if (currentStep.id === "structure" && !structureComplete) return true;
     if (currentStep.id === "stillness" && !stillnessAccepted) return true;
     if (currentStep.id === "test" && !testPassed) return true;
+    if (currentStep.id === "token-fit" && !tokenFitPassed) return true;
     return false;
   }, [
     canContinue,
@@ -298,16 +314,23 @@ export default function JalSolObserve() {
     structureComplete,
     stillnessAccepted,
     testPassed,
+    tokenFitPassed,
   ]);
 
   function handleNext() {
     if (loading || nextDisabled) return;
 
     if (isLastStep) {
+      const passed = testPassed && tokenFitPassed;
+
       const payload: ObserveAccessState = {
-        passed: true,
+        passed,
         score: testScore,
         total: TEST_QUESTIONS.length,
+        quizPassed: testPassed,
+        tokenFitPassed,
+        tokenFitScore,
+        tokenFitHighScore,
         completedAt: Date.now(),
         completedIso: new Date().toISOString(),
         gate: "observe",
@@ -315,6 +338,9 @@ export default function JalSolObserve() {
       };
 
       localStorage.setItem(OBSERVE_STORAGE_KEY, JSON.stringify(payload));
+
+      if (!passed) return;
+
       beginRoute("/app/jal-sol/enter");
       return;
     }
@@ -339,6 +365,8 @@ export default function JalSolObserve() {
       ? "Contribution to Gate 02: confirms calm before irreversible movement."
       : currentStep.id === "test"
       ? "Contribution to Gate 02: confirms understanding before entry."
+      : currentStep.id === "token-fit"
+      ? "Contribution to Gate 02: confirms control under movement."
       : "Contribution to Gate 02: observer state established.";
 
   return (
@@ -750,10 +778,47 @@ export default function JalSolObserve() {
                 {testSubmitted && (
                   <p className="jal-lock-text" style={{ marginTop: "1rem" }}>
                     {testPassed
-                      ? `Pass confirmed. You scored ${testScore}/${TEST_QUESTIONS.length} and may proceed to Gate 02.`
+                      ? `Pass confirmed. You scored ${testScore}/${TEST_QUESTIONS.length}. Continue to Token Fit to complete Gate 01.`
                       : `Test not passed. You scored ${testScore}/${TEST_QUESTIONS.length}. Review the Observe sequence and try again.`}
                   </p>
                 )}
+              </>
+            )}
+
+                        {currentStep.id === "token-fit" && (
+              <>
+                <div className="jal-bay-head">
+                  <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
+                  <div className="jal-bay-note">
+                    {tokenFitPassed
+                      ? `Passed · ${tokenFitScore} score`
+                      : `Minimum required: ${MIN_TOKEN_FIT_SCORE}`}
+                  </div>
+                </div>
+
+                <p className="jal-note">
+                  This trial checks controlled movement, not just understanding. Reach the minimum
+                  score to unlock the final Observe state and continue toward Gate 02.
+                </p>
+
+                <TokenFitGame
+                  minScore={MIN_TOKEN_FIT_SCORE}
+                  onPass={(score, highScore) => {
+                    setTokenFitPassed(true);
+                    setTokenFitScore(score);
+                    setTokenFitHighScore(highScore);
+                  }}
+                  onGameOver={(score, highScore) => {
+                    setTokenFitScore(score);
+                    setTokenFitHighScore(highScore);
+                  }}
+                />
+
+                <p className="jal-lock-text" style={{ marginTop: "1rem" }}>
+                  {tokenFitPassed
+                    ? `Trial passed. Score: ${tokenFitScore}. High Score: ${tokenFitHighScore}.`
+                    : "Gate 02 remains locked until this trial is passed."}
+                </p>
               </>
             )}
 
@@ -765,9 +830,9 @@ export default function JalSolObserve() {
                 </div>
 
                 <p className="jal-note">
-                  The user has now completed the Observe sequence and passed the comprehension test.
-                  Gate 02 can open because the next movement is being entered with structure, not
-                  guesswork.
+                  The user has now completed the Observe sequence, passed the comprehension test,
+                  and passed Token Fit. Gate 02 can open because the next movement is being entered
+                  with structure and control, not guesswork.
                 </p>
 
                 <div className="jal-bullets">
@@ -781,7 +846,7 @@ export default function JalSolObserve() {
                   <article className="jal-bullet">
                     <div className="jal-bullet-k">After</div>
                     <div className="jal-bullet-v">
-                      Informed observer with tested understanding.
+                      Informed observer with tested understanding and proven control.
                     </div>
                   </article>
 
