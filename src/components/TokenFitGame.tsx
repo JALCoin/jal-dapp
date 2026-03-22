@@ -81,6 +81,11 @@ export default function TokenFitGame({
 
   const scoreRef = useRef(0);
   const gameStateRef = useRef<TokenFitState>("idle");
+  const tokenYRef = useRef(BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
+  const velocityRef = useRef(0);
+
+  const pipesRef = useRef<Pipe[]>([]);
+  const lastRenderRef = useRef(0);
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -90,9 +95,27 @@ export default function TokenFitGame({
     scoreRef.current = score;
   }, [score]);
 
+useEffect(() => {
+  tokenYRef.current = tokenY;
+}, [tokenY]);
+
+useEffect(() => {
+  velocityRef.current = velocity;
+}, [velocity]);
+
+useEffect(() => {
+  pipesRef.current = pipes;
+}, [pipes]);
+
   const resetWorld = useCallback(() => {
     setScore(0);
     scoreRef.current = 0;
+
+    velocityRef.current = 0;
+    tokenYRef.current = BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2;
+    pipesRef.current = [];
+    lastRenderRef.current = 0;
+
     setVelocity(0);
     setTokenY(BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
     setPipes([]);
@@ -139,6 +162,7 @@ export default function TokenFitGame({
     }
 
     if (gameStateRef.current === "playing") {
+      velocityRef.current = JUMP_FORCE;
       setVelocity(JUMP_FORCE);
     }
   }, [resetWorld]);
@@ -168,32 +192,35 @@ export default function TokenFitGame({
     };
   }, [isFullscreen]);
 
-  useEffect(() => {
-    function updateSceneScale() {
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
+useEffect(() => {
+  function updateSceneScale() {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
 
-      const horizontalPadding = isFullscreen ? 12 : 32;
-      const verticalPadding = isFullscreen ? 12 : 32;
+    const horizontalPadding = isFullscreen ? 10 : 28;
+    const verticalPadding = isFullscreen ? 10 : 28;
 
-      const availableWidth = Math.max(260, viewportWidth - horizontalPadding);
-      const availableHeight = isFullscreen
-        ? Math.max(260, viewportHeight - verticalPadding)
-        : Math.min(420, viewportHeight * 0.5);
+    const hudAllowance = isFullscreen ? 20 : 0;
 
-      const scaleX = availableWidth / BASE_GAME_WIDTH;
-      const scaleY = availableHeight / BASE_GAME_HEIGHT;
-      const nextScale = Math.min(scaleX, scaleY, 1);
+    const availableWidth = Math.max(240, viewportWidth - horizontalPadding);
+    const availableHeight = isFullscreen
+      ? Math.max(220, viewportHeight - verticalPadding - hudAllowance)
+      : Math.min(420, viewportHeight * 0.48);
 
-      setSceneScale(nextScale);
-      setSceneWidth(BASE_GAME_WIDTH * nextScale);
-      setSceneHeight(BASE_GAME_HEIGHT * nextScale);
-    }
+    const scaleX = availableWidth / BASE_GAME_WIDTH;
+    const scaleY = availableHeight / BASE_GAME_HEIGHT;
 
-    updateSceneScale();
-    window.addEventListener("resize", updateSceneScale);
-    return () => window.removeEventListener("resize", updateSceneScale);
-  }, [isFullscreen]);
+    const nextScale = Math.min(scaleX, scaleY, 1);
+
+    setSceneScale(nextScale);
+    setSceneWidth(Math.round(BASE_GAME_WIDTH * nextScale));
+    setSceneHeight(Math.round(BASE_GAME_HEIGHT * nextScale));
+  }
+
+  updateSceneScale();
+  window.addEventListener("resize", updateSceneScale);
+  return () => window.removeEventListener("resize", updateSceneScale);
+}, [isFullscreen]);
 
   useEffect(() => {
     if (gameState !== "countdown") return;
@@ -253,27 +280,23 @@ export default function TokenFitGame({
 
       const frameScale = deltaMs / 16.6667;
 
-      setVelocity((prevVelocity) => {
-        const nextVelocity = prevVelocity + GRAVITY * frameScale;
+      const nextVelocity = velocityRef.current + GRAVITY * frameScale;
+      let nextY = tokenYRef.current + nextVelocity * frameScale;
 
-        setTokenY((prevY) => {
-          const nextY = prevY + nextVelocity * frameScale;
+      if (nextY <= topBound) {
+        nextY = topBound;
+        endGame("gameover");
+      }
 
-          if (nextY <= topBound) {
-            endGame("gameover");
-            return topBound;
-          }
+      if (nextY >= bottomBound) {
+        nextY = bottomBound;
+        endGame("gameover");
+      }
 
-          if (nextY >= bottomBound) {
-            endGame("gameover");
-            return bottomBound;
-          }
+velocityRef.current = nextVelocity;
+tokenYRef.current = nextY;
 
-          return nextY;
-        });
-
-        return nextVelocity;
-      });
+const nowRender = performance.now();
 
       spawnTimerRef.current += deltaMs;
 
@@ -286,40 +309,42 @@ export default function TokenFitGame({
         const maxGapY = BASE_GAME_HEIGHT - FLOOR_HEIGHT - gapPaddingBottom - PIPE_GAP / 2;
         const gapY = Math.random() * (maxGapY - minGapY) + minGapY;
 
-        setPipes((prev) => [
-          ...prev,
-          {
-            id: nextPipeIdRef.current++,
-            x: BASE_GAME_WIDTH + 40,
-            gapY,
-            scored: false,
-          },
-        ]);
+pipesRef.current.push({
+  id: nextPipeIdRef.current++,
+  x: BASE_GAME_WIDTH + 40,
+  gapY,
+  scored: false,
+});
       }
 
-      setPipes((prevPipes) => {
-        const nextPipes = prevPipes
-          .map((pipe) => {
-            const nextX = pipe.x - PIPE_SPEED * frameScale;
-            let nextPipe = { ...pipe, x: nextX };
+const updatedPipes = pipesRef.current
+  .map((pipe) => {
+    const nextX = pipe.x - PIPE_SPEED * frameScale;
+    let nextPipe = { ...pipe, x: nextX };
 
-            if (!pipe.scored && nextX + PIPE_WIDTH < TOKEN_X) {
-              nextPipe = { ...nextPipe, scored: true };
-              const nextScore = scoreRef.current + 1;
-              scoreRef.current = nextScore;
-              setScore(nextScore);
+    if (!pipe.scored && nextX + PIPE_WIDTH < TOKEN_X) {
+      nextPipe = { ...nextPipe, scored: true };
+      const nextScore = scoreRef.current + 1;
+      scoreRef.current = nextScore;
+      setScore(nextScore);
 
-              if (nextScore >= minScore) {
-                endGame("passed");
-              }
-            }
+      if (nextScore >= minScore) {
+        endGame("passed");
+      }
+    }
 
-            return nextPipe;
-          })
-          .filter((pipe) => pipe.x + PIPE_WIDTH > -40);
+    return nextPipe;
+  })
+  .filter((pipe) => pipe.x + PIPE_WIDTH > -40);
 
-        return nextPipes;
-      });
+pipesRef.current = updatedPipes;
+
+if (nowRender - lastRenderRef.current > 50) {
+  lastRenderRef.current = nowRender;
+  setVelocity(velocityRef.current);
+  setTokenY(tokenYRef.current);
+  setPipes([...pipesRef.current]);
+}
 
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -389,6 +414,14 @@ export default function TokenFitGame({
       };
 
   const tokenRotation = clamp(velocity * 4.5, -28, 60);
+  const isSmallViewport = sceneScale < 0.72;
+  const hudTop = isSmallViewport ? 16 : 26;
+  const hudSide = isSmallViewport ? 16 : 36;
+  const hudGap = isSmallViewport ? 8 : 12;
+  const hudPad = isSmallViewport ? "8px 10px" : "10px 14px";
+  const hudFont = isSmallViewport ? 12 : 15;
+  const hudStatWidth = isSmallViewport ? 88 : 108;
+  const hudStatValue = isSmallViewport ? 18 : 24;
 
   const handleScenePress = (event: React.MouseEvent | React.TouchEvent) => {
     event.stopPropagation();
@@ -470,22 +503,22 @@ export default function TokenFitGame({
           <div
             style={{
               position: "absolute",
-              left: 36,
-              top: 26,
+              left: hudSide,
+              top: hudTop,
               display: "flex",
-              gap: 12,
+              gap: hudGap,
               alignItems: "center",
               zIndex: 5,
             }}
           >
             <div
               style={{
-                padding: "10px 14px",
+                padding: hudPad,
                 borderRadius: 14,
                 border: "1px solid rgba(255,255,255,0.1)",
                 background: "rgba(5, 14, 22, 0.72)",
                 color: "#f6fffb",
-                fontSize: 15,
+                fontSize: hudFont,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
               }}
@@ -493,43 +526,43 @@ export default function TokenFitGame({
               JAL’s Trials
             </div>
 
-            <div
-              style={{
-                padding: "10px 14px",
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(5, 14, 22, 0.72)",
-                color: "#c7fce8",
-                fontSize: 15,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-              }}
-            >
-              Token Fit
-            </div>
+<div
+  style={{
+    padding: hudPad,
+    borderRadius: 14,
+    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(5, 14, 22, 0.72)",
+    color: "#c7fce8",
+    fontSize: hudFont,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+  }}
+>
+  Token Fit
+</div>
           </div>
 
-          <div
-            style={{
-              position: "absolute",
-              right: 36,
-              top: 26,
-              display: "flex",
-              gap: 12,
-              zIndex: 5,
-            }}
-          >
-            <div
-              style={{
-                minWidth: 108,
-                padding: "10px 14px",
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(5, 14, 22, 0.72)",
-                color: "#ffffff",
-                textAlign: "center",
-              }}
-            >
+<div
+  style={{
+    position: "absolute",
+    right: hudSide,
+    top: hudTop,
+    display: "flex",
+    gap: hudGap,
+    zIndex: 5,
+  }}
+>
+<div
+  style={{
+    minWidth: hudStatWidth,
+    padding: hudPad,
+    borderRadius: 14,
+    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(5, 14, 22, 0.72)",
+    color: "#ffffff",
+    textAlign: "center",
+  }}
+>
               <div
                 style={{
                   fontSize: 11,
@@ -540,20 +573,20 @@ export default function TokenFitGame({
               >
                 Score
               </div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>{score}</div>
+              <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>{score}</div>
             </div>
 
-            <div
-              style={{
-                minWidth: 108,
-                padding: "10px 14px",
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(5, 14, 22, 0.72)",
-                color: "#ffffff",
-                textAlign: "center",
-              }}
-            >
+<div
+  style={{
+    minWidth: hudStatWidth,
+    padding: hudPad,
+    borderRadius: 14,
+    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(5, 14, 22, 0.72)",
+    color: "#ffffff",
+    textAlign: "center",
+  }}
+>
               <div
                 style={{
                   fontSize: 11,
@@ -564,7 +597,7 @@ export default function TokenFitGame({
               >
                 Best
               </div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>{highScore}</div>
+              <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>{highScore}</div>
             </div>
 
             {isFullscreen && (
@@ -572,12 +605,12 @@ export default function TokenFitGame({
                 type="button"
                 onClick={closeTrial}
                 style={{
-                  padding: "0 16px",
+                  padding: hudPad,
                   borderRadius: 14,
                   border: "1px solid rgba(255,255,255,0.12)",
                   background: "rgba(8, 18, 28, 0.82)",
                   color: "#ffffff",
-                  fontSize: 14,
+                  fontSize: hudFont,
                   cursor: "pointer",
                 }}
               >
