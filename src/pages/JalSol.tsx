@@ -11,12 +11,15 @@ type RouteTo =
   | "/app/create-token"
   | "/app/engine";
 
+type GateId = "observe" | "enter" | "build";
+
 type GateCard = {
-  id: string;
+  id: GateId;
   eyebrow: string;
   title: string;
   line: string;
   note: string;
+  outcome: string;
   route: RouteTo;
   style: "observe" | "enter" | "build";
 };
@@ -25,8 +28,8 @@ type SystemStage = {
   id: string;
   level: string;
   title: string;
-  state: "current" | "available" | "locked";
   description: string;
+  gates: GateId[];
 };
 
 type OpenModule = {
@@ -64,6 +67,7 @@ export default function JalSolPage() {
 
   const [level1Unlocked, setLevel1Unlocked] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [activeGate, setActiveGate] = useState<GateId>("observe");
 
   useEffect(() => {
     const access = readLevel1Access();
@@ -90,9 +94,8 @@ export default function JalSolPage() {
     }, 1200);
   }
 
-  const primaryRoute: RouteTo = level1Unlocked
-    ? "/app/jal-sol/level-1"
-    : "/app/shop";
+  const enterRoute: RouteTo = level1Unlocked ? "/app/jal-sol/level-1" : "/app/shop";
+  const buildRoute: RouteTo = level1Unlocked ? "/app/nav" : "/app/shop";
 
   const gateCards = useMemo<GateCard[]>(
     () => [
@@ -100,8 +103,9 @@ export default function JalSolPage() {
         id: "observe",
         eyebrow: "Gate 01",
         title: "Observe",
-        line: "Learn before acting.",
-        note: "Begin with awareness. Understand exchanges, custody, wallets, and Solana before confusing movement with progress.",
+        line: "Understand the system before irreversible movement.",
+        note: "Start with disclosure, awareness, exchanges, wallets, custody, and system logic before confusing motion with progress.",
+        outcome: "Leads into Awareness (no irreversible action)",
         route: "/app/jal-sol",
         style: "observe",
       },
@@ -109,24 +113,30 @@ export default function JalSolPage() {
         id: "enter",
         eyebrow: "Gate 02",
         title: level1Unlocked ? "Resume Entry" : "Enter",
-        line: "Take your first controlled step.",
+        line: "Complete the first irreversible action.",
         note: level1Unlocked
-          ? "Your Level 1 path is already active. Return to the exact movement you previously unlocked."
-          : "Move from passive understanding into a real first action through guided progression and structured entry.",
-        route: primaryRoute,
+          ? "Your Level 1 path is already active. Return directly to the guided entry state you previously unlocked."
+          : "Move from passive understanding into guided participation and first controlled action through structured entry.",
+        outcome: "Leads into Controlled Entry (first real transaction)",
+        route: enterRoute,
         style: "enter",
       },
       {
         id: "build",
         eyebrow: "Gate 03",
         title: "Build",
-        line: "Create your own system.",
-        note: "Creation is not the first step, but it is where this path ultimately points: token creation, identity, and functional ownership.",
-        route: "/app/nav",
+        line: "Move into ownership, creation, and execution.",
+        note: level1Unlocked
+          ? "Progress beyond entry into token creation, identity, utility, and eventual deterministic execution."
+          : "Creation is downstream of correct entry. Unlock controlled entry first, then move into ownership and system building.",
+        outcome: level1Unlocked
+          ? "Leads into Creation and System Ownership"
+          : "Requires Controlled Entry before Creation",
+        route: buildRoute,
         style: "build",
       },
     ],
-    [level1Unlocked, primaryRoute]
+    [level1Unlocked, enterRoute, buildRoute]
   );
 
   const stages = useMemo<SystemStage[]>(
@@ -135,67 +145,94 @@ export default function JalSolPage() {
         id: "world-hub",
         level: "0.5",
         title: "World Hub",
-        state: "current",
         description: "First contact. Urgency is removed and direction becomes visible.",
+        gates: ["observe"],
       },
       {
         id: "awareness",
         level: "0",
         title: "Awareness",
-        state: "current",
         description: "The user learns how digital movement works before committing to it.",
+        gates: ["observe"],
       },
       {
         id: "entry",
         level: "1",
         title: "Controlled Entry",
-        state: level1Unlocked ? "current" : "available",
         description: "The first real step. Ownership begins when action becomes irreversible.",
+        gates: ["enter"],
       },
       {
         id: "creation",
         level: "2",
         title: "Creation",
-        state: "locked",
         description: "The user moves from participant to builder.",
+        gates: ["build"],
       },
       {
         id: "identity",
         level: "3",
         title: "Identity + Utility",
-        state: "locked",
         description: "Assets become tied to meaning, structure, and use.",
+        gates: ["build"],
       },
       {
         id: "market",
         level: "4",
         title: "Market Structure",
-        state: "locked",
         description: "Reaction is replaced by rule-based interaction.",
+        gates: ["build"],
       },
       {
         id: "engine",
         level: "5",
         title: "Deterministic Execution",
-        state: "locked",
         description: "Visible machine logic replaces emotional behaviour.",
+        gates: ["build"],
       },
       {
         id: "deployment",
         level: "6",
         title: "Deployment",
-        state: "locked",
         description: "Independent user-owned systems replicate outward.",
+        gates: ["build"],
       },
     ],
-    [level1Unlocked]
+    []
   );
+
+  const activeGateCard = gateCards.find((gate) => gate.id === activeGate)!;
+
+  const gateHeadline =
+    activeGate === "observe"
+      ? "Observe reveals the awareness path."
+      : activeGate === "enter"
+      ? "Enter reveals the first irreversible path."
+      : "Build reveals the ownership and execution path.";
+
+  const gateSubline =
+    activeGate === "observe"
+      ? "This path is for understanding before commitment."
+      : activeGate === "enter"
+      ? "This path is where the user stops observing and starts participating."
+      : "This path expands from creation into utility, structure, and system ownership.";
+
+  const activeGateRoute = activeGateCard.route;
+
+  const activeGateButtonLabel =
+    activeGate === "observe"
+      ? "Stay In Awareness"
+      : activeGate === "enter"
+      ? level1Unlocked
+        ? "Resume Controlled Entry"
+        : "Start Controlled Entry"
+      : level1Unlocked
+      ? "Move Toward Creation"
+      : "Unlock Entry First";
 
   return (
     <main
-      className={`home-shell jal-shell jal-ground-page ${
-        loading ? "is-fading" : ""
-      }`}
+      className={`home-shell jal-shell jal-ground-page ${loading ? "is-fading" : ""}`}
       aria-label="JAL/SOL World Hub"
     >
       <div className="home-wrap">
@@ -220,15 +257,14 @@ export default function JalSolPage() {
               </h1>
 
               <p className="home-lead">
-                JAL/SOL is the first real state of the wider environment. This is
-                where a person stops passively browsing and starts understanding
-                how the system is meant to be entered.
+                JAL/SOL is the first real state of the wider environment. This is where a person
+                stops passively browsing and starts understanding how the system is meant to be
+                entered.
               </p>
 
               <p className="jal-sublead">
-                The purpose of this page is simple: remove noise, give direction,
-                and let the user choose the correct next movement. Observe first.
-                Enter correctly. Build later.
+                The purpose of this page is simple: remove noise, give direction, and let the user
+                choose the correct next movement. Observe first. Enter correctly. Build later.
               </p>
             </div>
 
@@ -242,10 +278,10 @@ export default function JalSolPage() {
               <button
                 type="button"
                 className="button neon"
-                onClick={() => beginRoute(primaryRoute)}
+                onClick={() => beginRoute(activeGateRoute)}
                 disabled={loading}
               >
-                {level1Unlocked ? "Continue Progress" : "Enter The System"}
+                {activeGateButtonLabel}
               </button>
 
               <a
@@ -256,7 +292,7 @@ export default function JalSolPage() {
                   if (loading) event.preventDefault();
                 }}
               >
-                Choose A Path
+                Choose A Gate
               </a>
 
               <button
@@ -277,24 +313,24 @@ export default function JalSolPage() {
             </div>
 
             <p className="jal-note">
-              The wider experience now has a clearer order. <strong>Home</strong> is
-              the command overview. <strong>JAL/SOL</strong> is the first controlled
-              movement layer. <strong>$JAL~Engine</strong> is the execution layer where
-              visible machine truth takes over.
+              The wider experience now has a clearer order. <strong>Home</strong> is the command
+              overview. <strong>JAL/SOL</strong> is the first controlled movement layer.{" "}
+              <strong>$JAL~Engine</strong> is the execution layer where visible machine truth takes
+              over.
             </p>
 
             <div className="jal-bullets">
               <article className="jal-bullet">
                 <div className="jal-bullet-k">Home</div>
                 <div className="jal-bullet-v">
-                  Explains the architecture and lets the user select a state.
+                  Explains the architecture and sends the user toward the correct gate.
                 </div>
               </article>
 
               <article className="jal-bullet">
                 <div className="jal-bullet-k">JAL/SOL</div>
                 <div className="jal-bullet-v">
-                  Removes confusion and begins the correct order of entry.
+                  Converts direction into movement and reveals the corresponding path.
                 </div>
               </article>
 
@@ -318,114 +354,135 @@ export default function JalSolPage() {
             </div>
 
             <p className="jal-note">
-              This layer does not try to make the user consume everything. It
-              exists to remove indecision and expose the correct next state.
+              Gates are not levels. They are directional controls that reveal which part of the
+              visible progression belongs to the user’s chosen path.
             </p>
 
             <div className="jal-gate-grid">
-              {gateCards.map((gate) => (
-                <article
-                  key={gate.id}
-                  className={`jal-gate-card jal-gate-card--${gate.style}`}
-                >
-                  <div className="jal-gate-top">
-                    <span className="jal-gate-eyebrow">{gate.eyebrow}</span>
-                  </div>
+              {gateCards.map((gate) => {
+                const isActive = activeGate === gate.id;
 
-                  <h2 className="jal-gate-title">{gate.title}</h2>
-                  <p className="jal-gate-line">{gate.line}</p>
-                  <p className="jal-gate-note">{gate.note}</p>
+                return (
+                  <article
+                    key={gate.id}
+                    className={`jal-gate-card jal-gate-card--${gate.style} ${
+                      isActive ? "is-active" : ""
+                    }`}
+                  >
+                    <div className="jal-gate-top">
+                      <span className="jal-gate-eyebrow">{gate.eyebrow}</span>
+                    </div>
 
-                  <div className="jal-gate-actions">
-                    <button
-                      type="button"
-                      className={`button ${
-                        gate.style === "enter" ? "gold" : "ghost"
-                      }`}
-                      onClick={() => beginRoute(gate.route)}
-                      disabled={loading}
-                    >
-                      {gate.title}
-                    </button>
-                  </div>
-                </article>
-              ))}
+                    <h2 className="jal-gate-title">{gate.title}</h2>
+                    <p className="jal-gate-line">{gate.line}</p>
+                    <p className="jal-gate-note">{gate.note}</p>
+                    <p className="jal-lock-text">{gate.outcome}</p>
+
+                    <div className="jal-gate-actions">
+                      <button
+                        type="button"
+                        className={`button ${
+                          gate.style === "enter" ? "gold" : isActive ? "neon" : "ghost"
+                        }`}
+                        onClick={() => setActiveGate(gate.id)}
+                        disabled={loading}
+                      >
+                        {isActive ? "Selected" : `Select ${gate.title}`}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
 
-          <section className="jal-bay jal-bay-wide" aria-label="System definition">
+          <section className="jal-bay jal-bay-wide" aria-label="Gate interpretation">
             <div className="jal-bay-head">
-              <div className="jal-bay-title">What This Actually Is</div>
-              <div className="jal-bay-note">Controlled progression layer</div>
+              <div className="jal-bay-title">Current Gate Focus</div>
+              <div className="jal-bay-note">Selection changes progression visibility</div>
             </div>
 
             <p className="jal-note">
-              JAL/SOL is not just content, and it is not just a token utility.
-              It is the first structured environment where a user is taught how
-              to move correctly inside the broader JALSOL system.
+              <strong>{gateHeadline}</strong> {gateSubline}
             </p>
 
             <div className="jal-bullets">
               <article className="jal-bullet">
-                <div className="jal-bullet-k">Observe</div>
-                <div className="jal-bullet-v">
-                  Learn the foundations first: exchanges, wallets, custody,
-                  Solana, and why correct movement matters.
-                </div>
+                <div className="jal-bullet-k">Selected Gate</div>
+                <div className="jal-bullet-v">{activeGateCard.title}</div>
               </article>
 
               <article className="jal-bullet">
-                <div className="jal-bullet-k">Enter</div>
-                <div className="jal-bullet-v">
-                  Make the first controlled action through wallet connection,
-                  guided entry, and real interaction.
-                </div>
+                <div className="jal-bullet-k">Path Meaning</div>
+                <div className="jal-bullet-v">{activeGateCard.line}</div>
               </article>
 
               <article className="jal-bullet">
-                <div className="jal-bullet-k">Build</div>
-                <div className="jal-bullet-v">
-                  Progress toward creation, identity, utility, and eventual
-                  deterministic execution.
-                </div>
+                <div className="jal-bullet-k">Immediate Outcome</div>
+                <div className="jal-bullet-v">{activeGateCard.outcome}</div>
               </article>
+            </div>
+
+            <div className="jal-bay-actions">
+              <button
+                type="button"
+                className="button gold"
+                onClick={() => beginRoute(activeGateRoute)}
+                disabled={loading}
+              >
+                {activeGateButtonLabel}
+              </button>
+
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => beginRoute("/app/home")}
+                disabled={loading}
+              >
+                Return To Home
+              </button>
             </div>
           </section>
 
           <section className="jal-bay jal-bay-wide" aria-label="Visible progression">
             <div className="jal-bay-head">
               <div className="jal-bay-title">Visible Progression</div>
-              <div className="jal-bay-note">The path reveals itself in order</div>
+              <div className="jal-bay-note">The rail now follows the selected gate</div>
             </div>
 
             <p className="jal-note">
-              Every level exists to remove a different weakness: confusion,
-              hesitation, randomness, dependency, and unstructured reaction.
+              The progression rail below is no longer generic. It responds to the selected gate and
+              shows which stages belong to the current direction of movement.
             </p>
 
             <div className="jal-level-rail">
               {stages.map((stage) => {
-                const stateClass =
-                  stage.state === "current"
-                    ? "is-open"
-                    : stage.state === "available"
-                    ? "is-paid"
-                    : "is-locked";
+                const belongsToGate = stage.gates.includes(activeGate);
 
-                const stateLabel =
-                  stage.state === "current"
-                    ? "Visible"
-                    : stage.state === "available"
-                    ? "Next"
-                    : "Locked";
+                let stateClass = "is-locked";
+                let stateLabel = "Hidden";
+
+                if (belongsToGate) {
+                  if (stage.level === "1") {
+                    stateClass = level1Unlocked ? "is-open" : "is-paid";
+                    stateLabel = level1Unlocked ? "Active" : "Next";
+                  } else if (activeGate === "observe") {
+                    stateClass = "is-open";
+                    stateLabel = "Visible";
+                  } else if (activeGate === "build" && !level1Unlocked) {
+                    stateClass = "is-paid";
+                    stateLabel = "After Entry";
+                  } else {
+                    stateClass = "is-open";
+                    stateLabel = "Visible";
+                  }
+                }
 
                 return (
                   <article key={stage.id} className={`jal-level-card ${stateClass}`}>
                     <div className="jal-level-top">
                       <div className="jal-level-number">L{stage.level}</div>
-                      <div className={`jal-level-state ${stateClass}`}>
-                        {stateLabel}
-                      </div>
+                      <div className={`jal-level-state ${stateClass}`}>{stateLabel}</div>
                     </div>
 
                     <h3 className="jal-level-title">{stage.title}</h3>
@@ -444,8 +501,8 @@ export default function JalSolPage() {
               </div>
 
               <p className="jal-note">
-                Not everything should be locked. Awareness remains visible because
-                it stabilises the user before the first paid movement begins.
+                Not everything should be locked. Awareness remains visible because it stabilises
+                the user before the first paid movement begins.
               </p>
 
               <div className="jal-steps">
@@ -465,25 +522,23 @@ export default function JalSolPage() {
               </div>
 
               <p className="jal-note">
-                Level 1 is not important because it is “paid.” It matters because
-                it creates a real movement that changes the user’s relationship
-                to the system.
+                Level 1 is not important because it is “paid.” It matters because it creates a real
+                movement that changes the user’s relationship to the system.
               </p>
 
               <p className="jal-lock-text">
-                A wallet connected. A first transaction. A first controlled
-                transfer. Entry exists because observation alone does not create
-                ownership.
+                A wallet connected. A first transaction. A first controlled transfer. Entry exists
+                because observation alone does not create ownership.
               </p>
 
               <div className="jal-bay-actions">
                 <button
                   type="button"
                   className="button gold"
-                  onClick={() => beginRoute(primaryRoute)}
+                  onClick={() => beginRoute(enterRoute)}
                   disabled={loading}
                 >
-                  {level1Unlocked ? "Resume Entry" : "Enter The System"}
+                  {level1Unlocked ? "Resume Entry" : "Start Controlled Entry"}
                 </button>
 
                 <button
@@ -505,9 +560,9 @@ export default function JalSolPage() {
             </div>
 
             <p className="jal-note">
-              The endpoint is not endless learning. The endpoint is structured
-              operation: create assets, attach identity and utility, understand
-              market structure, and eventually access visible machine execution.
+              The endpoint is not endless learning. The endpoint is structured operation: create
+              assets, attach identity and utility, understand market structure, and eventually
+              access visible machine execution.
             </p>
 
             <div className="jal-bullets">
@@ -521,16 +576,15 @@ export default function JalSolPage() {
               <article className="jal-bullet">
                 <div className="jal-bullet-k">Layer 5</div>
                 <div className="jal-bullet-v">
-                  Access deterministic execution through state, rules, slots, and
-                  public machine logic.
+                  Access deterministic execution through state, rules, slots, and public machine
+                  logic.
                 </div>
               </article>
 
               <article className="jal-bullet">
                 <div className="jal-bullet-k">Layer 6</div>
                 <div className="jal-bullet-v">
-                  Expand into independent systems tied back to the source
-                  architecture.
+                  Expand into independent systems tied back to the source architecture.
                 </div>
               </article>
             </div>
@@ -539,22 +593,22 @@ export default function JalSolPage() {
           <section className="jal-bay jal-bay-wide" aria-label="Final choice">
             <div className="jal-bay-head">
               <div className="jal-bay-title">Choose The Next Movement</div>
-              <div className="jal-bay-note">Observer, participant, or builder</div>
+              <div className="jal-bay-note">Gate-driven routing is now active</div>
             </div>
 
             <p className="jal-note">
-              This page should end with clarity, not clutter. Choose the next
-              true state and move properly.
+              This page should end with clarity, not clutter. Select the gate, observe the path it
+              reveals, then move into the next true state.
             </p>
 
             <div className="jal-bay-actions">
               <button
                 type="button"
                 className="button neon"
-                onClick={() => beginRoute(primaryRoute)}
+                onClick={() => beginRoute(activeGateRoute)}
                 disabled={loading}
               >
-                {level1Unlocked ? "Continue Your Progress" : "Enter The System"}
+                {activeGateButtonLabel}
               </button>
 
               <button
@@ -580,12 +634,7 @@ export default function JalSolPage() {
       </div>
 
       {loading && (
-        <div
-          className="loading-screen"
-          role="status"
-          aria-live="polite"
-          aria-label="Loading"
-        >
+        <div className="loading-screen" role="status" aria-live="polite" aria-label="Loading">
           <img className="loading-logo" src="/JALSOL1.gif" alt="" />
         </div>
       )}
