@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
 
 export type TokenFitGameProps = {
   minScore: number;
   onPass: (score: number, highScore: number) => void;
   onGameOver?: (score: number, highScore: number) => void;
+  onLeaveAfterPass?: () => void;
 };
 
 type TokenFitState = "idle" | "countdown" | "playing" | "gameover" | "passed";
@@ -79,9 +79,8 @@ export default function TokenFitGame({
   minScore,
   onPass,
   onGameOver,
+  onLeaveAfterPass,
 }: TokenFitGameProps) {
-  const navigate = useNavigate();
-
   const [gameState, setGameState] = useState<TokenFitState>("idle");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -238,13 +237,25 @@ export default function TokenFitGame({
     gameStateRef.current = "countdown";
   }, [resetWorld]);
 
-const leaveToGate = useCallback(() => {
-  setIsFullscreen(false);
-  setGameState("idle");
-  gameStateRef.current = "idle";
-  resetWorld();
-  navigate("/app/jal-sol/level-1");
-}, [navigate, resetWorld]);
+  const closeTrial = useCallback(() => {
+    setIsFullscreen(false);
+    setGameState("idle");
+    gameStateRef.current = "idle";
+    resetWorld();
+  }, [resetWorld]);
+
+  const leaveTrial = useCallback(() => {
+    const passed = gameStateRef.current === "passed";
+
+    setIsFullscreen(false);
+    setGameState("idle");
+    gameStateRef.current = "idle";
+    resetWorld();
+
+    if (passed) {
+      onLeaveAfterPass?.();
+    }
+  }, [onLeaveAfterPass, resetWorld]);
 
   useEffect(() => {
     if (!isFullscreen || typeof document === "undefined" || typeof window === "undefined") return;
@@ -355,17 +366,17 @@ const leaveToGate = useCallback(() => {
         flap();
       }
 
-if (event.code === "Escape" && isFullscreen) {
-  event.preventDefault();
-  leaveToGate();
-}
+      if (event.code === "Escape" && isFullscreen) {
+        event.preventDefault();
+        closeTrial();
+      }
     }
 
     window.addEventListener("keydown", onKeyDown, { passive: false });
     return () => window.removeEventListener("keydown", onKeyDown);
- }, [flap, isFullscreen, leaveToGate]);
+  }, [closeTrial, flap, isFullscreen]);
 
-   const showCompactEntry = gameState === "idle";
+  const showCompactEntry = gameState === "idle";
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -397,7 +408,6 @@ if (event.code === "Escape" && isFullscreen) {
 
       const frameScale = deltaMs / 16.6667;
 
-      /* ===== token physics ===== */
       let nextVelocity = velocityRef.current + GRAVITY * frameScale;
       let nextY = tokenYRef.current + nextVelocity * frameScale;
 
@@ -420,7 +430,6 @@ if (event.code === "Escape" && isFullscreen) {
       velocityRef.current = nextVelocity;
       tokenYRef.current = nextY;
 
-      /* ===== pipe spawn ===== */
       spawnTimerRef.current += deltaMs;
 
       while (spawnTimerRef.current >= PIPE_SPAWN_EVERY) {
@@ -436,7 +445,6 @@ if (event.code === "Escape" && isFullscreen) {
         });
       }
 
-      /* ===== pipe move + score + collision ===== */
       const tokenLeft = tokenX;
       const tokenRight = tokenX + TOKEN_SIZE;
       const tokenTop = tokenYRef.current;
@@ -542,6 +550,10 @@ if (event.code === "Escape" && isFullscreen) {
 
   const scenePress = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!event.isPrimary) return;
+
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("button")) return;
+
     event.preventDefault();
     event.stopPropagation();
     flap();
@@ -731,10 +743,15 @@ if (event.code === "Escape" && isFullscreen) {
               {isFullscreen && (
                 <button
                   type="button"
-onClick={(event) => {
-  event.stopPropagation();
-  leaveToGate();
-}}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    closeTrial();
+                  }}
                   style={{
                     padding: hudPad,
                     borderRadius: 14,
@@ -1003,7 +1020,12 @@ onClick={(event) => {
                   >
                     <button
                       type="button"
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
                       onClick={(event) => {
+                        event.preventDefault();
                         event.stopPropagation();
                         resetWorld();
                         setGameState("countdown");
@@ -1024,12 +1046,17 @@ onClick={(event) => {
                       Retry
                     </button>
 
-<button
-  type="button"
-  onClick={(event) => {
-    event.stopPropagation();
-    leaveToGate();
-  }}
+                    <button
+                      type="button"
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        leaveTrial();
+                      }}
                       style={{
                         minWidth: isSmallViewport ? 120 : 140,
                         padding: "12px 18px",
@@ -1164,9 +1191,9 @@ onClick={(event) => {
     );
   }
 
-if (isFullscreen && typeof document !== "undefined" && document.body) {
-  return createPortal(gameView, document.body);
-}
+  if (isFullscreen && typeof document !== "undefined" && document.body) {
+    return createPortal(gameView, document.body);
+  }
 
   return gameView;
 }

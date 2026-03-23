@@ -220,6 +220,7 @@ export default function JalSolObserve() {
   const isLastStep = stepIndex === OBSERVE_STEPS.length - 1;
   const structureComplete = openedCards.length === LEARN_CARDS.length;
   const useCompactHeader = stepIndex > 0;
+  const observerStepIndex = OBSERVE_STEPS.findIndex((step) => step.id === "observer");
 
   useEffect(() => {
     return () => {
@@ -800,7 +801,6 @@ export default function JalSolObserve() {
                   This trial checks controlled movement, not just understanding. Reach the minimum
                   score to unlock the final Observe state and continue toward Gate 02.
                 </p>
-
                 <TokenFitGame
                   minScore={MIN_TOKEN_FIT_SCORE}
                   onPass={(score, highScore) => {
@@ -811,6 +811,10 @@ export default function JalSolObserve() {
                   onGameOver={(score, highScore) => {
                     setTokenFitScore(score);
                     setTokenFitHighScore(highScore);
+                  }}
+                  onLeaveAfterPass={() => {
+                    setStepIndex(observerStepIndex);
+                    window.scrollTo({ top: 0, behavior: "auto" });
                   }}
                 />
 
