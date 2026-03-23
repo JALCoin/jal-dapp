@@ -130,6 +130,24 @@ const GATE2_ADMIN_BYPASS_KEY = "gate2_admin_bypass";
 const MINT_AUTHORITY = "3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2";
 const JAL_TOKEN_ADDRESS = "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
 
+const VALID_GATE2_STAGES: Gate2Stage[] = [
+  "home",
+  "module-1-wallet",
+  "module-2-custody",
+  "module-3-finality",
+  "module-4-connection",
+  "module-5-action-path",
+  "module-6-verification",
+  "test",
+  "checklist",
+  "trial-brief",
+  "trial",
+  "wallet",
+  "transaction",
+  "verify",
+  "passed",
+];
+
 const ENTRY_RAIL: { id: Gate2Stage; title: string; note: string }[] = [
   {
     id: "module-1-wallet",
@@ -439,6 +457,32 @@ const TEST_QUESTIONS: TestQuestion[] = [
   },
 ];
 
+const CHECKLIST_ITEMS: {
+  key: keyof Gate2ProgressState["checklist"];
+  label: string;
+}[] = [
+  {
+    key: "walletControlsAssets",
+    label: "Wallet controls access to assets",
+  },
+  {
+    key: "transactionsMayBeIrreversible",
+    label: "Transactions may be irreversible",
+  },
+  {
+    key: "custodyIsMyResponsibility",
+    label: "Custody and responsibility are mine",
+  },
+  {
+    key: "verifyBeforeSigning",
+    label: "Verify details before signing",
+  },
+  {
+    key: "followGate2Order",
+    label: "Follow Gate 02 sequence exactly",
+  },
+];
+
 const DEFAULT_GATE2_PROGRESS: Gate2ProgressState = {
   accessGranted: false,
   privateHomeSeen: false,
@@ -500,6 +544,10 @@ const DEFAULT_GATE2_PROGRESS: Gate2ProgressState = {
   },
 };
 
+function isValidGate2Stage(value: unknown): value is Gate2Stage {
+  return typeof value === "string" && VALID_GATE2_STAGES.includes(value as Gate2Stage);
+}
+
 function readObservePassed(): boolean {
   try {
     const raw = localStorage.getItem(OBSERVE_STORAGE_KEY);
@@ -529,10 +577,7 @@ function readGate2Progress(): Gate2ProgressState {
     return {
       accessGranted: Boolean(parsed.accessGranted),
       privateHomeSeen: Boolean(parsed.privateHomeSeen),
-      currentStage:
-        typeof parsed.currentStage === "string"
-          ? (parsed.currentStage as Gate2Stage)
-          : "home",
+      currentStage: isValidGate2Stage(parsed.currentStage) ? parsed.currentStage : "home",
 
       modulesCompleted: Array.isArray(parsed.modulesCompleted)
         ? parsed.modulesCompleted.filter((item): item is string => typeof item === "string")
@@ -630,7 +675,6 @@ function writeGate2Bootstrap(email: string, displayName: string) {
     ...current,
     accessGranted: true,
     privateHomeSeen: false,
-    currentStage: current.currentStage,
   });
 }
 
@@ -909,9 +953,7 @@ export default function JalSolEnter() {
     }));
   }
 
-  function updateChecklist(
-    patch: Partial<Gate2ProgressState["checklist"]>
-  ) {
+  function updateChecklist(patch: Partial<Gate2ProgressState["checklist"]>) {
     patchProgress((prev) => {
       const nextChecklist = {
         ...prev.checklist,
@@ -1692,7 +1734,7 @@ export default function JalSolEnter() {
                 <section className="jal-bay jal-bay-wide" aria-label="Test result">
                   <div className="jal-bay-head">
                     <div className="jal-bay-title">
-                      {progress.test.passed ? "Test Passed" : "Test Not Passed"}
+                      {progress.test.passed ? "YOU PASSED!" : "TEST NOT PASSED"}
                     </div>
                     <div className="jal-bay-note">
                       Score: {progress.test.score} / {TEST_QUESTIONS.length}
@@ -1701,9 +1743,16 @@ export default function JalSolEnter() {
 
                   <p className="jal-note">
                     {progress.test.passed
-                      ? "Comprehension is confirmed. The readiness checklist is now available."
+                      ? "Comprehension is confirmed. You may now proceed to readiness validation."
                       : "Comprehension is not yet sufficient. Review the corrections, then retake the test."}
                   </p>
+
+                  {progress.test.passed && (
+                    <div className="jal-pass-banner" aria-label="Test pass status">
+                      <span>UNDERSTANDING CONFIRMED</span>
+                      <strong>5 / 5 READY TO PROCEED</strong>
+                    </div>
+                  )}
                 </section>
               )}
 
@@ -1726,14 +1775,25 @@ export default function JalSolEnter() {
                   Reset Test
                 </button>
 
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={submitComprehensionTest}
-                  disabled={loading || !allTestAnswered}
-                >
-                  Submit Test
-                </button>
+                {!progress.test.passed ? (
+                  <button
+                    type="button"
+                    className="button gold"
+                    onClick={submitComprehensionTest}
+                    disabled={loading || !allTestAnswered}
+                  >
+                    Submit Test
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="button gold"
+                    onClick={() => goToStage("checklist")}
+                    disabled={loading}
+                  >
+                    Proceed To Checklist
+                  </button>
+                )}
               </div>
             </section>
           )}
@@ -1760,71 +1820,35 @@ export default function JalSolEnter() {
                   <div className="jal-bay-note">Must all be true</div>
                 </div>
 
-                <label className="jal-check">
-                  <input
-                    type="checkbox"
-                    checked={progress.checklist.walletControlsAssets}
-                    onChange={(e) =>
-                      updateChecklist({ walletControlsAssets: e.target.checked })
-                    }
-                  />
-                  <span>I understand that a wallet controls access to assets.</span>
-                </label>
-
-                <label className="jal-check">
-                  <input
-                    type="checkbox"
-                    checked={progress.checklist.transactionsMayBeIrreversible}
-                    onChange={(e) =>
-                      updateChecklist({ transactionsMayBeIrreversible: e.target.checked })
-                    }
-                  />
-                  <span>I understand that transactions may be irreversible.</span>
-                </label>
-
-                <label className="jal-check">
-                  <input
-                    type="checkbox"
-                    checked={progress.checklist.custodyIsMyResponsibility}
-                    onChange={(e) =>
-                      updateChecklist({ custodyIsMyResponsibility: e.target.checked })
-                    }
-                  />
-                  <span>I understand that custody and responsibility are mine.</span>
-                </label>
-
-                <label className="jal-check">
-                  <input
-                    type="checkbox"
-                    checked={progress.checklist.verifyBeforeSigning}
-                    onChange={(e) =>
-                      updateChecklist({ verifyBeforeSigning: e.target.checked })
-                    }
-                  />
-                  <span>I understand I must verify details before signing any action.</span>
-                </label>
-
-                <label className="jal-check">
-                  <input
-                    type="checkbox"
-                    checked={progress.checklist.followGate2Order}
-                    onChange={(e) =>
-                      updateChecklist({ followGate2Order: e.target.checked })
-                    }
-                  />
-                  <span>I understand and will follow the required Gate 02 sequence.</span>
-                </label>
+                <ul className="jal-checklist">
+                  {CHECKLIST_ITEMS.map((item) => (
+                    <li key={item.key}>
+                      <label className="jal-check">
+                        <input
+                          type="checkbox"
+                          checked={progress.checklist[item.key] as boolean}
+                          onChange={(e) =>
+                            updateChecklist({
+                              [item.key]: e.target.checked,
+                            } as Partial<Gate2ProgressState["checklist"]>)
+                          }
+                        />
+                        <span>{item.label}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
               </section>
 
               {progress.checklist.completed && (
                 <section className="jal-bay jal-bay-wide" aria-label="Checklist complete">
                   <div className="jal-bay-head">
-                    <div className="jal-bay-title">Checklist Complete</div>
-                    <div className="jal-bay-note">Ready for trial briefing</div>
+                    <div className="jal-bay-title">READY</div>
+                    <div className="jal-bay-note">Trial unlocked</div>
                   </div>
 
                   <p className="jal-note">
-                    Procedural readiness is confirmed. The trial briefing is now available.
+                    Procedural readiness is confirmed. You may now enter the trial phase.
                   </p>
                 </section>
               )}
@@ -2198,7 +2222,18 @@ export default function JalSolEnter() {
                 <article className="jal-bullet">
                   <div className="jal-bullet-k">Explorer</div>
                   <div className="jal-bullet-v">
-                    {progress.transaction.explorerUrl || "No explorer link yet"}
+                    {progress.transaction.explorerUrl ? (
+                      <a
+                        href={progress.transaction.explorerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="jal-inline-link"
+                      >
+                        View on Solana Explorer
+                      </a>
+                    ) : (
+                      "No explorer link yet"
+                    )}
                   </div>
                 </article>
               </div>
@@ -2217,7 +2252,11 @@ export default function JalSolEnter() {
                   type="button"
                   className="button gold"
                   onClick={simulateTransactionConfirm}
-                  disabled={loading || !progress.transaction.initiated || progress.transaction.confirmed}
+                  disabled={
+                    loading ||
+                    !progress.transaction.initiated ||
+                    progress.transaction.confirmed
+                  }
                 >
                   Confirm Transaction Proof
                 </button>
