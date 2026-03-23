@@ -459,38 +459,49 @@ useEffect(() => {
     tokenFitPassed,
   ]);
 
-  function handleNext() {
-    if (loading || nextDisabled) return;
+function handleNext() {
+  if (loading || nextDisabled) return;
 
-    if (isLastStep) {
-      const passed = testPassed && tokenFitPassed;
+  if (isLastStep) {
+    const alreadyPassed = Boolean(completedAccess?.passed);
+    const quizPassedNow = alreadyPassed || testScore >= PASS_MARK;
+    const tokenFitPassedNow = alreadyPassed || tokenFitPassed;
+    const passed = quizPassedNow && tokenFitPassedNow;
 
-      const payload: ObserveAccessState = {
-        passed,
-        score: testScore,
-        total: TEST_QUESTIONS.length,
-        quizPassed: testPassed,
-        tokenFitPassed,
-        tokenFitScore,
-        tokenFitHighScore,
-        completedAt: Date.now(),
-        completedIso: new Date().toISOString(),
-        gate: "observe",
-        nextGate: "enter",
-      };
+    const payload: ObserveAccessState = {
+      passed,
+      score: alreadyPassed ? completedAccess?.score ?? testScore : testScore,
+      total: TEST_QUESTIONS.length,
+      quizPassed: quizPassedNow,
+      tokenFitPassed: tokenFitPassedNow,
+      tokenFitScore: alreadyPassed
+        ? completedAccess?.tokenFitScore ?? tokenFitScore
+        : tokenFitScore,
+      tokenFitHighScore: alreadyPassed
+        ? completedAccess?.tokenFitHighScore ?? tokenFitHighScore
+        : tokenFitHighScore,
+      completedAt: alreadyPassed
+        ? completedAccess?.completedAt ?? Date.now()
+        : Date.now(),
+      completedIso: alreadyPassed
+        ? completedAccess?.completedIso ?? new Date().toISOString()
+        : new Date().toISOString(),
+      gate: "observe",
+      nextGate: "enter",
+    };
 
-      localStorage.setItem(OBSERVE_STORAGE_KEY, JSON.stringify(payload));
+    localStorage.setItem(OBSERVE_STORAGE_KEY, JSON.stringify(payload));
 
-      if (passed) {
-        localStorage.removeItem(OBSERVE_PROGRESS_KEY);
-        beginRoute("/app/jal-sol/enter");
-      }
-
-      return;
+    if (passed) {
+      localStorage.removeItem(OBSERVE_PROGRESS_KEY);
+      beginRoute("/app/jal-sol/enter");
     }
 
-    setStepIndex((prev) => Math.min(prev + 1, OBSERVE_STEPS.length - 1));
+    return;
   }
+
+  setStepIndex((prev) => Math.min(prev + 1, OBSERVE_STEPS.length - 1));
+}
 
   const progressText = `${stepIndex + 1} / ${OBSERVE_STEPS.length}`;
 
