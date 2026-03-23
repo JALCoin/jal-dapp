@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 
 export type TokenFitGameProps = {
   minScore: number;
@@ -79,6 +80,8 @@ export default function TokenFitGame({
   onPass,
   onGameOver,
 }: TokenFitGameProps) {
+  const navigate = useNavigate();
+
   const [gameState, setGameState] = useState<TokenFitState>("idle");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -242,6 +245,14 @@ export default function TokenFitGame({
     resetWorld();
   }, [resetWorld]);
 
+const leaveToGate = useCallback(() => {
+  setIsFullscreen(false);
+  setGameState("idle");
+  gameStateRef.current = "idle";
+  resetWorld();
+  navigate("/app/jal-sol/level-1");
+}, [navigate, resetWorld]);
+
   useEffect(() => {
     if (!isFullscreen || typeof document === "undefined" || typeof window === "undefined") return;
 
@@ -351,15 +362,15 @@ export default function TokenFitGame({
         flap();
       }
 
-      if (event.code === "Escape" && isFullscreen) {
-        event.preventDefault();
-        closeTrial();
-      }
+if (event.code === "Escape" && isFullscreen) {
+  event.preventDefault();
+  leaveToGate();
+}
     }
 
     window.addEventListener("keydown", onKeyDown, { passive: false });
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [closeTrial, flap, isFullscreen]);
+ }, [flap, isFullscreen, leaveToGate]);
 
    const showCompactEntry = gameState === "idle";
 
@@ -727,10 +738,10 @@ export default function TokenFitGame({
               {isFullscreen && (
                 <button
                   type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    closeTrial();
-                  }}
+onClick={(event) => {
+  event.stopPropagation();
+  leaveToGate();
+}}
                   style={{
                     padding: hudPad,
                     borderRadius: 14,
@@ -1020,12 +1031,12 @@ export default function TokenFitGame({
                       Retry
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        closeTrial();
-                      }}
+<button
+  type="button"
+  onClick={(event) => {
+    event.stopPropagation();
+    leaveToGate();
+  }}
                       style={{
                         minWidth: isSmallViewport ? 120 : 140,
                         padding: "12px 18px",
