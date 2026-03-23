@@ -5856,103 +5856,66 @@ button.home-route-band{
 ========================================= */
 
 .jal-trial-entry{
-  position:relative;
   display:grid;
   gap:1rem;
-  padding:1.05rem;
+  padding:1rem;
   border:1px solid rgba(255,255,255,.08);
-  border-radius:1.28rem;
+  border-radius:1.25rem;
   background:
-    radial-gradient(720px 220px at 50% -6%, rgba(0,255,180,.08), transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+    radial-gradient(680px 180px at 50% 0%, rgba(0,255,180,.06), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.018),
+    inset 0 0 0 1px rgba(255,255,255,.02),
     0 18px 34px rgba(0,0,0,.24);
-  isolation:isolate;
-  contain:layout style;
-}
-
-.jal-trial-entry::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  pointer-events:none;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.035), transparent 28%, transparent 72%, rgba(0,255,180,.02));
-  opacity:.9;
 }
 
 .jal-trial-note{
   margin:0;
   max-width:64ch;
   line-height:1.7;
-  color:rgba(226,244,237,.84);
+  opacity:.84;
 }
 
 .jal-trial-preview{
   position:relative;
   overflow:hidden;
   display:grid;
-  gap:.58rem;
-  min-height:148px;
-  padding:1rem 1rem 1.08rem;
-  border-radius:1.12rem;
+  gap:.55rem;
+  min-height:140px;
+  padding:1rem 1rem 1.05rem;
+  border-radius:1.1rem;
   border:1px solid rgba(255,255,255,.08);
   background:
-    radial-gradient(560px 160px at 50% -4%, rgba(0,255,180,.09), transparent 64%),
+    radial-gradient(500px 140px at 50% 0%, rgba(0,255,180,.08), transparent 64%),
     linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.02),
-    0 12px 24px rgba(0,0,0,.18);
-}
-
-.jal-trial-preview::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.04), transparent 32%, transparent 72%, rgba(0,255,180,.03));
-  opacity:.9;
 }
 
 .jal-trial-preview::after{
   content:"";
   position:absolute;
-  left:0;
-  right:0;
-  bottom:0;
+  inset:auto 0 0 0;
   height:1px;
   background:linear-gradient(90deg, transparent, rgba(0,255,180,.35), transparent);
-  opacity:.72;
+  opacity:.7;
 }
 
 .jal-trial-preview-badge{
-  position:relative;
-  z-index:1;
   font-size:.72rem;
-  font-weight:600;
   text-transform:uppercase;
   letter-spacing:.16em;
-  color:rgba(205,255,237,.7);
+  opacity:.68;
 }
 
 .jal-trial-preview-title{
-  position:relative;
-  z-index:1;
   font-size:1.14rem;
   line-height:1.15;
   font-weight:700;
-  color:rgba(245,255,251,.97);
-  text-wrap:balance;
+  color:rgba(245,255,251,.96);
 }
 
 .jal-trial-preview-line{
-  position:relative;
-  z-index:1;
   max-width:52ch;
-  line-height:1.66;
+  line-height:1.65;
   color:rgba(225,244,236,.82);
 }
 
@@ -5960,60 +5923,40 @@ button.home-route-band{
   display:grid;
   grid-template-columns:repeat(3, minmax(0, 1fr));
   gap:.9rem;
-  align-items:stretch;
 }
 
 .jal-trial-card{
   position:relative;
   overflow:hidden;
-  display:grid;
-  align-content:start;
-  min-height:100%;
   padding:1rem;
   border-radius:1rem;
   border:1px solid rgba(255,255,255,.08);
   background:
-    radial-gradient(580px 140px at 50% -4%, rgba(0,255,180,.055), transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,.026), rgba(255,255,255,.012));
+    radial-gradient(560px 120px at 50% 0%, rgba(0,255,180,.05), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.012));
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.018),
+    inset 0 0 0 1px rgba(255,255,255,.02),
     0 12px 26px rgba(0,0,0,.22);
-}
-
-.jal-trial-card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.025), transparent 34%, transparent 72%, rgba(0,255,180,.02));
 }
 
 .jal-trial-card::after{
   content:"";
   position:absolute;
-  left:0;
-  right:0;
-  bottom:0;
+  inset:auto 0 0 0;
   height:1px;
   background:linear-gradient(90deg, transparent, rgba(0,255,180,.35), transparent);
-  opacity:.66;
+  opacity:.65;
 }
 
 .jal-trial-k{
-  position:relative;
-  z-index:1;
-  margin:0 0 .45rem;
   font-size:.72rem;
-  font-weight:600;
   text-transform:uppercase;
   letter-spacing:.14em;
-  color:rgba(205,255,237,.67);
+  opacity:.66;
+  margin-bottom:.42rem;
 }
 
 .jal-trial-v{
-  position:relative;
-  z-index:1;
   font-size:.94rem;
   line-height:1.62;
   color:rgba(231,255,247,.9);
@@ -6023,7 +5966,6 @@ button.home-route-band{
   display:flex;
   gap:.75rem;
   flex-wrap:wrap;
-  align-items:center;
   margin-top:.2rem;
 }
 
@@ -6033,7 +5975,6 @@ button.home-route-band{
 
 .jal-tokenfit-shell{
   width:100%;
-  contain:layout style;
 }
 
 .jal-tokenfit-inline-head{
@@ -6047,7 +5988,6 @@ button.home-route-band{
   justify-content:center;
   align-items:center;
   width:100%;
-  overflow:hidden;
 }
 
 .jal-tokenfit-fullscreen{
@@ -6066,7 +6006,6 @@ button.home-route-band{
   overscroll-behavior:none;
   touch-action:none;
   -webkit-tap-highlight-color:transparent;
-  contain:strict;
 }
 
 .jal-tokenfit-scene-frame{
@@ -6076,7 +6015,6 @@ button.home-route-band{
   height:100%;
   max-width:100vw;
   max-height:100dvh;
-  overflow:hidden;
   cursor:pointer;
   user-select:none;
   -webkit-user-select:none;
@@ -6085,7 +6023,6 @@ button.home-route-band{
   touch-action:none;
   outline:none;
   flex:0 0 auto;
-  backface-visibility:hidden;
 }
 
 .jal-trial-entry,
@@ -6110,7 +6047,6 @@ button,
 
 @media (max-width:760px){
   .jal-trial-entry{
-    gap:.92rem;
     padding:.95rem;
     border-radius:1rem;
   }
@@ -6118,7 +6054,6 @@ button,
   .jal-trial-preview{
     min-height:unset;
     padding:.95rem;
-    border-radius:1rem;
   }
 
   .jal-trial-preview-title{
@@ -6127,16 +6062,10 @@ button,
 
   .jal-trial-grid{
     grid-template-columns:1fr;
-    gap:.8rem;
-  }
-
-  .jal-trial-card{
-    padding:.95rem;
   }
 
   .jal-trial-actions{
     flex-direction:column;
-    align-items:stretch;
   }
 
   .jal-trial-actions .button{

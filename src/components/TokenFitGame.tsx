@@ -361,7 +361,7 @@ export default function TokenFitGame({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeTrial, flap, isFullscreen]);
 
-  const showCompactEntry = !isFullscreen && gameState === "idle";
+   const showCompactEntry = gameState === "idle";
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -1160,9 +1160,9 @@ export default function TokenFitGame({
     );
   }
 
-  if (isFullscreen && typeof document !== "undefined") {
-    return createPortal(gameView, document.body);
-  }
+if (isFullscreen && typeof document !== "undefined" && document.body) {
+  return createPortal(gameView, document.body);
+}
 
   return gameView;
 }
