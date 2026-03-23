@@ -5997,11 +5997,12 @@ button.home-route-band{
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:10px;
   width:100vw;
   height:100dvh;
   min-height:100dvh;
-  background:rgba(2,8,16,.985);
+  padding:0;
+  background:#020810;
+  overflow:hidden;
   overscroll-behavior:none;
   touch-action:none;
   -webkit-tap-highlight-color:transparent;
@@ -6009,7 +6010,11 @@ button.home-route-band{
 
 .jal-tokenfit-scene-frame{
   position:relative;
-  margin:0 auto;
+  margin:0;
+  width:100%;
+  height:100%;
+  max-width:100vw;
+  max-height:100dvh;
   cursor:pointer;
   user-select:none;
   -webkit-user-select:none;
@@ -6017,8 +6022,6 @@ button.home-route-band{
   -webkit-touch-callout:none;
   touch-action:none;
   outline:none;
-  max-width:100%;
-  max-height:100%;
   flex:0 0 auto;
 }
 

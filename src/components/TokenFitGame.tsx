@@ -8,6 +8,7 @@ export type TokenFitGameProps = {
 };
 
 type TokenFitState = "idle" | "countdown" | "playing" | "gameover" | "passed";
+type ViewMode = "portrait" | "landscape";
 
 type Pipe = {
   id: number;
@@ -18,23 +19,17 @@ type Pipe = {
 
 const STORAGE_KEY = "jal_token_fit_high_score";
 
-const BASE_GAME_WIDTH = 960;
-const BASE_GAME_HEIGHT = 540;
+const LANDSCAPE_WORLD_WIDTH = 960;
+const LANDSCAPE_WORLD_HEIGHT = 540;
+
+const PORTRAIT_WORLD_WIDTH = 420;
+const PORTRAIT_WORLD_HEIGHT = 820;
 
 const TOKEN_SIZE = 42;
-const TOKEN_X = 180;
 
 const GRAVITY = 0.34;
 const JUMP_FORCE = -5.9;
-
-const PIPE_WIDTH = 96;
-const PIPE_GAP = 190;
-const PIPE_SPEED = 2.3;
 const PIPE_SPAWN_EVERY = 1500;
-
-const FLOOR_HEIGHT = 74;
-const CEILING_HEIGHT = 18;
-
 const COUNTDOWN_SECONDS = 3;
 
 function clamp(value: number, min: number, max: number) {
@@ -55,7 +50,7 @@ function saveHighScore(score: number) {
 
 function getViewportSize() {
   if (typeof window === "undefined") {
-    return { width: BASE_GAME_WIDTH, height: BASE_GAME_HEIGHT };
+    return { width: LANDSCAPE_WORLD_WIDTH, height: LANDSCAPE_WORLD_HEIGHT };
   }
 
   const vv = window.visualViewport;
@@ -77,15 +72,16 @@ export default function TokenFitGame({
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => loadHighScore());
 
-  const [tokenY, setTokenY] = useState(BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
+  const [viewMode, setViewMode] = useState<ViewMode>("landscape");
+  const [sceneScale, setSceneScale] = useState(1);
+  const [sceneWidth, setSceneWidth] = useState(LANDSCAPE_WORLD_WIDTH);
+  const [sceneHeight, setSceneHeight] = useState(LANDSCAPE_WORLD_HEIGHT);
+
+  const initialPortraitY = PORTRAIT_WORLD_HEIGHT / 2 - TOKEN_SIZE / 2;
+  const [tokenY, setTokenY] = useState(initialPortraitY);
   const [velocity, setVelocity] = useState(0);
   const [pipes, setPipes] = useState<Pipe[]>([]);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
-
-  const [sceneScale, setSceneScale] = useState(1);
-  const [sceneWidth, setSceneWidth] = useState(BASE_GAME_WIDTH);
-  const [sceneHeight, setSceneHeight] = useState(BASE_GAME_HEIGHT);
-  const [viewportMode, setViewportMode] = useState<"portrait" | "landscape">("landscape");
 
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
@@ -95,7 +91,7 @@ export default function TokenFitGame({
 
   const scoreRef = useRef(0);
   const gameStateRef = useRef<TokenFitState>("idle");
-  const tokenYRef = useRef(BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2);
+  const tokenYRef = useRef(initialPortraitY);
   const velocityRef = useRef(0);
   const pipesRef = useRef<Pipe[]>([]);
 
@@ -130,8 +126,26 @@ export default function TokenFitGame({
     pipesRef.current = pipes;
   }, [pipes]);
 
+  const isPortrait = viewMode === "portrait";
+
+  const worldWidth = isPortrait ? PORTRAIT_WORLD_WIDTH : LANDSCAPE_WORLD_WIDTH;
+  const worldHeight = isPortrait ? PORTRAIT_WORLD_HEIGHT : LANDSCAPE_WORLD_HEIGHT;
+
+  const tokenX = isPortrait ? 104 : 180;
+  const pipeWidth = isPortrait ? 78 : 96;
+  const pipeGap = isPortrait ? 220 : 190;
+  const pipeSpeed = isPortrait ? 2.6 : 2.3;
+
+  const floorHeight = isPortrait ? 110 : 74;
+  const ceilingHeight = isPortrait ? 24 : 18;
+
+  const hintBottom = isPortrait ? 140 : 98;
+  const liftButtonRight = 20;
+  const liftButtonBottom = 148;
+  const liftButtonSize = 88;
+
   const resetWorld = useCallback(() => {
-    const startY = BASE_GAME_HEIGHT / 2 - TOKEN_SIZE / 2;
+    const startY = worldHeight / 2 - TOKEN_SIZE / 2;
 
     setScore(0);
     scoreRef.current = 0;
@@ -151,7 +165,7 @@ export default function TokenFitGame({
     spawnTimerRef.current = 0;
     nextPipeIdRef.current = 1;
     lastRenderRef.current = 0;
-  }, []);
+  }, [worldHeight]);
 
   const endGame = useCallback(
     (nextState: "gameover" | "passed") => {
@@ -179,8 +193,7 @@ export default function TokenFitGame({
   const flap = useCallback(() => {
     const current = gameStateRef.current;
 
-    if (current === "idle") return;
-    if (current === "countdown") return;
+    if (current === "idle" || current === "countdown") return;
 
     if (current === "gameover" || current === "passed") {
       resetWorld();
@@ -188,10 +201,8 @@ export default function TokenFitGame({
       return;
     }
 
-    if (current === "playing") {
-      velocityRef.current = JUMP_FORCE;
-      setVelocity(JUMP_FORCE);
-    }
+    velocityRef.current = JUMP_FORCE;
+    setVelocity(JUMP_FORCE);
   }, [resetWorld]);
 
   const beginPlaying = useCallback(() => {
@@ -250,23 +261,24 @@ export default function TokenFitGame({
   useEffect(() => {
     function updateSceneScale() {
       const { width: viewportWidth, height: viewportHeight } = getViewportSize();
-      const isPortraitNow = viewportHeight > viewportWidth;
+      const nextMode: ViewMode = viewportHeight > viewportWidth ? "portrait" : "landscape";
+      const nextWorldWidth =
+        nextMode === "portrait" ? PORTRAIT_WORLD_WIDTH : LANDSCAPE_WORLD_WIDTH;
+      const nextWorldHeight =
+        nextMode === "portrait" ? PORTRAIT_WORLD_HEIGHT : LANDSCAPE_WORLD_HEIGHT;
 
-      setViewportMode(isPortraitNow ? "portrait" : "landscape");
+      setViewMode(nextMode);
 
-      const outerPadX = isFullscreen ? 10 : 0;
-      const outerPadY = isFullscreen ? 10 : 0;
+      const availableWidth = Math.max(280, viewportWidth);
+      const availableHeight = Math.max(320, viewportHeight);
 
-      const availableWidth = Math.max(280, viewportWidth - outerPadX * 2);
-      const availableHeight = Math.max(260, viewportHeight - outerPadY * 2);
-
-      const scaleX = availableWidth / BASE_GAME_WIDTH;
-      const scaleY = availableHeight / BASE_GAME_HEIGHT;
-      const nextScale = Math.min(scaleX, scaleY, 1);
+      const scaleX = availableWidth / nextWorldWidth;
+      const scaleY = availableHeight / nextWorldHeight;
+      const nextScale = Math.min(scaleX, scaleY);
 
       setSceneScale(nextScale);
-      setSceneWidth(Math.round(BASE_GAME_WIDTH * nextScale));
-      setSceneHeight(Math.round(BASE_GAME_HEIGHT * nextScale));
+      setSceneWidth(Math.round(nextWorldWidth * nextScale));
+      setSceneHeight(Math.round(nextWorldHeight * nextScale));
     }
 
     updateSceneScale();
@@ -283,7 +295,7 @@ export default function TokenFitGame({
       vv?.removeEventListener("resize", updateSceneScale);
       vv?.removeEventListener("scroll", updateSceneScale);
     };
-  }, [isFullscreen]);
+  }, []);
 
   useEffect(() => {
     if (gameState !== "countdown") return;
@@ -318,12 +330,6 @@ export default function TokenFitGame({
   }, [closeTrial, flap, isFullscreen]);
 
   const showCompactEntry = !isFullscreen && gameState === "idle";
-  const isPortrait = viewportMode === "portrait";
-
-  const responsiveTokenX = isPortrait ? 144 : TOKEN_X;
-  const responsivePipeWidth = isPortrait ? 84 : PIPE_WIDTH;
-  const responsivePipeGap = isPortrait ? 178 : PIPE_GAP;
-  const responsivePipeSpeed = isPortrait ? 2.15 : PIPE_SPEED;
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -334,8 +340,8 @@ export default function TokenFitGame({
       return;
     }
 
-    const topBound = CEILING_HEIGHT;
-    const bottomBound = BASE_GAME_HEIGHT - FLOOR_HEIGHT - TOKEN_SIZE;
+    const topBound = ceilingHeight;
+    const bottomBound = worldHeight - floorHeight - TOKEN_SIZE;
 
     const tick = (now: number) => {
       if (lastFrameRef.current == null) {
@@ -368,16 +374,15 @@ export default function TokenFitGame({
       if (spawnTimerRef.current >= PIPE_SPAWN_EVERY) {
         spawnTimerRef.current = 0;
 
-        const gapPaddingTop = 76;
-        const gapPaddingBottom = 104;
-        const minGapY = gapPaddingTop + responsivePipeGap / 2;
-        const maxGapY =
-          BASE_GAME_HEIGHT - FLOOR_HEIGHT - gapPaddingBottom - responsivePipeGap / 2;
+        const gapPaddingTop = isPortrait ? 110 : 76;
+        const gapPaddingBottom = isPortrait ? 150 : 104;
+        const minGapY = gapPaddingTop + pipeGap / 2;
+        const maxGapY = worldHeight - floorHeight - gapPaddingBottom - pipeGap / 2;
         const gapY = Math.random() * (maxGapY - minGapY) + minGapY;
 
         pipesRef.current.push({
           id: nextPipeIdRef.current++,
-          x: BASE_GAME_WIDTH + 40,
+          x: worldWidth + 40,
           gapY,
           scored: false,
         });
@@ -385,10 +390,10 @@ export default function TokenFitGame({
 
       const updatedPipes = pipesRef.current
         .map((pipe) => {
-          const nextX = pipe.x - responsivePipeSpeed * frameScale;
+          const nextX = pipe.x - pipeSpeed * frameScale;
           let nextPipe = { ...pipe, x: nextX };
 
-          if (!pipe.scored && nextX + responsivePipeWidth < responsiveTokenX) {
+          if (!pipe.scored && nextX + pipeWidth < tokenX) {
             nextPipe = { ...nextPipe, scored: true };
 
             const nextScore = scoreRef.current + 1;
@@ -402,7 +407,7 @@ export default function TokenFitGame({
 
           return nextPipe;
         })
-        .filter((pipe) => pipe.x + responsivePipeWidth > -60);
+        .filter((pipe) => pipe.x + pipeWidth > -60);
 
       pipesRef.current = updatedPipes;
 
@@ -425,32 +430,45 @@ export default function TokenFitGame({
         rafRef.current = null;
       }
     };
-  }, [endGame, gameState, minScore, responsivePipeGap, responsivePipeSpeed, responsivePipeWidth, responsiveTokenX]);
+  }, [
+    ceilingHeight,
+    endGame,
+    floorHeight,
+    gameState,
+    isPortrait,
+    minScore,
+    pipeGap,
+    pipeSpeed,
+    pipeWidth,
+    tokenX,
+    worldHeight,
+    worldWidth,
+  ]);
 
   useEffect(() => {
     if (gameState !== "playing") return;
 
-    const tokenLeft = responsiveTokenX;
-    const tokenRight = responsiveTokenX + TOKEN_SIZE;
+    const tokenLeft = tokenX;
+    const tokenRight = tokenX + TOKEN_SIZE;
     const tokenTop = tokenY;
     const tokenBottom = tokenY + TOKEN_SIZE;
 
     for (const pipe of pipes) {
       const pipeLeft = pipe.x;
-      const pipeRight = pipe.x + responsivePipeWidth;
+      const pipeRight = pipe.x + pipeWidth;
 
       const withinX = tokenRight > pipeLeft && tokenLeft < pipeRight;
       if (!withinX) continue;
 
-      const gapTop = pipe.gapY - responsivePipeGap / 2;
-      const gapBottom = pipe.gapY + responsivePipeGap / 2;
+      const gapTop = pipe.gapY - pipeGap / 2;
+      const gapBottom = pipe.gapY + pipeGap / 2;
 
       if (tokenTop < gapTop || tokenBottom > gapBottom) {
         endGame("gameover");
         return;
       }
     }
-  }, [endGame, gameState, pipes, tokenY, responsivePipeGap, responsivePipeWidth, responsiveTokenX]);
+  }, [endGame, gameState, pipeGap, pipeWidth, pipes, tokenX, tokenY]);
 
   const statusText = useMemo(() => {
     if (gameState === "passed") return "Trial Complete";
@@ -507,27 +525,37 @@ export default function TokenFitGame({
             }
           }}
           className="jal-tokenfit-scene-frame"
-          style={{
-            width: `${sceneWidth}px`,
-            height: `${sceneHeight}px`,
-          }}
+          style={
+            isFullscreen
+              ? {
+                  width: "100vw",
+                  height: "100dvh",
+                }
+              : {
+                  width: `${sceneWidth}px`,
+                  height: `${sceneHeight}px`,
+                }
+          }
         >
           <div
             style={{
               position: "absolute",
-              left: 0,
-              top: 0,
-              width: `${BASE_GAME_WIDTH}px`,
-              height: `${BASE_GAME_HEIGHT}px`,
-              transform: `scale(${sceneScale})`,
-              transformOrigin: "top left",
+              left: isFullscreen ? "50%" : 0,
+              top: isFullscreen ? "50%" : 0,
+              width: `${worldWidth}px`,
+              height: `${worldHeight}px`,
+              transform: isFullscreen
+                ? `translate(-50%, -50%) scale(${sceneScale})`
+                : `scale(${sceneScale})`,
+              transformOrigin: isFullscreen ? "center center" : "top left",
               overflow: "hidden",
-              borderRadius: isFullscreen ? "22px" : "28px",
-              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: isFullscreen ? "0px" : "28px",
+              border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
               background:
                 "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
-              boxShadow:
-                "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
+              boxShadow: isFullscreen
+                ? "none"
+                : "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
             }}
           >
             <div
@@ -670,9 +698,9 @@ export default function TokenFitGame({
             </div>
 
             {pipes.map((pipe) => {
-              const topPipeHeight = pipe.gapY - responsivePipeGap / 2;
-              const bottomPipeY = pipe.gapY + responsivePipeGap / 2;
-              const bottomPipeHeight = BASE_GAME_HEIGHT - FLOOR_HEIGHT - bottomPipeY;
+              const topPipeHeight = pipe.gapY - pipeGap / 2;
+              const bottomPipeY = pipe.gapY + pipeGap / 2;
+              const bottomPipeHeight = worldHeight - floorHeight - bottomPipeY;
 
               return (
                 <div key={pipe.id}>
@@ -681,7 +709,7 @@ export default function TokenFitGame({
                       position: "absolute",
                       left: pipe.x,
                       top: 0,
-                      width: responsivePipeWidth,
+                      width: pipeWidth,
                       height: topPipeHeight,
                       borderRadius: "0 0 20px 20px",
                       background:
@@ -695,7 +723,7 @@ export default function TokenFitGame({
                       position: "absolute",
                       left: pipe.x - 8,
                       top: topPipeHeight - 20,
-                      width: responsivePipeWidth + 16,
+                      width: pipeWidth + 16,
                       height: 20,
                       borderRadius: 12,
                       background: "rgba(0,255,180,0.16)",
@@ -708,7 +736,7 @@ export default function TokenFitGame({
                       position: "absolute",
                       left: pipe.x,
                       top: bottomPipeY,
-                      width: responsivePipeWidth,
+                      width: pipeWidth,
                       height: bottomPipeHeight,
                       borderRadius: "20px 20px 0 0",
                       background:
@@ -722,7 +750,7 @@ export default function TokenFitGame({
                       position: "absolute",
                       left: pipe.x - 8,
                       top: bottomPipeY,
-                      width: responsivePipeWidth + 16,
+                      width: pipeWidth + 16,
                       height: 20,
                       borderRadius: 12,
                       background: "rgba(0,255,180,0.16)",
@@ -736,7 +764,7 @@ export default function TokenFitGame({
             <div
               style={{
                 position: "absolute",
-                left: responsiveTokenX,
+                left: tokenX,
                 top: tokenY,
                 width: TOKEN_SIZE,
                 height: TOKEN_SIZE,
@@ -765,7 +793,7 @@ export default function TokenFitGame({
                 position: "absolute",
                 left: 0,
                 right: 0,
-                bottom: FLOOR_HEIGHT,
+                bottom: floorHeight,
                 height: 1,
                 background: "rgba(255,255,255,0.08)",
               }}
@@ -777,7 +805,7 @@ export default function TokenFitGame({
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: FLOOR_HEIGHT,
+                height: floorHeight,
                 background:
                   "linear-gradient(180deg, rgba(13,22,18,0.96), rgba(7,13,10,1) 65%, rgba(3,6,5,1) 100%)",
                 borderTop: "1px solid rgba(255,255,255,0.08)",
@@ -790,7 +818,7 @@ export default function TokenFitGame({
                 left: 0,
                 right: 0,
                 top: 0,
-                height: CEILING_HEIGHT,
+                height: ceilingHeight,
                 background: "rgba(255,255,255,0.05)",
               }}
             />
@@ -965,7 +993,7 @@ export default function TokenFitGame({
                 style={{
                   position: "absolute",
                   left: "50%",
-                  bottom: isSmallViewport ? 84 : 98,
+                  bottom: hintBottom,
                   transform: "translateX(-50%)",
                   padding: isSmallViewport ? "8px 12px" : "10px 16px",
                   borderRadius: 999,
@@ -993,10 +1021,10 @@ export default function TokenFitGame({
                 }}
                 style={{
                   position: "absolute",
-                  right: 24,
-                  bottom: 96,
-                  width: 92,
-                  height: 92,
+                  right: liftButtonRight,
+                  bottom: liftButtonBottom,
+                  width: liftButtonSize,
+                  height: liftButtonSize,
                   borderRadius: "50%",
                   border: "1px solid rgba(0,255,180,0.28)",
                   background: "rgba(0,255,180,0.10)",
