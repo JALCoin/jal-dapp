@@ -16,7 +16,6 @@ import Engine from "./pages/Engine";
 import ShopPage from "./pages/Shop";
 import JalSolPage from "./pages/JalSol";
 import JalSolSuccess from "./pages/JalSolSuccess";
-import JalSolLevel1 from "./pages/JalSolLevel1";
 import JalSolObserve from "./pages/JalSolObserve";
 import JalSolEnter from "./pages/JalSolEnter";
 import JalSolBuild from "./pages/JalSolBuild";
@@ -177,7 +176,6 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
               { to: "/app/jal-sol/observe", label: "Gate 1 — Observe" },
               { to: "/app/jal-sol/enter", label: "Gate 2 — Enter" },
               { to: "/app/jal-sol/build", label: "Gate 3 — Build" },
-              { to: "/app/jal-sol/level-1", label: "Level 1" },
             ]}
           />
 
@@ -314,7 +312,6 @@ function AppShell() {
         <Route path="jal-sol/enter" element={<JalSolEnter />} />
         <Route path="jal-sol/build" element={<JalSolBuild />} />
         <Route path="jal-sol/success" element={<JalSolSuccess />} />
-        <Route path="jal-sol/level-1" element={<JalSolLevel1 />} />
 
         <Route path="token" element={<FeaturePage title="Token Generation" />} />
         <Route path="raydium" element={<FeaturePage title="Raydium / Liquidity" />} />
