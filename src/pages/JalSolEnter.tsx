@@ -90,6 +90,26 @@ type Gate2ProgressState = {
   };
 };
 
+type ModuleContent = {
+  stage: Extract<
+    Gate2Stage,
+    | "module-1-wallet"
+    | "module-2-custody"
+    | "module-3-finality"
+    | "module-4-connection"
+    | "module-5-action-path"
+    | "module-6-verification"
+  >;
+  title: string;
+  note: string;
+  meaning: string[];
+  requirement: string[];
+  risk: string[];
+  acknowledgementKey: keyof Gate2ProgressState["acknowledgements"];
+  acknowledgementText: string;
+  nextStage: Gate2Stage;
+};
+
 const OBSERVE_STORAGE_KEY = "jal_observe_complete_v1";
 const GATE2_ACCESS_KEY = "gate2_access";
 const GATE2_EMAIL_KEY = "gate2_email";
@@ -194,6 +214,147 @@ const PRIVATE_OUTCOMES: GatePoint[] = [
   {
     k: "Build Readiness",
     v: "Gate 03 opens as the next step: creation, ownership, token identity, and utility.",
+  },
+];
+
+const MODULE_CONTENT: ModuleContent[] = [
+  {
+    stage: "module-1-wallet",
+    title: "Module 1 — Wallet",
+    note: "Control point",
+    meaning: [
+      "A wallet is not decoration and it is not only a login.",
+      "Inside Gate 02, the wallet is the point of control that gives authority to sign real actions.",
+      "Once a wallet is connected and used, movement stops being theoretical.",
+    ],
+    requirement: [
+      "Understand that wallet connection is not cosmetic.",
+      "Understand that the wallet is where signing authority begins.",
+      "Understand that later Gate 02 phases depend on this control point being handled correctly.",
+    ],
+    risk: [
+      "If the user treats wallet connection like a harmless login, they may approve an action without understanding what they are authorising.",
+      "Gate 02 exists to stop that kind of careless movement before it happens.",
+    ],
+    acknowledgementKey: "wallet",
+    acknowledgementText:
+      "I understand that a wallet controls access and signing authority.",
+    nextStage: "module-2-custody",
+  },
+  {
+    stage: "module-2-custody",
+    title: "Module 2 — Custody",
+    note: "Responsibility layer",
+    meaning: [
+      "Custody means who holds practical responsibility for control and error.",
+      "On a guided platform, some burden is carried by the platform.",
+      "As the user moves closer to direct wallet control, responsibility moves closer to the user.",
+    ],
+    requirement: [
+      "Understand that control and responsibility travel together.",
+      "Understand that more direct control means less room for careless behaviour.",
+      "Understand that Gate 02 is preparing the user to act with ownership, not dependency.",
+    ],
+    risk: [
+      "If the user wants the benefits of control without the responsibility of control, errors become more likely.",
+      "Custody confusion creates false confidence before real consequence.",
+    ],
+    acknowledgementKey: "custody",
+    acknowledgementText:
+      "I understand that whoever carries control also carries responsibility.",
+    nextStage: "module-3-finality",
+  },
+  {
+    stage: "module-3-finality",
+    title: "Module 3 — Transaction Finality",
+    note: "Irreversibility",
+    meaning: [
+      "A transaction is a signed instruction that can change state.",
+      "Once an instruction is signed and confirmed, reversal may not be available.",
+      "Finality is what makes careless movement expensive.",
+    ],
+    requirement: [
+      "Understand that the system is not asking for random clicks.",
+      "Understand that later signing phases must be reviewed before approval.",
+      "Understand that consequence is part of why Gate 02 is structured slowly.",
+    ],
+    risk: [
+      "If the user assumes every action can be undone, they will treat signing too casually.",
+      "Believing that confirmation is harmless destroys procedural discipline.",
+    ],
+    acknowledgementKey: "finality",
+    acknowledgementText:
+      "I understand that signed and confirmed transactions may be irreversible.",
+    nextStage: "module-4-connection",
+  },
+  {
+    stage: "module-4-connection",
+    title: "Module 4 — Connection and Signing",
+    note: "Authority binding",
+    meaning: [
+      "Connection binds the user’s wallet to a live system context.",
+      "Signing is the act that proves the user is authorising the instruction.",
+      "Connection without understanding creates friction. Signing without understanding creates damage.",
+    ],
+    requirement: [
+      "Understand the difference between being connected and approving an action.",
+      "Understand that signing is not only technical — it is behavioural authority.",
+      "Understand that the user must review details before granting approval.",
+    ],
+    risk: [
+      "If the user does not distinguish connection from signing, they may authorise something they did not intend.",
+      "A rushed signer becomes vulnerable to avoidable mistakes.",
+    ],
+    acknowledgementKey: "connection",
+    acknowledgementText:
+      "I understand that connection and signing are different, and signing grants real authority.",
+    nextStage: "module-5-action-path",
+  },
+  {
+    stage: "module-5-action-path",
+    title: "Module 5 — First Real Action Path",
+    note: "Execution preview",
+    meaning: [
+      "Gate 02 does not jump from theory into unexplained execution.",
+      "The real action phase will require wallet connection, transaction review, and a fixed minimal SOL transfer.",
+      "This path exists so the user knows what is coming before consequence is live.",
+    ],
+    requirement: [
+      "Understand the order: learn, test, checklist, trial, wallet, transaction, verification.",
+      "Understand that the real action will be deliberate, not spontaneous.",
+      "Understand that the transfer phase is the participant threshold.",
+    ],
+    risk: [
+      "If the real path feels vague, the user begins guessing.",
+      "Execution without a clear path causes hesitation or blind approval.",
+    ],
+    acknowledgementKey: "actionPath",
+    acknowledgementText:
+      "I understand the required action path and the order Gate 02 will follow.",
+    nextStage: "module-6-verification",
+  },
+  {
+    stage: "module-6-verification",
+    title: "Module 6 — Verification",
+    note: "Proof layer",
+    meaning: [
+      "Verification is what separates a claimed action from a proven one.",
+      "Gate 02 does not succeed because the user says they acted. It succeeds because proof is visible.",
+      "Wallet address, transaction signature, confirmation state, and explorer proof complete the sequence.",
+    ],
+    requirement: [
+      "Understand that proof must be shown after the real transaction phase.",
+      "Understand that verification is part of the pass condition, not a nice extra.",
+      "Understand that participant state is only granted after proof exists.",
+    ],
+    risk: [
+      "Without verification, completion becomes guesswork.",
+      "If proof is not required, Gate 02 loses legitimacy and seriousness.",
+    ],
+    acknowledgementKey: "verification",
+    acknowledgementText:
+      "I understand that Gate 02 requires visible verification, not just claimed completion.",
+    nextStage: "test",
   },
 ];
 
@@ -526,28 +687,30 @@ export default function JalSolEnter() {
     goToStage("home");
   }
 
-  function handleWalletModuleContinue() {
-    if (!progress.acknowledgements.wallet || loading) return;
-
-    markModuleCompleted("module-1-wallet");
-    goToStage("module-2-custody");
+  function handleModuleContinue(module: ModuleContent) {
+    if (!progress.acknowledgements[module.acknowledgementKey] || loading) return;
+    markModuleCompleted(module.stage);
+    goToStage(module.nextStage);
   }
 
   const canEnterGate2 = adminBypass || (observePassed && gate2Access);
   const needsPublicUnlock = !adminBypass && observePassed && !gate2Access;
+  const currentStage = progress.currentStage;
 
   const accessLabel = adminBypass
     ? "Private Admin Access"
     : observePassed
     ? gate2Access
-      ? progress.currentStage === "home"
+      ? currentStage === "home"
         ? "Entry Sequence Ready"
         : "Sequence Active"
       : "Ready To Enter"
     : "Locked — Observe Required";
 
-  const currentStage = progress.currentStage;
-  const walletAckChecked = progress.acknowledgements.wallet;
+  const activeModule =
+    currentStage.startsWith("module-")
+      ? MODULE_CONTENT.find((module) => module.stage === currentStage)
+      : null;
 
   return (
     <main
@@ -980,195 +1143,90 @@ export default function JalSolEnter() {
             </>
           )}
 
-          {canEnterGate2 && currentStage === "module-1-wallet" && (
-            <>
-              <section className="jal-bay jal-bay-wide" aria-label="Module 1 wallet">
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">Module 1 — Wallet</div>
-                  <div className="jal-bay-note">Control point</div>
-                </div>
-
-                <p className="jal-note">
-                  A wallet is not decoration and it is not only a login. Inside Gate 02, the wallet
-                  is the point of control that gives authority to sign real actions.
-                </p>
-
-                <div className="jal-grid" aria-label="Wallet module structure">
-                  <section className="jal-bay">
-                    <div className="jal-bay-head">
-                      <div className="jal-bay-title">What this means</div>
-                      <div className="jal-bay-note">Definition</div>
-                    </div>
-
-                    <p className="jal-note">
-                      The wallet is where the user moves from observation toward authority. Once a
-                      wallet is connected and used, actions stop being theoretical.
-                    </p>
-
-                    <p className="jal-lock-text">
-                      A wallet controls access and signing authority.
-                    </p>
-                  </section>
-
-                  <section className="jal-bay">
-                    <div className="jal-bay-head">
-                      <div className="jal-bay-title">What you must do</div>
-                      <div className="jal-bay-note">Requirement</div>
-                    </div>
-
-                    <p className="jal-note">
-                      Understand that wallet connection is not a cosmetic step. It prepares the user
-                      to approve real instructions that can affect assets and state.
-                    </p>
-
-                    <p className="jal-lock-text">
-                      Connection is the threshold between explanation and consequence.
-                    </p>
-                  </section>
-                </div>
-
-                <section className="jal-bay jal-bay-wide" aria-label="Wallet risk">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">What can go wrong</div>
-                    <div className="jal-bay-note">Risk</div>
-                  </div>
-
-                  <p className="jal-note">
-                    If the user treats wallet connection like a harmless login, they may approve an
-                    action without understanding what they are authorising.
-                  </p>
-
-                  <p className="jal-lock-text">
-                    Gate 02 exists to stop that kind of careless movement before it happens.
-                  </p>
-                </section>
-
-                <section className="jal-bay jal-bay-wide" aria-label="Wallet acknowledgement">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">Required acknowledgement</div>
-                    <div className="jal-bay-note">Must confirm</div>
-                  </div>
-
-                  <label className="jal-check">
-                    <input
-                      type="checkbox"
-                      checked={walletAckChecked}
-                      onChange={(e) =>
-                        updateAcknowledgements({
-                          wallet: e.target.checked,
-                        })
-                      }
-                    />
-                    <span>
-                      I understand that a wallet controls access and signing authority.
-                    </span>
-                  </label>
-
-                  <div className="jal-bay-actions">
-                    <button
-                      type="button"
-                      className="button ghost"
-                      onClick={handleReturnToGateHome}
-                      disabled={loading}
-                    >
-                      Return To Gate 02 Home
-                    </button>
-
-                    <button
-                      type="button"
-                      className="button gold"
-                      onClick={handleWalletModuleContinue}
-                      disabled={loading || !walletAckChecked}
-                    >
-                      Continue
-                    </button>
-                  </div>
-                </section>
-              </section>
-            </>
-          )}
-
-          {canEnterGate2 && currentStage === "module-2-custody" && (
-            <section className="jal-bay jal-bay-wide" aria-label="Module 2 custody placeholder">
+          {canEnterGate2 && activeModule && (
+            <section className="jal-bay jal-bay-wide" aria-label={activeModule.title}>
               <div className="jal-bay-head">
-                <div className="jal-bay-title">Module 2 — Custody</div>
-                <div className="jal-bay-note">Next active stage</div>
+                <div className="jal-bay-title">{activeModule.title}</div>
+                <div className="jal-bay-note">{activeModule.note}</div>
               </div>
 
               <p className="jal-note">
-                Module 1 is now complete and the sequence engine is working. The next step is to
-                replace this stage with the full Custody module.
+                {activeModule.stage === "module-1-wallet" &&
+                  "Gate 02 begins with control, because correct action cannot happen without understanding what authorises it."}
+                {activeModule.stage === "module-2-custody" &&
+                  "Gate 02 now moves from control into responsibility. The user must understand who carries the burden of error."}
+                {activeModule.stage === "module-3-finality" &&
+                  "Gate 02 now moves into consequence. The user must understand what it means for an action to be signed and final."}
+                {activeModule.stage === "module-4-connection" &&
+                  "Gate 02 now moves into live authority. The user must understand how connection and signing actually function."}
+                {activeModule.stage === "module-5-action-path" &&
+                  "Gate 02 now shows the real execution path in advance so the later live action is not vague or guessed."}
+                {activeModule.stage === "module-6-verification" &&
+                  "Gate 02 now locks the proof standard. The user must understand that visible verification completes the action."}
               </p>
 
-              <div className="jal-bullets">
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Previous</div>
-                  <div className="jal-bullet-v">Module 1 — Wallet completed.</div>
-                </article>
+              <div className="jal-grid" aria-label={`${activeModule.title} structure`}>
+                <section className="jal-bay">
+                  <div className="jal-bay-head">
+                    <div className="jal-bay-title">What this means</div>
+                    <div className="jal-bay-note">Definition</div>
+                  </div>
 
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Current</div>
-                  <div className="jal-bullet-v">Module 2 — Custody placeholder active.</div>
-                </article>
+                  {activeModule.meaning.map((line, index) => (
+                    <p key={index} className="jal-note">
+                      {line}
+                    </p>
+                  ))}
+                </section>
 
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Next Build</div>
-                  <div className="jal-bullet-v">Write the full Custody module.</div>
-                </article>
+                <section className="jal-bay">
+                  <div className="jal-bay-head">
+                    <div className="jal-bay-title">What you must do</div>
+                    <div className="jal-bay-note">Requirement</div>
+                  </div>
+
+                  {activeModule.requirement.map((line, index) => (
+                    <p key={index} className="jal-note">
+                      {line}
+                    </p>
+                  ))}
+                </section>
               </div>
 
-              <div className="jal-bay-actions">
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => goToStage("module-1-wallet")}
-                  disabled={loading}
-                >
-                  Return To Module 1
-                </button>
-
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={handleReturnToGateHome}
-                  disabled={loading}
-                >
-                  Return To Gate 02 Home
-                </button>
-              </div>
-            </section>
-          )}
-
-          {canEnterGate2 &&
-            currentStage !== "home" &&
-            currentStage !== "module-1-wallet" &&
-            currentStage !== "module-2-custody" && (
-              <section className="jal-bay jal-bay-wide" aria-label="Gate 02 sequence workspace">
+              <section className="jal-bay jal-bay-wide" aria-label={`${activeModule.title} risk`}>
                 <div className="jal-bay-head">
-                  <div className="jal-bay-title">Gate 02 Sequence Active</div>
-                  <div className="jal-bay-note">{currentStage.toUpperCase()}</div>
+                  <div className="jal-bay-title">What can go wrong</div>
+                  <div className="jal-bay-note">Risk</div>
                 </div>
 
-                <p className="jal-note">
-                  The private sequence is active. This stage has not been fully built yet.
-                </p>
+                {activeModule.risk.map((line, index) => (
+                  <p key={index} className="jal-note">
+                    {line}
+                  </p>
+                ))}
+              </section>
 
-                <div className="jal-bullets">
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Current Stage</div>
-                    <div className="jal-bullet-v">{currentStage}</div>
-                  </article>
-
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Status</div>
-                    <div className="jal-bullet-v">Sequence stage reserved</div>
-                  </article>
-
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Next Build</div>
-                    <div className="jal-bullet-v">Implement this stage directly.</div>
-                  </article>
+              <section
+                className="jal-bay jal-bay-wide"
+                aria-label={`${activeModule.title} acknowledgement`}
+              >
+                <div className="jal-bay-head">
+                  <div className="jal-bay-title">Required acknowledgement</div>
+                  <div className="jal-bay-note">Must confirm</div>
                 </div>
+
+                <label className="jal-check">
+                  <input
+                    type="checkbox"
+                    checked={progress.acknowledgements[activeModule.acknowledgementKey]}
+                    onChange={(e) =>
+                      updateAcknowledgements({
+                        [activeModule.acknowledgementKey]: e.target.checked,
+                      })
+                    }
+                  />
+                  <span>{activeModule.acknowledgementText}</span>
+                </label>
 
                 <div className="jal-bay-actions">
                   <button
@@ -1179,9 +1237,437 @@ export default function JalSolEnter() {
                   >
                     Return To Gate 02 Home
                   </button>
+
+                  <button
+                    type="button"
+                    className="button gold"
+                    onClick={() => handleModuleContinue(activeModule)}
+                    disabled={loading || !progress.acknowledgements[activeModule.acknowledgementKey]}
+                  >
+                    Continue
+                  </button>
                 </div>
               </section>
-            )}
+            </section>
+          )}
+
+          {canEnterGate2 && currentStage === "test" && (
+            <section className="jal-bay jal-bay-wide" aria-label="Comprehension test placeholder">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Comprehension Test</div>
+                <div className="jal-bay-note">Placeholder</div>
+              </div>
+
+              <p className="jal-note">
+                All six learning modules are now written and wired in sequence. This stage is the
+                placeholder for the 4–5 question comprehension test.
+              </p>
+
+              <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Required Later</div>
+                  <div className="jal-bullet-v">Question set, answers, scoring, pass/fail rule.</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Pass Rule</div>
+                  <div className="jal-bullet-v">Recommended threshold: 4 correct answers minimum.</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Next Stage</div>
+                  <div className="jal-bullet-v">Checklist</div>
+                </article>
+              </div>
+
+              <div className="jal-bay-actions">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => goToStage("module-6-verification")}
+                  disabled={loading}
+                >
+                  Return To Module 6
+                </button>
+
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => goToStage("checklist")}
+                  disabled={loading}
+                >
+                  Continue To Checklist Placeholder
+                </button>
+              </div>
+            </section>
+          )}
+
+          {canEnterGate2 && currentStage === "checklist" && (
+            <section className="jal-bay jal-bay-wide" aria-label="Checklist placeholder">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Practical Readiness Checklist</div>
+                <div className="jal-bay-note">Placeholder</div>
+              </div>
+
+              <p className="jal-note">
+                This stage will later require the user to confirm procedural readiness before the
+                trial unlocks.
+              </p>
+
+              <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Checklist Type</div>
+                  <div className="jal-bullet-v">All items required. No partial pass.</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Examples</div>
+                  <div className="jal-bullet-v">
+                    Wallet controls assets, transactions may be irreversible, verify before signing.
+                  </div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Next Stage</div>
+                  <div className="jal-bullet-v">Trial Brief</div>
+                </article>
+              </div>
+
+              <div className="jal-bay-actions">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => goToStage("test")}
+                  disabled={loading}
+                >
+                  Return To Test
+                </button>
+
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => goToStage("trial-brief")}
+                  disabled={loading}
+                >
+                  Continue To Trial Brief Placeholder
+                </button>
+              </div>
+            </section>
+          )}
+
+          {canEnterGate2 && currentStage === "trial-brief" && (
+            <section className="jal-bay jal-bay-wide" aria-label="Trial brief placeholder">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Trial Briefing</div>
+                <div className="jal-bay-note">Placeholder</div>
+              </div>
+
+              <p className="jal-note">
+                This stage will later explain the trial score requirement, streak requirement, reset
+                rule, and acknowledgement requirement before Token Fit begins.
+              </p>
+
+              <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Minimum Score</div>
+                  <div className="jal-bullet-v">20</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Required Consistency</div>
+                  <div className="jal-bullet-v">2 successful runs</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Next Stage</div>
+                  <div className="jal-bullet-v">Trial</div>
+                </article>
+              </div>
+
+              <div className="jal-bay-actions">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => goToStage("checklist")}
+                  disabled={loading}
+                >
+                  Return To Checklist
+                </button>
+
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => goToStage("trial")}
+                  disabled={loading}
+                >
+                  Continue To Trial Placeholder
+                </button>
+              </div>
+            </section>
+          )}
+
+          {canEnterGate2 && currentStage === "trial" && (
+            <section className="jal-bay jal-bay-wide" aria-label="Trial placeholder">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Hard Trial — Token Fit</div>
+                <div className="jal-bay-note">Placeholder</div>
+              </div>
+
+              <p className="jal-note">
+                This stage will later host the harder Gate 02 Token Fit trial with its own
+                progression state, reset logic, and post-pass unlock.
+              </p>
+
+              <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Game Direction</div>
+                  <div className="jal-bullet-v">
+                    Increased gravity, tighter gaps, reduced forgiveness, faster speed.
+                  </div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Proof Required</div>
+                  <div className="jal-bullet-v">
+                    Two successful runs meeting the threshold.
+                  </div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Next Stage</div>
+                  <div className="jal-bullet-v">Wallet</div>
+                </article>
+              </div>
+
+              <div className="jal-bay-actions">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => goToStage("trial-brief")}
+                  disabled={loading}
+                >
+                  Return To Trial Brief
+                </button>
+
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => goToStage("wallet")}
+                  disabled={loading}
+                >
+                  Continue To Wallet Placeholder
+                </button>
+              </div>
+            </section>
+          )}
+
+          {canEnterGate2 && currentStage === "wallet" && (
+            <section className="jal-bay jal-bay-wide" aria-label="Wallet connection placeholder">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Wallet Connection</div>
+                <div className="jal-bay-note">Placeholder</div>
+              </div>
+
+              <p className="jal-note">
+                This stage will later contain the real wallet connection flow. It remains a
+                placeholder until the payment and access flow is finalised.
+              </p>
+
+              <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Required Output</div>
+                  <div className="jal-bullet-v">wallet_connected === true</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Stored Data</div>
+                  <div className="jal-bullet-v">wallet_address</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Next Stage</div>
+                  <div className="jal-bullet-v">Transaction</div>
+                </article>
+              </div>
+
+              <div className="jal-bay-actions">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => goToStage("trial")}
+                  disabled={loading}
+                >
+                  Return To Trial
+                </button>
+
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => goToStage("transaction")}
+                  disabled={loading}
+                >
+                  Continue To Transaction Placeholder
+                </button>
+              </div>
+            </section>
+          )}
+
+          {canEnterGate2 && currentStage === "transaction" && (
+            <section className="jal-bay jal-bay-wide" aria-label="Transaction placeholder">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Real Transaction</div>
+                <div className="jal-bay-note">Placeholder</div>
+              </div>
+
+              <p className="jal-note">
+                This stage will later host the fixed minimal SOL transfer flow. For now it exists
+                as a structural placeholder only.
+              </p>
+
+              <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Transaction Type</div>
+                  <div className="jal-bullet-v">SOL transfer</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Destination</div>
+                  <div className="jal-bullet-v">
+                    3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2
+                  </div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Next Stage</div>
+                  <div className="jal-bullet-v">Verify</div>
+                </article>
+              </div>
+
+              <div className="jal-bay-actions">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => goToStage("wallet")}
+                  disabled={loading}
+                >
+                  Return To Wallet
+                </button>
+
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => goToStage("verify")}
+                  disabled={loading}
+                >
+                  Continue To Verification Placeholder
+                </button>
+              </div>
+            </section>
+          )}
+
+          {canEnterGate2 && currentStage === "verify" && (
+            <section className="jal-bay jal-bay-wide" aria-label="Verification placeholder">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Verification</div>
+                <div className="jal-bay-note">Placeholder</div>
+              </div>
+
+              <p className="jal-note">
+                This stage will later display wallet address, transaction signature, confirmation
+                state, and explorer proof. For now it remains a locked structural placeholder.
+              </p>
+
+              <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Required Success</div>
+                  <div className="jal-bullet-v">
+                    wallet_connected === true and transaction_confirmed === true
+                  </div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Output</div>
+                  <div className="jal-bullet-v">participant_state = true</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Next Stage</div>
+                  <div className="jal-bullet-v">Passed</div>
+                </article>
+              </div>
+
+              <div className="jal-bay-actions">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => goToStage("transaction")}
+                  disabled={loading}
+                >
+                  Return To Transaction
+                </button>
+
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => goToStage("passed")}
+                  disabled={loading}
+                >
+                  Continue To Passed Placeholder
+                </button>
+              </div>
+            </section>
+          )}
+
+          {canEnterGate2 && currentStage === "passed" && (
+            <section className="jal-bay jal-bay-wide" aria-label="Passed placeholder">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">You Have Entered Correctly</div>
+                <div className="jal-bay-note">Passed state placeholder</div>
+              </div>
+
+              <p className="jal-note">
+                This stage will later become the true participant-state transition after verified
+                wallet interaction and confirmed transaction proof.
+              </p>
+
+              <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Proof</div>
+                  <div className="jal-bullet-v">Wallet interaction + transaction verification</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">State</div>
+                  <div className="jal-bullet-v">Participant</div>
+                </article>
+
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Next</div>
+                  <div className="jal-bullet-v">Proceed To Build</div>
+                </article>
+              </div>
+
+              <div className="jal-bay-actions">
+                <button
+                  type="button"
+                  className="button gold"
+                  onClick={() => beginRoute("/app/jal-sol/build")}
+                  disabled={loading}
+                >
+                  Proceed To Build
+                </button>
+
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => beginRoute("/app/jal-sol")}
+                  disabled={loading}
+                >
+                  Return To World Hub
+                </button>
+              </div>
+            </section>
+          )}
         </section>
       </div>
 
