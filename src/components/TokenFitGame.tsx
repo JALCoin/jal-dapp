@@ -238,13 +238,6 @@ export default function TokenFitGame({
     gameStateRef.current = "countdown";
   }, [resetWorld]);
 
-  const closeTrial = useCallback(() => {
-    setIsFullscreen(false);
-    setGameState("idle");
-    gameStateRef.current = "idle";
-    resetWorld();
-  }, [resetWorld]);
-
 const leaveToGate = useCallback(() => {
   setIsFullscreen(false);
   setGameState("idle");
