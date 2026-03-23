@@ -39,6 +39,7 @@ const GATE2_ACCESS_KEY = "gate2_access";
 const GATE2_EMAIL_KEY = "gate2_email";
 const GATE2_DISPLAY_NAME_KEY = "gate2_display_name";
 const GATE2_PROGRESS_KEY = "gate2_progress";
+const GATE2_ADMIN_BYPASS_KEY = "gate2_admin_bypass";
 
 const ENTRY_RAIL: RailStep[] = [
   {
@@ -126,6 +127,10 @@ function readGate2Access(): boolean {
   return localStorage.getItem(GATE2_ACCESS_KEY) === "true";
 }
 
+function readGate2AdminBypass(): boolean {
+  return localStorage.getItem(GATE2_ADMIN_BYPASS_KEY) === "true";
+}
+
 function readGate2Stage(): string {
   try {
     const raw = localStorage.getItem(GATE2_PROGRESS_KEY);
@@ -170,9 +175,31 @@ function writeGate2Bootstrap(email: string, displayName: string) {
       );
       return;
     } catch {
-      // fall through to default write
+      // fall through
     }
   }
+
+  localStorage.setItem(
+    GATE2_PROGRESS_KEY,
+    JSON.stringify({
+      accessGranted: true,
+      privateHomeSeen: true,
+      currentStage: "home",
+      modulesCompleted: 0,
+      comprehensionPassed: false,
+      checklistPassed: false,
+      trialPassed: false,
+      walletConnected: false,
+      transactionConfirmed: false,
+      enterPassed: false,
+      participantState: false,
+    } satisfies Gate2ProgressState)
+  );
+}
+
+function ensureGate2ProgressExists() {
+  const existingRaw = localStorage.getItem(GATE2_PROGRESS_KEY);
+  if (existingRaw) return;
 
   localStorage.setItem(
     GATE2_PROGRESS_KEY,
@@ -199,14 +226,20 @@ export default function JalSolEnter() {
   const [loading, setLoading] = useState(false);
   const [observePassed, setObservePassed] = useState(false);
   const [gate2Access, setGate2Access] = useState(false);
+  const [adminBypass, setAdminBypass] = useState(false);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [formError, setFormError] = useState("");
   const [currentStage, setCurrentStage] = useState("home");
 
   useEffect(() => {
-    setObservePassed(readObservePassed());
-    setGate2Access(readGate2Access());
+    const observe = readObservePassed();
+    const access = readGate2Access();
+    const bypass = readGate2AdminBypass();
+
+    setObservePassed(observe);
+    setGate2Access(access);
+    setAdminBypass(bypass);
     setCurrentStage(readGate2Stage());
 
     const savedEmail = localStorage.getItem(GATE2_EMAIL_KEY) ?? "";
@@ -214,6 +247,10 @@ export default function JalSolEnter() {
 
     setEmail(savedEmail);
     setDisplayName(savedDisplay);
+
+    if (bypass) {
+      ensureGate2ProgressExists();
+    }
   }, []);
 
   useEffect(() => {
@@ -237,7 +274,7 @@ export default function JalSolEnter() {
   }
 
   function handleDevUnlock() {
-    if (!observePassed || loading) return;
+    if ((!observePassed && !adminBypass) || loading) return;
 
     const cleanEmail = email.trim();
     const cleanDisplayName = displayName.trim();
@@ -292,7 +329,12 @@ export default function JalSolEnter() {
     setCurrentStage("home");
   }
 
-  const accessLabel = observePassed
+  const canEnterGate2 = adminBypass || (observePassed && gate2Access);
+  const needsPublicUnlock = !adminBypass && observePassed && !gate2Access;
+
+  const accessLabel = adminBypass
+    ? "Private Admin Access"
+    : observePassed
     ? gate2Access
       ? "Entry Sequence Ready"
       : "Ready To Enter"
@@ -343,7 +385,7 @@ export default function JalSolEnter() {
             </div>
 
             <div className="jal-links">
-              {!observePassed ? (
+              {!canEnterGate2 && !observePassed ? (
                 <button
                   type="button"
                   className="button gold"
@@ -352,7 +394,7 @@ export default function JalSolEnter() {
                 >
                   Go To Observe
                 </button>
-              ) : !gate2Access ? (
+              ) : needsPublicUnlock ? (
                 <button
                   type="button"
                   className="button gold"
@@ -401,7 +443,7 @@ export default function JalSolEnter() {
             </div>
           </section>
 
-          {!observePassed && (
+          {!adminBypass && !observePassed && (
             <section className="jal-bay jal-bay-wide" aria-label="Gate blocked">
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Gate 02 Locked</div>
@@ -457,7 +499,7 @@ export default function JalSolEnter() {
             </section>
           )}
 
-          {observePassed && !gate2Access && (
+          {needsPublicUnlock && (
             <>
               <section className="jal-bay jal-bay-wide" aria-label="Observe complete handoff">
                 <div className="jal-bay-head">
@@ -576,12 +618,14 @@ export default function JalSolEnter() {
             </>
           )}
 
-          {observePassed && gate2Access && currentStage === "home" && (
+          {canEnterGate2 && currentStage === "home" && (
             <>
               <section className="jal-bay jal-bay-wide" aria-label="Private Gate 02 home">
                 <div className="jal-bay-head">
                   <div className="jal-bay-title">Gate 02 Private Workspace</div>
-                  <div className="jal-bay-note">Controlled progression environment</div>
+                  <div className="jal-bay-note">
+                    {adminBypass ? "Private bypass active" : "Controlled progression environment"}
+                  </div>
                 </div>
 
                 <p className="jal-note">
@@ -593,12 +637,16 @@ export default function JalSolEnter() {
                 <div className="jal-bullets">
                   <article className="jal-bullet">
                     <div className="jal-bullet-k">Identity</div>
-                    <div className="jal-bullet-v">{displayName || "Unnamed entrant"}</div>
+                    <div className="jal-bullet-v">
+                      {displayName || (adminBypass ? "Private admin" : "Unnamed entrant")}
+                    </div>
                   </article>
 
                   <article className="jal-bullet">
                     <div className="jal-bullet-k">Access</div>
-                    <div className="jal-bullet-v">Gate 02 unlocked in development mode.</div>
+                    <div className="jal-bullet-v">
+                      {adminBypass ? "Admin bypass active on this browser." : "Gate 02 unlocked in development mode."}
+                    </div>
                   </article>
 
                   <article className="jal-bullet">
@@ -721,48 +769,46 @@ export default function JalSolEnter() {
             </>
           )}
 
-          {observePassed && gate2Access && currentStage !== "home" && (
-            <>
-              <section className="jal-bay jal-bay-wide" aria-label="Gate 02 sequence workspace">
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">Gate 02 Sequence Active</div>
-                  <div className="jal-bay-note">{currentStage.toUpperCase()}</div>
-                </div>
+          {canEnterGate2 && currentStage !== "home" && (
+            <section className="jal-bay jal-bay-wide" aria-label="Gate 02 sequence workspace">
+              <div className="jal-bay-head">
+                <div className="jal-bay-title">Gate 02 Sequence Active</div>
+                <div className="jal-bay-note">{currentStage.toUpperCase()}</div>
+              </div>
 
-                <p className="jal-note">
-                  The private sequence has started. The next build step is to replace this
-                  workspace with Module 1 — Wallet.
-                </p>
+              <p className="jal-note">
+                The private sequence has started. The next build step is to replace this workspace
+                with Module 1 — Wallet.
+              </p>
 
-                <div className="jal-bullets">
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Current Stage</div>
-                    <div className="jal-bullet-v">{currentStage}</div>
-                  </article>
+              <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Current Stage</div>
+                  <div className="jal-bullet-v">{currentStage}</div>
+                </article>
 
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Status</div>
-                    <div className="jal-bullet-v">Private sequence active</div>
-                  </article>
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Status</div>
+                  <div className="jal-bullet-v">Private sequence active</div>
+                </article>
 
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Next Build</div>
-                    <div className="jal-bullet-v">Module 1 — Wallet</div>
-                  </article>
-                </div>
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">Next Build</div>
+                  <div className="jal-bullet-v">Module 1 — Wallet</div>
+                </article>
+              </div>
 
-                <div className="jal-bay-actions">
-                  <button
-                    type="button"
-                    className="button ghost"
-                    onClick={handleReturnToGateHome}
-                    disabled={loading}
-                  >
-                    Return To Gate 02 Home
-                  </button>
-                </div>
-              </section>
-            </>
+              <div className="jal-bay-actions">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={handleReturnToGateHome}
+                  disabled={loading}
+                >
+                  Return To Gate 02 Home
+                </button>
+              </div>
+            </section>
           )}
         </section>
       </div>
