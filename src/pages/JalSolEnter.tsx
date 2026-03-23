@@ -20,7 +20,7 @@ type GatePoint = {
   v: string;
 };
 
-const OBSERVE_PASSED_KEY = "observe_passed";
+const OBSERVE_STORAGE_KEY = "jal_observe_complete_v1";
 const GATE2_ACCESS_KEY = "gate2_access";
 const GATE2_EMAIL_KEY = "gate2_email";
 const GATE2_DISPLAY_NAME_KEY = "gate2_display_name";
@@ -131,7 +131,19 @@ const PRIVATE_OUTCOMES: GatePoint[] = [
 ];
 
 function readObservePassed(): boolean {
-  return localStorage.getItem(OBSERVE_PASSED_KEY) === "true";
+  try {
+    const raw = localStorage.getItem(OBSERVE_STORAGE_KEY);
+    if (!raw) return false;
+
+    const parsed = JSON.parse(raw);
+    return Boolean(
+      parsed?.passed &&
+      parsed?.gate === "observe" &&
+      parsed?.nextGate === "enter"
+    );
+  } catch {
+    return false;
+  }
 }
 
 function readGate2Access(): boolean {
@@ -385,204 +397,220 @@ export default function JalSolEnter() {
             </section>
           )}
 
-          {observePassed && !gate2Access && (
-            <>
-              <section className="jal-bay jal-bay-wide" aria-label="Gate 02 definition">
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">What This Gate Is</div>
-                  <div className="jal-bay-note">Observer to participant</div>
-                </div>
+{observePassed && !gate2Access && (
+  <>
+    <section className="jal-bay jal-bay-wide" aria-label="Observe complete handoff">
+      <div className="jal-bay-head">
+        <div className="jal-bay-title">Observe Complete</div>
+        <div className="jal-bay-note">You may now enter</div>
+      </div>
 
-                <p className="jal-note">
-                  Gate 02 is a controlled-entry threshold. It exists to move the user from safe
-                  understanding into correct first participation. The user is not rewarded for
-                  random movement. They are advanced only after preparation, validation, pressure,
-                  execution, and proof.
-                </p>
+      <p className="jal-note">
+        You completed Gate 01 correctly. You now move from understanding into controlled
+        participation.
+      </p>
 
-                <div className="jal-bullets">
-                  {PUBLIC_POINTS.map((point) => (
-                    <article key={point.k} className="jal-bullet">
-                      <div className="jal-bullet-k">{point.k}</div>
-                      <div className="jal-bullet-v">{point.v}</div>
-                    </article>
-                  ))}
-                </div>
-              </section>
+      <p className="jal-lock-text">
+        This next gate will require preparation, validation, and a real irreversible action.
+      </p>
+    </section>
 
-              <section className="jal-grid" aria-label="Why Gate 02 matters">
-                <section className="jal-bay">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">Why Entry Matters</div>
-                    <div className="jal-bay-note">State change, not theory</div>
-                  </div>
+    <section className="jal-bay jal-bay-wide" aria-label="Gate 02 definition">
+      <div className="jal-bay-head">
+        <div className="jal-bay-title">What This Gate Is</div>
+        <div className="jal-bay-note">Observer to participant</div>
+      </div>
 
-                  <p className="jal-note">
-                    This is the first layer where the system expects real consequence. The user is
-                    no longer only learning or agreeing. They are preparing to connect control,
-                    sign movement, and verify proof.
-                  </p>
+      <p className="jal-note">
+        Gate 02 is a controlled-entry threshold. It exists to move the user from safe
+        understanding into correct first participation. The user is not rewarded for
+        random movement. They are advanced only after preparation, validation, pressure,
+        execution, and proof.
+      </p>
 
-                  <p className="jal-lock-text">
-                    A first controlled transaction matters because it changes the user’s
-                    relationship to the system.
-                  </p>
-                </section>
+      <div className="jal-bullets">
+        {PUBLIC_POINTS.map((point) => (
+          <article key={point.k} className="jal-bullet">
+            <div className="jal-bullet-k">{point.k}</div>
+            <div className="jal-bullet-v">{point.v}</div>
+          </article>
+        ))}
+      </div>
+    </section>
 
-                <section className="jal-bay">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">What Changes Here</div>
-                    <div className="jal-bay-note">Participation established</div>
-                  </div>
+    <section className="jal-grid" aria-label="Why Gate 02 matters">
+      <section className="jal-bay">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">Why Entry Matters</div>
+          <div className="jal-bay-note">State change, not theory</div>
+        </div>
 
-                  <p className="jal-note">
-                    Gate 02 converts awareness into exposure. Once a wallet is connected and a real
-                    transaction is confirmed, the user is no longer outside the system. They have
-                    entered it.
-                  </p>
+        <p className="jal-note">
+          This is the first layer where the system expects real consequence. The user is
+          no longer only learning or agreeing. They are preparing to connect control,
+          sign movement, and verify proof.
+        </p>
 
-                  <p className="jal-lock-text">
-                    This gate turns an informed observer into a verified participant.
-                  </p>
-                </section>
-              </section>
+        <p className="jal-lock-text">
+          A first controlled transaction matters because it changes the user’s
+          relationship to the system.
+        </p>
+      </section>
 
-              <section className="jal-bay jal-bay-wide" aria-label="What Gate 02 includes">
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">What This Gate Includes</div>
-                  <div className="jal-bay-note">Controlled entry package</div>
-                </div>
+      <section className="jal-bay">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">What Changes Here</div>
+          <div className="jal-bay-note">Participation established</div>
+        </div>
 
-                <p className="jal-note">
-                  Gate 02 is structured as a locked progression path. It does not begin with wallet
-                  friction. It begins with preparation and builds toward real irreversible action.
-                </p>
+        <p className="jal-note">
+          Gate 02 converts awareness into exposure. Once a wallet is connected and a real
+          transaction is confirmed, the user is no longer outside the system. They have
+          entered it.
+        </p>
 
-                <div className="jal-bullets">
-                  {INCLUDED_POINTS.map((point) => (
-                    <article key={point.k} className="jal-bullet">
-                      <div className="jal-bullet-k">{point.k}</div>
-                      <div className="jal-bullet-v">{point.v}</div>
-                    </article>
-                  ))}
-                </div>
-              </section>
+        <p className="jal-lock-text">
+          This gate turns an informed observer into a verified participant.
+        </p>
+      </section>
+    </section>
 
-              <section className="jal-bay jal-bay-wide" aria-label="Gate 02 sequence rail">
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">Controlled Entry Rail</div>
-                  <div className="jal-bay-note">The required order</div>
-                </div>
+    <section className="jal-bay jal-bay-wide" aria-label="What Gate 02 includes">
+      <div className="jal-bay-head">
+        <div className="jal-bay-title">What This Gate Includes</div>
+        <div className="jal-bay-note">Controlled entry package</div>
+      </div>
 
-                <p className="jal-note">
-                  Gate 02 must unfold in sequence. The user should see the full rail, but only one
-                  live stage is active at a time once the private workspace begins.
-                </p>
+      <p className="jal-note">
+        Gate 02 is structured as a locked progression path. It does not begin with wallet
+        friction. It begins with preparation and builds toward real irreversible action.
+      </p>
 
-                <div className="jal-steps">
-                  {ENTRY_RAIL.map((step) => (
-                    <div key={step.id}>
-                      <strong>{step.title}</strong>
-                      <span className="jal-step-sub">{step.note}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
+      <div className="jal-bullets">
+        {INCLUDED_POINTS.map((point) => (
+          <article key={point.k} className="jal-bullet">
+            <div className="jal-bullet-k">{point.k}</div>
+            <div className="jal-bullet-v">{point.v}</div>
+          </article>
+        ))}
+      </div>
+    </section>
 
-              <section className="jal-grid" aria-label="Gate 02 requirements and access">
-                <section className="jal-bay">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">Entry Requirements</div>
-                    <div className="jal-bay-note">Locked by intent</div>
-                  </div>
+    <section className="jal-bay jal-bay-wide" aria-label="Gate 02 sequence rail">
+      <div className="jal-bay-head">
+        <div className="jal-bay-title">Controlled Entry Rail</div>
+        <div className="jal-bay-note">The required order</div>
+      </div>
 
-                  <p className="jal-note">
-                    Gate 02 must be unlocked intentionally. Observe has already been completed. The
-                    next requirement is local access continuity so identity and progression can be
-                    preserved during development.
-                  </p>
+      <p className="jal-note">
+        Gate 02 must unfold in sequence. The user should see the full rail, but only one
+        live stage is active at a time once the private workspace begins.
+      </p>
 
-                  <div className="jal-bullets">
-                    <article className="jal-bullet">
-                      <div className="jal-bullet-k">Observe Complete</div>
-                      <div className="jal-bullet-v">
-                        Awareness is already established before entry begins.
-                      </div>
-                    </article>
+      <div className="jal-steps">
+        {ENTRY_RAIL.map((step) => (
+          <div key={step.id}>
+            <strong>{step.title}</strong>
+            <span className="jal-step-sub">{step.note}</span>
+          </div>
+        ))}
+      </div>
+    </section>
 
-                    <article className="jal-bullet">
-                      <div className="jal-bullet-k">Access Required</div>
-                      <div className="jal-bullet-v">
-                        Gate 02 remains locked until a local bootstrap identity is created.
-                      </div>
-                    </article>
+    <section className="jal-grid" aria-label="Gate 02 requirements and access">
+      <section className="jal-bay">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">Entry Requirements</div>
+          <div className="jal-bay-note">Locked by intent</div>
+        </div>
 
-                    <article className="jal-bullet">
-                      <div className="jal-bullet-k">No Skipping</div>
-                      <div className="jal-bullet-v">
-                        Wallet execution and transaction proof happen only after the earlier stages.
-                      </div>
-                    </article>
-                  </div>
-                </section>
+        <p className="jal-note">
+          Gate 02 must be unlocked intentionally. Observe has already been completed. The
+          next requirement is local access continuity so identity and progression can be
+          preserved during development.
+        </p>
 
-                <section className="jal-bay" aria-label="Dev access setup">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">Access Bootstrap</div>
-                    <div className="jal-bay-note">Dev mode identity</div>
-                  </div>
+        <div className="jal-bullets">
+          <article className="jal-bullet">
+            <div className="jal-bullet-k">Observe Complete</div>
+            <div className="jal-bullet-v">
+              Awareness is already established before entry begins.
+            </div>
+          </article>
 
-                  <p className="jal-note">
-                    Payments are temporarily disabled while Gate 02 is finalised. Access is still
-                    intentionally gated so the system behaves like a locked threshold rather than an
-                    open page.
-                  </p>
+          <article className="jal-bullet">
+            <div className="jal-bullet-k">Access Required</div>
+            <div className="jal-bullet-v">
+              Gate 02 remains locked until a local bootstrap identity is created.
+            </div>
+          </article>
 
-                  <label className="jal-field">
-                    <span className="jal-field-label">Email</span>
-                    <input
-                      className="jal-input"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      autoComplete="email"
-                    />
-                  </label>
+          <article className="jal-bullet">
+            <div className="jal-bullet-k">No Skipping</div>
+            <div className="jal-bullet-v">
+              Wallet execution and transaction proof happen only after the earlier stages.
+            </div>
+          </article>
+        </div>
+      </section>
 
-                  <label className="jal-field">
-                    <span className="jal-field-label">Display name</span>
-                    <input
-                      className="jal-input"
-                      type="text"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="How you appear in Gate 02"
-                      autoComplete="nickname"
-                    />
-                  </label>
+      <section className="jal-bay" aria-label="Dev access setup">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">Access Bootstrap</div>
+          <div className="jal-bay-note">Dev mode identity</div>
+        </div>
 
-                  {formError ? <p className="jal-error-text">{formError}</p> : null}
+        <p className="jal-note">
+          Payments are temporarily disabled while Gate 02 is finalised. Access is still
+          intentionally gated so the system behaves like a locked threshold rather than an
+          open page.
+        </p>
 
-                  <p className="jal-lock-text">
-                    This display name becomes the visible identity for progression continuity and
-                    later leaderboard placement.
-                  </p>
+        <label className="jal-field">
+          <span className="jal-field-label">Email</span>
+          <input
+            className="jal-input"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+          />
+        </label>
 
-                  <div className="jal-bay-actions">
-                    <button
-                      type="button"
-                      className="button gold"
-                      onClick={handleDevUnlock}
-                      disabled={loading}
-                    >
-                      Unlock Gate 02
-                    </button>
-                  </div>
-                </section>
-              </section>
-            </>
-          )}
+        <label className="jal-field">
+          <span className="jal-field-label">Display name</span>
+          <input
+            className="jal-input"
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="How you appear in Gate 02"
+            autoComplete="nickname"
+          />
+        </label>
+
+        {formError ? <p className="jal-error-text">{formError}</p> : null}
+
+        <p className="jal-lock-text">
+          This display name becomes the visible identity for progression continuity and
+          later leaderboard placement.
+        </p>
+
+        <div className="jal-bay-actions">
+          <button
+            type="button"
+            className="button gold"
+            onClick={handleDevUnlock}
+            disabled={loading}
+          >
+            Unlock Gate 02
+          </button>
+        </div>
+      </section>
+    </section>
+  </>
+)}
 
           {observePassed && gate2Access && (
             <>
