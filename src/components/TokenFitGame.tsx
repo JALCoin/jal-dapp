@@ -18,7 +18,7 @@ type Pipe = {
   scored: boolean;
 };
 
-const STORAGE_KEY = "jal_token_fit_high_score";
+const STORAGE_KEY = "jal_observe_token_fit_high_score_v1";
 
 /* =========================
    WORLD SIZING

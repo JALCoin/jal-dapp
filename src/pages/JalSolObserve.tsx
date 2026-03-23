@@ -8,8 +8,10 @@ type RouteTo =
   | "/app/jal-sol/enter"
   | "/app/shop";
 
+type LearnCardId = "wallets" | "custody" | "cex-dex" | "solana";
+
 type LearnCard = {
-  id: "wallets" | "custody" | "cex-dex" | "solana";
+  id: LearnCardId;
   title: string;
   body: string[];
   contribution: string;
@@ -53,7 +55,19 @@ type ObserveAccessState = {
   nextGate: "enter";
 };
 
+type ObserveProgressState = {
+  stepIndex: number;
+  openedCards: LearnCardId[];
+  stillnessAccepted: boolean;
+  answers: Record<string, number | null>;
+  testSubmitted: boolean;
+  tokenFitPassed: boolean;
+  tokenFitScore: number;
+  tokenFitHighScore: number;
+};
+
 const OBSERVE_STORAGE_KEY = "jal_observe_complete_v1";
+const OBSERVE_PROGRESS_KEY = "jal_observe_progress_v1";
 const PASS_MARK = 4;
 const MIN_TOKEN_FIT_SCORE = 12;
 
@@ -88,7 +102,7 @@ const OBSERVE_STEPS: ObserveStep[] = [
     label: "Stillness",
     note: "No urgency enters Gate 02.",
   },
-    {
+  {
     id: "test",
     label: "Test",
     note: "Confirm understanding before entry.",
@@ -195,32 +209,127 @@ const TEST_QUESTIONS: TestQuestion[] = [
   },
 ];
 
+const DEFAULT_ANSWERS: Record<string, number | null> = {
+  q1: null,
+  q2: null,
+  q3: null,
+  q4: null,
+};
+
+function readProgress(): ObserveProgressState | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(OBSERVE_PROGRESS_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<ObserveProgressState>;
+
+    const safeStepIndex =
+      typeof parsed.stepIndex === "number" &&
+      parsed.stepIndex >= 0 &&
+      parsed.stepIndex < OBSERVE_STEPS.length
+        ? parsed.stepIndex
+        : 0;
+
+    const validCardIds = new Set<LearnCardId>(LEARN_CARDS.map((card) => card.id));
+    const safeOpenedCards = Array.isArray(parsed.openedCards)
+      ? parsed.openedCards.filter((id): id is LearnCardId => validCardIds.has(id as LearnCardId))
+      : [];
+
+    const safeAnswers =
+      parsed.answers && typeof parsed.answers === "object"
+        ? {
+            q1:
+              typeof parsed.answers.q1 === "number" || parsed.answers.q1 === null
+                ? parsed.answers.q1
+                : null,
+            q2:
+              typeof parsed.answers.q2 === "number" || parsed.answers.q2 === null
+                ? parsed.answers.q2
+                : null,
+            q3:
+              typeof parsed.answers.q3 === "number" || parsed.answers.q3 === null
+                ? parsed.answers.q3
+                : null,
+            q4:
+              typeof parsed.answers.q4 === "number" || parsed.answers.q4 === null
+                ? parsed.answers.q4
+                : null,
+          }
+        : DEFAULT_ANSWERS;
+
+    return {
+      stepIndex: safeStepIndex,
+      openedCards: safeOpenedCards,
+      stillnessAccepted: Boolean(parsed.stillnessAccepted),
+      answers: safeAnswers,
+      testSubmitted: Boolean(parsed.testSubmitted),
+      tokenFitPassed: Boolean(parsed.tokenFitPassed),
+      tokenFitScore:
+        typeof parsed.tokenFitScore === "number" ? parsed.tokenFitScore : 0,
+      tokenFitHighScore:
+        typeof parsed.tokenFitHighScore === "number" ? parsed.tokenFitHighScore : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function readCompletedAccess(): ObserveAccessState | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(OBSERVE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ObserveAccessState;
+    return parsed?.passed ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function JalSolObserve() {
   const navigate = useNavigate();
   const timerRef = useRef<number | null>(null);
   const stepDelayRef = useRef<number | null>(null);
 
+  const [restoredProgress] = useState<ObserveProgressState | null>(() => readProgress());
+  const [completedAccess] = useState<ObserveAccessState | null>(() => readCompletedAccess());
+  const observerStepIndex = OBSERVE_STEPS.findIndex((step) => step.id === "observer");
+
   const [loading, setLoading] = useState(false);
-  const [stepIndex, setStepIndex] = useState(0);
-  const [canContinue, setCanContinue] = useState(false);
-  const [openedCards, setOpenedCards] = useState<string[]>([]);
-  const [stillnessAccepted, setStillnessAccepted] = useState(false);
-  const [answers, setAnswers] = useState<Record<string, number | null>>({
-    q1: null,
-    q2: null,
-    q3: null,
-    q4: null,
+  const [stepIndex, setStepIndex] = useState(() => {
+    if (completedAccess?.passed) return observerStepIndex;
+    return restoredProgress?.stepIndex ?? 0;
   });
-  const [testSubmitted, setTestSubmitted] = useState(false);
-  const [tokenFitPassed, setTokenFitPassed] = useState(false);
-  const [tokenFitScore, setTokenFitScore] = useState(0);
-  const [tokenFitHighScore, setTokenFitHighScore] = useState(0);
+  const [canContinue, setCanContinue] = useState(false);
+  const [openedCards, setOpenedCards] = useState<LearnCardId[]>(
+    restoredProgress?.openedCards ?? []
+  );
+  const [stillnessAccepted, setStillnessAccepted] = useState(
+    restoredProgress?.stillnessAccepted ?? false
+  );
+  const [answers, setAnswers] = useState<Record<string, number | null>>(
+    restoredProgress?.answers ?? DEFAULT_ANSWERS
+  );
+  const [testSubmitted, setTestSubmitted] = useState(
+    completedAccess?.quizPassed ?? restoredProgress?.testSubmitted ?? false
+  );
+  const [tokenFitPassed, setTokenFitPassed] = useState(
+    completedAccess?.tokenFitPassed ?? restoredProgress?.tokenFitPassed ?? false
+  );
+  const [tokenFitScore, setTokenFitScore] = useState(
+    completedAccess?.tokenFitScore ?? restoredProgress?.tokenFitScore ?? 0
+  );
+  const [tokenFitHighScore, setTokenFitHighScore] = useState(
+    completedAccess?.tokenFitHighScore ?? restoredProgress?.tokenFitHighScore ?? 0
+  );
 
   const currentStep = OBSERVE_STEPS[stepIndex];
   const isLastStep = stepIndex === OBSERVE_STEPS.length - 1;
   const structureComplete = openedCards.length === LEARN_CARDS.length;
   const useCompactHeader = stepIndex > 0;
-  const observerStepIndex = OBSERVE_STEPS.findIndex((step) => step.id === "observer");
 
   useEffect(() => {
     return () => {
@@ -229,6 +338,34 @@ export default function JalSolObserve() {
       document.body.style.pointerEvents = "";
     };
   }, []);
+
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  if (completedAccess?.passed) return;
+
+  const progress: ObserveProgressState = {
+    stepIndex,
+    openedCards,
+    stillnessAccepted,
+    answers,
+    testSubmitted,
+    tokenFitPassed,
+    tokenFitScore,
+    tokenFitHighScore,
+  };
+
+  window.localStorage.setItem(OBSERVE_PROGRESS_KEY, JSON.stringify(progress));
+}, [
+  completedAccess?.passed,
+  stepIndex,
+  openedCards,
+  stillnessAccepted,
+  answers,
+  testSubmitted,
+  tokenFitPassed,
+  tokenFitScore,
+  tokenFitHighScore,
+]);
 
   useEffect(() => {
     setCanContinue(false);
@@ -275,7 +412,7 @@ export default function JalSolObserve() {
     setStepIndex((prev) => Math.max(prev - 1, 0));
   }
 
-  function openCard(cardId: string) {
+  function openCard(cardId: LearnCardId) {
     setOpenedCards((prev) => (prev.includes(cardId) ? prev : [...prev, cardId]));
   }
 
@@ -284,6 +421,10 @@ export default function JalSolObserve() {
       ...prev,
       [questionId]: optionIndex,
     }));
+
+    if (testSubmitted) {
+      setTestSubmitted(false);
+    }
   }
 
   function submitTest() {
@@ -340,9 +481,11 @@ export default function JalSolObserve() {
 
       localStorage.setItem(OBSERVE_STORAGE_KEY, JSON.stringify(payload));
 
-      if (!passed) return;
+      if (passed) {
+        localStorage.removeItem(OBSERVE_PROGRESS_KEY);
+        beginRoute("/app/jal-sol/enter");
+      }
 
-      beginRoute("/app/jal-sol/enter");
       return;
     }
 
@@ -725,7 +868,9 @@ export default function JalSolObserve() {
                 <div className="jal-bay-head">
                   <div className="jal-bay-title">Observe comprehension test</div>
                   <div className="jal-bay-note">
-                    {testSubmitted ? `${testScore} / ${TEST_QUESTIONS.length}` : "Required before Gate 02"}
+                    {testSubmitted
+                      ? `${testScore} / ${TEST_QUESTIONS.length}`
+                      : "Required before Gate 02"}
                   </div>
                 </div>
 
@@ -742,7 +887,10 @@ export default function JalSolObserve() {
                       <div key={question.id}>
                         <strong>{question.prompt}</strong>
 
-                        <div className="jal-bay-actions" style={{ marginTop: "0.85rem", flexWrap: "wrap" }}>
+                        <div
+                          className="jal-bay-actions"
+                          style={{ marginTop: "0.85rem", flexWrap: "wrap" }}
+                        >
                           {question.options.map((option, index) => {
                             const isSelected = selected === index;
                             const buttonClass = isSelected ? "button gold" : "button ghost";
@@ -786,7 +934,7 @@ export default function JalSolObserve() {
               </>
             )}
 
-                        {currentStep.id === "token-fit" && (
+            {currentStep.id === "token-fit" && (
               <>
                 <div className="jal-bay-head">
                   <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
@@ -801,6 +949,7 @@ export default function JalSolObserve() {
                   This trial checks controlled movement, not just understanding. Reach the minimum
                   score to unlock the final Observe state and continue toward Gate 02.
                 </p>
+
                 <TokenFitGame
                   minScore={MIN_TOKEN_FIT_SCORE}
                   onPass={(score, highScore) => {
