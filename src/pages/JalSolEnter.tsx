@@ -31,6 +31,14 @@ type Gate2Stage =
   | "verify"
   | "passed";
 
+type TrialState =
+  | "locked"
+  | "available"
+  | "in_run"
+  | "failed_run"
+  | "one_pass"
+  | "passed";
+
 type TestQuestion = {
   id: string;
   prompt: string;
@@ -91,6 +99,7 @@ type Gate2ProgressState = {
   };
 
   trial: {
+    state: TrialState;
     unlocked: boolean;
     acknowledged: boolean;
     successfulRuns: number;
@@ -444,7 +453,8 @@ const TEST_QUESTIONS: TestQuestion[] = [
   },
   {
     id: "gate-order",
-    prompt: "What is the correct Gate 02 order before participant state can be granted?",
+    prompt:
+      "What is the correct Gate 02 order before participant state can be granted?",
     options: [
       "Wallet, transaction, trial, verification",
       "Learn, test, checklist, trial, wallet, transaction, verification",
@@ -461,26 +471,11 @@ const CHECKLIST_ITEMS: {
   key: keyof Gate2ProgressState["checklist"];
   label: string;
 }[] = [
-  {
-    key: "walletControlsAssets",
-    label: "Wallet controls access to assets",
-  },
-  {
-    key: "transactionsMayBeIrreversible",
-    label: "Transactions may be irreversible",
-  },
-  {
-    key: "custodyIsMyResponsibility",
-    label: "Custody and responsibility are mine",
-  },
-  {
-    key: "verifyBeforeSigning",
-    label: "Verify details before signing",
-  },
-  {
-    key: "followGate2Order",
-    label: "Follow Gate 02 sequence exactly",
-  },
+  { key: "walletControlsAssets", label: "Wallet controls access to assets" },
+  { key: "transactionsMayBeIrreversible", label: "Transactions may be irreversible" },
+  { key: "custodyIsMyResponsibility", label: "Custody and responsibility are mine" },
+  { key: "verifyBeforeSigning", label: "Verify details before signing" },
+  { key: "followGate2Order", label: "Follow Gate 02 sequence exactly" },
 ];
 
 const DEFAULT_GATE2_PROGRESS: Gate2ProgressState = {
@@ -515,6 +510,7 @@ const DEFAULT_GATE2_PROGRESS: Gate2ProgressState = {
   },
 
   trial: {
+    state: "locked",
     unlocked: false,
     acknowledged: false,
     successfulRuns: 0,
@@ -545,7 +541,21 @@ const DEFAULT_GATE2_PROGRESS: Gate2ProgressState = {
 };
 
 function isValidGate2Stage(value: unknown): value is Gate2Stage {
-  return typeof value === "string" && VALID_GATE2_STAGES.includes(value as Gate2Stage);
+  return (
+    typeof value === "string" &&
+    VALID_GATE2_STAGES.includes(value as Gate2Stage)
+  );
+}
+
+function isValidTrialState(value: unknown): value is TrialState {
+  return (
+    value === "locked" ||
+    value === "available" ||
+    value === "in_run" ||
+    value === "failed_run" ||
+    value === "one_pass" ||
+    value === "passed"
+  );
 }
 
 function readObservePassed(): boolean {
@@ -553,7 +563,9 @@ function readObservePassed(): boolean {
     const raw = localStorage.getItem(OBSERVE_STORAGE_KEY);
     if (!raw) return false;
     const parsed = JSON.parse(raw);
-    return Boolean(parsed?.passed && parsed?.gate === "observe" && parsed?.nextGate === "enter");
+    return Boolean(
+      parsed?.passed && parsed?.gate === "observe" && parsed?.nextGate === "enter"
+    );
   } catch {
     return false;
   }
@@ -577,10 +589,14 @@ function readGate2Progress(): Gate2ProgressState {
     return {
       accessGranted: Boolean(parsed.accessGranted),
       privateHomeSeen: Boolean(parsed.privateHomeSeen),
-      currentStage: isValidGate2Stage(parsed.currentStage) ? parsed.currentStage : "home",
+      currentStage: isValidGate2Stage(parsed.currentStage)
+        ? parsed.currentStage
+        : "home",
 
       modulesCompleted: Array.isArray(parsed.modulesCompleted)
-        ? parsed.modulesCompleted.filter((item): item is string => typeof item === "string")
+        ? parsed.modulesCompleted.filter(
+            (item): item is string => typeof item === "string"
+          )
         : [],
 
       acknowledgements: {
@@ -604,7 +620,9 @@ function readGate2Progress(): Gate2ProgressState {
 
       checklist: {
         walletControlsAssets: Boolean(parsed.checklist?.walletControlsAssets),
-        transactionsMayBeIrreversible: Boolean(parsed.checklist?.transactionsMayBeIrreversible),
+        transactionsMayBeIrreversible: Boolean(
+          parsed.checklist?.transactionsMayBeIrreversible
+        ),
         custodyIsMyResponsibility: Boolean(parsed.checklist?.custodyIsMyResponsibility),
         verifyBeforeSigning: Boolean(parsed.checklist?.verifyBeforeSigning),
         followGate2Order: Boolean(parsed.checklist?.followGate2Order),
@@ -612,16 +630,27 @@ function readGate2Progress(): Gate2ProgressState {
       },
 
       trial: {
+        state: isValidTrialState(parsed.trial?.state)
+          ? parsed.trial.state
+          : "locked",
         unlocked: Boolean(parsed.trial?.unlocked),
         acknowledged: Boolean(parsed.trial?.acknowledged),
         successfulRuns:
-          typeof parsed.trial?.successfulRuns === "number" ? parsed.trial.successfulRuns : 0,
-        bestScore: typeof parsed.trial?.bestScore === "number" ? parsed.trial.bestScore : 0,
+          typeof parsed.trial?.successfulRuns === "number"
+            ? parsed.trial.successfulRuns
+            : 0,
+        bestScore:
+          typeof parsed.trial?.bestScore === "number" ? parsed.trial.bestScore : 0,
         passed: Boolean(parsed.trial?.passed),
         endlessUnlocked: Boolean(parsed.trial?.endlessUnlocked),
-        lastRunScore: typeof parsed.trial?.lastRunScore === "number" ? parsed.trial.lastRunScore : 0,
+        lastRunScore:
+          typeof parsed.trial?.lastRunScore === "number"
+            ? parsed.trial.lastRunScore
+            : 0,
         lastRunPassed:
-          typeof parsed.trial?.lastRunPassed === "boolean" ? parsed.trial.lastRunPassed : null,
+          typeof parsed.trial?.lastRunPassed === "boolean"
+            ? parsed.trial.lastRunPassed
+            : null,
       },
 
       wallet: {
@@ -632,7 +661,9 @@ function readGate2Progress(): Gate2ProgressState {
       transaction: {
         initiated: Boolean(parsed.transaction?.initiated),
         signature:
-          typeof parsed.transaction?.signature === "string" ? parsed.transaction.signature : "",
+          typeof parsed.transaction?.signature === "string"
+            ? parsed.transaction.signature
+            : "",
         confirmed: Boolean(parsed.transaction?.confirmed),
         explorerUrl:
           typeof parsed.transaction?.explorerUrl === "string"
@@ -727,6 +758,31 @@ function canAccessStage(progress: Gate2ProgressState, stage: Gate2Stage): boolea
   }
 }
 
+function isStepCompleted(progress: Gate2ProgressState, stepId: Gate2Stage): boolean {
+  if (progress.modulesCompleted.includes(stepId)) return true;
+
+  switch (stepId) {
+    case "test":
+      return progress.test.passed;
+    case "checklist":
+      return progress.checklist.completed;
+    case "trial-brief":
+      return progress.trial.acknowledged;
+    case "trial":
+      return progress.trial.passed;
+    case "wallet":
+      return progress.wallet.connected;
+    case "transaction":
+      return progress.transaction.initiated;
+    case "verify":
+      return progress.transaction.confirmed;
+    case "passed":
+      return progress.completion.enterPassed;
+    default:
+      return false;
+  }
+}
+
 export default function JalSolEnter() {
   const navigate = useNavigate();
   const timerRef = useRef<number | null>(null);
@@ -784,6 +840,12 @@ export default function JalSolEnter() {
       ? MODULE_CONTENT.find((module) => module.stage === currentStage) ?? null
       : null;
 
+  const shouldShowFullHero =
+    currentStage === "home" || !canEnterGate2 || needsPublicUnlock;
+
+  const currentStageLabel =
+    ENTRY_RAIL.find((step) => step.id === currentStage)?.title || currentStage;
+
   const allTestAnswered = useMemo(() => {
     return TEST_QUESTIONS.every(
       (question) => typeof progress.test.answers[question.id] === "number"
@@ -828,6 +890,14 @@ export default function JalSolEnter() {
     }));
   }
 
+  function getPreviousModuleStage(
+    stage: ModuleContent["stage"]
+  ): ModuleContent["stage"] | null {
+    const index = MODULE_CONTENT.findIndex((module) => module.stage === stage);
+    if (index <= 0) return null;
+    return MODULE_CONTENT[index - 1].stage;
+  }
+
   function handleDevUnlock() {
     if ((!observePassed && !adminBypass) || loading) return;
 
@@ -849,8 +919,19 @@ export default function JalSolEnter() {
     if (loading) return;
 
     patchProgress((prev) => {
+      const hasStarted =
+        prev.modulesCompleted.length > 0 ||
+        prev.currentStage !== "home" ||
+        prev.test.submitted ||
+        prev.checklist.completed ||
+        prev.trial.acknowledged ||
+        prev.wallet.connected ||
+        prev.transaction.initiated;
+
       const nextStage =
-        prev.currentStage !== "home" && canAccessStage(prev, prev.currentStage)
+        hasStarted &&
+        prev.currentStage !== "home" &&
+        canAccessStage(prev, prev.currentStage)
           ? prev.currentStage
           : "module-1-wallet";
 
@@ -886,7 +967,10 @@ export default function JalSolEnter() {
 
     patchProgress((prev) => {
       const already = prev.modulesCompleted.includes(module.stage);
-      const nextModules = already ? prev.modulesCompleted : [...prev.modulesCompleted, module.stage];
+      const nextModules = already
+        ? prev.modulesCompleted
+        : [...prev.modulesCompleted, module.stage];
+
       const nextState = {
         ...prev,
         modulesCompleted: nextModules,
@@ -983,6 +1067,7 @@ export default function JalSolEnter() {
       ...prev,
       trial: {
         ...prev.trial,
+        state: value ? "available" : "locked",
         acknowledged: value,
         unlocked: value,
       },
@@ -991,7 +1076,20 @@ export default function JalSolEnter() {
 
   function beginTrial() {
     if (loading || !progress.trial.acknowledged) return;
-    goToStage("trial");
+
+    patchProgress((prev) => ({
+      ...prev,
+      trial: {
+        ...prev.trial,
+        state:
+          prev.trial.passed
+            ? "passed"
+            : prev.trial.successfulRuns === 1
+            ? "one_pass"
+            : "in_run",
+      },
+      currentStage: "trial",
+    }));
   }
 
   function submitTrialRun() {
@@ -1007,10 +1105,16 @@ export default function JalSolEnter() {
       const successfulRuns = passedRun ? prev.trial.successfulRuns + 1 : 0;
       const passed = successfulRuns >= 2;
 
+      let state: TrialState = "in_run";
+      if (!passedRun) state = "failed_run";
+      else if (successfulRuns === 1) state = "one_pass";
+      else if (passed) state = "passed";
+
       return {
         ...prev,
         trial: {
           ...prev.trial,
+          state,
           unlocked: true,
           acknowledged: true,
           bestScore,
@@ -1032,6 +1136,7 @@ export default function JalSolEnter() {
       ...prev,
       trial: {
         ...prev.trial,
+        state: prev.trial.acknowledged ? "available" : "locked",
         unlocked: prev.trial.unlocked,
         acknowledged: prev.trial.acknowledged,
         successfulRuns: 0,
@@ -1140,101 +1245,138 @@ export default function JalSolEnter() {
     >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
-          <section className="jal-hero jal-world-hero" aria-label="Enter gate hero">
-            <div className="jal-hero-top">
-              <div className="jal-kicker">JAL/SOL • GATE 02</div>
+          {shouldShowFullHero && (
+            <section className="jal-hero jal-world-hero" aria-label="Enter gate hero">
+              <div className="jal-hero-top">
+                <div className="jal-kicker">JAL/SOL • GATE 02</div>
 
-              <div className="jal-status" aria-label="Gate 02 state">
-                <span className="jal-status-dot" />
-                <span className="jal-status-text">{accessLabel}</span>
+                <div className="jal-status" aria-label="Gate 02 state">
+                  <span className="jal-status-dot" />
+                  <span className="jal-status-text">{accessLabel}</span>
+                </div>
               </div>
-            </div>
 
-            <div className="jal-hero-center">
-              <p className="jal-world-pretitle">Participation gate</p>
+              <div className="jal-hero-center">
+                <p className="jal-world-pretitle">Participation gate</p>
 
-              <h1 className="home-title">
-                You are now
-                <br />
-                entering movement.
-              </h1>
+                <h1 className="home-title">
+                  You are now
+                  <br />
+                  entering movement.
+                </h1>
 
-              <p className="home-lead">
-                Gate 02 is the threshold where understanding must become correct action. This is
-                the first irreversible layer in JAL/SOL. The user stops observing from a safe
-                distance and begins preparing for real participation.
-              </p>
+                <p className="home-lead">
+                  Gate 02 is the threshold where understanding must become correct action.
+                  This is the first irreversible layer in JAL/SOL. The user stops observing
+                  from a safe distance and begins preparing for real participation.
+                </p>
 
-              <p className="jal-sublead">
-                This gate is not about speed or hype. It is about sequence, control, proof, and the
-                first verified movement that changes system state.
-              </p>
-            </div>
+                <p className="jal-sublead">
+                  This gate is not about speed or hype. It is about sequence, control, proof,
+                  and the first verified movement that changes system state.
+                </p>
+              </div>
 
-            <div className="jal-arrival-note" aria-label="Enter principles">
-              <span>CONTROLLED ENTRY</span>
-              <span>UNDERSTANDING → CONTROL → EXECUTION</span>
-              <span>PARTICIPATION BEGINS WITH VERIFIED MOVEMENT</span>
-            </div>
+              <div className="jal-arrival-note" aria-label="Enter principles">
+                <span>CONTROLLED ENTRY</span>
+                <span>UNDERSTANDING → CONTROL → EXECUTION</span>
+                <span>PARTICIPATION BEGINS WITH VERIFIED MOVEMENT</span>
+              </div>
 
-            <div className="jal-links">
-              {!canEnterGate2 && !observePassed ? (
+              <div className="jal-links">
+                {!canEnterGate2 && !observePassed ? (
+                  <button
+                    type="button"
+                    className="button gold"
+                    onClick={() => beginRoute("/app/jal-sol/observe")}
+                    disabled={loading}
+                  >
+                    Go To Observe
+                  </button>
+                ) : needsPublicUnlock ? (
+                  <button
+                    type="button"
+                    className="button gold"
+                    onClick={handleDevUnlock}
+                    disabled={loading}
+                  >
+                    Begin Entry
+                  </button>
+                ) : currentStage === "home" ? (
+                  <button
+                    type="button"
+                    className="button gold"
+                    onClick={handleBeginSequence}
+                    disabled={loading}
+                  >
+                    Enter Gate 02
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="button gold"
+                    onClick={handleReturnToGateHome}
+                    disabled={loading}
+                  >
+                    Return To Gate 02 Home
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  className="button gold"
+                  className="button ghost"
                   onClick={() => beginRoute("/app/jal-sol/observe")}
                   disabled={loading}
                 >
-                  Go To Observe
+                  Return To Observe
                 </button>
-              ) : needsPublicUnlock ? (
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={handleDevUnlock}
-                  disabled={loading}
-                >
-                  Begin Entry
-                </button>
-              ) : currentStage === "home" ? (
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={handleBeginSequence}
-                  disabled={loading}
-                >
-                  Enter Gate 02
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={handleReturnToGateHome}
-                  disabled={loading}
-                >
-                  Return To Gate 02 Home
-                </button>
-              )}
 
-              <button
-                type="button"
-                className="button ghost"
-                onClick={() => beginRoute("/app/jal-sol/observe")}
-                disabled={loading}
-              >
-                Return To Observe
-              </button>
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => beginRoute("/app/jal-sol")}
+                  disabled={loading}
+                >
+                  Return To World Hub
+                </button>
+              </div>
+            </section>
+          )}
 
-              <button
-                type="button"
-                className="button ghost"
-                onClick={() => beginRoute("/app/jal-sol")}
-                disabled={loading}
-              >
-                Return To World Hub
-              </button>
-            </div>
-          </section>
+          {canEnterGate2 && currentStage !== "home" && (
+            <>
+              <section className="jal-stage-bar" aria-label="Current Gate 02 stage">
+                <div className="jal-stage-bar-left">
+                  <span>JAL/SOL • Gate 02</span>
+                  <strong>{currentStageLabel}</strong>
+                </div>
+
+                <div className="jal-stage-bar-right">
+                  <span className="jal-status-dot" />
+                  <span>{accessLabel}</span>
+                </div>
+              </section>
+
+              <section className="jal-progress-rail" aria-label="Gate 02 progression rail">
+                {ENTRY_RAIL.map((step) => {
+                  const completed = isStepCompleted(progress, step.id);
+                  const active = step.id === currentStage;
+
+                  return (
+                    <div
+                      key={step.id}
+                      className={`jal-progress-node ${
+                        active ? "active" : completed ? "done" : "locked"
+                      }`}
+                      aria-current={active ? "step" : undefined}
+                    >
+                      <span>{step.title}</span>
+                    </div>
+                  );
+                })}
+              </section>
+            </>
+          )}
 
           {!adminBypass && !observePassed && (
             <section className="jal-bay jal-bay-wide" aria-label="Gate blocked">
@@ -1244,9 +1386,9 @@ export default function JalSolEnter() {
               </div>
 
               <p className="jal-note">
-                Gate 02 requires completion of Observe before controlled entry can begin. The
-                system does not allow real participation to open before awareness has been
-                established.
+                Gate 02 requires completion of Observe before controlled entry can begin.
+                The system does not allow real participation to open before awareness has
+                been established.
               </p>
 
               <div className="jal-bullets">
@@ -1301,13 +1443,12 @@ export default function JalSolEnter() {
                 </div>
 
                 <p className="jal-note">
-                  You completed Gate 01 correctly. You now move from understanding into controlled
-                  participation.
+                  You completed Gate 01 correctly. You now move from understanding into
+                  controlled participation.
                 </p>
 
                 <p className="jal-lock-text">
-                  This next gate will require preparation, validation, and a real irreversible
-                  action.
+                  This next gate will require preparation, validation, and a real irreversible action.
                 </p>
               </section>
 
@@ -1422,9 +1563,9 @@ export default function JalSolEnter() {
                 </div>
 
                 <p className="jal-note">
-                  Gate 02 access is active. This is now the internal progression environment. From
-                  here onward, the user is no longer being sold the gate. They are being processed
-                  through it.
+                  Gate 02 access is active. This is now the internal progression environment.
+                  From here onward, the user is no longer being sold the gate. They are being
+                  processed through it.
                 </p>
 
                 <div className="jal-bullets">
@@ -1496,8 +1637,7 @@ export default function JalSolEnter() {
 
                   <p className="jal-note">
                     The point of Gate 02 is not only to complete a sequence. It is to leave the
-                    user with a changed relationship to the system and a prepared transition toward
-                    Build.
+                    user with a changed relationship to the system and a prepared transition toward Build.
                   </p>
 
                   <div className="jal-bullets">
@@ -1647,20 +1787,24 @@ export default function JalSolEnter() {
                 </label>
 
                 <div className="jal-bay-actions">
-                  <button
-                    type="button"
-                    className="button ghost"
-                    onClick={handleReturnToGateHome}
-                    disabled={loading}
-                  >
-                    Return To Gate 02 Home
-                  </button>
+                  {getPreviousModuleStage(activeModule.stage) && (
+                    <button
+                      type="button"
+                      className="button ghost"
+                      onClick={() => goBackStage(getPreviousModuleStage(activeModule.stage)!)}
+                      disabled={loading}
+                    >
+                      Back
+                    </button>
+                  )}
 
                   <button
                     type="button"
                     className="button gold"
                     onClick={() => handleModuleContinue(activeModule)}
-                    disabled={loading || !progress.acknowledgements[activeModule.acknowledgementKey]}
+                    disabled={
+                      loading || !progress.acknowledgements[activeModule.acknowledgementKey]
+                    }
                   >
                     Continue
                   </button>
@@ -1734,7 +1878,9 @@ export default function JalSolEnter() {
                 <section className="jal-bay jal-bay-wide" aria-label="Test result">
                   <div className="jal-bay-head">
                     <div className="jal-bay-title">
-                      {progress.test.passed ? "YOU PASSED!" : "TEST NOT PASSED"}
+                      {progress.test.passed
+                        ? "COMPREHENSION CONFIRMED"
+                        : "COMPREHENSION NOT YET CONFIRMED"}
                     </div>
                     <div className="jal-bay-note">
                       Score: {progress.test.score} / {TEST_QUESTIONS.length}
@@ -1750,7 +1896,9 @@ export default function JalSolEnter() {
                   {progress.test.passed && (
                     <div className="jal-pass-banner" aria-label="Test pass status">
                       <span>UNDERSTANDING CONFIRMED</span>
-                      <strong>5 / 5 READY TO PROCEED</strong>
+                      <strong>
+                        {progress.test.score} / {TEST_QUESTIONS.length} READY TO PROCEED
+                      </strong>
                     </div>
                   )}
                 </section>
@@ -1821,22 +1969,29 @@ export default function JalSolEnter() {
                 </div>
 
                 <ul className="jal-checklist">
-                  {CHECKLIST_ITEMS.map((item) => (
-                    <li key={item.key}>
-                      <label className="jal-check">
-                        <input
-                          type="checkbox"
-                          checked={progress.checklist[item.key] as boolean}
-                          onChange={(e) =>
-                            updateChecklist({
-                              [item.key]: e.target.checked,
-                            } as Partial<Gate2ProgressState["checklist"]>)
-                          }
-                        />
-                        <span>{item.label}</span>
-                      </label>
-                    </li>
-                  ))}
+                  {CHECKLIST_ITEMS.map((item) => {
+                    const checked = progress.checklist[item.key] as boolean;
+
+                    return (
+                      <li key={item.key} className="jal-checklist-row">
+                        <label className="jal-check">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              updateChecklist({
+                                [item.key]: e.target.checked,
+                              } as Partial<Gate2ProgressState["checklist"]>)
+                            }
+                          />
+                          <span>{item.label}</span>
+                        </label>
+                        <span className="jal-checklist-status">
+                          {checked ? "CONFIRMED" : "PENDING"}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </section>
 
@@ -1948,16 +2103,21 @@ export default function JalSolEnter() {
             <section className="jal-bay jal-bay-wide" aria-label="Hard trial">
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Hard Trial — Token Fit</div>
-                <div className="jal-bay-note">Dev simulation until live game is wired</div>
+                <div className="jal-bay-note">Trial checkpoint shell</div>
               </div>
 
               <p className="jal-note">
                 This stage is the structural trial engine for Gate 02. The live harder Token Fit
-                component can replace this later, but the pass and reset logic here already follows
-                the required system rules.
+                component should mount into the dedicated game slot below. Pass and reset logic are
+                already enforced here.
               </p>
 
               <div className="jal-bullets">
+                <article className="jal-bullet">
+                  <div className="jal-bullet-k">State</div>
+                  <div className="jal-bullet-v">{progress.trial.state.replace("_", " ")}</div>
+                </article>
+
                 <article className="jal-bullet">
                   <div className="jal-bullet-k">Streak</div>
                   <div className="jal-bullet-v">{progress.trial.successfulRuns} / 2</div>
@@ -1969,17 +2129,6 @@ export default function JalSolEnter() {
                 </article>
 
                 <article className="jal-bullet">
-                  <div className="jal-bullet-k">Last Run</div>
-                  <div className="jal-bullet-v">
-                    {progress.trial.lastRunPassed === null
-                      ? "No run submitted yet."
-                      : `${progress.trial.lastRunScore} ${
-                          progress.trial.lastRunPassed ? "(passed)" : "(failed)"
-                        }`}
-                  </div>
-                </article>
-
-                <article className="jal-bullet">
                   <div className="jal-bullet-k">Wallet Unlock</div>
                   <div className="jal-bullet-v">
                     {progress.trial.passed ? "Unlocked" : "Locked until 2 successful runs"}
@@ -1987,9 +2136,42 @@ export default function JalSolEnter() {
                 </article>
               </div>
 
-              <section className="jal-bay jal-bay-wide" aria-label="Trial run submission">
+              <section className="jal-bay jal-bay-wide" aria-label="Trial rule strip">
                 <div className="jal-bay-head">
-                  <div className="jal-bay-title">Submit Trial Run</div>
+                  <div className="jal-bay-title">Trial Conditions</div>
+                  <div className="jal-bay-note">Threshold remains fixed</div>
+                </div>
+
+                <div className="jal-bullets">
+                  <article className="jal-bullet">
+                    <div className="jal-bullet-k">Threshold</div>
+                    <div className="jal-bullet-v">20+</div>
+                  </article>
+                  <article className="jal-bullet">
+                    <div className="jal-bullet-k">Consistency</div>
+                    <div className="jal-bullet-v">2 successful runs</div>
+                  </article>
+                  <article className="jal-bullet">
+                    <div className="jal-bullet-k">Reset</div>
+                    <div className="jal-bullet-v">Failure resets streak</div>
+                  </article>
+                </div>
+              </section>
+
+              <section className="jal-bay jal-bay-wide" aria-label="Token Fit game slot">
+                <div className="jal-bay-head">
+                  <div className="jal-bay-title">Token Fit Mount Zone</div>
+                  <div className="jal-bay-note">Embed live trial component here</div>
+                </div>
+
+                <div className="jal-trial-game-slot">
+                  {/* TokenFitGame mounts here */}
+                </div>
+              </section>
+
+              <section className="jal-bay jal-bay-wide" aria-label="Trial result and control">
+                <div className="jal-bay-head">
+                  <div className="jal-bay-title">Run Result</div>
                   <div className="jal-bay-note">Temporary development control</div>
                 </div>
 
@@ -1997,6 +2179,19 @@ export default function JalSolEnter() {
                   Enter a run score. A score of 20 or greater counts as success. Any lower score
                   resets the streak to zero.
                 </p>
+
+                <div className="jal-bullets">
+                  <article className="jal-bullet">
+                    <div className="jal-bullet-k">Last Run</div>
+                    <div className="jal-bullet-v">
+                      {progress.trial.lastRunPassed === null
+                        ? "No run submitted yet."
+                        : `${progress.trial.lastRunScore} ${
+                            progress.trial.lastRunPassed ? "(passed)" : "(failed)"
+                          }`}
+                    </div>
+                  </article>
+                </div>
 
                 <label className="jal-field">
                   <span className="jal-field-label">Run score</span>
@@ -2014,6 +2209,12 @@ export default function JalSolEnter() {
                 {progress.trial.lastRunPassed === false && (
                   <p className="jal-error-text">
                     The last run failed. Streak reset to zero.
+                  </p>
+                )}
+
+                {progress.trial.state === "one_pass" && (
+                  <p className="jal-lock-text">
+                    First successful run confirmed. One more successful run is required.
                   </p>
                 )}
 
@@ -2064,8 +2265,7 @@ export default function JalSolEnter() {
 
               <p className="jal-note">
                 Wallet connection remains deliberately positioned after learning, testing, checklist,
-                and trial success. This preserves system seriousness and prevents premature wallet
-                friction.
+                and trial success. This preserves system seriousness and prevents premature wallet friction.
               </p>
 
               <div className="jal-bullets">
@@ -2126,8 +2326,8 @@ export default function JalSolEnter() {
               </div>
 
               <p className="jal-note">
-                This stage will later host the real fixed minimal SOL transfer. The sequence and data
-                requirements are already shaped correctly here.
+                This stage will later host the real fixed minimal SOL transfer. The sequence and
+                data requirements are already shaped correctly here.
               </p>
 
               <div className="jal-bullets">
@@ -2193,8 +2393,8 @@ export default function JalSolEnter() {
               </div>
 
               <p className="jal-note">
-                Gate 02 does not complete on claim. It completes on proof. Wallet address, signature,
-                confirmation state, and explorer proof belong here.
+                Gate 02 does not complete on claim. It completes on proof. Wallet address,
+                signature, confirmation state, and explorer proof belong here.
               </p>
 
               <div className="jal-bullets">
