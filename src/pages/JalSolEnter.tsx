@@ -191,6 +191,7 @@ const GATE2_ADMIN_BYPASS_KEY = "gate2_admin_bypass";
 const MINT_AUTHORITY = "3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2";
 const JAL_TOKEN_ADDRESS = "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
 const MIN_TRANSFER_SOL = 0.001;
+const GATE2_PAYMENT_LINK = "https://buy.stripe.com/eVq3cu9xmesz6Kr7ww0x20a";
 
 const VALID_GATE2_STAGES: Gate2Stage[] = [
   "home",
@@ -952,7 +953,10 @@ function buildSigningMessage(displayName: string) {
 }
 
 function getPaymentComplete(progress: Gate2ProgressState) {
-  return progress.package.paymentStatus === "paid";
+  return (
+    progress.package.paymentStatus === "paid" &&
+    progress.package.paymentSource === "verified"
+  );
 }
 
 function getHasWalletAuthority(progress: Gate2ProgressState) {
@@ -988,7 +992,6 @@ function getTrueParticipantState(progress: Gate2ProgressState) {
 function canAccessStage(progress: Gate2ProgressState, stage: Gate2Stage): boolean {
   switch (stage) {
     case "home":
-      return true;
     case "profile":
       return true;
     case "payment":
@@ -1074,6 +1077,30 @@ export default function JalSolEnter() {
   const [trialScoreInput, setTrialScoreInput] = useState("");
   const [trialMode, setTrialMode] = useState<TrialMode>("trial");
 
+  function patchProgress(recipe: (prev: Gate2ProgressState) => Gate2ProgressState) {
+    setProgress((prev) => {
+      const cooked = recipe(prev);
+      const complete = getDevelopmentFlowComplete(cooked);
+
+      const withCompletion: Gate2ProgressState = {
+        ...cooked,
+        completion: {
+          ...cooked.completion,
+          enterPassed: complete,
+          participantState: getTrueParticipantState(cooked),
+          developmentFlowComplete: complete,
+          buildReady: complete,
+          completedAt: complete
+            ? cooked.completion.completedAt ?? Date.now()
+            : null,
+        },
+      };
+
+      writeGate2Progress(withCompletion);
+      return withCompletion;
+    });
+  }
+
   useEffect(() => {
     const observe = readObservePassed();
     const bypass = readGate2AdminBypass();
@@ -1084,6 +1111,40 @@ export default function JalSolEnter() {
     setProgress(saved);
     setProfileDraft(saved.profile);
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paid = params.get("paid");
+
+    if (paid !== "true") return;
+    if (!progress.profile.created) return;
+    if (progress.package.paymentStatus === "paid" && progress.package.paymentSource === "verified") {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    patchProgress((prev) => ({
+      ...prev,
+      package: {
+        ...prev.package,
+        checkoutStarted: true,
+        stripeSessionId: prev.package.stripeSessionId || createMockSessionId(),
+        stripeReceiptNumber:
+          prev.package.stripeReceiptNumber || createMockReceiptNumber(),
+        stripeCustomerEmail: prev.profile.email,
+        paymentStatus: "paid",
+        paymentSource: "verified",
+        paidAt: prev.package.paidAt ?? Date.now(),
+      },
+      currentStage: "module-1-wallet",
+    }));
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }, [
+    progress.profile.created,
+    progress.package.paymentStatus,
+    progress.package.paymentSource,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -1103,11 +1164,13 @@ export default function JalSolEnter() {
 
   const shouldShowFullHero = currentStage === "home" || !canEnterGate2;
 
-  const allTestAnswered = useMemo(() => {
-    return TEST_QUESTIONS.every(
-      (question) => typeof progress.test.answers[question.id] === "number"
-    );
-  }, [progress.test.answers]);
+  const allTestAnswered = useMemo(
+    () =>
+      TEST_QUESTIONS.every(
+        (question) => typeof progress.test.answers[question.id] === "number"
+      ),
+    [progress.test.answers]
+  );
 
   const paymentComplete = getPaymentComplete(progress);
   const hasWalletAuthority = getHasWalletAuthority(progress);
@@ -1124,29 +1187,9 @@ export default function JalSolEnter() {
     ? "Development Flow Complete"
     : "Sequence Active";
 
-  function patchProgress(recipe: (prev: Gate2ProgressState) => Gate2ProgressState) {
-    setProgress((prev) => {
-      const cooked = recipe(prev);
-      const withCompletion: Gate2ProgressState = {
-        ...cooked,
-        completion: {
-          ...cooked.completion,
-          enterPassed: getDevelopmentFlowComplete(cooked),
-          participantState: getTrueParticipantState(cooked),
-          developmentFlowComplete: getDevelopmentFlowComplete(cooked),
-          buildReady: getDevelopmentFlowComplete(cooked),
-          completedAt: getDevelopmentFlowComplete(cooked)
-            ? cooked.completion.completedAt ?? Date.now()
-            : null,
-        },
-      };
-      writeGate2Progress(withCompletion);
-      return withCompletion;
-    });
-  }
-
   function beginRoute(to: RouteTo) {
     if (loading) return;
+
     setLoading(true);
     document.body.style.pointerEvents = "none";
 
@@ -1162,6 +1205,7 @@ export default function JalSolEnter() {
       if (!canAccessStage(prev, stage) && stage !== "home" && stage !== "profile") {
         return prev;
       }
+
       return {
         ...prev,
         currentStage: stage,
@@ -1199,7 +1243,9 @@ export default function JalSolEnter() {
         prev.transaction.initiated;
 
       const nextStage =
-        hasStarted && prev.currentStage !== "home" && canAccessStage(prev, prev.currentStage)
+        hasStarted &&
+        prev.currentStage !== "home" &&
+        canAccessStage(prev, prev.currentStage)
           ? prev.currentStage
           : "profile";
 
@@ -1225,14 +1271,10 @@ export default function JalSolEnter() {
     patchProgress((prev) => ({
       ...prev,
       profile: {
+        ...prev.profile,
         created: true,
         displayName: cleanDisplayName,
         email: cleanEmail,
-        projectName: prev.profile.projectName || "",
-        tokenSymbol: prev.profile.tokenSymbol || "",
-        dexDomain: prev.profile.dexDomain || "",
-        landingButtonLogo: prev.profile.landingButtonLogo || "",
-        headerLogo: prev.profile.headerLogo || "",
         acceptedTerms: true,
         createdAt: prev.profile.createdAt ?? Date.now(),
       },
@@ -1241,11 +1283,11 @@ export default function JalSolEnter() {
 
     setProfileDraft((prev) => ({
       ...prev,
+      created: true,
       displayName: cleanDisplayName,
       email: cleanEmail,
       acceptedTerms: true,
-      created: true,
-      createdAt: Date.now(),
+      createdAt: prev.createdAt ?? Date.now(),
     }));
 
     setProfileError("");
@@ -1268,8 +1310,7 @@ export default function JalSolEnter() {
     if (!progress.acknowledgements[module.acknowledgementKey]) return;
 
     patchProgress((prev) => {
-      const already = prev.modulesCompleted.includes(module.stage);
-      const nextModules = already
+      const nextModules = prev.modulesCompleted.includes(module.stage)
         ? prev.modulesCompleted
         : [...prev.modulesCompleted, module.stage];
 
@@ -1510,6 +1551,7 @@ export default function JalSolEnter() {
       },
       currentStage: "trial",
     }));
+
     setTrialScoreInput("");
     setTrialMode("trial");
   }
@@ -2239,12 +2281,12 @@ export default function JalSolEnter() {
 
                   <div className="jal-bay-actions">
                     <a
-                      href="https://buy.stripe.com/dRmaEW5h62JRfgX8AA0x201"
+                      href={GATE2_PAYMENT_LINK}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="button gold"
                     >
-                      Proceed to Payment
+                      Open Gate 02
                     </a>
                   </div>
                 </section>
@@ -2257,34 +2299,13 @@ export default function JalSolEnter() {
                 </div>
 
                 <p className="jal-note">
-                  After completing payment, confirm below to unlock the next stage.
+                  After completing payment, this page waits for the redirect signal before
+                  the next stage opens.
                 </p>
 
                 <div className="jal-bay-actions">
-                  <button
-                    type="button"
-                    className="button gold"
-                    onClick={() => {
-                      patchProgress((prev) => ({
-                        ...prev,
-                        package: {
-                          ...prev.package,
-                          checkoutStarted: true,
-                          stripeSessionId:
-                            prev.package.stripeSessionId || createMockSessionId(),
-                          stripeReceiptNumber:
-                            prev.package.stripeReceiptNumber || createMockReceiptNumber(),
-                          stripeCustomerEmail: prev.profile.email,
-                          paymentStatus: "paid",
-                          paymentSource: "dev",
-                          paidAt: Date.now(),
-                        },
-                        currentStage: "module-1-wallet",
-                      }));
-                    }}
-                    disabled={loading}
-                  >
-                    I Have Completed Payment
+                  <button type="button" className="button gold" disabled>
+                    Awaiting Payment Confirmation...
                   </button>
                 </div>
               </section>
