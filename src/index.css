@@ -6105,3 +6105,122 @@ button,
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* =========================================
+   GATE 02 — STAGE BAR + PROGRESS RAIL
+========================================= */
+
+.jal-stage-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+  flex-wrap:wrap;
+  margin:0 0 1rem;
+  padding:1rem 1.1rem;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:1.2rem;
+  background:
+    radial-gradient(720px 180px at 50% 0%, rgba(255,255,255,.03), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.03),
+    0 12px 28px rgba(0,0,0,.22);
+}
+
+.jal-stage-bar-left,
+.jal-stage-bar-right{
+  display:flex;
+  align-items:center;
+  gap:.7rem;
+  flex-wrap:wrap;
+}
+
+.jal-stage-bar-left span,
+.jal-stage-bar-right span{
+  font-size:.72rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.72;
+}
+
+.jal-stage-bar-left strong{
+  font-size:.98rem;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+.jal-progress-rail{
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+  gap:.75rem;
+  margin:0 0 1.2rem;
+  padding:1rem;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:1.25rem;
+  background:
+    radial-gradient(900px 220px at 50% 0%, rgba(0,240,255,.04), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.01));
+}
+
+.jal-progress-node{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:54px;
+  padding:.8rem .9rem;
+  border-radius:1rem;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.02);
+  text-align:center;
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    transform var(--t-fast),
+    opacity var(--t-fast);
+}
+
+.jal-progress-node span{
+  font-size:.76rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  line-height:1.35;
+}
+
+.jal-progress-node.locked{
+  opacity:.42;
+  filter:saturate(.72);
+}
+
+.jal-progress-node.done{
+  border-color:rgba(17,241,167,.26);
+  color:#b8ffe1;
+  box-shadow:0 0 14px rgba(17,241,167,.08);
+}
+
+.jal-progress-node.active{
+  border-color:rgba(244,200,106,.42);
+  color:#ffe2a2;
+  background:
+    radial-gradient(420px 120px at 50% 0%, rgba(244,200,106,.08), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.012));
+  box-shadow:
+    0 0 18px rgba(244,200,106,.10),
+    inset 0 0 0 1px rgba(255,255,255,.03);
+  transform:translateY(-1px);
+}
+
+@media (max-width:820px){
+  .jal-stage-bar{
+    align-items:flex-start;
+  }
+
+  .jal-stage-bar-left,
+  .jal-stage-bar-right{
+    width:100%;
+  }
+
+  .jal-progress-rail{
+    grid-template-columns:1fr;
+  }
+}
