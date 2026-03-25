@@ -923,12 +923,10 @@ function createMockReceiptNumber() {
   return `rcpt_${Date.now().toString(36).toUpperCase()}`;
 }
 
-function buildSigningMessage(displayName: string, projectName: string, tokenSymbol: string) {
+function buildSigningMessage(displayName: string) {
   return [
     "JAL/SOL Gate 02 — Enter",
     `Display Name: ${displayName || "Unnamed"}`,
-    `Project: ${projectName || "Unset"}`,
-    `Token Symbol: ${tokenSymbol || "Unset"}`,
     `Authority Wallet: ${MINT_AUTHORITY}`,
     "Purpose: prove control before first transfer",
   ].join("\n");
@@ -1192,65 +1190,45 @@ export default function JalSolEnter() {
     });
   }
 
-  function handleProfileSave() {
-    if (loading) return;
+function handleProfileSave() {
+  if (loading) return;
 
-    const cleanDisplayName = profileDraft.displayName.trim();
-    const cleanEmail = profileDraft.email.trim();
-    const cleanProjectName = profileDraft.projectName.trim();
-    const cleanTokenSymbol = profileDraft.tokenSymbol.trim().toUpperCase();
-    const cleanDexDomain = profileDraft.dexDomain.trim();
-    const cleanLandingLogo = profileDraft.landingButtonLogo.trim();
-    const cleanHeaderLogo = profileDraft.headerLogo.trim();
+  const cleanDisplayName = profileDraft.displayName.trim();
+  const cleanEmail = profileDraft.email.trim();
 
-    if (
-      !cleanDisplayName ||
-      !cleanEmail ||
-      !cleanProjectName ||
-      !cleanTokenSymbol ||
-      !cleanDexDomain ||
-      !cleanLandingLogo ||
-      !cleanHeaderLogo ||
-      !profileDraft.acceptedTerms
-    ) {
-      setProfileError("All profile fields and terms acceptance are required.");
-      return;
-    }
-
-    patchProgress((prev) => ({
-      ...prev,
-      profile: {
-        created: true,
-        displayName: cleanDisplayName,
-        email: cleanEmail,
-        projectName: cleanProjectName,
-        tokenSymbol: cleanTokenSymbol,
-        dexDomain: cleanDexDomain,
-        landingButtonLogo: cleanLandingLogo,
-        headerLogo: cleanHeaderLogo,
-        acceptedTerms: true,
-        createdAt: prev.profile.createdAt ?? Date.now(),
-      },
-      currentStage: "payment",
-    }));
-
-    setProfileDraft((prev) => ({
-      ...prev,
-      displayName: cleanDisplayName,
-      email: cleanEmail,
-      projectName: cleanProjectName,
-      tokenSymbol: cleanTokenSymbol,
-      dexDomain: cleanDexDomain,
-      landingButtonLogo: cleanLandingLogo,
-      headerLogo: cleanHeaderLogo,
-      acceptedTerms: true,
-      created: true,
-      createdAt: Date.now(),
-    }));
-
-    setProfileError("");
+  if (!cleanDisplayName || !cleanEmail || !profileDraft.acceptedTerms) {
+    setProfileError("Display name, email, and terms acceptance are required.");
+    return;
   }
 
+  patchProgress((prev) => ({
+    ...prev,
+    profile: {
+      created: true,
+      displayName: cleanDisplayName,
+      email: cleanEmail,
+      projectName: prev.profile.projectName || "",
+      tokenSymbol: prev.profile.tokenSymbol || "",
+      dexDomain: prev.profile.dexDomain || "",
+      landingButtonLogo: prev.profile.landingButtonLogo || "",
+      headerLogo: prev.profile.headerLogo || "",
+      acceptedTerms: true,
+      createdAt: prev.profile.createdAt ?? Date.now(),
+    },
+    currentStage: "payment",
+  }));
+
+  setProfileDraft((prev) => ({
+    ...prev,
+    displayName: cleanDisplayName,
+    email: cleanEmail,
+    acceptedTerms: true,
+    created: true,
+    createdAt: Date.now(),
+  }));
+
+  setProfileError("");
+}
   function handlePaymentSessionStart() {
     if (loading || !progress.profile.created) return;
 
@@ -1588,29 +1566,25 @@ patchProgress((prev): Gate2ProgressState => {
     }));
   }
 
-  function simulateWalletSign() {
-    if (loading || !progress.wallet.connected) return;
+function simulateWalletSign() {
+  if (loading || !progress.wallet.connected) return;
 
-    patchProgress((prev) => {
-      const message = buildSigningMessage(
-        prev.profile.displayName,
-        prev.profile.projectName,
-        prev.profile.tokenSymbol
-      );
+  patchProgress((prev) => {
+    const message = buildSigningMessage(prev.profile.displayName);
 
-      return {
-        ...prev,
-        wallet: {
-          ...prev.wallet,
-          messageSigned: true,
-          signedMessageText: message,
-          signedMessageSignature: createMockSignature(),
-          signingSource: "dev",
-        },
-        currentStage: "transaction",
-      };
-    });
-  }
+    return {
+      ...prev,
+      wallet: {
+        ...prev.wallet,
+        messageSigned: true,
+        signedMessageText: message,
+        signedMessageSignature: createMockSignature(),
+        signingSource: "dev",
+      },
+      currentStage: "transaction",
+    };
+  });
+}
 
   function resetWalletState() {
     patchProgress((prev) => ({
@@ -2126,254 +2100,127 @@ patchProgress((prev): Gate2ProgressState => {
             </>
           )}
 
-          {canEnterGate2 && currentStage === "profile" && (
-            <section className="jal-bay jal-bay-wide" aria-label="Gate 02 profile creation">
-              <div className="jal-bay-head">
-                <div className="jal-bay-title">Gate 02 Profile Creation</div>
-                <div className="jal-bay-note">Package identity required</div>
+{canEnterGate2 && currentStage === "payment" && (
+  <section className="jal-bay jal-bay-wide" aria-label="Gate 02 payment">
+    <div className="jal-bay-head">
+      <div className="jal-bay-title">Gate 02 Entry Condition</div>
+      <div className="jal-bay-note">Commitment required</div>
+    </div>
+
+    <p className="jal-note">
+      Entry into Gate 02 is not granted by navigation. It is granted by commitment.
+      This step confirms intent before authority is given.
+    </p>
+
+    <div className="jal-grid">
+
+      {/* INTENT */}
+      <section className="jal-bay">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">Intent</div>
+          <div className="jal-bay-note">Declaration</div>
+        </div>
+
+        <p className="jal-note">
+          You are not purchasing access.  
+          You are committing to proceed through a controlled system of value creation.
+        </p>
+
+        <div className="jal-emerging-stack">
+          <div className="jal-emerging-row">
+            <div>
+              <div className="jal-emerging-label">Outcome</div>
+              <div className="jal-emerging-note">
+                Access to Gate 02 environment and progression path.
               </div>
+            </div>
+            <span className="jal-emerging-chip">UNLOCK</span>
+          </div>
 
-              <p className="jal-note">
-                This form creates the Gate 02 package shell. It must exist before payment,
-                before wallet authority, and before the first real movement.
-              </p>
-
-              <div className="jal-grid">
-                <section className="jal-bay">
-                  <label className="jal-field">
-                    <span className="jal-field-label">Display name</span>
-                    <input
-                      className="jal-input"
-                      type="text"
-                      value={profileDraft.displayName}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({ ...prev, displayName: e.target.value }))
-                      }
-                      placeholder="Your visible Gate 02 identity"
-                    />
-                  </label>
-
-                  <label className="jal-field">
-                    <span className="jal-field-label">Email</span>
-                    <input
-                      className="jal-input"
-                      type="email"
-                      value={profileDraft.email}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({ ...prev, email: e.target.value }))
-                      }
-                      placeholder="you@example.com"
-                    />
-                  </label>
-
-                  <label className="jal-field">
-                    <span className="jal-field-label">Project name</span>
-                    <input
-                      className="jal-input"
-                      type="text"
-                      value={profileDraft.projectName}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({ ...prev, projectName: e.target.value }))
-                      }
-                      placeholder="Your project name"
-                    />
-                  </label>
-
-                  <label className="jal-field">
-                    <span className="jal-field-label">Chosen token symbol</span>
-                    <input
-                      className="jal-input"
-                      type="text"
-                      value={profileDraft.tokenSymbol}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({ ...prev, tokenSymbol: e.target.value }))
-                      }
-                      placeholder="JAL"
-                    />
-                  </label>
-                </section>
-
-                <section className="jal-bay">
-                  <label className="jal-field">
-                    <span className="jal-field-label">DEX domain</span>
-                    <input
-                      className="jal-input"
-                      type="text"
-                      value={profileDraft.dexDomain}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({ ...prev, dexDomain: e.target.value }))
-                      }
-                      placeholder="example.com"
-                    />
-                  </label>
-
-                  <label className="jal-field">
-                    <span className="jal-field-label">Landing button logo URL</span>
-                    <input
-                      className="jal-input"
-                      type="text"
-                      value={profileDraft.landingButtonLogo}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({
-                          ...prev,
-                          landingButtonLogo: e.target.value,
-                        }))
-                      }
-                      placeholder="https://..."
-                    />
-                  </label>
-
-                  <label className="jal-field">
-                    <span className="jal-field-label">Header logo URL</span>
-                    <input
-                      className="jal-input"
-                      type="text"
-                      value={profileDraft.headerLogo}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({ ...prev, headerLogo: e.target.value }))
-                      }
-                      placeholder="https://..."
-                    />
-                  </label>
-
-                  <label className="jal-check">
-                    <input
-                      type="checkbox"
-                      checked={profileDraft.acceptedTerms}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({
-                          ...prev,
-                          acceptedTerms: e.target.checked,
-                        }))
-                      }
-                    />
-                    <span>
-                      I accept the Gate 02 terms and understand that this package identity is tied
-                      to progression, payment, wallet authority, and verification.
-                    </span>
-                  </label>
-                </section>
+          <div className="jal-emerging-row">
+            <div>
+              <div className="jal-emerging-label">Requirement</div>
+              <div className="jal-emerging-note">
+                Verified payment tied to your participant shell.
               </div>
+            </div>
+            <span className="jal-emerging-chip">REQUIRED</span>
+          </div>
+        </div>
+      </section>
 
-              {profileError ? <p className="jal-error-text">{profileError}</p> : null}
+      {/* PAYMENT */}
+      <section className="jal-bay">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">Payment</div>
+          <div className="jal-bay-note">External verification</div>
+        </div>
 
-              <div className="jal-bay-actions">
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => goBackStage("home")}
-                  disabled={loading}
-                >
-                  Return To Home
-                </button>
+        <p className="jal-note">
+          Complete the payment externally.  
+          Return here to confirm and unlock the next stage.
+        </p>
 
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={handleProfileSave}
-                  disabled={loading}
-                >
-                  Save Profile
-                </button>
-              </div>
-            </section>
-          )}
+        <div className="jal-bay-actions">
+          <a
+            href="https://buy.stripe.com/dRmaEW5h62JRfgX8AA0x201"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="button gold"
+          >
+            Proceed to Payment
+          </a>
+        </div>
+      </section>
+    </div>
 
-          {canEnterGate2 && currentStage === "payment" && (
-            <section className="jal-bay jal-bay-wide" aria-label="Payment packaging">
-              <div className="jal-bay-head">
-                <div className="jal-bay-title">Stripe Payment Packaging</div>
-                <div className="jal-bay-note">Package truth required</div>
-              </div>
+    {/* VERIFY */}
+    <section className="jal-bay">
+      <div className="jal-bay-head">
+        <div className="jal-bay-title">Verification</div>
+        <div className="jal-bay-note">Return + confirm</div>
+      </div>
 
-              <p className="jal-note">
-                Gate 02 packaging should be paid access. Redirect alone is not truth. Final
-                integration should rely on Checkout Session retrieval and webhook confirmation.
-                This scaffold preserves that meaning while development actions remain clearly marked.
-              </p>
+      <p className="jal-note">
+        After completing payment, confirm below to unlock the next stage.
+      </p>
 
-              <div className="jal-bullets">
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Display Name</div>
-                  <div className="jal-bullet-v">{progress.profile.displayName || "Missing"}</div>
-                </article>
+      <div className="jal-bay-actions">
+        <button
+          className="button gold"
+onClick={() => {
+  patchProgress((prev) => ({
+    ...prev,
+    package: {
+      ...prev.package,
+      checkoutStarted: true,
+      stripeSessionId: prev.package.stripeSessionId || createMockSessionId(),
+      stripeReceiptNumber: prev.package.stripeReceiptNumber || createMockReceiptNumber(),
+      stripeCustomerEmail: prev.profile.email,
+      paymentStatus: "paid",
+      paymentSource: "dev",
+      paidAt: Date.now(),
+    },
+    currentStage: "module-1-wallet",
+  }));
+}}
+        >
+          I Have Completed Payment
+        </button>
+      </div>
+    </section>
 
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Customer Email</div>
-                  <div className="jal-bullet-v">{progress.profile.email || "Missing"}</div>
-                </article>
-
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Session ID</div>
-                  <div className="jal-bullet-v">
-                    {progress.package.stripeSessionId || "Not created"}
-                  </div>
-                </article>
-
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Receipt Number</div>
-                  <div className="jal-bullet-v">
-                    {progress.package.stripeReceiptNumber || "Not captured"}
-                  </div>
-                </article>
-
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Payment Status</div>
-                  <div className="jal-bullet-v">
-                    {progress.package.paymentStatus.toUpperCase()}
-                    {progress.package.paymentSource !== "missing"
-                      ? ` (${progress.package.paymentSource})`
-                      : ""}
-                  </div>
-                </article>
-              </div>
-
-              <div className="jal-bay-actions">
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => goBackStage("profile")}
-                  disabled={loading}
-                >
-                  Return To Profile
-                </button>
-
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={handlePaymentSessionStart}
-                  disabled={loading}
-                >
-                  Create Session Shell
-                </button>
-
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={handlePaymentReset}
-                  disabled={loading}
-                >
-                  Reset Payment
-                </button>
-
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={handlePaymentDevPaid}
-                  disabled={loading}
-                >
-                  Mark Paid (DEV)
-                </button>
-              </div>
-
-              {paymentComplete && (
-                <p className="jal-lock-text">
-                  Payment shell recorded. Module access is open, but final production flow should
-                  replace DEV payment truth with verified Stripe truth.
-                </p>
-              )}
-            </section>
-          )}
+    <div className="jal-bay-actions">
+      <button
+        type="button"
+        className="button ghost"
+        onClick={() => goBackStage("profile")}
+      >
+        Back to Profile
+      </button>
+    </div>
+  </section>
+)}
 
           {canEnterGate2 && activeModule && (
             <section className="jal-bay jal-bay-wide" aria-label={activeModule.title}>
