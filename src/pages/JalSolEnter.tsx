@@ -1743,6 +1743,10 @@ patchProgress((prev): Gate2ProgressState => {
       v: MINT_AUTHORITY,
     },
     {
+      k: "JAL Token Address",
+      v: JAL_TOKEN_ADDRESS,
+    },
+    {
       k: "Mint Account",
       v: "Pending Build",
     },
