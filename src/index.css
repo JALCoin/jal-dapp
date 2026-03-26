@@ -1853,6 +1853,166 @@ a.button[aria-disabled="true"]{
   }
 }
 
+.jal-logo-nav{
+  display:block;
+  width:max-content;
+  margin:0 auto 1rem;
+  padding:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+}
+
+.jal-logo-nav-image{
+  display:block;
+  width:min(220px, 42vw);
+  height:auto;
+  object-fit:contain;
+  filter:drop-shadow(0 0 16px rgba(255,255,255,.12));
+}
+
+.jal-observe-sequence-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:14px;
+  margin-top:1rem;
+}
+
+.jal-observe-sequence-card{
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:1.1rem;
+  padding:1rem;
+  min-width:0;
+  background:
+    radial-gradient(720px 180px at 50% 0%, rgba(255,255,255,.03), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+}
+
+.jal-observe-sequence-card.is-active{
+  border-color:rgba(227,190,92,.52);
+  box-shadow:0 0 0 1px rgba(227,190,92,.14), 0 0 24px rgba(227,190,92,.12);
+}
+
+.jal-observe-sequence-card.is-complete{
+  border-color:rgba(22,214,173,.34);
+}
+
+.jal-observe-sequence-card.is-waiting{
+  opacity:.68;
+}
+
+.jal-observe-sequence-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:.8rem;
+}
+
+.jal-observe-sequence-number{
+  font-size:.82rem;
+  letter-spacing:.14em;
+  opacity:.8;
+}
+
+.jal-observe-sequence-state{
+  font-size:.72rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  opacity:.82;
+}
+
+.jal-observe-sequence-title{
+  margin:0 0 .45rem;
+  font-size:1rem;
+  line-height:1.2;
+}
+
+.jal-observe-sequence-note{
+  margin:0;
+  font-size:.92rem;
+  opacity:.82;
+  line-height:1.5;
+}
+
+.jal-observe-nav-shell{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  width:100%;
+}
+
+.jal-observe-nav-button{
+  width:52px;
+  height:52px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.03);
+  color:inherit;
+  font-size:1.05rem;
+  cursor:pointer;
+  transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease, opacity .18s ease;
+}
+
+.jal-observe-nav-button:hover:not(:disabled){
+  transform:translateY(-1px);
+  border-color:rgba(227,190,92,.42);
+  box-shadow:0 0 16px rgba(227,190,92,.12);
+}
+
+.jal-observe-nav-button:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+.jal-observe-status-light{
+  width:16px;
+  height:16px;
+  border-radius:999px;
+  display:inline-block;
+  box-shadow:0 0 0 1px rgba(255,255,255,.1);
+}
+
+.jal-observe-status-light.is-red{
+  background:#a83d3d;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 0 14px rgba(168,61,61,.45);
+}
+
+.jal-observe-status-light.is-green{
+  background:#16d6ad;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 0 14px rgba(22,214,173,.45);
+}
+
+@media (max-width: 980px){
+  .jal-observe-sequence-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px){
+  .jal-logo-nav-image{
+    width:min(180px, 54vw);
+  }
+
+  .jal-observe-sequence-grid{
+    grid-template-columns:1fr;
+  }
+
+  .jal-observe-nav-shell{
+    gap:12px;
+  }
+
+  .jal-observe-nav-button{
+    width:48px;
+    height:48px;
+  }
+}
+
 /* =========================================
    11) FOOTER
 ========================================= */

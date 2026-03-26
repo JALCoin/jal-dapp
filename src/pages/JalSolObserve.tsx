@@ -25,8 +25,7 @@ type ObserveStepId =
   | "transaction"
   | "stillness"
   | "test"
-  | "token-fit"
-  | "observer";
+  | "token-fit";
 
 type ObserveStep = {
   id: ObserveStepId;
@@ -111,11 +110,6 @@ const OBSERVE_STEPS: ObserveStep[] = [
     id: "token-fit",
     label: "Token Fit",
     note: "Prove control under movement.",
-  },
-  {
-    id: "observer",
-    label: "Observer",
-    note: "State confirmed.",
   },
 ];
 
@@ -296,11 +290,10 @@ export default function JalSolObserve() {
 
   const [restoredProgress] = useState<ObserveProgressState | null>(() => readProgress());
   const [completedAccess] = useState<ObserveAccessState | null>(() => readCompletedAccess());
-  const observerStepIndex = OBSERVE_STEPS.findIndex((step) => step.id === "observer");
 
   const [loading, setLoading] = useState(false);
   const [stepIndex, setStepIndex] = useState(() => {
-    if (completedAccess?.passed) return observerStepIndex;
+    if (completedAccess?.passed) return OBSERVE_STEPS.length - 1;
     return restoredProgress?.stepIndex ?? 0;
   });
   const [canContinue, setCanContinue] = useState(false);
@@ -339,11 +332,24 @@ export default function JalSolObserve() {
     };
   }, []);
 
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  if (completedAccess?.passed) return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (completedAccess?.passed) return;
 
-  const progress: ObserveProgressState = {
+    const progress: ObserveProgressState = {
+      stepIndex,
+      openedCards,
+      stillnessAccepted,
+      answers,
+      testSubmitted,
+      tokenFitPassed,
+      tokenFitScore,
+      tokenFitHighScore,
+    };
+
+    window.localStorage.setItem(OBSERVE_PROGRESS_KEY, JSON.stringify(progress));
+  }, [
+    completedAccess?.passed,
     stepIndex,
     openedCards,
     stillnessAccepted,
@@ -352,20 +358,7 @@ useEffect(() => {
     tokenFitPassed,
     tokenFitScore,
     tokenFitHighScore,
-  };
-
-  window.localStorage.setItem(OBSERVE_PROGRESS_KEY, JSON.stringify(progress));
-}, [
-  completedAccess?.passed,
-  stepIndex,
-  openedCards,
-  stillnessAccepted,
-  answers,
-  testSubmitted,
-  tokenFitPassed,
-  tokenFitScore,
-  tokenFitHighScore,
-]);
+  ]);
 
   useEffect(() => {
     setCanContinue(false);
@@ -405,6 +398,12 @@ useEffect(() => {
       navigate(to);
       document.body.style.pointerEvents = "";
     }, 900);
+  }
+
+  function handleGateHome() {
+    if (loading) return;
+    setStepIndex(0);
+    window.scrollTo({ top: 0, behavior: "auto" });
   }
 
   function handleBack() {
@@ -459,51 +458,52 @@ useEffect(() => {
     tokenFitPassed,
   ]);
 
-function handleNext() {
-  if (loading || nextDisabled) return;
+  function handleNext() {
+    if (loading || nextDisabled) return;
 
-  if (isLastStep) {
-    const alreadyPassed = Boolean(completedAccess?.passed);
-    const quizPassedNow = alreadyPassed || testScore >= PASS_MARK;
-    const tokenFitPassedNow = alreadyPassed || tokenFitPassed;
-    const passed = quizPassedNow && tokenFitPassedNow;
+    if (isLastStep) {
+      const alreadyPassed = Boolean(completedAccess?.passed);
+      const quizPassedNow = alreadyPassed || testScore >= PASS_MARK;
+      const tokenFitPassedNow = alreadyPassed || tokenFitPassed;
+      const passed = quizPassedNow && tokenFitPassedNow;
 
-    const payload: ObserveAccessState = {
-      passed,
-      score: alreadyPassed ? completedAccess?.score ?? testScore : testScore,
-      total: TEST_QUESTIONS.length,
-      quizPassed: quizPassedNow,
-      tokenFitPassed: tokenFitPassedNow,
-      tokenFitScore: alreadyPassed
-        ? completedAccess?.tokenFitScore ?? tokenFitScore
-        : tokenFitScore,
-      tokenFitHighScore: alreadyPassed
-        ? completedAccess?.tokenFitHighScore ?? tokenFitHighScore
-        : tokenFitHighScore,
-      completedAt: alreadyPassed
-        ? completedAccess?.completedAt ?? Date.now()
-        : Date.now(),
-      completedIso: alreadyPassed
-        ? completedAccess?.completedIso ?? new Date().toISOString()
-        : new Date().toISOString(),
-      gate: "observe",
-      nextGate: "enter",
-    };
+      const payload: ObserveAccessState = {
+        passed,
+        score: alreadyPassed ? completedAccess?.score ?? testScore : testScore,
+        total: TEST_QUESTIONS.length,
+        quizPassed: quizPassedNow,
+        tokenFitPassed: tokenFitPassedNow,
+        tokenFitScore: alreadyPassed
+          ? completedAccess?.tokenFitScore ?? tokenFitScore
+          : tokenFitScore,
+        tokenFitHighScore: alreadyPassed
+          ? completedAccess?.tokenFitHighScore ?? tokenFitHighScore
+          : tokenFitHighScore,
+        completedAt: alreadyPassed
+          ? completedAccess?.completedAt ?? Date.now()
+          : Date.now(),
+        completedIso: alreadyPassed
+          ? completedAccess?.completedIso ?? new Date().toISOString()
+          : new Date().toISOString(),
+        gate: "observe",
+        nextGate: "enter",
+      };
 
-    localStorage.setItem(OBSERVE_STORAGE_KEY, JSON.stringify(payload));
+      localStorage.setItem(OBSERVE_STORAGE_KEY, JSON.stringify(payload));
 
-    if (passed) {
-      localStorage.removeItem(OBSERVE_PROGRESS_KEY);
-      beginRoute("/app/jal-sol/enter");
+      if (passed) {
+        localStorage.removeItem(OBSERVE_PROGRESS_KEY);
+        beginRoute("/app/jal-sol/enter");
+      }
+
+      return;
     }
 
-    return;
+    setStepIndex((prev) => Math.min(prev + 1, OBSERVE_STEPS.length - 1));
   }
 
-  setStepIndex((prev) => Math.min(prev + 1, OBSERVE_STEPS.length - 1));
-}
-
-  const progressText = `${stepIndex + 1} / ${OBSERVE_STEPS.length}`;
+  const completionReady =
+    currentStep.id === "token-fit" ? tokenFitPassed : currentStep.id === "test" ? testPassed : true;
 
   const frameContribution =
     currentStep.id === "orientation"
@@ -520,9 +520,7 @@ function handleNext() {
       ? "Contribution to Gate 02: confirms calm before irreversible movement."
       : currentStep.id === "test"
       ? "Contribution to Gate 02: confirms understanding before entry."
-      : currentStep.id === "token-fit"
-      ? "Contribution to Gate 02: confirms control under movement."
-      : "Contribution to Gate 02: observer state established.";
+      : "Contribution to Gate 02: confirms control under movement.";
 
   return (
     <main
@@ -535,6 +533,15 @@ function handleNext() {
             className={`jal-hero jal-world-hero ${useCompactHeader ? "jal-observe-hero--compact" : ""}`}
             aria-label="Observe gate hero"
           >
+            <button
+              type="button"
+              className="jal-logo-nav"
+              onClick={() => beginRoute("/app/jal-sol")}
+              aria-label="Return to JAL/SOL World Hub"
+            >
+              <img src="/JALSOL2.png" alt="JAL/SOL" className="jal-logo-nav-image" />
+            </button>
+
             <div className="jal-hero-top">
               <div className="jal-kicker">JAL/SOL • GATE 01</div>
 
@@ -583,7 +590,7 @@ function handleNext() {
           <section className="jal-bay jal-bay-wide" aria-label="Observe progress tracker">
             <div className="jal-bay-head">
               <div className="jal-bay-title">Observe Sequence</div>
-              <div className="jal-bay-note">{progressText}</div>
+              <div className="jal-bay-note">{stepIndex + 1} / {OBSERVE_STEPS.length}</div>
             </div>
 
             <p className="jal-note">
@@ -591,7 +598,7 @@ function handleNext() {
               so the user slows down before entering the next state.
             </p>
 
-            <div className="jal-level-rail">
+            <div className="jal-observe-sequence-grid">
               {OBSERVE_STEPS.map((step, index) => {
                 const isActive = index === stepIndex;
                 const isComplete = index < stepIndex;
@@ -599,24 +606,22 @@ function handleNext() {
                 return (
                   <article
                     key={step.id}
-                    className={`jal-level-card ${
-                      isActive ? "is-open" : isComplete ? "is-paid" : "is-locked"
+                    className={`jal-observe-sequence-card ${
+                      isActive ? "is-active" : isComplete ? "is-complete" : "is-waiting"
                     }`}
                     aria-current={isActive ? "step" : undefined}
                   >
-                    <div className="jal-level-top">
-                      <div className="jal-level-number">{String(index + 1).padStart(2, "0")}</div>
-                      <div
-                        className={`jal-level-state ${
-                          isActive ? "is-open" : isComplete ? "is-paid" : "is-locked"
-                        }`}
-                      >
+                    <div className="jal-observe-sequence-top">
+                      <div className="jal-observe-sequence-number">
+                        {String(index + 1).padStart(2, "0")}
+                      </div>
+                      <div className="jal-observe-sequence-state">
                         {isActive ? "Current" : isComplete ? "Complete" : "Waiting"}
                       </div>
                     </div>
 
-                    <h3 className="jal-level-title">{step.label}</h3>
-                    <p className="jal-level-outcome">{step.note}</p>
+                    <h3 className="jal-observe-sequence-title">{step.label}</h3>
+                    <p className="jal-observe-sequence-note">{step.note}</p>
                   </article>
                 );
               })}
@@ -694,10 +699,6 @@ function handleNext() {
                     </span>
                   </div>
                 </div>
-
-                <p className="jal-lock-text">
-                  These are not strategies. They are unstable entry conditions.
-                </p>
               </>
             )}
 
@@ -750,7 +751,7 @@ function handleNext() {
                   continues.
                 </p>
 
-                <div className="jal-grid" aria-label="Observe learning cards">
+                <div className="jal-grid">
                   {LEARN_CARDS.map((card) => {
                     const isOpened = openedCards.includes(card.id);
 
@@ -793,11 +794,6 @@ function handleNext() {
                     );
                   })}
                 </div>
-
-                <p className="jal-lock-text">
-                  Completion here is soft, but intentional. The user must at least touch each
-                  primitive once.
-                </p>
               </>
             )}
 
@@ -958,7 +954,7 @@ function handleNext() {
 
                 <p className="jal-note">
                   This trial checks controlled movement, not just understanding. Reach the minimum
-                  score to unlock the final Observe state and continue toward Gate 02.
+                  score to unlock Gate 02.
                 </p>
 
                 <TokenFitGame
@@ -972,10 +968,6 @@ function handleNext() {
                     setTokenFitScore(score);
                     setTokenFitHighScore(highScore);
                   }}
-                  onLeaveAfterPass={() => {
-                    setStepIndex(observerStepIndex);
-                    window.scrollTo({ top: 0, behavior: "auto" });
-                  }}
                 />
 
                 <p className="jal-lock-text" style={{ marginTop: "1rem" }}>
@@ -986,90 +978,46 @@ function handleNext() {
               </>
             )}
 
-            {currentStep.id === "observer" && (
-              <>
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">Observer state confirmed</div>
-                  <div className="jal-bay-note">State change</div>
-                </div>
-
-                <p className="jal-note">
-                  The user has now completed the Observe sequence, passed the comprehension test,
-                  and passed Token Fit. Gate 02 can open because the next movement is being entered
-                  with structure and control, not guesswork.
-                </p>
-
-                <div className="jal-bullets">
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Before</div>
-                    <div className="jal-bullet-v">
-                      Unaware, reactive, and vulnerable to noise.
-                    </div>
-                  </article>
-
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">After</div>
-                    <div className="jal-bullet-v">
-                      Informed observer with tested understanding and proven control.
-                    </div>
-                  </article>
-
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Next</div>
-                    <div className="jal-bullet-v">
-                      Controlled Entry — the first irreversible action.
-                    </div>
-                  </article>
-                </div>
-              </>
-            )}
-
             <div className="jal-bay-actions" style={{ marginTop: "1rem" }}>
               <div className="jal-lock-text">{frameContribution}</div>
             </div>
           </section>
 
           <section className="jal-bay jal-bay-wide" aria-label="Observe controls">
-            <div className="jal-bay-head">
-              <div className="jal-bay-title">Sequence Controls</div>
-              <div className="jal-bay-note">Gate 01 progression</div>
-            </div>
-
-            <div className="jal-bay-actions">
+            <div className="jal-observe-nav-shell">
               <button
                 type="button"
-                className="button ghost"
+                className="jal-observe-nav-button"
+                onClick={handleGateHome}
+                disabled={loading || stepIndex === 0}
+                aria-label="Return to Gate 01 homepage"
+              >
+                {"<<"}
+              </button>
+
+              <button
+                type="button"
+                className="jal-observe-nav-button"
                 onClick={handleBack}
                 disabled={loading || stepIndex === 0}
+                aria-label="Previous step"
               >
-                Back
+                {"<"}
               </button>
+
+              <span
+                className={`jal-observe-status-light ${completionReady ? "is-green" : "is-red"}`}
+                aria-label={completionReady ? "Current step ready" : "Current step incomplete"}
+              />
 
               <button
                 type="button"
-                className={isLastStep ? "button gold" : "button neon"}
+                className="jal-observe-nav-button"
                 onClick={handleNext}
                 disabled={loading || nextDisabled}
+                aria-label={isLastStep ? "Proceed to Enter" : "Next step"}
               >
-                {isLastStep ? "Proceed To Enter" : "Continue"}
-              </button>
-
-              <button
-                type="button"
-                className="button ghost"
-                onClick={() => beginRoute("/app/jal-sol")}
-                disabled={loading}
-              >
-                Return To World Hub
-              </button>
-
-              <button
-                type="button"
-                className="button ghost"
-                onClick={() => beginRoute("/app/home")}
-                disabled={loading}
-              >
-                Return To Home
+                {">"}
               </button>
             </div>
           </section>
