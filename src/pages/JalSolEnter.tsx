@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import TokenFitGameV10 from "../components/TokenFitGamev10";
 
@@ -1918,149 +1919,158 @@ export default function JalSolEnter() {
             </section>
           )}
 
-          {canEnterGate2 && showProfileOverlay && (
-  <div className="jal-overlay" role="dialog" aria-modal="true" aria-label="Gate 02 profile creation">
+          {canEnterGate2 &&
+  showProfileOverlay &&
+  createPortal(
     <div
-  className="jal-overlay-backdrop"
-  onClick={() => {
-    setProfileError("");
-    setShowProfileOverlay(false);
-  }}
-/>
-    <section className="jal-overlay-panel jal-bay jal-bay-wide">
-      <div className="jal-bay-head">
-        <div className="jal-bay-title">Gate 02 Profile Creation</div>
-        <div className="jal-bay-note">Participant shell required</div>
-      </div>
+      className="jal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Gate 02 profile creation"
+    >
+      <div
+        className="jal-overlay-backdrop"
+        onClick={() => {
+          setProfileError("");
+          setShowProfileOverlay(false);
+        }}
+      />
 
-      <p className="jal-note jal-center-text">
-  Complete your participant shell to begin Gate 02 progression.
-</p>
+      <section className="jal-overlay-panel jal-bay jal-bay-wide">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">Gate 02 Profile Creation</div>
+          <div className="jal-bay-note">Participant shell required</div>
+        </div>
 
-      <div className="jal-grid">
-        <section className="jal-bay">
-          <div className="jal-bay-head">
-            <div className="jal-bay-title">Required To Begin</div>
-            <div className="jal-bay-note">Active now</div>
-          </div>
+        <p className="jal-note jal-center-text">
+          Complete your participant shell to begin Gate 02 progression.
+        </p>
 
-          <label className="jal-field">
-            <span className="jal-field-label">Display name</span>
-            <input
-              className="jal-input"
-              type="text"
-              value={profileDraft.displayName}
-              onChange={(e) =>
-                setProfileDraft((prev) => ({
-                  ...prev,
-                  displayName: e.target.value,
-                }))
+        <div className="jal-grid">
+          <section className="jal-bay">
+            <div className="jal-bay-head">
+              <div className="jal-bay-title">Required To Begin</div>
+              <div className="jal-bay-note">Active now</div>
+            </div>
+
+            <label className="jal-field">
+              <span className="jal-field-label">Display name</span>
+              <input
+                className="jal-input"
+                type="text"
+                value={profileDraft.displayName}
+                onChange={(e) =>
+                  setProfileDraft((prev) => ({
+                    ...prev,
+                    displayName: e.target.value,
+                  }))
+                }
+                placeholder="Your visible Gate 02 identity"
+              />
+            </label>
+
+            <label className="jal-field">
+              <span className="jal-field-label">Email</span>
+              <input
+                className="jal-input"
+                type="email"
+                value={profileDraft.email}
+                onChange={(e) =>
+                  setProfileDraft((prev) => ({
+                    ...prev,
+                    email: e.target.value,
+                  }))
+                }
+                placeholder="you@example.com"
+              />
+            </label>
+
+            <div className={`jal-note ${isCreatorDraft ? "jal-note-creator" : ""}`}>
+              {isCreatorDraft ? (
+                <>
+                  Creator identity detected. This profile matches <strong>JAL</strong> /
+                  <strong> 358jal@gmail.com</strong> and will bypass Stripe payment with
+                  creator rights.
+                </>
+              ) : (
+                <>
+                  Standard participant profile. Use your own display name and the same
+                  email used during Stripe purchase so payment can be matched correctly.
+                </>
+              )}
+            </div>
+
+            <label className="jal-check">
+              <input
+                type="checkbox"
+                checked={profileDraft.acceptedTerms}
+                onChange={(e) =>
+                  setProfileDraft((prev) => ({
+                    ...prev,
+                    acceptedTerms: e.target.checked,
+                  }))
+                }
+              />
+              <span>
+                I accept the Gate 02 terms and understand that this participant shell
+                is tied to progression, payment, wallet authority, and verification.
+              </span>
+            </label>
+          </section>
+
+          <section className="jal-bay jal-emerging-panel">
+            <div className="jal-bay-head">
+              <div className="jal-bay-title">Emerging Identity</div>
+              <div className="jal-bay-note">Forms through progression</div>
+            </div>
+
+            <p className="jal-note">
+              These parts of the package become real only after the required actions have
+              been taken and confirmed.
+            </p>
+          </section>
+        </div>
+
+        {profileError ? <p className="jal-error-text">{profileError}</p> : null}
+
+        <div className="jal-bay-actions jal-bay-actions-center">
+          <button
+            type="button"
+            className="button ghost"
+            onClick={() => {
+              setProfileError("");
+              setShowProfileOverlay(false);
+            }}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className="button gold"
+            onClick={() => {
+              const cleanDisplayName = profileDraft.displayName.trim();
+              const cleanEmail = profileDraft.email.trim().toLowerCase();
+
+              if (!cleanDisplayName || !cleanEmail || !profileDraft.acceptedTerms) {
+                setProfileError("Display name, email, and terms acceptance are required.");
+                return;
               }
-              placeholder="Your visible Gate 02 identity"
-            />
-          </label>
 
-          <label className="jal-field">
-            <span className="jal-field-label">Email</span>
-            <input
-              className="jal-input"
-              type="email"
-              value={profileDraft.email}
-              onChange={(e) =>
-                setProfileDraft((prev) => ({
-                  ...prev,
-                  email: e.target.value,
-                }))
-              }
-              placeholder="you@example.com"
-            />
-          </label>
-
-          <div className={`jal-note ${isCreatorDraft ? "jal-note-creator" : ""}`}>
-            {isCreatorDraft ? (
-              <>
-                Creator identity detected. This profile matches <strong>JAL</strong> /
-                <strong> 358jal@gmail.com</strong> and will bypass Stripe payment with
-                creator rights.
-              </>
-            ) : (
-              <>
-                Standard participant profile. Use your own display name and the same
-                email used during Stripe purchase so payment can be matched correctly.
-              </>
-            )}
-          </div>
-
-          <label className="jal-check">
-            <input
-              type="checkbox"
-              checked={profileDraft.acceptedTerms}
-              onChange={(e) =>
-                setProfileDraft((prev) => ({
-                  ...prev,
-                  acceptedTerms: e.target.checked,
-                }))
-              }
-            />
-            <span>
-              I accept the Gate 02 terms and understand that this participant shell
-              is tied to progression, payment, wallet authority, and verification.
-            </span>
-          </label>
-        </section>
-
-        <section className="jal-bay jal-emerging-panel">
-          <div className="jal-bay-head">
-            <div className="jal-bay-title">Emerging Identity</div>
-            <div className="jal-bay-note">Forms through progression</div>
-          </div>
-
-          <p className="jal-note">
-            These parts of the package become real only after the required actions have
-            been taken and confirmed.
-          </p>
-        </section>
-      </div>
-
-      {profileError ? <p className="jal-error-text">{profileError}</p> : null}
-
-      <div className="jal-bay-actions jal-bay-actions-center">
-  <button
-    type="button"
-    className="button ghost"
-    onClick={() => {
-      setProfileError("");
-      setShowProfileOverlay(false);
-    }}
-    disabled={loading}
-  >
-    Cancel
-  </button>
-
-  <button
-    type="button"
-    className="button gold"
-    onClick={() => {
-      const cleanDisplayName = profileDraft.displayName.trim();
-      const cleanEmail = profileDraft.email.trim().toLowerCase();
-
-      if (!cleanDisplayName || !cleanEmail || !profileDraft.acceptedTerms) {
-        setProfileError("Display name, email, and terms acceptance are required.");
-        return;
-      }
-
-      setProfileError("");
-      handleProfileSave();
-      setShowProfileOverlay(false);
-    }}
-    disabled={loading}
-  >
-    Save Participant Shell
-  </button>
-</div>
-    </section>
-  </div>
-)}
+              setProfileError("");
+              handleProfileSave();
+              setShowProfileOverlay(false);
+            }}
+            disabled={loading}
+          >
+            Save Participant Shell
+          </button>
+        </div>
+      </section>
+    </div>,
+    document.body
+  )}
 
           {canEnterGate2 && currentStage === "payment" && (
   <section className="jal-bay jal-bay-wide" aria-label="Gate 02 payment">
