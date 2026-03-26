@@ -192,6 +192,8 @@ const MINT_AUTHORITY = "3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2";
 const JAL_TOKEN_ADDRESS = "9TCwNEKKPPgZBQ3CopjdhW9j8fZNt8SH7waZJTFRgx7v";
 const MIN_TRANSFER_SOL = 0.001;
 const GATE2_PAYMENT_LINK = "https://buy.stripe.com/eVq3cu9xmesz6Kr7ww0x20a";
+const FOUNDER_BYPASS_NAME = "JAL";
+const FOUNDER_BYPASS_EMAIL = "358jal@gmail.com";
 
 const VALID_GATE2_STAGES: Gate2Stage[] = [
   "home",
@@ -943,6 +945,13 @@ function createMockReceiptNumber() {
   return `rcpt_${Date.now().toString(36).toUpperCase()}`;
 }
 
+function isFounderGate2Bypass(displayName: string, email: string) {
+  return (
+    displayName.trim().toLowerCase() === FOUNDER_BYPASS_NAME.toLowerCase() &&
+    email.trim().toLowerCase() === FOUNDER_BYPASS_EMAIL.toLowerCase()
+  );
+}
+
 function buildSigningMessage(displayName: string) {
   return [
     "JAL/SOL Gate 02 — Enter",
@@ -1175,7 +1184,10 @@ export default function JalSolEnter() {
   const paymentComplete = getPaymentComplete(progress);
   const hasWalletAuthority = getHasWalletAuthority(progress);
   const developmentFlowComplete = getDevelopmentFlowComplete(progress);
-  const participantState = getTrueParticipantState(progress);
+  cconst founderBypassActive = isFounderGate2Bypass(
+  progress.profile.displayName,
+  progress.profile.email
+);
 
   const accessLabel = !canEnterGate2
     ? "Locked — Observe Required"
@@ -1257,41 +1269,56 @@ export default function JalSolEnter() {
     });
   }
 
-  function handleProfileSave() {
-    if (loading) return;
+function handleProfileSave() {
+  if (loading) return;
 
-    const cleanDisplayName = profileDraft.displayName.trim();
-    const cleanEmail = profileDraft.email.trim();
+  const cleanDisplayName = profileDraft.displayName.trim();
+  const cleanEmail = profileDraft.email.trim();
 
-    if (!cleanDisplayName || !cleanEmail || !profileDraft.acceptedTerms) {
-      setProfileError("Display name, email, and terms acceptance are required.");
-      return;
-    }
+  if (!cleanDisplayName || !cleanEmail || !profileDraft.acceptedTerms) {
+    setProfileError("Display name, email, and terms acceptance are required.");
+    return;
+  }
 
-    patchProgress((prev) => ({
-      ...prev,
-      profile: {
-        ...prev.profile,
-        created: true,
-        displayName: cleanDisplayName,
-        email: cleanEmail,
-        acceptedTerms: true,
-        createdAt: prev.profile.createdAt ?? Date.now(),
-      },
-      currentStage: "payment",
-    }));
+  const founderBypass = isFounderGate2Bypass(cleanDisplayName, cleanEmail);
 
-    setProfileDraft((prev) => ({
-      ...prev,
+  patchProgress((prev) => ({
+    ...prev,
+    profile: {
+      ...prev.profile,
       created: true,
       displayName: cleanDisplayName,
       email: cleanEmail,
       acceptedTerms: true,
-      createdAt: prev.createdAt ?? Date.now(),
-    }));
+      createdAt: prev.profile.createdAt ?? Date.now(),
+    },
+    package: founderBypass
+      ? {
+          ...prev.package,
+          checkoutStarted: true,
+          stripeSessionId: prev.package.stripeSessionId || "gate2-founder-bypass",
+          stripeReceiptNumber:
+            prev.package.stripeReceiptNumber || "gate2-founder-bypass",
+          stripeCustomerEmail: cleanEmail,
+          paymentStatus: "paid",
+          paymentSource: "verified",
+          paidAt: prev.package.paidAt ?? Date.now(),
+        }
+      : prev.package,
+    currentStage: founderBypass ? "module-1-wallet" : "payment",
+  }));
 
-    setProfileError("");
-  }
+  setProfileDraft((prev) => ({
+    ...prev,
+    created: true,
+    displayName: cleanDisplayName,
+    email: cleanEmail,
+    acceptedTerms: true,
+    createdAt: prev.createdAt ?? Date.now(),
+  }));
+
+  setProfileError("");
+}
 
   function updateAcknowledgements(
     patch: Partial<Gate2ProgressState["acknowledgements"]>
@@ -2274,21 +2301,33 @@ export default function JalSolEnter() {
                     <div className="jal-bay-note">External verification</div>
                   </div>
 
-                  <p className="jal-note">
-                    Complete the payment externally. Return here to confirm and unlock the
-                    next stage.
-                  </p>
+<p className="jal-note">
+  {founderBypassActive
+    ? "Founder bypass active. Payment is marked complete for this identity."
+    : "Complete the payment externally. Return here to confirm and unlock the next stage."}
+</p>
 
-                  <div className="jal-bay-actions">
-                    <a
-                      href={GATE2_PAYMENT_LINK}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="button gold"
-                    >
-                      Open Gate 02
-                    </a>
-                  </div>
+<div className="jal-bay-actions">
+  {founderBypassActive ? (
+    <button
+      type="button"
+      className="button gold"
+      onClick={() => goToStage("module-1-wallet")}
+      disabled={loading}
+    >
+      Continue To Gate 02
+    </button>
+  ) : (
+    <a
+      href={GATE2_PAYMENT_LINK}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="button gold"
+    >
+      Open Gate 02
+    </a>
+  )}
+</div>
                 </section>
               </div>
 
