@@ -991,11 +991,7 @@ export default function JalSolEnter() {
   const [progress, setProgress] =
     useState<Gate2ProgressState>(DEFAULT_GATE2_PROGRESS);
 
-  const [profileDraft, setProfileDraft] = useState({
-  ...DEFAULT_GATE2_PROGRESS.profile,
-  displayName: CREATOR_DISPLAY_NAME,
-  email: CREATOR_EMAIL,
-});
+  const [profileDraft, setProfileDraft] = useState(DEFAULT_GATE2_PROGRESS.profile);
   const [profileError, setProfileError] = useState("");
 
   function patchProgress(recipe: (prev: Gate2ProgressState) => Gate2ProgressState) {
@@ -1030,16 +1026,8 @@ export default function JalSolEnter() {
   setObservePassed(observe);
   setAdminBypass(bypass);
   setProgress(saved);
-  setProfileDraft(
-    saved.profile.created
-      ? saved.profile
-      : {
-          ...saved.profile,
-          displayName: CREATOR_DISPLAY_NAME,
-          email: CREATOR_EMAIL,
-        }
-  );
-}, []);;
+  setProfileDraft(saved.profile.created ? saved.profile : DEFAULT_GATE2_PROGRESS.profile);
+}, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1112,8 +1100,6 @@ export default function JalSolEnter() {
   const hasWalletAuthority = getHasWalletAuthority(progress);
   const developmentFlowComplete = getDevelopmentFlowComplete(progress);
   const participantState = getTrueParticipantState(progress);
-
-  const isCreatorProfile = creatorBypass;
 
   const isCreatorDraft = isCreatorIdentity(
     profileDraft.displayName,
@@ -1586,7 +1572,7 @@ export default function JalSolEnter() {
 },
     {
   k: "Creator Rights",
-  v: getCreatorBypass(progress) ? "Granted" : "Standard User",
+  v: creatorBypass ? "Granted" : "Standard User",
 },
     { k: "Wallet Public Key", v: progress.wallet.address || "Missing" },
     {
@@ -1895,11 +1881,11 @@ export default function JalSolEnter() {
                   </article>
 
                   <article
-  className={`jal-bullet ${getStatusTone(isCreatorProfile)}`}
+  className={`jal-bullet ${getStatusTone(creatorBypass)}`}
 >
   <div className="jal-bullet-k">Creator Rights</div>
   <div className="jal-bullet-v">
-    {isCreatorProfile ? "Granted" : "Standard User"}
+    {creatorBypass ? "Granted" : "Standard User"}
   </div>
 </article>
 
@@ -2113,24 +2099,39 @@ export default function JalSolEnter() {
               {profileError ? <p className="jal-error-text">{profileError}</p> : null}
 
               <div className="jal-bay-actions jal-bay-actions-spread">
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => goBackStage("home")}
-                  disabled={loading}
-                >
-                  Return To Home
-                </button>
+  <button
+    type="button"
+    className="button ghost"
+    onClick={() => goBackStage("home")}
+    disabled={loading}
+  >
+    Return To Home
+  </button>
 
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={handleProfileSave}
-                  disabled={loading}
-                >
-                  Save Participant Shell
-                </button>
-              </div>
+  <button
+    type="button"
+    className="button ghost"
+    onClick={() =>
+      setProfileDraft((prev) => ({
+        ...prev,
+        displayName: CREATOR_DISPLAY_NAME,
+        email: CREATOR_EMAIL,
+      }))
+    }
+    disabled={loading}
+  >
+    Use Creator Identity
+  </button>
+
+  <button
+    type="button"
+    className="button gold"
+    onClick={handleProfileSave}
+    disabled={loading}
+  >
+    Save Participant Shell
+  </button>
+</div>
             </section>
           )}
 
@@ -2173,7 +2174,8 @@ export default function JalSolEnter() {
             <div>
               <div className="jal-emerging-label">Requirement</div>
               <div className="jal-emerging-note">
-  Verified payment tied to your participant shell, or creator bypass for the JAL profile.
+  Verified payment tied to your participant shell, unless the exact creator identity
+  JAL / 358jal@gmail.com is used for creator bypass.
 </div>
             </div>
             <span className="jal-emerging-chip">REQUIRED</span>
