@@ -54,6 +54,13 @@
   --t-slow:480ms;
 
   --max-w:1200px;
+
+  --jal-space-xs:8px;
+  --jal-space-sm:12px;
+  --jal-space-md:16px;
+  --jal-space-lg:24px;
+  --jal-space-xl:32px;
+  --jal-space-2xl:48px;
 }
 
 /* =========================================
@@ -170,7 +177,8 @@ main{
   width:min(100% - 2rem, var(--max-w));
   margin:0 auto;
   display:grid;
-  gap:16px;
+  gap:var(--jal-space-lg);
+  padding:var(--jal-space-lg) 0 var(--jal-space-xl);
 }
 
 .jal-shell{
@@ -224,6 +232,7 @@ main{
   position:relative;
   border-radius:var(--r-lg);
   border:1px solid rgba(255,255,255,.14);
+  padding:var(--jal-space-lg);
   box-shadow:
     0 10px 30px rgba(0,0,0,.55),
     inset 0 0 0 1px rgba(255,255,255,.05);
@@ -976,14 +985,15 @@ a.button[aria-disabled="true"]{
 .jal-grid{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:1rem;
+  gap:var(--jal-space-lg);
+  margin-top:var(--jal-space-md);
 }
 
 .jal-bay{
   position:relative;
   border:1px solid rgba(255,255,255,.10);
   border-radius:1.4rem;
-  padding:1.15rem;
+  padding:var(--jal-space-lg);
   background:
     radial-gradient(720px 180px at 50% 0%, rgba(255,255,255,.03), transparent 62%),
     linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
@@ -1013,11 +1023,11 @@ a.button[aria-disabled="true"]{
   display:flex;
   align-items:flex-end;
   justify-content:space-between;
-  gap:1rem;
+  gap:var(--jal-space-md);
   flex-wrap:wrap;
   border-bottom:1px solid rgba(17,241,167,.08);
-  padding-bottom:9px;
-  margin-bottom:12px;
+  padding-bottom:var(--jal-space-sm);
+  margin-bottom:var(--jal-space-md);
 }
 
 .jal-bay-title{
@@ -1036,7 +1046,7 @@ a.button[aria-disabled="true"]{
 .jal-note{
   position:relative;
   z-index:1;
-  margin:0;
+  margin:0 0 var(--jal-space-md);
   line-height:1.72;
   opacity:.84;
 }
@@ -1050,9 +1060,10 @@ a.button[aria-disabled="true"]{
 
 .jal-bay-actions{
   display:flex;
-  gap:.75rem;
+  gap:var(--jal-space-sm);
   flex-wrap:wrap;
-  margin-top:1rem;
+  margin-top:var(--jal-space-lg);
+  padding-top:var(--jal-space-sm);
 }
 
 /* ---------- THREE GATES ---------- */
@@ -1739,6 +1750,28 @@ a.button[aria-disabled="true"]{
   .jal-bay-actions .button.gold::after{
     animation:none;
     transition:none;
+  }
+}
+
+@media (max-width:640px){
+  .panel-frame{
+    padding:var(--jal-space-md);
+  }
+
+  .jal-bay{
+    padding:var(--jal-space-md);
+  }
+
+  .jal-stage-bar{
+    padding:var(--jal-space-md);
+  }
+
+  .jal-progress-rail{
+    padding:var(--jal-space-md);
+  }
+
+  .home-wrap{
+    padding:var(--jal-space-md) 0 var(--jal-space-lg);
   }
 }
 
@@ -6113,10 +6146,10 @@ button,
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:1rem;
+  gap:var(--jal-space-md);
   flex-wrap:wrap;
-  margin:0 0 1rem;
-  padding:1rem 1.1rem;
+  margin:0 0 var(--jal-space-lg);
+  padding:var(--jal-space-md) var(--jal-space-lg);
   border:1px solid rgba(255,255,255,.10);
   border-radius:1.2rem;
   background:
@@ -6153,9 +6186,9 @@ button,
   position:relative;
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
-  gap:.75rem;
-  margin:0 0 1.2rem;
-  padding:1rem;
+  gap:var(--jal-space-sm);
+  margin:0 0 var(--jal-space-xl);
+  padding:var(--jal-space-lg);
   border:1px solid rgba(255,255,255,.08);
   border-radius:1.25rem;
   background:
