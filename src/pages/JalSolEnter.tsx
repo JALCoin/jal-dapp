@@ -1184,7 +1184,8 @@ export default function JalSolEnter() {
   const paymentComplete = getPaymentComplete(progress);
   const hasWalletAuthority = getHasWalletAuthority(progress);
   const developmentFlowComplete = getDevelopmentFlowComplete(progress);
-  cconst founderBypassActive = isFounderGate2Bypass(
+  const participantState = getTrueParticipantState(progress);
+  const founderBypassActive = isFounderGate2Bypass(
   progress.profile.displayName,
   progress.profile.email
 );
