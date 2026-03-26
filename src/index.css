@@ -6484,8 +6484,23 @@ button,
   border-color:rgba(255,255,255,.12);
 }
 
-.jal-sequence-controls{
-  gap:14px;
+.jal-sequence-controls {
+  display: flex;
+  justify-content: center;   /* center horizontally */
+  align-items: center;
+  gap: 14px;
+
+  width: 100%;
+  margin: 0 auto;
+
+  padding: 10px 0;
+}
+
+.jal-bay-actions-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 .jal-sequence-indicator-dot{
