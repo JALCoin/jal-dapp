@@ -1088,7 +1088,6 @@ export default function JalSolEnter() {
     [progress.test.answers]
   );
 
-  const paymentComplete = getPaymentComplete(progress);
   const creatorBypass = getCreatorBypass(progress);
   const hasWalletAuthority = getHasWalletAuthority(progress);
   const developmentFlowComplete = getDevelopmentFlowComplete(progress);
@@ -1150,34 +1149,6 @@ export default function JalSolEnter() {
     const index = MODULE_CONTENT.findIndex((module) => module.stage === stage);
     if (index <= 0) return null;
     return MODULE_CONTENT[index - 1].stage;
-  }
-
-  function handleBeginSequence() {
-    if (loading || !canEnterGate2) return;
-
-    patchProgress((prev) => {
-      const hasStarted =
-        prev.profile.created ||
-        prev.package.checkoutStarted ||
-        prev.modulesCompleted.length > 0 ||
-        prev.test.submitted ||
-        prev.trial.acknowledged ||
-        prev.wallet.connected ||
-        prev.transaction.initiated;
-
-      const nextStage =
-        hasStarted &&
-        prev.currentStage !== "home" &&
-        canAccessStage(prev, prev.currentStage)
-          ? prev.currentStage
-          : "profile";
-
-      return {
-        ...prev,
-        privateHomeSeen: true,
-        currentStage: nextStage,
-      };
-    });
   }
 
   function handleProfileSave() {
