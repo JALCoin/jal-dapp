@@ -995,16 +995,16 @@ export default function JalSolEnter() {
     });
   }
 
-  useEffect(() => {
-    const observe = readObservePassed();
-    const bypass = readGate2AdminBypass();
-    const saved = readGate2Progress();
+useEffect(() => {
+  const observe = readObservePassed();
+  const bypass = readGate2AdminBypass(); 
+  const saved = readGate2Progress();
 
-    setObservePassed(observe);
-    setAdminBypass(bypass);
-    setProgress(saved);
-    setProfileDraft(saved.profile);
-  }, []);
+  setObservePassed(observe);
+  setAdminBypass(bypass); // ← this uses it
+  setProgress(saved);
+  setProfileDraft(saved.profile);
+}, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
