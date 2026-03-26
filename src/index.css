@@ -230,6 +230,8 @@ main{
 
 .panel-frame{
   position:relative;
+  display:grid;
+  gap:var(--jal-space-lg);
   border-radius:var(--r-lg);
   border:1px solid rgba(255,255,255,.14);
   padding:var(--jal-space-lg);
@@ -985,8 +987,9 @@ a.button[aria-disabled="true"]{
 .jal-grid{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:var(--jal-space-lg);
-  margin-top:var(--jal-space-md);
+  gap:calc(var(--jal-space-lg) + 4px);
+  margin-top:0;
+  align-items:start;
 }
 
 .jal-bay{
@@ -1201,7 +1204,7 @@ a.button[aria-disabled="true"]{
 .jal-bullets{
   display:grid;
   grid-template-columns:repeat(3, minmax(0, 1fr));
-  gap:.9rem;
+  gap:var(--jal-space-lg);
   margin-top:1rem;
 }
 
@@ -1224,6 +1227,24 @@ a.button[aria-disabled="true"]{
 .jal-bullet-v{
   line-height:1.66;
   font-size:.92rem;
+}
+
+.jal-window > .jal-stage-bar + .jal-progress-rail{
+  margin-top:0;
+}
+
+.jal-window > section + section{
+  margin-top:0;
+}
+
+.jal-window > .jal-bay + .jal-bay,
+.jal-window > .jal-bay + .jal-grid,
+.jal-window > .jal-grid + .jal-bay,
+.jal-window > .jal-grid + .jal-grid,
+.jal-window > .jal-stage-bar + .jal-bay,
+.jal-window > .jal-progress-rail + .jal-bay,
+.jal-window > .jal-progress-rail + .jal-grid{
+  margin-top:0;
 }
 
 /* ---------- PROGRESSION RAIL ---------- */
@@ -1435,14 +1456,17 @@ a.button[aria-disabled="true"]{
 
 .jal-window{
   position:relative;
-  z-index:1;
-  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:clamp(18px, 2.5vw, 28px);
+  border-radius:1.6rem;
+  padding:var(--jal-space-lg);
+  border:1px solid rgba(255,255,255,.12);
   background:
-    radial-gradient(1200px 440px at 50% 0%, rgba(255,255,255,.035), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
   box-shadow:
-    0 24px 64px rgba(0,0,0,.44),
-    inset 0 0 0 1px rgba(255,255,255,.03);
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 18px 40px rgba(0,0,0,.45);
 }
 
 /* ---------- HERO DEPTH ---------- */
