@@ -2112,21 +2112,6 @@ export default function JalSolEnter() {
 
   <button
     type="button"
-    className="button ghost"
-    onClick={() =>
-      setProfileDraft((prev) => ({
-        ...prev,
-        displayName: CREATOR_DISPLAY_NAME,
-        email: CREATOR_EMAIL,
-      }))
-    }
-    disabled={loading}
-  >
-    Use Creator Identity
-  </button>
-
-  <button
-    type="button"
     className="button gold"
     onClick={handleProfileSave}
     disabled={loading}
