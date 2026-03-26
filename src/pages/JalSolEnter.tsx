@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import TokenFitGameV10 from "../components/TokenFitGamev1.0";
+import TokenFitGameV10 from "../components/TokenFitGamev10";
 
 type RouteTo =
   | "/app/home"
