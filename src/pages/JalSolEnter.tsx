@@ -2250,36 +2250,11 @@ export default function JalSolEnter() {
                 ))}
               </section>
 
-              <div className="jal-bay-actions jal-bay-actions-spread">
-                {getPreviousModuleStage(activeModule.stage) ? (
-                  <button
-                    type="button"
-                    className="button ghost"
-                    onClick={() => goBackStage(getPreviousModuleStage(activeModule.stage)!)}
-                    disabled={loading}
-                  >
-                    Back
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="button ghost"
-                    onClick={() => goBackStage("payment")}
-                    disabled={loading}
-                  >
-                    Back
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={() => handleModuleContinue(activeModule)}
-                  disabled={loading}
-                >
-                  Continue To Next Module
-                </button>
-              </div>
+              <div className="jal-bay-actions jal-bay-actions-center">
+  <div className="jal-lock-text">
+    Use the sequence controls below to move through the module path.
+  </div>
+</div>
             </section>
           )}
 
@@ -2856,14 +2831,27 @@ export default function JalSolEnter() {
       />
 
       <button
-        type="button"
-        className="button ghost"
-        onClick={() => nextStageId && goToStage(nextStageId)}
-        disabled={loading || !nextStageId || !canAccessStage(progress, nextStageId)}
-        aria-label="Next stage"
-      >
-        {">"}
-      </button>
+  type="button"
+  className="button ghost"
+  onClick={() => {
+    if (!nextStageId) return;
+
+    if (activeModule) {
+      handleModuleContinue(activeModule);
+      return;
+    }
+
+    goToStage(nextStageId);
+  }}
+  disabled={
+    loading ||
+    !nextStageId ||
+    (!activeModule && !canAccessStage(progress, nextStageId))
+  }
+  aria-label="Next stage"
+>
+  {">"}
+</button>
     </div>
   </section>
 )}
