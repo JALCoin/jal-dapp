@@ -987,8 +987,9 @@ a.button[aria-disabled="true"]{
 .jal-grid{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:calc(var(--jal-space-lg) + 4px);
+  gap:calc(var(--jal-space-lg) + 8px);
   margin-top:0;
+  margin-bottom:calc(var(--jal-space-lg) + 4px);
   align-items:start;
 }
 
@@ -996,7 +997,7 @@ a.button[aria-disabled="true"]{
   position:relative;
   border:1px solid rgba(255,255,255,.10);
   border-radius:1.4rem;
-  padding:var(--jal-space-lg);
+  padding:calc(var(--jal-space-lg) + 6px);
   background:
     radial-gradient(720px 180px at 50% 0%, rgba(255,255,255,.03), transparent 62%),
     linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
@@ -1065,8 +1066,17 @@ a.button[aria-disabled="true"]{
   display:flex;
   gap:var(--jal-space-sm);
   flex-wrap:wrap;
-  margin-top:var(--jal-space-lg);
-  padding-top:var(--jal-space-sm);
+  margin-top:calc(var(--jal-space-md) + 2px);
+  padding-top:0;
+  align-items:center;
+}
+
+.jal-bay > .jal-bay + .jal-bay{
+  margin-top:calc(var(--jal-space-lg) + 2px);
+}
+
+.jal-bay-wide{
+  padding:calc(var(--jal-space-lg) + 8px);
 }
 
 /* ---------- THREE GATES ---------- */
@@ -6210,8 +6220,8 @@ button,
   position:relative;
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
-  gap:var(--jal-space-sm);
-  margin:0 0 var(--jal-space-xl);
+  gap:var(--jal-space-md);
+  margin:0 0 calc(var(--jal-space-xl) + 10px);
   padding:var(--jal-space-lg);
   border:1px solid rgba(255,255,255,.08);
   border-radius:1.25rem;
