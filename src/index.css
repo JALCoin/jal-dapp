@@ -1853,31 +1853,6 @@ a.button[aria-disabled="true"]{
   }
 }
 
-.jal-logo-nav{
-  display:block;
-  width:max-content;
-  margin:0 auto 1rem;
-  padding:0;
-  border:0;
-  background:transparent;
-  cursor:pointer;
-}
-
-.jal-logo-nav-image{
-  display:block;
-  width:min(220px, 42vw);
-  height:auto;
-  object-fit:contain;
-  filter:drop-shadow(0 0 16px rgba(255,255,255,.12));
-}
-
-.jal-observe-sequence-grid{
-  display:grid;
-  grid-template-columns:repeat(4, minmax(0, 1fr));
-  gap:14px;
-  margin-top:1rem;
-}
-
 .jal-observe-sequence-card{
   border:1px solid rgba(255,255,255,.10);
   border-radius:1.1rem;

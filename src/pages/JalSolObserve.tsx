@@ -533,14 +533,6 @@ export default function JalSolObserve() {
             className={`jal-hero jal-world-hero ${useCompactHeader ? "jal-observe-hero--compact" : ""}`}
             aria-label="Observe gate hero"
           >
-            <button
-              type="button"
-              className="jal-logo-nav"
-              onClick={() => beginRoute("/app/jal-sol")}
-              aria-label="Return to JAL/SOL World Hub"
-            >
-              <img src="/JALSOL2.png" alt="JAL/SOL" className="jal-logo-nav-image" />
-            </button>
 
             <div className="jal-hero-top">
               <div className="jal-kicker">JAL/SOL • GATE 01</div>
