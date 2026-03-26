@@ -1290,35 +1290,6 @@ export default function JalSolEnter() {
     }));
   }
 
-  function setTrialAcknowledged(value: boolean) {
-    patchProgress((prev) => ({
-      ...prev,
-      trial: {
-        ...prev.trial,
-        state: value ? "available" : "locked",
-        unlocked: value,
-        acknowledged: value,
-      },
-    }));
-  }
-
-  function beginTrial() {
-    if (loading || !progress.trial.acknowledged) return;
-
-    patchProgress((prev) => ({
-      ...prev,
-      trial: {
-        ...prev.trial,
-        state: prev.trial.passed
-          ? "passed"
-          : prev.trial.successfulRuns === 1
-          ? "one_pass"
-          : "in_run",
-      },
-      currentStage: "trial",
-    }));
-  }
-
   function handleTrialRunComplete(payload: { score: number; mode: TrialMode }) {
     const numeric = Number(payload.score);
     if (!Number.isFinite(numeric) || numeric < 0) return;
