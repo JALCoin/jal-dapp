@@ -1101,6 +1101,8 @@ export default function JalSolEnter() {
   const developmentFlowComplete = getDevelopmentFlowComplete(progress);
   const participantState = getTrueParticipantState(progress);
 
+  const isCreatorProfile = creatorBypass;
+
   const isCreatorDraft = isCreatorIdentity(
     profileDraft.displayName,
     profileDraft.email
