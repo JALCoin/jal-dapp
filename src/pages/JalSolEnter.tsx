@@ -873,6 +873,14 @@ function getPaymentComplete(progress: Gate2ProgressState) {
   );
 }
 
+function getCreatorBypass(progress: Gate2ProgressState) {
+  return isCreatorIdentity(progress.profile.displayName, progress.profile.email);
+}
+
+function getPaymentOrCreatorAccess(progress: Gate2ProgressState) {
+  return getPaymentComplete(progress) || getCreatorBypass(progress);
+}
+
 function getHasWalletAuthority(progress: Gate2ProgressState) {
   return progress.wallet.connected && progress.wallet.messageSigned;
 }
@@ -881,7 +889,7 @@ function getDevelopmentFlowComplete(progress: Gate2ProgressState) {
   return Boolean(
     progress.profile.created &&
       progress.profile.acceptedTerms &&
-      getPaymentComplete(progress) &&
+      getPaymentOrCreatorAccess(progress) &&
       progress.modulesCompleted.includes("module-6-verification") &&
       progress.test.passed &&
       progress.trial.passed &&
@@ -893,9 +901,11 @@ function getDevelopmentFlowComplete(progress: Gate2ProgressState) {
 }
 
 function getTrueParticipantState(progress: Gate2ProgressState) {
+  const creatorBypass = getCreatorBypass(progress);
+
   return Boolean(
     getDevelopmentFlowComplete(progress) &&
-      progress.package.paymentSource === "verified" &&
+      (creatorBypass || progress.package.paymentSource === "verified") &&
       progress.wallet.connectionSource === "verified" &&
       progress.wallet.signingSource === "verified" &&
       progress.transaction.confirmationSource === "verified"
@@ -910,7 +920,7 @@ function canAccessStage(progress: Gate2ProgressState, stage: Gate2Stage): boolea
     case "payment":
       return progress.profile.created && progress.profile.acceptedTerms;
     case "module-1-wallet":
-      return getPaymentComplete(progress);
+      return getPaymentOrCreatorAccess(progress);
     case "module-2-custody":
       return progress.modulesCompleted.includes("module-1-wallet");
     case "module-3-finality":
@@ -944,10 +954,10 @@ function isStepCompleted(progress: Gate2ProgressState, stepId: Gate2Stage): bool
   if (progress.modulesCompleted.includes(stepId)) return true;
 
   switch (stepId) {
-    case "profile":
+        case "profile":
       return progress.profile.created;
     case "payment":
-      return getPaymentComplete(progress);
+      return getPaymentOrCreatorAccess(progress);
     case "test":
       return progress.test.passed;
     case "trial-brief":
@@ -981,11 +991,11 @@ export default function JalSolEnter() {
   const [progress, setProgress] =
     useState<Gate2ProgressState>(DEFAULT_GATE2_PROGRESS);
 
-      const [profileDraft, setProfileDraft] = useState({
-    ...DEFAULT_GATE2_PROGRESS.profile,
-    displayName: CREATOR_DISPLAY_NAME,
-    email: CREATOR_EMAIL,
-  });
+  const [profileDraft, setProfileDraft] = useState({
+  ...DEFAULT_GATE2_PROGRESS.profile,
+  displayName: CREATOR_DISPLAY_NAME,
+  email: CREATOR_EMAIL,
+});
   const [profileError, setProfileError] = useState("");
 
   function patchProgress(recipe: (prev: Gate2ProgressState) => Gate2ProgressState) {
@@ -1013,23 +1023,23 @@ export default function JalSolEnter() {
   }
 
   useEffect(() => {
-    const observe = readObservePassed();
-    const bypass = readGate2AdminBypass();
-    const saved = readGate2Progress();
+  const observe = readObservePassed();
+  const bypass = readGate2AdminBypass();
+  const saved = readGate2Progress();
 
-    setObservePassed(observe);
-    setAdminBypass(bypass);
-    setProgress(saved);
-    setProfileDraft(
-      saved.profile.created
-        ? saved.profile
-        : {
-            ...saved.profile,
-            displayName: CREATOR_DISPLAY_NAME,
-            email: CREATOR_EMAIL,
-          }
-    );
-  }, []);
+  setObservePassed(observe);
+  setAdminBypass(bypass);
+  setProgress(saved);
+  setProfileDraft(
+    saved.profile.created
+      ? saved.profile
+      : {
+          ...saved.profile,
+          displayName: CREATOR_DISPLAY_NAME,
+          email: CREATOR_EMAIL,
+        }
+  );
+}, []);;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1089,7 +1099,7 @@ export default function JalSolEnter() {
 
   const shouldShowFullHero = currentStage === "home" || !canEnterGate2;
 
-  const allTestAnswered = useMemo(
+    const allTestAnswered = useMemo(
     () =>
       TEST_QUESTIONS.every(
         (question) => typeof progress.test.answers[question.id] === "number"
@@ -1098,14 +1108,12 @@ export default function JalSolEnter() {
   );
 
   const paymentComplete = getPaymentComplete(progress);
+  const creatorBypass = getCreatorBypass(progress);
   const hasWalletAuthority = getHasWalletAuthority(progress);
   const developmentFlowComplete = getDevelopmentFlowComplete(progress);
   const participantState = getTrueParticipantState(progress);
 
-    const isCreatorProfile = isCreatorIdentity(
-    progress.profile.displayName,
-    progress.profile.email
-  );
+  const isCreatorProfile = creatorBypass;
 
   const isCreatorDraft = isCreatorIdentity(
     profileDraft.displayName,
@@ -1202,6 +1210,8 @@ export default function JalSolEnter() {
       return;
     }
 
+        const creatorIdentity = isCreatorIdentity(cleanDisplayName, cleanEmail);
+
     patchProgress((prev) => ({
       ...prev,
       profile: {
@@ -1212,7 +1222,19 @@ export default function JalSolEnter() {
         acceptedTerms: true,
         createdAt: prev.profile.createdAt ?? Date.now(),
       },
-      currentStage: "payment",
+        package: creatorIdentity
+        ? {
+            ...prev.package,
+            checkoutStarted: false,
+            stripeSessionId: "CREATOR_BYPASS",
+            stripeReceiptNumber: "CREATOR_BYPASS",
+            stripeCustomerEmail: cleanEmail,
+            paymentStatus: "paid",
+            paymentSource: "verified",
+            paidAt: prev.package.paidAt ?? Date.now(),
+          }
+        : prev.package,
+      currentStage: creatorIdentity ? "module-1-wallet" : "payment",
     }));
 
     setProfileDraft((prev) => ({
@@ -1418,25 +1440,30 @@ export default function JalSolEnter() {
     }));
   }
 
-  function simulateWalletConnect() {
+    function simulateWalletConnect() {
     if (loading || !progress.trial.passed) return;
 
-    patchProgress((prev) => ({
-      ...prev,
-      wallet: {
-        ...prev.wallet,
-        connected: true,
-        address: createMockWalletAddress(),
-        connectionSource: "dev",
-      },
-    }));
+    patchProgress((prev) => {
+      const proofSource: ProofSource = getCreatorBypass(prev) ? "verified" : "dev";
+
+      return {
+        ...prev,
+        wallet: {
+          ...prev.wallet,
+          connected: true,
+          address: createMockWalletAddress(),
+          connectionSource: proofSource,
+        },
+      };
+    });
   }
 
-  function simulateWalletSign() {
+    function simulateWalletSign() {
     if (loading || !progress.wallet.connected) return;
 
     patchProgress((prev) => {
       const message = buildSigningMessage(prev.profile.displayName);
+      const proofSource: ProofSource = getCreatorBypass(prev) ? "verified" : "dev";
 
       return {
         ...prev,
@@ -1445,7 +1472,7 @@ export default function JalSolEnter() {
           messageSigned: true,
           signedMessageText: message,
           signedMessageSignature: createMockSignature(),
-          signingSource: "dev",
+          signingSource: proofSource,
         },
         currentStage: "transaction",
       };
@@ -1501,19 +1528,23 @@ export default function JalSolEnter() {
     }));
   }
 
-  function simulateTransactionConfirm() {
+    function simulateTransactionConfirm() {
     if (loading || !progress.transaction.submitted) return;
 
-    patchProgress((prev) => ({
-      ...prev,
-      transaction: {
-        ...prev.transaction,
-        confirmed: true,
-        confirmedAt: Date.now(),
-        confirmationSource: "dev",
-      },
-      currentStage: "passed",
-    }));
+    patchProgress((prev) => {
+      const proofSource: ProofSource = getCreatorBypass(prev) ? "verified" : "dev";
+
+      return {
+        ...prev,
+        transaction: {
+          ...prev.transaction,
+          confirmed: true,
+          confirmedAt: Date.now(),
+          confirmationSource: proofSource,
+        },
+        currentStage: "passed",
+      };
+    });
   }
 
   function resetTransactionState() {
@@ -1540,21 +1571,23 @@ export default function JalSolEnter() {
     { k: "Stripe Receipt Number", v: progress.package.stripeReceiptNumber || "Missing" },
     { k: "Stripe Customer Email", v: progress.package.stripeCustomerEmail || "Missing" },
     {
-      k: "Stripe Payment State",
-      v:
-        progress.package.paymentStatus === "paid"
-          ? `PAID (${progress.package.paymentSource})`
-          : progress.package.paymentStatus.toUpperCase(),
-    },
-    { k: "Stripe Checkout Session ID", v: progress.package.stripeSessionId || "Missing" },
+  k: "Stripe Payment State",
+  v: creatorBypass
+    ? "CREATOR BYPASS (verified)"
+    : progress.package.paymentStatus === "paid"
+    ? `PAID (${progress.package.paymentSource})`
+    : progress.package.paymentStatus.toUpperCase(),
+},
     {
-      k: "Creator Identity Match",
-      v: isCreatorProfile ? "Yes" : "No",
-    },
+  k: "Stripe Checkout Session ID",
+  v: creatorBypass
+    ? "CREATOR_BYPASS"
+    : progress.package.stripeSessionId || "Missing",
+},
     {
-      k: "Creator Rights",
-      v: isCreatorProfile && paymentComplete ? "Granted" : "Standard User",
-    },
+  k: "Creator Rights",
+  v: getCreatorBypass(progress) ? "Granted" : "Standard User",
+},
     { k: "Wallet Public Key", v: progress.wallet.address || "Missing" },
     {
       k: "Message Signed Status",
@@ -1796,13 +1829,15 @@ export default function JalSolEnter() {
                   </article>
 
                   <article className="jal-bullet">
-                    <div className="jal-bullet-k">Package</div>
-                    <div className="jal-bullet-v">
-                      {paymentComplete
-                        ? `Payment recorded (${progress.package.paymentSource})`
-                        : "Payment not yet completed"}
-                    </div>
-                  </article>
+  <div className="jal-bullet-k">Package</div>
+  <div className="jal-bullet-v">
+    {creatorBypass
+      ? "Creator bypass active"
+      : paymentComplete
+      ? `Payment recorded (${progress.package.paymentSource})`
+      : "Payment not yet completed"}
+  </div>
+</article>
 
                   <article className="jal-bullet">
                     <div className="jal-bullet-k">Stage</div>
@@ -1859,12 +1894,14 @@ export default function JalSolEnter() {
                     </div>
                   </article>
 
-                  <article className={`jal-bullet ${getStatusTone(isCreatorProfile && paymentComplete)}`}>
-                    <div className="jal-bullet-k">Creator Rights</div>
-                    <div className="jal-bullet-v">
-                      {isCreatorProfile && paymentComplete ? "Granted" : "Standard User"}
-                    </div>
-                  </article>
+                  <article
+  className={`jal-bullet ${getStatusTone(isCreatorProfile)}`}
+>
+  <div className="jal-bullet-k">Creator Rights</div>
+  <div className="jal-bullet-v">
+    {isCreatorProfile ? "Granted" : "Standard User"}
+  </div>
+</article>
 
                   <article className={`jal-bullet ${getStatusTone(progress.trial.passed)}`}>
                     <div className="jal-bullet-k">Trial</div>
@@ -1975,19 +2012,19 @@ export default function JalSolEnter() {
                   </label>
 
                                     <div className={`jal-note ${isCreatorDraft ? "jal-note-creator" : ""}`}>
-                    {isCreatorDraft ? (
-                      <>
-                        Creator identity detected. This profile matches <strong>JAL</strong> /
-                        <strong> 358jal@gmail.com</strong> and will receive creator rights once
-                        payment is verified.
-                      </>
-                    ) : (
-                      <>
-                        Standard participant profile. Use your own display name and the same
-                        email used during Stripe purchase so payment can be matched correctly.
-                      </>
-                    )}
-                  </div>
+  {isCreatorDraft ? (
+    <>
+      Creator identity detected. This profile matches <strong>JAL</strong> /
+      <strong> 358jal@gmail.com</strong> and will bypass Stripe payment with
+      creator rights.
+    </>
+  ) : (
+    <>
+      Standard participant profile. Use your own display name and the same
+      email used during Stripe purchase so payment can be matched correctly.
+    </>
+  )}
+</div>
 
                   <label className="jal-check">
                     <input
@@ -2098,121 +2135,133 @@ export default function JalSolEnter() {
           )}
 
           {canEnterGate2 && currentStage === "payment" && (
-            <section className="jal-bay jal-bay-wide" aria-label="Gate 02 payment">
-              <div className="jal-bay-head">
-                <div className="jal-bay-title">Gate 02 Entry Condition</div>
-                <div className="jal-bay-note">Commitment required</div>
+  <section className="jal-bay jal-bay-wide" aria-label="Gate 02 payment">
+    <div className="jal-bay-head">
+      <div className="jal-bay-title">Gate 02 Entry Condition</div>
+      <div className="jal-bay-note">Commitment required</div>
+    </div>
+
+    <p className="jal-note">
+      Entry into Gate 02 is not granted by navigation. It is granted by
+      commitment. This step confirms intent before authority is given.
+    </p>
+
+    <div className="jal-grid">
+      <section className="jal-bay">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">Intent</div>
+          <div className="jal-bay-note">Declaration</div>
+        </div>
+
+        <p className="jal-note">
+          You are not purchasing access. You are committing to proceed through a
+          controlled system of value creation.
+        </p>
+
+        <div className="jal-emerging-stack">
+          <div className="jal-emerging-row">
+            <div>
+              <div className="jal-emerging-label">Outcome</div>
+              <div className="jal-emerging-note">
+                Access to Gate 02 environment and progression path.
               </div>
+            </div>
+            <span className="jal-emerging-chip">UNLOCK</span>
+          </div>
 
-              <p className="jal-note">
-                Entry into Gate 02 is not granted by navigation. It is granted by
-                commitment. This step confirms intent before authority is given.
-              </p>
+          <div className="jal-emerging-row">
+            <div>
+              <div className="jal-emerging-label">Requirement</div>
+              <div className="jal-emerging-note">
+  Verified payment tied to your participant shell, or creator bypass for the JAL profile.
+</div>
+            </div>
+            <span className="jal-emerging-chip">REQUIRED</span>
+          </div>
+        </div>
+      </section>
 
-              <div className="jal-grid">
-                <section className="jal-bay">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">Intent</div>
-                    <div className="jal-bay-note">Declaration</div>
-                  </div>
+      <section className="jal-bay">
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">Payment</div>
+          <div className="jal-bay-note">External verification</div>
+        </div>
 
-                  <p className="jal-note">
-                    You are not purchasing access. You are committing to proceed through a
-                    controlled system of value creation.
-                  </p>
+        <p className="jal-note">
+          Complete the payment externally. Return here to confirm and unlock the
+          next stage.
+        </p>
 
-                  <div className="jal-emerging-stack">
-                    <div className="jal-emerging-row">
-                      <div>
-                        <div className="jal-emerging-label">Outcome</div>
-                        <div className="jal-emerging-note">
-                          Access to Gate 02 environment and progression path.
-                        </div>
-                      </div>
-                      <span className="jal-emerging-chip">UNLOCK</span>
-                    </div>
-
-                    <div className="jal-emerging-row">
-                      <div>
-                        <div className="jal-emerging-label">Requirement</div>
-                        <div className="jal-emerging-note">
-                          Verified payment tied to your participant shell.
-                        </div>
-                      </div>
-                      <span className="jal-emerging-chip">REQUIRED</span>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="jal-bay">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">Payment</div>
-                    <div className="jal-bay-note">External verification</div>
-                  </div>
-
-                                    <p className="jal-note">
-                    Complete the payment externally. Return here to confirm and unlock the
-                    next stage.
-                  </p>
-
-                  <p className="jal-note">
-                    {isCreatorProfile ? (
-                      <>
-                        Creator profile active. Payment tied to <strong>{CREATOR_DISPLAY_NAME}</strong>
-                        {" / "}
-                        <strong>{CREATOR_EMAIL}</strong> will unlock creator rights.
-                      </>
-                    ) : (
-                      <>
-                        Use the same email here that you used during Stripe purchase so your
-                        payment can be matched to your participant shell.
-                      </>
-                    )}
-                  </p>
-
-                  <div className="jal-bay-actions">
-                    <a
-                      href={GATE2_PAYMENT_LINK}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="button gold"
-                    >
-                      Open Gate 02
-                    </a>
-                  </div>
-                </section>
-              </div>
-
-              <section className="jal-bay">
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">Verification</div>
-                  <div className="jal-bay-note">Return + confirm</div>
-                </div>
-
-                <p className="jal-note">
-                  After completing payment, this page waits for the redirect signal before
-                  the next stage opens.
-                </p>
-
-                <div className="jal-bay-actions">
-                  <button type="button" className="button gold" disabled>
-                    Awaiting Payment Confirmation...
-                  </button>
-                </div>
-              </section>
-
-              <div className="jal-bay-actions jal-bay-actions-spread">
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => goBackStage("profile")}
-                  disabled={loading}
-                >
-                  Back To Profile
-                </button>
-              </div>
-            </section>
+        <p className="jal-note">
+          {isCreatorProfile ? (
+            <>
+              Creator profile active. <strong>{CREATOR_DISPLAY_NAME}</strong>
+              {" / "}
+              <strong>{CREATOR_EMAIL}</strong> bypasses Stripe payment and can proceed
+              directly through Gate 02 with creator rights.
+            </>
+          ) : (
+            <>
+              Use your own display name and the same email used during Stripe purchase
+              so payment can be matched correctly to your participant shell.
+            </>
           )}
+        </p>
+
+        <div className="jal-bay-actions">
+          {isCreatorProfile ? (
+            <button
+              type="button"
+              className="button gold"
+              onClick={() => goToStage("module-1-wallet")}
+              disabled={loading}
+            >
+              Continue As Creator
+            </button>
+          ) : (
+            <a
+              href={GATE2_PAYMENT_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button gold"
+            >
+              Open Gate 02
+            </a>
+          )}
+        </div>
+      </section>
+    </div>
+
+    <section className="jal-bay">
+      <div className="jal-bay-head">
+        <div className="jal-bay-title">Verification</div>
+        <div className="jal-bay-note">Return + confirm</div>
+      </div>
+
+      <p className="jal-note">
+        After completing payment, this page waits for the redirect signal before
+        the next stage opens.
+      </p>
+
+      <div className="jal-bay-actions">
+        <button type="button" className="button gold" disabled>
+          {isCreatorProfile ? "Creator Bypass Active" : "Awaiting Payment Confirmation..."}
+        </button>
+      </div>
+    </section>
+
+    <div className="jal-bay-actions jal-bay-actions-spread">
+      <button
+        type="button"
+        className="button ghost"
+        onClick={() => goBackStage("profile")}
+        disabled={loading}
+      >
+        Back To Profile
+      </button>
+    </div>
+  </section>
+)}
 
           {canEnterGate2 && activeModule && (
             <section className="jal-bay jal-bay-wide" aria-label={activeModule.title}>
@@ -2465,7 +2514,7 @@ export default function JalSolEnter() {
           ? "passed"
           : prev.trial.successfulRuns === 1
           ? "one_pass"
-          : "in_run",
+          : "available",
       },
       currentStage: "trial",
     }));
@@ -2849,10 +2898,14 @@ export default function JalSolEnter() {
               </div>
 
               <p className="jal-note">
-                {participantState
-                                    ? `Gate 02 is complete with verified payment truth, verified wallet authority, and verified transaction confirmation.${isCreatorProfile ? " Creator rights are active." : ""}`
-                  : "Gate 02 development sequencing is complete, but the current proof sources remain marked as development truth. Final integration is still required before this becomes true participant state."}
-              </p>
+  {participantState
+    ? `Gate 02 is complete with ${
+        creatorBypass ? "creator bypass payment truth" : "verified payment truth"
+      }, verified wallet authority, and verified transaction confirmation.${
+        isCreatorProfile ? " Creator rights are active." : ""
+      }`
+    : "Gate 02 development sequencing is complete, but the current proof sources remain marked as development truth. Final integration is still required before this becomes true participant state."}
+</p>
 
               <div className="jal-bullets">
                 <article className="jal-bullet">
