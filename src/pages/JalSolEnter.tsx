@@ -170,8 +170,21 @@ const GATE2_PROGRESS_KEY = "gate2_progress_v2";
 const GATE2_ADMIN_BYPASS_KEY = "gate2_admin_bypass";
 
 const MINT_AUTHORITY = "3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2";
+const CREATOR_DISPLAY_NAME = "JAL";
+const CREATOR_EMAIL = "358jal@gmail.com";
 const MIN_TRANSFER_SOL = 0.001;
 const GATE2_PAYMENT_LINK = "https://buy.stripe.com/eVq3cu9xmesz6Kr7ww0x20a";
+
+function normalizeIdentityValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function isCreatorIdentity(displayName: string, email: string) {
+  return (
+    normalizeIdentityValue(displayName) === normalizeIdentityValue(CREATOR_DISPLAY_NAME) &&
+    normalizeIdentityValue(email) === normalizeIdentityValue(CREATOR_EMAIL)
+  );
+}
 
 const VALID_GATE2_STAGES: Gate2Stage[] = [
   "home",
@@ -968,7 +981,11 @@ export default function JalSolEnter() {
   const [progress, setProgress] =
     useState<Gate2ProgressState>(DEFAULT_GATE2_PROGRESS);
 
-  const [profileDraft, setProfileDraft] = useState(DEFAULT_GATE2_PROGRESS.profile);
+      const [profileDraft, setProfileDraft] = useState({
+    ...DEFAULT_GATE2_PROGRESS.profile,
+    displayName: CREATOR_DISPLAY_NAME,
+    email: CREATOR_EMAIL,
+  });
   const [profileError, setProfileError] = useState("");
 
   function patchProgress(recipe: (prev: Gate2ProgressState) => Gate2ProgressState) {
@@ -995,16 +1012,24 @@ export default function JalSolEnter() {
     });
   }
 
-useEffect(() => {
-  const observe = readObservePassed();
-  const bypass = readGate2AdminBypass(); 
-  const saved = readGate2Progress();
+  useEffect(() => {
+    const observe = readObservePassed();
+    const bypass = readGate2AdminBypass();
+    const saved = readGate2Progress();
 
-  setObservePassed(observe);
-  setAdminBypass(bypass); // ← this uses it
-  setProgress(saved);
-  setProfileDraft(saved.profile);
-}, []);
+    setObservePassed(observe);
+    setAdminBypass(bypass);
+    setProgress(saved);
+    setProfileDraft(
+      saved.profile.created
+        ? saved.profile
+        : {
+            ...saved.profile,
+            displayName: CREATOR_DISPLAY_NAME,
+            email: CREATOR_EMAIL,
+          }
+    );
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1012,26 +1037,32 @@ useEffect(() => {
 
     if (paid !== "true") return;
     if (!progress.profile.created) return;
-    if (progress.package.paymentStatus === "paid" && progress.package.paymentSource === "verified") {
+
+    if (
+      progress.package.paymentStatus === "paid" &&
+      progress.package.paymentSource === "verified"
+    ) {
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
 
-    patchProgress((prev) => ({
-      ...prev,
-      package: {
-        ...prev.package,
-        checkoutStarted: true,
-        stripeSessionId: prev.package.stripeSessionId || createMockSessionId(),
-        stripeReceiptNumber:
-          prev.package.stripeReceiptNumber || createMockReceiptNumber(),
-        stripeCustomerEmail: prev.profile.email,
-        paymentStatus: "paid",
-        paymentSource: "verified",
-        paidAt: prev.package.paidAt ?? Date.now(),
-      },
-      currentStage: "module-1-wallet",
-    }));
+    patchProgress((prev) => {
+      return {
+        ...prev,
+        package: {
+          ...prev.package,
+          checkoutStarted: true,
+          stripeSessionId: prev.package.stripeSessionId || createMockSessionId(),
+          stripeReceiptNumber:
+            prev.package.stripeReceiptNumber || createMockReceiptNumber(),
+          stripeCustomerEmail: prev.profile.email,
+          paymentStatus: "paid",
+          paymentSource: "verified",
+          paidAt: prev.package.paidAt ?? Date.now(),
+        },
+        currentStage: "module-1-wallet",
+      };
+    });
 
     window.history.replaceState({}, document.title, window.location.pathname);
   }, [
@@ -1070,6 +1101,16 @@ useEffect(() => {
   const hasWalletAuthority = getHasWalletAuthority(progress);
   const developmentFlowComplete = getDevelopmentFlowComplete(progress);
   const participantState = getTrueParticipantState(progress);
+
+    const isCreatorProfile = isCreatorIdentity(
+    progress.profile.displayName,
+    progress.profile.email
+  );
+
+  const isCreatorDraft = isCreatorIdentity(
+    profileDraft.displayName,
+    profileDraft.email
+  );
 
   const accessLabel = !canEnterGate2
     ? "Locked — Observe Required"
@@ -1153,8 +1194,8 @@ useEffect(() => {
   function handleProfileSave() {
     if (loading) return;
 
-    const cleanDisplayName = profileDraft.displayName.trim();
-    const cleanEmail = profileDraft.email.trim();
+        const cleanDisplayName = profileDraft.displayName.trim();
+        const cleanEmail = profileDraft.email.trim().toLowerCase();
 
     if (!cleanDisplayName || !cleanEmail || !profileDraft.acceptedTerms) {
       setProfileError("Display name, email, and terms acceptance are required.");
@@ -1535,6 +1576,14 @@ useEffect(() => {
           : progress.package.paymentStatus.toUpperCase(),
     },
     { k: "Stripe Checkout Session ID", v: progress.package.stripeSessionId || "Missing" },
+    {
+      k: "Creator Identity Match",
+      v: isCreatorProfile ? "Yes" : "No",
+    },
+    {
+      k: "Creator Rights",
+      v: isCreatorProfile && paymentComplete ? "Granted" : "Standard User",
+    },
     { k: "Wallet Public Key", v: progress.wallet.address || "Missing" },
     {
       k: "Message Signed Status",
@@ -1839,10 +1888,10 @@ useEffect(() => {
                     </div>
                   </article>
 
-                  <article className={`jal-bullet ${getStatusTone(paymentComplete)}`}>
-                    <div className="jal-bullet-k">Payment</div>
+                  <article className={`jal-bullet ${getStatusTone(isCreatorProfile && paymentComplete)}`}>
+                    <div className="jal-bullet-k">Creator Rights</div>
                     <div className="jal-bullet-v">
-                      {paymentComplete ? `Paid (${progress.package.paymentSource})` : "Missing"}
+                      {isCreatorProfile && paymentComplete ? "Granted" : "Standard User"}
                     </div>
                   </article>
 
@@ -1953,6 +2002,21 @@ useEffect(() => {
                       placeholder="you@example.com"
                     />
                   </label>
+
+                                    <div className={`jal-note ${isCreatorDraft ? "jal-note-creator" : ""}`}>
+                    {isCreatorDraft ? (
+                      <>
+                        Creator identity detected. This profile matches <strong>JAL</strong> /
+                        <strong> 358jal@gmail.com</strong> and will receive creator rights once
+                        payment is verified.
+                      </>
+                    ) : (
+                      <>
+                        Standard participant profile. Use your own display name and the same
+                        email used during Stripe purchase so payment can be matched correctly.
+                      </>
+                    )}
+                  </div>
 
                   <label className="jal-check">
                     <input
@@ -2115,9 +2179,24 @@ useEffect(() => {
                     <div className="jal-bay-note">External verification</div>
                   </div>
 
-                  <p className="jal-note">
+                                    <p className="jal-note">
                     Complete the payment externally. Return here to confirm and unlock the
                     next stage.
+                  </p>
+
+                  <p className="jal-note">
+                    {isCreatorProfile ? (
+                      <>
+                        Creator profile active. Payment tied to <strong>{CREATOR_DISPLAY_NAME}</strong>
+                        {" / "}
+                        <strong>{CREATOR_EMAIL}</strong> will unlock creator rights.
+                      </>
+                    ) : (
+                      <>
+                        Use the same email here that you used during Stripe purchase so your
+                        payment can be matched to your participant shell.
+                      </>
+                    )}
                   </p>
 
                   <div className="jal-bay-actions">
@@ -2400,16 +2479,30 @@ useEffect(() => {
                 </button>
 
                 <button
-                  type="button"
-                  className="button gold"
-                  onClick={() => {
-                    setTrialAcknowledged(true);
-                    beginTrial();
-                  }}
-                  disabled={loading}
-                >
-                  Begin Trial
-                </button>
+  type="button"
+  className="button gold"
+  onClick={() => {
+    if (loading) return;
+
+    patchProgress((prev) => ({
+      ...prev,
+      trial: {
+        ...prev.trial,
+        unlocked: true,
+        acknowledged: true,
+        state: prev.trial.passed
+          ? "passed"
+          : prev.trial.successfulRuns === 1
+          ? "one_pass"
+          : "in_run",
+      },
+      currentStage: "trial",
+    }));
+  }}
+  disabled={loading}
+>
+  Begin Trial
+</button>
               </div>
             </section>
           )}
@@ -2786,7 +2879,7 @@ useEffect(() => {
 
               <p className="jal-note">
                 {participantState
-                  ? "Gate 02 is complete with verified payment truth, verified wallet authority, and verified transaction confirmation."
+                                    ? `Gate 02 is complete with verified payment truth, verified wallet authority, and verified transaction confirmation.${isCreatorProfile ? " Creator rights are active." : ""}`
                   : "Gate 02 development sequencing is complete, but the current proof sources remain marked as development truth. Final integration is still required before this becomes true participant state."}
               </p>
 
