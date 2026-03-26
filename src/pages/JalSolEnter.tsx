@@ -283,32 +283,19 @@ const ENTRY_RAIL: { id: Gate2Stage; title: string; note: string }[] = [
   },
 ];
 
-const PRIVATE_RULES: string[] = [
-  "Complete every stage in order.",
-  "No wallet connection before the trial phase.",
-  "No transaction before wallet connection and message signing.",
-  "No completion without visible proof.",
-  "Mocked development actions do not count as true participant state.",
-];
+const GATE2_SEQUENCE: Gate2Stage[] = ENTRY_RAIL.map((step) => step.id);
 
-const PRIVATE_OUTCOMES: GatePoint[] = [
-  {
-    k: "Profile Shell",
-    v: "A persistent Gate 02 package identity is created before deeper progression.",
-  },
-  {
-    k: "Payment Truth",
-    v: "Gate access packaging is tied to a recorded payment state rather than a vague return URL.",
-  },
-  {
-    k: "Wallet Authority",
-    v: "Connection alone is not enough. A signed message must prove control before execution.",
-  },
-  {
-    k: "Build Readiness",
-    v: "Build only opens from completed Gate 02 sequencing and visible proof conditions.",
-  },
-];
+function getPreviousStageId(stage: Gate2Stage): Gate2Stage | null {
+  const index = GATE2_SEQUENCE.indexOf(stage);
+  if (index <= 0) return null;
+  return GATE2_SEQUENCE[index - 1];
+}
+
+function getNextStageId(stage: Gate2Stage): Gate2Stage | null {
+  const index = GATE2_SEQUENCE.indexOf(stage);
+  if (index < 0 || index >= GATE2_SEQUENCE.length - 1) return null;
+  return GATE2_SEQUENCE[index + 1];
+}
 
 const MODULE_CONTENT: ModuleContent[] = [
   {
@@ -1085,7 +1072,11 @@ export default function JalSolEnter() {
   const currentStageLabel =
     ENTRY_RAIL.find((step) => step.id === currentStage)?.title || currentStage;
 
-  const shouldShowFullHero = currentStage === "home" || !canEnterGate2;
+  const currentStageIndex = GATE2_SEQUENCE.indexOf(currentStage);
+  const previousStageId = getPreviousStageId(currentStage);
+  const nextStageId = getNextStageId(currentStage);
+  const showCompactHeader = currentStage !== "home";
+  const shouldShowFullHero = true;
 
     const allTestAnswered = useMemo(
     () =>
@@ -1613,7 +1604,10 @@ export default function JalSolEnter() {
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
           {shouldShowFullHero && (
-            <section className="jal-hero jal-world-hero" aria-label="Enter gate hero">
+  <section
+    className={`jal-hero jal-world-hero ${showCompactHeader ? "jal-enter-hero--compact" : ""}`}
+    aria-label="Enter gate hero"
+  >
               <div className="jal-hero-top">
                 <div className="jal-kicker">JAL/SOL • GATE 02</div>
 
@@ -1633,16 +1627,16 @@ export default function JalSolEnter() {
                 </h1>
 
                 <p className="home-lead">
-                  Gate 02 is the threshold where understanding must become correct action.
-                  This is the first irreversible layer in JAL/SOL. The user stops observing
-                  from a safe distance and begins preparing for real participation.
-                </p>
+  Gate 02 is the threshold where understanding must become correct action.
+  This is the first irreversible layer in JAL/SOL. The user stops observing
+  from a safe distance and begins preparing for real participation.
+</p>
 
-                <p className="jal-sublead">
-                  This gate is about sequence, payment truth, identity packaging, authority
-                  proof, and visible verification. Mocked development movement may help
-                  scaffold the route, but it is not the same as true participant state.
-                </p>
+<p className="jal-sublead">
+  This gate is about sequence, payment truth, identity packaging, authority
+  proof, and visible verification. Mocked development movement may help
+  scaffold the route, but it is not the same as true participant state.
+</p>
               </div>
 
               <div className="jal-arrival-note" aria-label="Enter principles">
@@ -1703,39 +1697,56 @@ export default function JalSolEnter() {
           )}
 
           {canEnterGate2 && currentStage !== "home" && (
-            <>
-              <section className="jal-stage-bar" aria-label="Current Gate 02 stage">
-                <div className="jal-stage-bar-left">
-                  <span>JAL/SOL • Gate 02</span>
-                  <strong>{currentStageLabel}</strong>
-                </div>
+  <>
+    <section className="jal-stage-bar" aria-label="Current Gate 02 stage">
+      <div className="jal-stage-bar-left">
+        <span>JAL/SOL • Gate 02</span>
+        <strong>{currentStageLabel}</strong>
+      </div>
 
-                <div className="jal-stage-bar-right">
-                  <span className="jal-status-dot" />
-                  <span>{accessLabel}</span>
-                </div>
-              </section>
+      <div className="jal-stage-bar-right">
+        <span className="jal-status-dot" />
+        <span>{accessLabel}</span>
+      </div>
+    </section>
 
-              <section className="jal-progress-rail" aria-label="Gate 02 progression rail">
-                {ENTRY_RAIL.map((step) => {
-                  const completed = isStepCompleted(progress, step.id);
-                  const active = step.id === currentStage;
+    <section className="jal-bay jal-bay-wide" aria-label="Gate 02 sequence">
+  <div className="jal-bay-head">
+    <div className="jal-bay-title">Enter Sequence</div>
+    <div className="jal-bay-note">
+      {currentStageIndex >= 0 ? `${currentStageIndex + 1} / ${GATE2_SEQUENCE.length}` : ""}
+    </div>
+  </div>
 
-                  return (
-                    <div
-                      key={step.id}
-                      className={`jal-progress-node ${
-                        active ? "active" : completed ? "done" : "locked"
-                      }`}
-                      aria-current={active ? "step" : undefined}
-                    >
-                      <span>{step.title}</span>
-                    </div>
-                  );
-                })}
-              </section>
-            </>
-          )}
+  <p className="jal-note">
+    Gate 02 is completed in order. One frame is active at a time. Progression is paced
+    so the user enters participation with control, not guesswork.
+  </p>
+
+  <div className="jal-sequence-dot-row" aria-label="Gate 02 step indicators">
+    {ENTRY_RAIL.map((step, index) => {
+      const completed = isStepCompleted(progress, step.id);
+      const active = step.id === currentStage;
+
+      return (
+        <button
+          key={step.id}
+          type="button"
+          className={`jal-sequence-dot ${
+            active ? "is-current" : completed ? "is-complete" : "is-waiting"
+          }`}
+          onClick={() => goToStage(step.id)}
+          disabled={loading || (!canAccessStage(progress, step.id) && step.id !== "profile")}
+          aria-label={`${index + 1}. ${step.title}`}
+          aria-current={active ? "step" : undefined}
+          title={`${String(index + 1).padStart(2, "0")} · ${step.title}`}
+        />
+      );
+    })}
+  </div>
+</section>
+  </>
+)}
 
           {!canEnterGate2 && (
             <section className="jal-bay jal-bay-wide" aria-label="Gate blocked">
@@ -1794,158 +1805,59 @@ export default function JalSolEnter() {
           )}
 
           {canEnterGate2 && currentStage === "home" && (
-            <>
-              <section className="jal-bay jal-bay-wide" aria-label="Private Gate 02 home">
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">Gate 02 Private Workspace</div>
-                  <div className="jal-bay-note">
-                    {adminBypass ? "Private bypass active" : "Controlled progression environment"}
-                  </div>
-                </div>
+  <section className="jal-bay jal-bay-wide" aria-label="Gate 02 home">
+    <div className="jal-bay-head">
+      <div className="jal-bay-title">Gate 02 — Enter</div>
+      <div className="jal-bay-note">
+        {adminBypass ? "Private bypass active" : "Controlled progression environment"}
+      </div>
+    </div>
 
-                <p className="jal-note">
-                  Gate 02 access is active. This is the internal progression environment.
-                  The user is no longer being sold the gate. They are being processed through it.
-                </p>
+    <p className="jal-note">
+      Gate 02 is the first participation layer. The user moves from understanding into
+      controlled action through profile, payment truth, learning, testing, trial, wallet,
+      transaction, and verification.
+    </p>
 
-                <div className="jal-bullets">
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Identity</div>
-                    <div className="jal-bullet-v">
-                      {progress.profile.displayName || "Profile not created yet"}
-                    </div>
-                  </article>
+    <div className="jal-bullets">
+      <article className="jal-bullet">
+        <div className="jal-bullet-k">Identity</div>
+        <div className="jal-bullet-v">
+          {progress.profile.displayName || "Profile not created yet"}
+        </div>
+      </article>
 
-                  <article className="jal-bullet">
-  <div className="jal-bullet-k">Package</div>
-  <div className="jal-bullet-v">
-    {creatorBypass
-      ? "Creator bypass active"
-      : paymentComplete
-      ? `Payment recorded (${progress.package.paymentSource})`
-      : "Payment not yet completed"}
-  </div>
-</article>
+      <article className="jal-bullet">
+        <div className="jal-bullet-k">Access</div>
+        <div className="jal-bullet-v">
+          {creatorBypass
+            ? "Creator bypass active"
+            : paymentComplete
+            ? `Payment recorded (${progress.package.paymentSource})`
+            : "Payment not yet completed"}
+        </div>
+      </article>
 
-                  <article className="jal-bullet">
-                    <div className="jal-bullet-k">Stage</div>
-                    <div className="jal-bullet-v">Home</div>
-                  </article>
-                </div>
-              </section>
+      <article className="jal-bullet">
+        <div className="jal-bullet-k">Outcome</div>
+        <div className="jal-bullet-v">
+          Build opens only after full proof-backed completion.
+        </div>
+      </article>
+    </div>
 
-              <section className="jal-grid" aria-label="Private rules and outcomes">
-                <section className="jal-bay">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">Rules And Requirements</div>
-                    <div className="jal-bay-note">Strict path enforcement</div>
-                  </div>
-
-                  <div className="jal-steps">
-                    {PRIVATE_RULES.map((rule, index) => (
-                      <div key={`${rule}-${index}`}>
-                        <strong>{index + 1}.</strong>
-                        <span className="jal-step-sub">{rule}</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="jal-bay">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">What Unlocks After Pass</div>
-                    <div className="jal-bay-note">Outcome integrity</div>
-                  </div>
-
-                  <div className="jal-bullets">
-                    {PRIVATE_OUTCOMES.map((point) => (
-                      <article key={point.k} className="jal-bullet">
-                        <div className="jal-bullet-k">{point.k}</div>
-                        <div className="jal-bullet-v">{point.v}</div>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              </section>
-
-              <section className="jal-bay jal-bay-wide" aria-label="Credential board preview">
-                <div className="jal-bay-head">
-                  <div className="jal-bay-title">Gate 02 Credential Board</div>
-                  <div className="jal-bay-note">Live package dashboard</div>
-                </div>
-
-                <div className="jal-bullets">
-                  <article className={`jal-bullet ${getStatusTone(progress.profile.created)}`}>
-                    <div className="jal-bullet-k">Profile</div>
-                    <div className="jal-bullet-v">
-                      {progress.profile.created ? "Complete" : "Missing"}
-                    </div>
-                  </article>
-
-                  <article
-  className={`jal-bullet ${getStatusTone(creatorBypass)}`}
->
-  <div className="jal-bullet-k">Creator Rights</div>
-  <div className="jal-bullet-v">
-    {creatorBypass ? "Granted" : "Standard User"}
-  </div>
-</article>
-
-                  <article className={`jal-bullet ${getStatusTone(progress.trial.passed)}`}>
-                    <div className="jal-bullet-k">Trial</div>
-                    <div className="jal-bullet-v">
-                      {progress.trial.passed ? "Passed" : "Pending"}
-                    </div>
-                  </article>
-
-                  <article className={`jal-bullet ${getStatusTone(hasWalletAuthority)}`}>
-                    <div className="jal-bullet-k">Wallet Authority</div>
-                    <div className="jal-bullet-v">
-                      {hasWalletAuthority ? "Connected + Signed" : "Pending"}
-                    </div>
-                  </article>
-
-                  <article
-                    className={`jal-bullet ${getStatusTone(progress.transaction.confirmed)}`}
-                  >
-                    <div className="jal-bullet-k">Transaction Proof</div>
-                    <div className="jal-bullet-v">
-                      {progress.transaction.confirmed ? "Confirmed" : "Pending"}
-                    </div>
-                  </article>
-
-                  <article
-                    className={`jal-bullet ${getStatusTone(progress.completion.buildReady)}`}
-                  >
-                    <div className="jal-bullet-k">Build Readiness</div>
-                    <div className="jal-bullet-v">
-                      {progress.completion.buildReady ? "Unlocked" : "Locked"}
-                    </div>
-                  </article>
-                </div>
-
-                <div className="jal-bay-actions">
-                  <button
-                    type="button"
-                    className="button gold"
-                    onClick={handleBeginSequence}
-                    disabled={loading}
-                  >
-                    Begin Sequence
-                  </button>
-
-                  <button
-                    type="button"
-                    className="button ghost"
-                    onClick={() => beginRoute("/app/jal-sol")}
-                    disabled={loading}
-                  >
-                    Return To World Hub
-                  </button>
-                </div>
-              </section>
-            </>
-          )}
+    <div className="jal-bay-actions jal-bay-actions-center">
+      <button
+        type="button"
+        className="button gold"
+        onClick={handleBeginSequence}
+        disabled={loading}
+      >
+        Begin Sequence
+      </button>
+    </div>
+  </section>
+)}
 
           {canEnterGate2 && currentStage === "profile" && (
             <section className="jal-bay jal-bay-wide" aria-label="Gate 02 profile creation">
@@ -2870,7 +2782,54 @@ export default function JalSolEnter() {
               </div>
             </section>
           )}
+          
+          {canEnterGate2 && currentStage !== "home" && currentStage !== "passed" && (
+  <section className="jal-bay jal-bay-wide" aria-label="Gate 02 controls">
+    <div className="jal-bay-actions jal-bay-actions-center jal-sequence-controls">
+      <button
+        type="button"
+        className="button ghost"
+        onClick={() => goBackStage("home")}
+        disabled={loading}
+        aria-label="Return to Gate 02 home"
+      >
+        {"<<"}
+      </button>
 
+      <button
+        type="button"
+        className="button ghost"
+        onClick={() => previousStageId && goBackStage(previousStageId)}
+        disabled={loading || !previousStageId}
+        aria-label="Previous stage"
+      >
+        {"<"}
+      </button>
+
+      <span
+        className={`jal-sequence-indicator-dot ${
+          isStepCompleted(progress, currentStage) ? "is-complete" : "is-active"
+        }`}
+        aria-label={
+          isStepCompleted(progress, currentStage)
+            ? "Current stage complete"
+            : "Current stage in progress"
+        }
+      />
+
+      <button
+        type="button"
+        className="button ghost"
+        onClick={() => nextStageId && goToStage(nextStageId)}
+        disabled={loading || !nextStageId || !canAccessStage(progress, nextStageId)}
+        aria-label="Next stage"
+      >
+        {">"}
+      </button>
+    </div>
+  </section>
+)}
+        
           {canEnterGate2 && currentStage === "passed" && (
             <section className="jal-bay jal-bay-wide" aria-label="Passed state">
               <div className="jal-bay-head">
