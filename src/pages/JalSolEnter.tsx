@@ -284,6 +284,7 @@ const ENTRY_RAIL: { id: Gate2Stage; title: string; note: string }[] = [
 ];
 
 const GATE2_SEQUENCE: Gate2Stage[] = ENTRY_RAIL.map((step) => step.id);
+const JALSOL_SEQUENCE_TITLE = "JALSOL Sequence Progress";
 
 function getPreviousStageId(stage: Gate2Stage): Gate2Stage | null {
   const index = GATE2_SEQUENCE.indexOf(stage);
@@ -980,6 +981,7 @@ export default function JalSolEnter() {
 
   const [profileDraft, setProfileDraft] = useState(DEFAULT_GATE2_PROGRESS.profile);
   const [profileError, setProfileError] = useState("");
+  const [showProfileOverlay, setShowProfileOverlay] = useState(false);
 
   function patchProgress(recipe: (prev: Gate2ProgressState) => Gate2ProgressState) {
     setProgress((prev) => {
@@ -1076,7 +1078,7 @@ export default function JalSolEnter() {
   const previousStageId = getPreviousStageId(currentStage);
   const nextStageId = getNextStageId(currentStage);
   const showCompactHeader = currentStage !== "home";
-  const shouldShowFullHero = true;
+  const shouldShowFullHero = currentStage === "home";
 
     const allTestAnswered = useMemo(
     () =>
@@ -1617,86 +1619,51 @@ export default function JalSolEnter() {
                 </div>
               </div>
 
-              <div className="jal-hero-center">
-                <p className="jal-world-pretitle">Participation gate</p>
+              <div className="jal-hero-center jal-enter-hero-center">
+  <h1 className="home-title jal-enter-gate-title">GATE 02</h1>
 
-                <h1 className="home-title">
-                  You are now
-                  <br />
-                  entering movement.
-                </h1>
+  <p className="jal-world-pretitle">Participation gate</p>
 
-                <p className="home-lead">
-  Gate 02 is the threshold where understanding must become correct action.
-  This is the first irreversible layer in JAL/SOL. The user stops observing
-  from a safe distance and begins preparing for real participation.
-</p>
+  <h2 className="jal-enter-statement">
+    This is the point where observation ends.
+    <br />
+    You either act with intent,
+    <br />
+    or remain outside the system.
+  </h2>
 
-<p className="jal-sublead">
-  This gate is about sequence, payment truth, identity packaging, authority
-  proof, and visible verification. Mocked development movement may help
-  scaffold the route, but it is not the same as true participant state.
-</p>
-              </div>
+  <div className="jal-links jal-links-center">
+    <button
+  type="button"
+  className="button gold"
+  onClick={() => {
+  if (loading || !canEnterGate2) return;
+
+  setProfileError("");
+  setShowProfileOverlay(true);
+
+  patchProgress((prev) => ({
+    ...prev,
+    privateHomeSeen: true,
+    currentStage: "profile",
+  }));
+}}
+  disabled={loading}
+>
+  Enter
+</button>
+  </div>
+</div>
 
               <div className="jal-arrival-note" aria-label="Enter principles">
-                <span>CONTROLLED ENTRY</span>
-                <span>PROFILE → PAYMENT → AUTHORITY → EXECUTION → VERIFICATION</span>
-                <span>PARTICIPATION BEGINS WITH PROVEN MOVEMENT</span>
-              </div>
-
-              <div className="jal-links">
-                {!canEnterGate2 ? (
-                  <button
-                    type="button"
-                    className="button gold"
-                    onClick={() => beginRoute("/app/jal-sol/observe")}
-                    disabled={loading}
-                  >
-                    Go To Observe
-                  </button>
-                ) : currentStage === "home" ? (
-                  <button
-                    type="button"
-                    className="button gold"
-                    onClick={handleBeginSequence}
-                    disabled={loading}
-                  >
-                    Enter Gate 02
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="button gold"
-                    onClick={() => goBackStage("home")}
-                    disabled={loading}
-                  >
-                    Return To Gate 02 Home
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => beginRoute("/app/jal-sol/observe")}
-                  disabled={loading}
-                >
-                  Return To Observe
-                </button>
-
-                <button
-                  type="button"
-                  className="button ghost"
-                  onClick={() => beginRoute("/app/jal-sol")}
-                  disabled={loading}
-                >
-                  Return To World Hub
-                </button>
-              </div>
+  <span>CONTROLLED ENTRY</span>
+  <span>PROFILE → PAYMENT → AUTHORITY → EXECUTION → VERIFICATION</span>
+  <span>PARTICIPATION BEGINS WITH PROVEN MOVEMENT</span>
+</div>
             </section>
           )}
 
-          {canEnterGate2 && currentStage !== "home" && (
+          {canEnterGate2 && currentStage !== "home" && !showProfileOverlay && (
   <>
     <section className="jal-stage-bar" aria-label="Current Gate 02 stage">
       <div className="jal-stage-bar-left">
@@ -1710,20 +1677,21 @@ export default function JalSolEnter() {
       </div>
     </section>
 
-    <section className="jal-bay jal-bay-wide" aria-label="Gate 02 sequence">
-  <div className="jal-bay-head">
-    <div className="jal-bay-title">Enter Sequence</div>
-    <div className="jal-bay-note">
-      {currentStageIndex >= 0 ? `${currentStageIndex + 1} / ${GATE2_SEQUENCE.length}` : ""}
+    <section className="jal-bay jal-bay-wide jal-sequence-progress-shell" aria-label="Gate 02 sequence">
+  <div className="jal-bay-head jal-bay-head-center">
+    <div className="jal-bay-title jal-center-text jal-sequence-progress-title">
+      {JALSOL_SEQUENCE_TITLE}
+    </div>
+    <div className="jal-bay-note jal-center-text">
+      Gate 02 • {currentStageIndex >= 0 ? `${currentStageIndex + 1} / ${GATE2_SEQUENCE.length}` : ""}
     </div>
   </div>
 
-  <p className="jal-note">
-    Gate 02 is completed in order. One frame is active at a time. Progression is paced
-    so the user enters participation with control, not guesswork.
+  <p className="jal-note jal-center-text jal-sequence-progress-copy">
+    Movement through JALSOL is earned in order. Each gate and each stage confirms direction before the next opens.
   </p>
 
-  <div className="jal-sequence-dot-row" aria-label="Gate 02 step indicators">
+  <div className="jal-sequence-dot-row jal-sequence-dot-row-center" aria-label="Gate 02 step indicators">
     {ENTRY_RAIL.map((step, index) => {
       const completed = isStepCompleted(progress, step.id);
       const active = step.id === currentStage;
@@ -1804,62 +1772,7 @@ export default function JalSolEnter() {
             </section>
           )}
 
-          {canEnterGate2 && currentStage === "home" && (
-  <section className="jal-bay jal-bay-wide" aria-label="Gate 02 home">
-    <div className="jal-bay-head">
-      <div className="jal-bay-title">Gate 02 — Enter</div>
-      <div className="jal-bay-note">
-        {adminBypass ? "Private bypass active" : "Controlled progression environment"}
-      </div>
-    </div>
-
-    <p className="jal-note">
-      Gate 02 is the first participation layer. The user moves from understanding into
-      controlled action through profile, payment truth, learning, testing, trial, wallet,
-      transaction, and verification.
-    </p>
-
-    <div className="jal-bullets">
-      <article className="jal-bullet">
-        <div className="jal-bullet-k">Identity</div>
-        <div className="jal-bullet-v">
-          {progress.profile.displayName || "Profile not created yet"}
-        </div>
-      </article>
-
-      <article className="jal-bullet">
-        <div className="jal-bullet-k">Access</div>
-        <div className="jal-bullet-v">
-          {creatorBypass
-            ? "Creator bypass active"
-            : paymentComplete
-            ? `Payment recorded (${progress.package.paymentSource})`
-            : "Payment not yet completed"}
-        </div>
-      </article>
-
-      <article className="jal-bullet">
-        <div className="jal-bullet-k">Outcome</div>
-        <div className="jal-bullet-v">
-          Build opens only after full proof-backed completion.
-        </div>
-      </article>
-    </div>
-
-    <div className="jal-bay-actions jal-bay-actions-center">
-      <button
-        type="button"
-        className="button gold"
-        onClick={handleBeginSequence}
-        disabled={loading}
-      >
-        Begin Sequence
-      </button>
-    </div>
-  </section>
-)}
-
-          {canEnterGate2 && currentStage === "profile" && (
+          {false && canEnterGate2 && currentStage === "profile" && !showProfileOverlay && (
             <section className="jal-bay jal-bay-wide" aria-label="Gate 02 profile creation">
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Gate 02 Profile Creation</div>
@@ -2033,6 +1946,150 @@ export default function JalSolEnter() {
 </div>
             </section>
           )}
+
+          {canEnterGate2 && showProfileOverlay && (
+  <div className="jal-overlay" role="dialog" aria-modal="true" aria-label="Gate 02 profile creation">
+    <div
+  className="jal-overlay-backdrop"
+  onClick={() => {
+    setProfileError("");
+    setShowProfileOverlay(false);
+  }}
+/>
+    <section className="jal-overlay-panel jal-bay jal-bay-wide">
+      <div className="jal-bay-head">
+        <div className="jal-bay-title">Gate 02 Profile Creation</div>
+        <div className="jal-bay-note">Participant shell required</div>
+      </div>
+
+      <p className="jal-note jal-center-text">
+  Complete your participant shell to begin Gate 02 progression.
+</p>
+
+      <div className="jal-grid">
+        <section className="jal-bay">
+          <div className="jal-bay-head">
+            <div className="jal-bay-title">Required To Begin</div>
+            <div className="jal-bay-note">Active now</div>
+          </div>
+
+          <label className="jal-field">
+            <span className="jal-field-label">Display name</span>
+            <input
+              className="jal-input"
+              type="text"
+              value={profileDraft.displayName}
+              onChange={(e) =>
+                setProfileDraft((prev) => ({
+                  ...prev,
+                  displayName: e.target.value,
+                }))
+              }
+              placeholder="Your visible Gate 02 identity"
+            />
+          </label>
+
+          <label className="jal-field">
+            <span className="jal-field-label">Email</span>
+            <input
+              className="jal-input"
+              type="email"
+              value={profileDraft.email}
+              onChange={(e) =>
+                setProfileDraft((prev) => ({
+                  ...prev,
+                  email: e.target.value,
+                }))
+              }
+              placeholder="you@example.com"
+            />
+          </label>
+
+          <div className={`jal-note ${isCreatorDraft ? "jal-note-creator" : ""}`}>
+            {isCreatorDraft ? (
+              <>
+                Creator identity detected. This profile matches <strong>JAL</strong> /
+                <strong> 358jal@gmail.com</strong> and will bypass Stripe payment with
+                creator rights.
+              </>
+            ) : (
+              <>
+                Standard participant profile. Use your own display name and the same
+                email used during Stripe purchase so payment can be matched correctly.
+              </>
+            )}
+          </div>
+
+          <label className="jal-check">
+            <input
+              type="checkbox"
+              checked={profileDraft.acceptedTerms}
+              onChange={(e) =>
+                setProfileDraft((prev) => ({
+                  ...prev,
+                  acceptedTerms: e.target.checked,
+                }))
+              }
+            />
+            <span>
+              I accept the Gate 02 terms and understand that this participant shell
+              is tied to progression, payment, wallet authority, and verification.
+            </span>
+          </label>
+        </section>
+
+        <section className="jal-bay jal-emerging-panel">
+          <div className="jal-bay-head">
+            <div className="jal-bay-title">Emerging Identity</div>
+            <div className="jal-bay-note">Forms through progression</div>
+          </div>
+
+          <p className="jal-note">
+            These parts of the package become real only after the required actions have
+            been taken and confirmed.
+          </p>
+        </section>
+      </div>
+
+      {profileError ? <p className="jal-error-text">{profileError}</p> : null}
+
+      <div className="jal-bay-actions jal-bay-actions-center">
+  <button
+    type="button"
+    className="button ghost"
+    onClick={() => {
+      setProfileError("");
+      setShowProfileOverlay(false);
+    }}
+    disabled={loading}
+  >
+    Cancel
+  </button>
+
+  <button
+    type="button"
+    className="button gold"
+    onClick={() => {
+      const cleanDisplayName = profileDraft.displayName.trim();
+      const cleanEmail = profileDraft.email.trim().toLowerCase();
+
+      if (!cleanDisplayName || !cleanEmail || !profileDraft.acceptedTerms) {
+        setProfileError("Display name, email, and terms acceptance are required.");
+        return;
+      }
+
+      setProfileError("");
+      handleProfileSave();
+      setShowProfileOverlay(false);
+    }}
+    disabled={loading}
+  >
+    Save Participant Shell
+  </button>
+</div>
+    </section>
+  </div>
+)}
 
           {canEnterGate2 && currentStage === "payment" && (
   <section className="jal-bay jal-bay-wide" aria-label="Gate 02 payment">
