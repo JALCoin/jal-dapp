@@ -1144,14 +1144,6 @@ export default function JalSolEnter() {
     }));
   }
 
-  function getPreviousModuleStage(
-    stage: ModuleContent["stage"]
-  ): ModuleContent["stage"] | null {
-    const index = MODULE_CONTENT.findIndex((module) => module.stage === stage);
-    if (index <= 0) return null;
-    return MODULE_CONTENT[index - 1].stage;
-  }
-
   function handleProfileSave() {
     if (loading) return;
 
