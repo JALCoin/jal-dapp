@@ -1158,19 +1158,22 @@ export default function JalSolEnter() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const paid = params.get("paid");
+  const params = new URLSearchParams(window.location.search);
+  const paid = params.get("paid");
 
-    if (paid !== "true") return;
-    if (!progress.profile.created) return;
+  if (paid !== "true") return;
+  if (!progress.profile.created) return;
 
-    if (
-      progress.package.paymentStatus === "paid" &&
-      progress.package.paymentSource === "verified"
-    ) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
+  setShowPaymentCeremony(false);
+  setPaymentCommitChecked(false);
+
+  if (
+    progress.package.paymentStatus === "paid" &&
+    progress.package.paymentSource === "verified"
+  ) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return;
+  }
 
     patchProgress((prev) => {
       return {
@@ -2260,8 +2263,7 @@ if (
         </div>
 
         <p className="jal-note">
-          Complete the payment externally. Return here to confirm and unlock the
-          next stage.
+        Gate 02 entry is currently set at <strong>$5 AUD</strong> to open controlled participation at a lower threshold.
         </p>
 
         <p className="jal-note">
@@ -2966,7 +2968,7 @@ if (
             </section>
           )}
           
-          {canEnterGate2 && currentStage !== "home" && (
+          {canEnterGate2 && currentStage !== "home" && currentStage !== "passed" && (
   <section className="jal-bay jal-bay-wide" aria-label="Gate 02 controls">
     <div className="jal-bay-actions jal-bay-actions-center jal-sequence-controls">
       <button
@@ -3280,22 +3282,17 @@ if (
             Return
           </button>
 
-          <a
-            href={paymentCommitChecked ? GATE2_PAYMENT_LINK : undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`button gold ${paymentCommitChecked ? "" : "is-disabled"}`}
-            onClick={(e) => {
-              if (!paymentCommitChecked) {
-                e.preventDefault();
-              } else {
-                setShowPaymentCeremony(false);
-              }
-            }}
-            aria-disabled={!paymentCommitChecked}
-          >
-            Enter Gate 02 — $5
-          </a>
+          <button
+  type="button"
+  className={`button gold ${paymentCommitChecked ? "" : "is-disabled"}`}
+  disabled={!paymentCommitChecked}
+  onClick={() => {
+    setShowPaymentCeremony(false);
+    window.location.href = GATE2_PAYMENT_LINK;
+  }}
+>
+  Enter Gate 02 — $5
+</button>
         </div>
       </section>
     </div>,
