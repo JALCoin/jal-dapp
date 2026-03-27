@@ -2233,15 +2233,16 @@ if (
         </p>
 
         <div className="jal-emerging-stack">
-          <div className="jal-emerging-row">
-            <div>
-              <div className="jal-emerging-label">Outcome</div>
-              <div className="jal-emerging-note">
-                Access to Gate 02 environment and progression path.
-              </div>
-            </div>
-            <span className="jal-emerging-chip">UNLOCK</span>
-          </div>
+  <div className="jal-emerging-row">
+    <div>
+      <div className="jal-emerging-label">Outcome</div>
+      <div className="jal-emerging-note">
+        Access to Gate 02 environment and progression path.
+      </div>
+    </div>
+    <span className="jal-emerging-chip">UNLOCK</span>
+  </div>
+</div>
       </section>
 
       <section className="jal-bay">
