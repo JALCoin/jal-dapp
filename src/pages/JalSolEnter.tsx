@@ -237,7 +237,7 @@ const MINT_AUTHORITY = "3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2";
 const CREATOR_DISPLAY_NAME = "JAL";
 const CREATOR_EMAIL = "358jal@gmail.com";
 const MIN_TRANSFER_SOL = 0.001;
-const GATE2_PAYMENT_LINK = "https://buy.stripe.com/eVq3cu9xmesz6Kr7ww0x20a";
+const GATE2_PAYMENT_LINK = "https://buy.stripe.com/14AbJ06ladovgl19EE0x20b";
 
 function normalizeIdentityValue(value: string) {
   return value.trim().toLowerCase();
