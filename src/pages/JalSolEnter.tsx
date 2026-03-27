@@ -1655,17 +1655,23 @@ if (
     !sendTransaction ||
     !progress.transaction.destination
   ) {
+    setVerifyMessage("Wallet authority is missing. Connect, sync, and sign first.");
     return;
   }
 
   try {
-  setLoading(true);
-  setVerifyMessage("");
+    setLoading(true);
+    setVerifyMessage("");
 
-  const destination = new PublicKey(progress.transaction.destination);
+    const destination = new PublicKey(progress.transaction.destination);
     const lamports = Math.round(progress.transaction.amountSol * LAMPORTS_PER_SOL);
 
-    const tx = new Transaction().add(
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+
+    const tx = new Transaction({
+      feePayer: publicKey,
+      recentBlockhash: blockhash,
+    }).add(
       SystemProgram.transfer({
         fromPubkey: publicKey,
         toPubkey: destination,
@@ -1673,10 +1679,20 @@ if (
       })
     );
 
-    tx.feePayer = publicKey;
-    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    const signature = await sendTransaction(tx, connection, {
+      skipPreflight: false,
+      preflightCommitment: "confirmed",
+      maxRetries: 3,
+    });
 
-    const signature = await sendTransaction(tx, connection);
+    await connection.confirmTransaction(
+      {
+        signature,
+        blockhash,
+        lastValidBlockHeight,
+      },
+      "confirmed"
+    );
 
     patchProgress((prev) => ({
       ...prev,
@@ -1693,9 +1709,15 @@ if (
       currentStage: "verify",
     }));
   } catch (error) {
-  console.error("Gate 02 transfer failed:", error);
-  setVerifyMessage("Transfer failed or was cancelled. Please review the wallet prompt and try again.");
-} finally {
+    console.error("Gate 02 transfer failed:", error);
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Transfer failed or was cancelled. Please review the wallet prompt and try again.";
+
+    setVerifyMessage(message);
+  } finally {
     setLoading(false);
   }
 }
@@ -2879,7 +2901,13 @@ if (
   are separated here so participant state is granted only from verified movement.
 </p>
 
-              {verifyMessage ? <p className="jal-note">{verifyMessage}</p> : null}
+              <p className="jal-note">
+  This stage is shaped for the final on-chain transfer. It stores amount,
+  source, destination, signature, explorer URL, and confirmation truth
+  separately.
+</p>
+
+{verifyMessage ? <p className="jal-note">{verifyMessage}</p> : null}
 
 <div className="jal-bullets">
   {verificationRows.map((row) => (
