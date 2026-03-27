@@ -2310,10 +2310,21 @@ if (
       </p>
 
       <div className="jal-bay-actions">
-        <button type="button" className="button gold" disabled>
-          {isCreatorProfile ? "Creator Bypass Active" : "Awaiting Payment Confirmation..."}
-        </button>
-      </div>
+  {getPaymentOrCreatorAccess(progress) ? (
+    <button
+      type="button"
+      className="button gold"
+      onClick={() => goToStage("module-1-wallet")}
+      disabled={loading}
+    >
+      Payment Confirmed — Continue
+    </button>
+  ) : (
+    <button type="button" className="button gold" disabled>
+      Awaiting Payment Confirmation...
+    </button>
+  )}
+</div>
     </section>
 
     <div className="jal-bay-actions jal-bay-actions-spread">
