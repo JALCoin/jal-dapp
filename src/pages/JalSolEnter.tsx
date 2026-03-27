@@ -2927,7 +2927,7 @@ if (
             </section>
           )}
           
-          {canEnterGate2 && currentStage !== "home" && currentStage !== "passed" && (
+          {canEnterGate2 && currentStage !== "home" && (
   <section className="jal-bay jal-bay-wide" aria-label="Gate 02 controls">
     <div className="jal-bay-actions jal-bay-actions-center jal-sequence-controls">
       <button
