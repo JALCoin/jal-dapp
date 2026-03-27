@@ -1661,20 +1661,17 @@ if (
 
   try {
     setLoading(true);
-    setVerifyMessage("Preparing transfer...");
+    setVerifyMessage("");
 
     const destination = new PublicKey(progress.transaction.destination);
     const lamports = Math.round(progress.transaction.amountSol * LAMPORTS_PER_SOL);
 
-    setVerifyMessage("Checking wallet balance...");
     const balance = await connection.getBalance(publicKey, "confirmed");
     if (balance < lamports + 5000) {
       throw new Error("Insufficient SOL for transfer and network fee.");
     }
 
-    setVerifyMessage("Fetching latest blockhash...");
-    const { blockhash, lastValidBlockHeight } =
-      await connection.getLatestBlockhash("confirmed");
+    const { blockhash } = await connection.getLatestBlockhash("confirmed");
 
     const tx = new Transaction({
       feePayer: publicKey,
@@ -1687,22 +1684,11 @@ if (
       })
     );
 
-    setVerifyMessage("Opening wallet approval...");
     const signature = await sendTransaction(tx, connection, {
       skipPreflight: false,
       preflightCommitment: "confirmed",
       maxRetries: 3,
     });
-
-    setVerifyMessage("Waiting for network confirmation...");
-    await connection.confirmTransaction(
-      {
-        signature,
-        blockhash,
-        lastValidBlockHeight,
-      },
-      "confirmed"
-    );
 
     patchProgress((prev) => ({
       ...prev,
