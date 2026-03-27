@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import { useWallet } from "@solana/wallet-adapter-react";
+import {
+  Connection,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
 import TokenFitGameV10 from "../components/TokenFitGamev10";
 
 type RouteTo =
@@ -169,6 +177,60 @@ type Gate2ProgressState = {
 const OBSERVE_STORAGE_KEY = "jal_observe_complete_v1";
 const GATE2_PROGRESS_KEY = "gate2_progress_v2";
 const GATE2_ADMIN_BYPASS_KEY = "gate2_admin_bypass";
+const GATE3_PROFILE_HANDOVER_KEY = "gate3_profile_handover_v1";
+
+const SOLANA_RPC_URL =
+  (import.meta as ImportMeta & {
+    env?: { VITE_SOLANA_RPC_URL?: string };
+  }).env?.VITE_SOLANA_RPC_URL || "https://solana-proxy-production.up.railway.app";
+
+type Gate3ProfileHandover = {
+  sourceGate: "enter";
+  handoffAt: number;
+  identity: {
+  displayName: string;
+  email: string;
+  projectName: string;
+  tokenSymbol: string;
+  dexDomain: string;
+  landingButtonLogo: string;
+  headerLogo: string;
+};
+  payment: {
+    status: PaymentStatus;
+    source: ProofSource;
+    receiptNumber: string;
+    customerEmail: string;
+  };
+  wallet: {
+    connected: boolean;
+    address: string;
+    connectionSource: ProofSource;
+    messageSigned: boolean;
+    signedMessageSignature: string;
+    signingSource: ProofSource;
+  };
+  transaction: {
+    initiated: boolean;
+    submitted: boolean;
+    confirmed: boolean;
+    signature: string;
+    explorerUrl: string;
+    amountSol: number;
+    destination: string;
+    confirmationSource: ProofSource;
+  };
+  completion: {
+    enterPassed: boolean;
+    participantState: boolean;
+    developmentFlowComplete: boolean;
+    buildReady: boolean;
+    completedAt: number | null;
+  };
+  buildPreview: {
+    next: string[];
+  };
+};
 
 const MINT_AUTHORITY = "3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2";
 const CREATOR_DISPLAY_NAME = "JAL";
@@ -826,18 +888,6 @@ function writeGate2Progress(progress: Gate2ProgressState) {
   localStorage.setItem(GATE2_PROGRESS_KEY, JSON.stringify(progress));
 }
 
-function createMockWalletAddress() {
-  return "9vKfWc7fZ3aWfXyQe7vY6xK3v4Pm8rL2nT5hQ9JAL02";
-}
-
-function createMockSignature() {
-  return `GATE2-${Date.now().toString(36).toUpperCase()}-SIG`;
-}
-
-function createMockExplorerUrl(signature: string) {
-  return `https://explorer.solana.com/tx/${signature}?cluster=mainnet-beta`;
-}
-
 function createMockSessionId() {
   return `cs_test_${Date.now().toString(36)}`;
 }
@@ -943,7 +993,7 @@ function isStepCompleted(progress: Gate2ProgressState, stepId: Gate2Stage): bool
   if (progress.modulesCompleted.includes(stepId)) return true;
 
   switch (stepId) {
-        case "profile":
+  case "profile":
       return progress.profile.created;
     case "payment":
       return getPaymentOrCreatorAccess(progress);
@@ -969,10 +1019,85 @@ function isStepCompleted(progress: Gate2ProgressState, stepId: Gate2Stage): bool
 function getStatusTone(ready: boolean) {
   return ready ? "jal-cred-ok" : "jal-cred-bad";
 }
+function shortenAddress(value: string, left = 4, right = 4) {
+  if (!value || value.length <= left + right + 3) return value;
+  return `${value.slice(0, left)}...${value.slice(-right)}`;
+}
+
+function buildExplorerTxUrl(signature: string) {
+  return `https://explorer.solana.com/tx/${signature}?cluster=mainnet-beta`;
+}
+
+function createGate3ProfileHandover(progress: Gate2ProgressState): Gate3ProfileHandover {
+  return {
+    sourceGate: "enter",
+    handoffAt: Date.now(),
+    identity: {
+  displayName: progress.profile.displayName,
+  email: progress.profile.email,
+  projectName: progress.profile.projectName,
+  tokenSymbol: progress.profile.tokenSymbol,
+  dexDomain: progress.profile.dexDomain,
+  landingButtonLogo: progress.profile.landingButtonLogo,
+  headerLogo: progress.profile.headerLogo,
+},
+    payment: {
+      status: progress.package.paymentStatus,
+      source: progress.package.paymentSource,
+      receiptNumber: progress.package.stripeReceiptNumber,
+      customerEmail: progress.package.stripeCustomerEmail,
+    },
+    wallet: {
+      connected: progress.wallet.connected,
+      address: progress.wallet.address,
+      connectionSource: progress.wallet.connectionSource,
+      messageSigned: progress.wallet.messageSigned,
+      signedMessageSignature: progress.wallet.signedMessageSignature,
+      signingSource: progress.wallet.signingSource,
+    },
+    transaction: {
+      initiated: progress.transaction.initiated,
+      submitted: progress.transaction.submitted,
+      confirmed: progress.transaction.confirmed,
+      signature: progress.transaction.signature,
+      explorerUrl: progress.transaction.explorerUrl,
+      amountSol: progress.transaction.amountSol,
+      destination: progress.transaction.destination,
+      confirmationSource: progress.transaction.confirmationSource,
+    },
+    completion: {
+      enterPassed: progress.completion.enterPassed,
+      participantState: progress.completion.participantState,
+      developmentFlowComplete: progress.completion.developmentFlowComplete,
+      buildReady: progress.completion.buildReady,
+      completedAt: progress.completion.completedAt,
+    },
+    buildPreview: {
+      next: [
+        "Create token mint",
+        "Create associated token account",
+        "Mint supply",
+        "Attach metadata",
+        "Open Vault / Build identity",
+      ],
+    },
+  };
+}
+
+function writeGate3ProfileHandover(progress: Gate2ProgressState) {
+  const payload = createGate3ProfileHandover(progress);
+  localStorage.setItem(GATE3_PROFILE_HANDOVER_KEY, JSON.stringify(payload));
+}
 
 export default function JalSolEnter() {
   const navigate = useNavigate();
   const timerRef = useRef<number | null>(null);
+  const { publicKey, connected, sendTransaction, signMessage } = useWallet();
+
+    const connection = useMemo(
+    () => new Connection(SOLANA_RPC_URL, "confirmed"),
+    []
+  );
 
   const [loading, setLoading] = useState(false);
   const [observePassed, setObservePassed] = useState(false);
@@ -983,6 +1108,7 @@ export default function JalSolEnter() {
   const [profileDraft, setProfileDraft] = useState(DEFAULT_GATE2_PROGRESS.profile);
   const [profileError, setProfileError] = useState("");
   const [showProfileOverlay, setShowProfileOverlay] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState("");
 
   function patchProgress(recipe: (prev: Gate2ProgressState) => Gate2ProgressState) {
     setProgress((prev) => {
@@ -996,7 +1122,7 @@ export default function JalSolEnter() {
           enterPassed: complete,
           participantState: getTrueParticipantState(cooked),
           developmentFlowComplete: complete,
-          buildReady: complete,
+          buildReady: getTrueParticipantState(cooked),
           completedAt: complete
             ? cooked.completion.completedAt ?? Date.now()
             : null,
@@ -1018,6 +1144,15 @@ export default function JalSolEnter() {
   setProgress(saved);
   setProfileDraft(saved.profile.created ? saved.profile : DEFAULT_GATE2_PROGRESS.profile);
 }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+      }
+      document.body.style.pointerEvents = "";
+    };
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1059,12 +1194,39 @@ export default function JalSolEnter() {
     progress.package.paymentSource,
   ]);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-      document.body.style.pointerEvents = "";
-    };
-  }, []);
+      useEffect(() => {
+    if (!progress.trial.passed) return;
+
+    if (connected && publicKey) {
+      patchProgress((prev) => ({
+        ...prev,
+        wallet: {
+          ...prev.wallet,
+          connected: true,
+          address: publicKey.toBase58(),
+          connectionSource: "verified",
+        },
+      }));
+      return;
+    }
+
+    if (!connected && progress.wallet.connected) {
+      setVerifyMessage("");
+      patchProgress((prev) => ({
+        ...prev,
+        wallet: {
+          ...prev.wallet,
+          connected: false,
+          address: "",
+          connectionSource: "missing",
+          messageSigned: false,
+          signedMessageText: "",
+          signedMessageSignature: "",
+          signingSource: "missing",
+        },
+      }));
+    }
+  }, [connected, publicKey, progress.trial.passed]);
 
   const canEnterGate2 = adminBypass || observePassed;
   const currentStage = progress.currentStage;
@@ -1081,7 +1243,7 @@ export default function JalSolEnter() {
   const showCompactHeader = currentStage !== "home";
   const shouldShowFullHero = currentStage === "home";
 
-    const allTestAnswered = useMemo(
+      const allTestAnswered = useMemo(
     () =>
       TEST_QUESTIONS.every(
         (question) => typeof progress.test.answers[question.id] === "number"
@@ -1124,11 +1286,20 @@ export default function JalSolEnter() {
     }, 1200);
   }
 
-  function goToStage(stage: Gate2Stage) {
+    function goToStage(stage: Gate2Stage) {
+    setVerifyMessage("");
     patchProgress((prev) => {
-      if (!canAccessStage(prev, stage) && stage !== "home" && stage !== "profile") {
-        return prev;
-      }
+      const reviewUnlocked =
+  prev.completion.enterPassed && GATE2_SEQUENCE.includes(stage);
+
+if (
+  !reviewUnlocked &&
+  !canAccessStage(prev, stage) &&
+  stage !== "home" &&
+  stage !== "profile"
+) {
+  return prev;
+}
 
       return {
         ...prev,
@@ -1137,7 +1308,8 @@ export default function JalSolEnter() {
     });
   }
 
-  function goBackStage(stage: Gate2Stage) {
+    function goBackStage(stage: Gate2Stage) {
+    setVerifyMessage("");
     patchProgress((prev) => ({
       ...prev,
       currentStage: stage,
@@ -1160,13 +1332,18 @@ export default function JalSolEnter() {
     patchProgress((prev) => ({
       ...prev,
       profile: {
-        ...prev.profile,
-        created: true,
-        displayName: cleanDisplayName,
-        email: cleanEmail,
-        acceptedTerms: true,
-        createdAt: prev.profile.createdAt ?? Date.now(),
-      },
+  ...prev.profile,
+  created: true,
+  displayName: cleanDisplayName,
+  email: cleanEmail,
+  projectName: profileDraft.projectName.trim(),
+  tokenSymbol: profileDraft.tokenSymbol.trim().toUpperCase(),
+  dexDomain: prev.profile.dexDomain,
+  landingButtonLogo: prev.profile.landingButtonLogo,
+  headerLogo: prev.profile.headerLogo,
+  acceptedTerms: true,
+  createdAt: prev.profile.createdAt ?? Date.now(),
+},
         package: creatorIdentity
         ? {
             ...prev.package,
@@ -1183,13 +1360,15 @@ export default function JalSolEnter() {
     }));
 
     setProfileDraft((prev) => ({
-      ...prev,
-      created: true,
-      displayName: cleanDisplayName,
-      email: cleanEmail,
-      acceptedTerms: true,
-      createdAt: prev.createdAt ?? Date.now(),
-    }));
+  ...prev,
+  created: true,
+  displayName: cleanDisplayName,
+  email: cleanEmail,
+  projectName: prev.projectName.trim(),
+  tokenSymbol: prev.tokenSymbol.trim().toUpperCase(),
+  acceptedTerms: true,
+  createdAt: prev.createdAt ?? Date.now(),
+}));
 
     setProfileError("");
   }
@@ -1332,7 +1511,8 @@ export default function JalSolEnter() {
     });
   }
 
-  function resetTrialProgress() {
+    function resetTrialProgress() {
+    setVerifyMessage("");
     patchProgress((prev) => ({
       ...prev,
       trial: {
@@ -1359,7 +1539,8 @@ export default function JalSolEnter() {
           jalClaimPotential: false,
         },
       },
-      wallet: {
+            wallet: {
+        ...prev.wallet,
         connected: false,
         address: "",
         connectionSource: "missing",
@@ -1385,78 +1566,116 @@ export default function JalSolEnter() {
     }));
   }
 
-    function simulateWalletConnect() {
-    if (loading || !progress.trial.passed) return;
+      function syncConnectedWallet() {
+  if (loading || !progress.trial.passed || !connected || !publicKey) return;
 
-    patchProgress((prev) => {
-      const proofSource: ProofSource = getCreatorBypass(prev) ? "verified" : "dev";
+  patchProgress((prev) => ({
+    ...prev,
+    wallet: {
+      ...prev.wallet,
+      connected: true,
+      address: publicKey.toBase58(),
+      connectionSource: "verified",
+    },
+  }));
+}
 
-      return {
-        ...prev,
-        wallet: {
-          ...prev.wallet,
-          connected: true,
-          address: createMockWalletAddress(),
-          connectionSource: proofSource,
-        },
-      };
-    });
-  }
+      async function handleWalletSignReal() {
+  if (loading || !progress.wallet.connected || !publicKey || !signMessage) return;
 
-    function simulateWalletSign() {
-    if (loading || !progress.wallet.connected) return;
+  try {
+    setLoading(true);
+    setVerifyMessage("");
 
-    patchProgress((prev) => {
-      const message = buildSigningMessage(prev.profile.displayName);
-      const proofSource: ProofSource = getCreatorBypass(prev) ? "verified" : "dev";
+    const message = buildSigningMessage(progress.profile.displayName);
+    const encoded = new TextEncoder().encode(message);
+    const signatureBytes = await signMessage(encoded);
 
-      return {
-        ...prev,
-        wallet: {
-          ...prev.wallet,
-          messageSigned: true,
-          signedMessageText: message,
-          signedMessageSignature: createMockSignature(),
-          signingSource: proofSource,
-        },
-        currentStage: "transaction",
-      };
-    });
-  }
+    const signatureBase64 = btoa(
+      String.fromCharCode(...Array.from(signatureBytes))
+    );
 
-  function resetWalletState() {
     patchProgress((prev) => ({
       ...prev,
       wallet: {
-        connected: false,
-        address: "",
-        connectionSource: "missing",
-        messageSigned: false,
-        signedMessageText: "",
-        signedMessageSignature: "",
-        signingSource: "missing",
+        ...prev.wallet,
+        messageSigned: true,
+        signedMessageText: message,
+        signedMessageSignature: signatureBase64,
+        signingSource: "verified",
       },
-      transaction: {
-        initiated: false,
-        submitted: false,
-        signature: "",
-        confirmed: false,
-        explorerUrl: "",
-        amountSol: MIN_TRANSFER_SOL,
-        destination: MINT_AUTHORITY,
-        sourceWallet: "",
-        submittedAt: null,
-        confirmedAt: null,
-        confirmationSource: "missing",
-      },
-      currentStage: "wallet",
+      currentStage: "transaction",
     }));
+  } catch (error) {
+  console.error("Gate 02 signing failed:", error);
+  setVerifyMessage("Message signing was cancelled or failed. Please try again.");
+} finally {
+    setLoading(false);
+  }
+}
+
+  function resetWalletState() {
+  setVerifyMessage("");
+
+  patchProgress((prev) => ({
+    ...prev,
+    wallet: {
+  ...prev.wallet,
+  connected: false,
+  address: "",
+  connectionSource: "missing",
+  messageSigned: false,
+  signedMessageText: "",
+  signedMessageSignature: "",
+  signingSource: "missing",
+},
+    transaction: {
+      initiated: false,
+      submitted: false,
+      signature: "",
+      confirmed: false,
+      explorerUrl: "",
+      amountSol: MIN_TRANSFER_SOL,
+      destination: MINT_AUTHORITY,
+      sourceWallet: "",
+      submittedAt: null,
+      confirmedAt: null,
+      confirmationSource: "missing",
+    },
+    currentStage: "wallet",
+  }));
+}
+
+  async function handleTransactionStartReal() {
+  if (
+    loading ||
+    !hasWalletAuthority ||
+    !publicKey ||
+    !sendTransaction ||
+    !progress.transaction.destination
+  ) {
+    return;
   }
 
-  function simulateTransactionStart() {
-    if (loading || !hasWalletAuthority) return;
+  try {
+  setLoading(true);
+  setVerifyMessage("");
 
-    const signature = createMockSignature();
+  const destination = new PublicKey(progress.transaction.destination);
+    const lamports = Math.round(progress.transaction.amountSol * LAMPORTS_PER_SOL);
+
+    const tx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: publicKey,
+        toPubkey: destination,
+        lamports,
+      })
+    );
+
+    tx.feePayer = publicKey;
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+    const signature = await sendTransaction(tx, connection);
 
     patchProgress((prev) => ({
       ...prev,
@@ -1465,52 +1684,87 @@ export default function JalSolEnter() {
         initiated: true,
         submitted: true,
         signature,
-        explorerUrl: createMockExplorerUrl(signature),
-        sourceWallet: prev.wallet.address,
+        explorerUrl: buildExplorerTxUrl(signature),
+        sourceWallet: publicKey.toBase58(),
         submittedAt: Date.now(),
+        confirmationSource: "missing",
       },
       currentStage: "verify",
     }));
+  } catch (error) {
+  console.error("Gate 02 transfer failed:", error);
+  setVerifyMessage("Transfer failed or was cancelled. Please review the wallet prompt and try again.");
+} finally {
+    setLoading(false);
   }
+}
 
-    function simulateTransactionConfirm() {
-    if (loading || !progress.transaction.submitted) return;
+      async function handleTransactionConfirmReal() {
+  if (loading || !progress.transaction.submitted || !progress.transaction.signature) return;
 
-    patchProgress((prev) => {
-      const proofSource: ProofSource = getCreatorBypass(prev) ? "verified" : "dev";
+  try {
+    setLoading(true);
+    setVerifyMessage("");
 
-      return {
-        ...prev,
-        transaction: {
-          ...prev.transaction,
-          confirmed: true,
-          confirmedAt: Date.now(),
-          confirmationSource: proofSource,
-        },
-        currentStage: "passed",
-      };
-    });
-  }
+    const result = await connection.getSignatureStatuses([
+      progress.transaction.signature,
+    ]);
 
-  function resetTransactionState() {
+    const status = result?.value?.[0];
+    const isConfirmed = Boolean(
+      status &&
+        (status.confirmationStatus === "confirmed" ||
+          status.confirmationStatus === "finalized")
+    );
+
+    if (!isConfirmed) {
+      setVerifyMessage(
+        "Transaction found, but confirmation is not final yet. Check again shortly."
+      );
+      return;
+    }
+
+    setVerifyMessage("");
+
     patchProgress((prev) => ({
       ...prev,
       transaction: {
-        initiated: false,
-        submitted: false,
-        signature: "",
-        confirmed: false,
-        explorerUrl: "",
-        amountSol: MIN_TRANSFER_SOL,
-        destination: MINT_AUTHORITY,
-        sourceWallet: "",
-        submittedAt: null,
-        confirmedAt: null,
-        confirmationSource: "missing",
+        ...prev.transaction,
+        confirmed: true,
+        confirmedAt: Date.now(),
+        confirmationSource: "verified",
       },
-      currentStage: "transaction",
+      currentStage: "passed",
     }));
+  } catch (error) {
+    console.error("Gate 02 confirmation check failed:", error);
+    setVerifyMessage("Confirmation check failed. Please try again.");
+  } finally {
+    setLoading(false);
   }
+}
+
+  function resetTransactionState() {
+  setVerifyMessage("");
+
+  patchProgress((prev) => ({
+    ...prev,
+    transaction: {
+      initiated: false,
+      submitted: false,
+      signature: "",
+      confirmed: false,
+      explorerUrl: "",
+      amountSol: MIN_TRANSFER_SOL,
+      destination: MINT_AUTHORITY,
+      sourceWallet: "",
+      submittedAt: null,
+      confirmedAt: null,
+      confirmationSource: "missing",
+    },
+    currentStage: "transaction",
+  }));
+}
 
   const verificationRows: GatePoint[] = [
     { k: "Stripe Receipt Number", v: progress.package.stripeReceiptNumber || "Missing" },
@@ -1533,7 +1787,12 @@ export default function JalSolEnter() {
   k: "Creator Rights",
   v: creatorBypass ? "Granted" : "Standard User",
 },
-    { k: "Wallet Public Key", v: progress.wallet.address || "Missing" },
+    {
+  k: "Wallet Public Key",
+  v: progress.wallet.address
+    ? shortenAddress(progress.wallet.address, 6, 6)
+    : "Missing",
+},
     {
       k: "Message Signed Status",
       v: progress.wallet.messageSigned
@@ -1548,7 +1807,7 @@ export default function JalSolEnter() {
         ? `CONFIRMED (${progress.transaction.confirmationSource})`
         : "Missing",
     },
-    { k: "Mint Authority Wallet", v: MINT_AUTHORITY },
+    { k: "Mint Authority Wallet", v: shortenAddress(MINT_AUTHORITY, 6, 6) },
     { k: "Chosen Token Symbol", v: progress.profile.tokenSymbol || "Missing" },
     { k: "DEX Domain", v: progress.profile.dexDomain || "Missing" },
     {
@@ -1668,7 +1927,12 @@ export default function JalSolEnter() {
             active ? "is-current" : completed ? "is-complete" : "is-waiting"
           }`}
           onClick={() => goToStage(step.id)}
-          disabled={loading || (!canAccessStage(progress, step.id) && step.id !== "profile")}
+          disabled={
+  loading ||
+  (!progress.completion.enterPassed &&
+    !canAccessStage(progress, step.id) &&
+    step.id !== "profile")
+}
           aria-label={`${index + 1}. ${step.title}`}
           aria-current={active ? "step" : undefined}
           title={`${String(index + 1).padStart(2, "0")} · ${step.title}`}
@@ -1733,181 +1997,6 @@ export default function JalSolEnter() {
                   Return To World Hub
                 </button>
               </div>
-            </section>
-          )}
-
-          {false && canEnterGate2 && currentStage === "profile" && !showProfileOverlay && (
-            <section className="jal-bay jal-bay-wide" aria-label="Gate 02 profile creation">
-              <div className="jal-bay-head">
-                <div className="jal-bay-title">Gate 02 Profile Creation</div>
-                <div className="jal-bay-note">Participant shell required</div>
-              </div>
-
-              <p className="jal-note">
-                This stage creates the participant shell for Gate 02. Only the identity
-                required to begin is recorded now. The rest of the package forms
-                progressively through verified movement across Gate 02 and into Build.
-              </p>
-
-              <div className="jal-grid">
-                <section className="jal-bay">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">Required To Begin</div>
-                    <div className="jal-bay-note">Active now</div>
-                  </div>
-
-                  <label className="jal-field">
-                    <span className="jal-field-label">Display name</span>
-                    <input
-                      className="jal-input"
-                      type="text"
-                      value={profileDraft.displayName}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({
-                          ...prev,
-                          displayName: e.target.value,
-                        }))
-                      }
-                      placeholder="Your visible Gate 02 identity"
-                    />
-                  </label>
-
-                  <label className="jal-field">
-                    <span className="jal-field-label">Email</span>
-                    <input
-                      className="jal-input"
-                      type="email"
-                      value={profileDraft.email}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({
-                          ...prev,
-                          email: e.target.value,
-                        }))
-                      }
-                      placeholder="you@example.com"
-                    />
-                  </label>
-
-                                    <div className={`jal-note ${isCreatorDraft ? "jal-note-creator" : ""}`}>
-  {isCreatorDraft ? (
-    <>
-      Creator identity detected. This profile matches <strong>JAL</strong> /
-      <strong> 358jal@gmail.com</strong> and will bypass Stripe payment with
-      creator rights.
-    </>
-  ) : (
-    <>
-      Standard participant profile. Use your own display name and the same
-      email used during Stripe purchase so payment can be matched correctly.
-    </>
-  )}
-</div>
-
-                  <label className="jal-check">
-                    <input
-                      type="checkbox"
-                      checked={profileDraft.acceptedTerms}
-                      onChange={(e) =>
-                        setProfileDraft((prev) => ({
-                          ...prev,
-                          acceptedTerms: e.target.checked,
-                        }))
-                      }
-                    />
-                    <span>
-                      I accept the Gate 02 terms and understand that this participant shell
-                      is tied to progression, payment, wallet authority, and verification.
-                    </span>
-                  </label>
-                </section>
-
-                                <section className="jal-bay jal-emerging-panel">
-                  <div className="jal-bay-head">
-                    <div className="jal-bay-title">Emerging Identity</div>
-                    <div className="jal-bay-note">Forms through progression</div>
-                  </div>
-
-                  <p className="jal-note">
-                    These parts of the package are not missing. They are future identity
-                    points that become real only after the required actions have been taken
-                    and confirmed.
-                  </p>
-
-                  <div className="jal-emerging-stack">
-                    <article className="jal-emerging-row">
-                      <div>
-                        <div className="jal-emerging-label">Proof of Payment</div>
-                        <div className="jal-emerging-note">
-                          Captured in the next stage before deeper access opens.
-                        </div>
-                      </div>
-                      <span className="jal-emerging-chip">NEXT</span>
-                    </article>
-
-                    <article className="jal-emerging-row">
-                      <div>
-                        <div className="jal-emerging-label">Project Name</div>
-                        <div className="jal-emerging-note">
-                          Held pending until Build begins to define the asset properly.
-                        </div>
-                      </div>
-                      <span className="jal-emerging-chip">PENDING</span>
-                    </article>
-
-                    <article className="jal-emerging-row">
-                      <div>
-                        <div className="jal-emerging-label">Token Symbol</div>
-                        <div className="jal-emerging-note">
-                          Becomes valid only when token creation has actually occurred.
-                        </div>
-                      </div>
-                      <span className="jal-emerging-chip">PENDING</span>
-                    </article>
-
-                    <article className="jal-emerging-row">
-                      <div>
-                        <div className="jal-emerging-label">DEX Domain</div>
-                        <div className="jal-emerging-note">
-                          Opens later once deployment structure and route identity exist.
-                        </div>
-                      </div>
-                      <span className="jal-emerging-chip">PENDING</span>
-                    </article>
-
-                    <article className="jal-emerging-row">
-                      <div>
-                        <div className="jal-emerging-label">Brand Assets</div>
-                        <div className="jal-emerging-note">
-                          Header and button identity are completed after the package matures.
-                        </div>
-                      </div>
-                      <span className="jal-emerging-chip">PENDING</span>
-                    </article>
-                  </div>
-                </section>
-              </div>
-
-              {profileError ? <p className="jal-error-text">{profileError}</p> : null}
-
-              <div className="jal-bay-actions jal-bay-actions-spread">
-  <button
-    type="button"
-    className="button ghost"
-    onClick={() => goBackStage("home")}
-    disabled={loading}
-  >
-    Return To Home
-  </button>
-
-  <button
-    type="button"
-    className="button gold"
-    onClick={handleProfileSave}
-    disabled={loading}
-  >
-    Save Participant Shell
-  </button>
-</div>
             </section>
           )}
 
@@ -1977,6 +2066,38 @@ export default function JalSolEnter() {
               />
             </label>
 
+            <label className="jal-field">
+  <span className="jal-field-label">Project name (optional for Build prefill)</span>
+  <input
+    className="jal-input"
+    type="text"
+    value={profileDraft.projectName}
+    onChange={(e) =>
+      setProfileDraft((prev) => ({
+        ...prev,
+        projectName: e.target.value,
+      }))
+    }
+    placeholder="Your project or currency identity"
+  />
+</label>
+
+<label className="jal-field">
+  <span className="jal-field-label">Token symbol (optional for Build prefill)</span>
+  <input
+    className="jal-input"
+    type="text"
+    value={profileDraft.tokenSymbol}
+    onChange={(e) =>
+      setProfileDraft((prev) => ({
+        ...prev,
+        tokenSymbol: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10),
+      }))
+    }
+    placeholder="JAL"
+  />
+</label>
+
             <div className={`jal-note ${isCreatorDraft ? "jal-note-creator" : ""}`}>
               {isCreatorDraft ? (
                 <>
@@ -2039,25 +2160,22 @@ export default function JalSolEnter() {
           </button>
 
           <button
-            type="button"
-            className="button gold"
-            onClick={() => {
-              const cleanDisplayName = profileDraft.displayName.trim();
-              const cleanEmail = profileDraft.email.trim().toLowerCase();
+  type="button"
+  className="button gold"
+  onClick={() => {
+    handleProfileSave();
 
-              if (!cleanDisplayName || !cleanEmail || !profileDraft.acceptedTerms) {
-                setProfileError("Display name, email, and terms acceptance are required.");
-                return;
-              }
+    const cleanDisplayName = profileDraft.displayName.trim();
+    const cleanEmail = profileDraft.email.trim().toLowerCase();
 
-              setProfileError("");
-              handleProfileSave();
-              setShowProfileOverlay(false);
-            }}
-            disabled={loading}
-          >
-            Save Participant Shell
-          </button>
+    if (cleanDisplayName && cleanEmail && profileDraft.acceptedTerms) {
+      setShowProfileOverlay(false);
+    }
+  }}
+  disabled={loading}
+>
+  Save Participant Shell
+</button>
         </div>
       </section>
     </div>,
@@ -2567,20 +2685,29 @@ export default function JalSolEnter() {
               </div>
 
               <p className="jal-note">
-                Wallet connection alone is not enough. Gate 02 requires message signing
-                before the transaction phase opens. Final implementation should replace the
-                DEV actions below with real Solana wallet adapter integration.
-              </p>
+  Wallet connection alone is not enough. Gate 02 requires a real wallet
+  connection and a real signed message before the transaction phase opens.
+  This stage proves authority before any on-chain movement is attempted.
+</p>
 
               <div className="jal-bullets">
-                <article className={`jal-bullet ${getStatusTone(progress.wallet.connected)}`}>
-                  <div className="jal-bullet-k">Wallet Connected</div>
-                  <div className="jal-bullet-v">
-                    {progress.wallet.connected
-                      ? `${progress.wallet.address} (${progress.wallet.connectionSource})`
-                      : "No"}
-                  </div>
-                </article>
+  <article className={`jal-bullet ${getStatusTone(Boolean(connected && publicKey))}`}>
+    <div className="jal-bullet-k">Browser Wallet</div>
+    <div className="jal-bullet-v">
+      {connected && publicKey
+        ? `Detected • ${shortenAddress(publicKey.toBase58(), 6, 6)}`
+        : "No wallet detected"}
+    </div>
+  </article>
+
+  <article className={`jal-bullet ${getStatusTone(progress.wallet.connected)}`}>
+    <div className="jal-bullet-k">Wallet Connected</div>
+    <div className="jal-bullet-v">
+            {progress.wallet.connected
+        ? `${shortenAddress(progress.wallet.address, 6, 6)} (${progress.wallet.connectionSource})`
+        : "No"}
+    </div>
+  </article>
 
                 <article
                   className={`jal-bullet ${getStatusTone(progress.wallet.messageSigned)}`}
@@ -2634,22 +2761,24 @@ export default function JalSolEnter() {
                 </button>
 
                 <button
-                  type="button"
-                  className="button ghost"
-                  onClick={simulateWalletConnect}
-                  disabled={loading || progress.wallet.connected}
-                >
-                  Connect Wallet (DEV)
-                </button>
+  type="button"
+  className="button ghost"
+  onClick={syncConnectedWallet}
+  disabled={loading || !connected || !publicKey}
+>
+    {connected && publicKey
+    ? `Use ${shortenAddress(publicKey.toBase58(), 6, 6)}`
+    : "Wallet Not Detected"}
+</button>
 
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={simulateWalletSign}
-                  disabled={loading || !progress.wallet.connected || progress.wallet.messageSigned}
-                >
-                  Sign Message (DEV)
-                </button>
+<button
+  type="button"
+  className="button gold"
+  onClick={handleWalletSignReal}
+  disabled={loading || !progress.wallet.connected || progress.wallet.messageSigned || !signMessage}
+>
+  Sign Message
+</button>
               </div>
             </section>
           )}
@@ -2670,7 +2799,13 @@ export default function JalSolEnter() {
               <div className="jal-bullets">
                 <article className="jal-bullet">
                   <div className="jal-bullet-k">Source Wallet</div>
-                  <div className="jal-bullet-v">{progress.wallet.address || "Missing"}</div>
+                  <div className="jal-bullet-v">
+  {progress.transaction.sourceWallet
+  ? shortenAddress(progress.transaction.sourceWallet, 6, 6)
+  : progress.wallet.address
+  ? shortenAddress(progress.wallet.address, 6, 6)
+  : "Missing"}
+</div>
                 </article>
 
                 <article className="jal-bullet">
@@ -2686,7 +2821,9 @@ export default function JalSolEnter() {
                 <article className="jal-bullet">
                   <div className="jal-bullet-k">Signature</div>
                   <div className="jal-bullet-v">
-                    {progress.transaction.signature || "Not submitted"}
+                                        {progress.transaction.signature
+                      ? shortenAddress(progress.transaction.signature, 8, 8)
+                      : "Not submitted"}
                   </div>
                 </article>
               </div>
@@ -2711,13 +2848,13 @@ export default function JalSolEnter() {
                 </button>
 
                 <button
-                  type="button"
-                  className="button gold"
-                  onClick={simulateTransactionStart}
-                  disabled={loading || progress.transaction.submitted}
-                >
-                  Submit Transfer (DEV)
-                </button>
+  type="button"
+  className="button gold"
+  onClick={handleTransactionStartReal}
+  disabled={loading || progress.transaction.submitted || !progress.wallet.messageSigned}
+>
+  Submit Transfer
+</button>
               </div>
             </section>
           )}
@@ -2730,13 +2867,15 @@ export default function JalSolEnter() {
               </div>
 
               <p className="jal-note">
-                Gate 02 does not complete on claim. It completes on visible proof.
-                Development truth and verified truth are separated here so mock scaffolding
-                cannot pretend to be final participant state.
-              </p>
+  Gate 02 does not complete on claim. It completes on visible proof.
+  Payment truth, wallet authority, transaction proof, and confirmation truth
+  are separated here so participant state is granted only from verified movement.
+</p>
 
-              <div className="jal-bullets">
-                {verificationRows.map((row) => (
+              {verifyMessage ? <p className="jal-note">{verifyMessage}</p> : null}
+
+<div className="jal-bullets">
+  {verificationRows.map((row) => (
                   <article
                     key={row.k}
                     className={`jal-bullet ${getStatusTone(
@@ -2773,17 +2912,17 @@ export default function JalSolEnter() {
                 </button>
 
                 <button
-                  type="button"
-                  className="button gold"
-                  onClick={simulateTransactionConfirm}
-                  disabled={
-                    loading ||
-                    !progress.transaction.submitted ||
-                    progress.transaction.confirmed
-                  }
-                >
-                  Confirm Proof (DEV)
-                </button>
+  type="button"
+  className="button gold"
+  onClick={handleTransactionConfirmReal}
+  disabled={
+    loading ||
+    !progress.transaction.submitted ||
+    progress.transaction.confirmed
+  }
+>
+  Check Confirmation
+</button>
               </div>
             </section>
           )}
@@ -2859,7 +2998,7 @@ export default function JalSolEnter() {
                 <div className="jal-bay-note">
                   {participantState
                     ? "True verified proof achieved"
-                    : "Mock scaffolding does not equal true participant state"}
+                    : "Verification remains incomplete"}
                 </div>
               </div>
 
@@ -2870,50 +3009,134 @@ export default function JalSolEnter() {
       }, verified wallet authority, and verified transaction confirmation.${
         isCreatorProfile ? " Creator rights are active." : ""
       }`
-    : "Gate 02 development sequencing is complete, but the current proof sources remain marked as development truth. Final integration is still required before this becomes true participant state."}
+    : "Gate 02 sequence completion is recorded, but participant state is not yet granted until every required proof source remains verified and present."}
 </p>
 
               <div className="jal-bullets">
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Enter Passed</div>
-                  <div className="jal-bullet-v">
-                    {progress.completion.enterPassed ? "Yes" : "No"}
-                  </div>
-                </article>
+  <article className="jal-bullet">
+    <div className="jal-bullet-k">Enter Passed</div>
+    <div className="jal-bullet-v">
+      {progress.completion.enterPassed ? "Yes" : "No"}
+    </div>
+  </article>
 
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Participant State</div>
-                  <div className="jal-bullet-v">
-                    {progress.completion.participantState ? "Yes" : "Not yet"}
-                  </div>
-                </article>
+  <article className="jal-bullet">
+    <div className="jal-bullet-k">Participant State</div>
+    <div className="jal-bullet-v">
+      {progress.completion.participantState ? "Yes" : "Not yet"}
+    </div>
+  </article>
 
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Build Readiness</div>
-                  <div className="jal-bullet-v">
-                    {progress.completion.buildReady ? "Unlocked" : "Locked"}
-                  </div>
-                </article>
+  <article className="jal-bullet">
+    <div className="jal-bullet-k">Build Readiness</div>
+    <div className="jal-bullet-v">
+      {progress.completion.buildReady ? "Unlocked" : "Locked"}
+    </div>
+  </article>
 
-                <article className="jal-bullet">
-                  <div className="jal-bullet-k">Completed At</div>
-                  <div className="jal-bullet-v">
-                    {progress.completion.completedAt
-                      ? new Date(progress.completion.completedAt).toLocaleString()
-                      : "Unknown"}
-                  </div>
-                </article>
-              </div>
+  <article className="jal-bullet">
+    <div className="jal-bullet-k">Completed At</div>
+    <div className="jal-bullet-v">
+      {progress.completion.completedAt
+        ? new Date(progress.completion.completedAt).toLocaleString()
+        : "Unknown"}
+    </div>
+  </article>
+</div>
+
+<section className="jal-bay jal-bay-wide">
+  <div className="jal-bay-head">
+    <div className="jal-bay-title">Gate 03 Handover Profile</div>
+    <div className="jal-bay-note">Participant account state</div>
+  </div>
+
+  <div className="jal-bullets">
+    <article className="jal-bullet">
+      <div className="jal-bullet-k">Signed In As</div>
+      <div className="jal-bullet-v">
+        {progress.profile.displayName || "Missing"} • {progress.profile.email || "Missing"}
+      </div>
+    </article>
+
+    <article className={`jal-bullet ${getStatusTone(progress.wallet.connected)}`}>
+      <div className="jal-bullet-k">Connected Wallet</div>
+      <div className="jal-bullet-v">
+  {progress.wallet.address
+    ? shortenAddress(progress.wallet.address, 6, 6)
+    : "Missing"}
+</div>
+    </article>
+
+    <article className={`jal-bullet ${getStatusTone(progress.wallet.messageSigned)}`}>
+      <div className="jal-bullet-k">Authority Signature</div>
+      <div className="jal-bullet-v">
+        {progress.wallet.messageSigned ? "Ready" : "Missing"}
+      </div>
+    </article>
+
+    <article className={`jal-bullet ${getStatusTone(progress.transaction.confirmed)}`}>
+  <div className="jal-bullet-k">Explorer Proof</div>
+  <div className="jal-bullet-v">
+    {progress.transaction.explorerUrl ? "Available" : "Missing"}
+  </div>
+</article>
+
+    <article className="jal-bullet">
+      <div className="jal-bullet-k">Gate 03 Unlock</div>
+      <div className="jal-bullet-v">
+        {progress.completion.buildReady ? "Ready" : "Locked"}
+      </div>
+    </article>
+
+    <article className="jal-bullet">
+      <div className="jal-bullet-k">What Comes Next</div>
+      <div className="jal-bullet-v">
+        Token mint • ATA • supply • metadata • vault identity
+      </div>
+    </article>
+  </div>
+
+  <p className="jal-note">
+    Gate 02 is complete. Previous Gate 02 stages remain reviewable, and this
+    participant profile is handed forward into Build.
+  </p>
+</section>
+
+<section className="jal-bay jal-bay-wide">
+  <div className="jal-bay-head">
+    <div className="jal-bay-title">Review Access</div>
+    <div className="jal-bay-note">Gate 02 remains visible</div>
+  </div>
+
+  <p className="jal-note">
+    Completion does not close Gate 02. Previous stages remain available through
+    the sequence rail, and you can review wallet authority and proof at any time.
+  </p>
+
+  <div className="jal-bay-actions jal-bay-actions-center">
+    <button
+      type="button"
+      className="button ghost"
+      onClick={() => goToStage("wallet")}
+      disabled={loading}
+    >
+      Review Wallet + Proof Path
+    </button>
+  </div>
+</section>
 
               <div className="jal-bay-actions jal-bay-actions-spread">
                 <button
-                  type="button"
-                  className="button gold"
-                  onClick={() => beginRoute("/app/jal-sol/build")}
-                  disabled={loading || !progress.completion.buildReady}
-                >
-                  Proceed To Build
-                </button>
+  type="button"
+  className="button gold"
+  onClick={() => {
+    writeGate3ProfileHandover(progress);
+    beginRoute("/app/jal-sol/build");
+  }}
+  disabled={loading || !progress.completion.buildReady}
+>
+  Proceed To Build
+</button>
 
                 <button
                   type="button"
