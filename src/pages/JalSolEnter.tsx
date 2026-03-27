@@ -10,6 +10,7 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import TokenFitGameV10 from "../components/TokenFitGamev10";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 type RouteTo =
   | "/app/home"
@@ -2760,16 +2761,22 @@ if (
                   Reset Wallet
                 </button>
 
-                <button
-  type="button"
-  className="button ghost"
-  onClick={syncConnectedWallet}
-  disabled={loading || !connected || !publicKey}
->
+                <div className="jal-wallet-connect-group">
+  <div className="jal-wallet-connect-button">
+    <WalletMultiButton />
+  </div>
+
+  <button
+    type="button"
+    className="button ghost"
+    onClick={syncConnectedWallet}
+    disabled={loading || !connected || !publicKey}
+  >
     {connected && publicKey
-    ? `Use ${shortenAddress(publicKey.toBase58(), 6, 6)}`
-    : "Wallet Not Detected"}
-</button>
+      ? `Use ${shortenAddress(publicKey.toBase58(), 6, 6)}`
+      : "Sync Connected Wallet"}
+  </button>
+</div>
 
 <button
   type="button"

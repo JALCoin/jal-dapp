@@ -63,6 +63,51 @@
   --jal-space-2xl:48px;
 }
 
+.jal-wallet-connect-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.jal-wallet-connect-button {
+  display: flex;
+  align-items: center;
+}
+
+.jal-wallet-connect-button .wallet-adapter-button {
+  min-height: 46px;
+  border-radius: 16px;
+  border: 1px solid rgba(120, 220, 255, 0.16);
+  background: rgba(10, 16, 28, 0.92);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0 16px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+}
+
+.jal-wallet-connect-button .wallet-adapter-button:hover {
+  border-color: rgba(17, 241, 167, 0.34);
+  box-shadow: 0 0 18px rgba(17, 241, 167, 0.1);
+}
+
+.jal-wallet-connect-button .wallet-adapter-button-trigger {
+  background: rgba(10, 16, 28, 0.92);
+}
+
+@media (max-width: 640px) {
+  .jal-wallet-connect-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .jal-wallet-connect-button,
+  .jal-wallet-connect-button .wallet-adapter-button {
+    width: 100%;
+  }
+}
 /* =========================================
    2) RESET / BASE
 ========================================= */
