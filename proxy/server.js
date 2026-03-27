@@ -3,17 +3,10 @@ import cors from "cors";
 import solanaProxy from "./solanaProxy.js";
 
 const app = express();
-const PORT = process.env.PORT || 8080; // Railway expects this
+const PORT = process.env.PORT || 8080;
 
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
-
-app.get("/", (_req, res) => {
-  res.json({
-    ok: true,
-    service: "solana-proxy",
-  });
-});
+app.use(express.json());
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
@@ -22,5 +15,5 @@ app.get("/health", (_req, res) => {
 app.use("/api/solana", solanaProxy);
 
 app.listen(PORT, () => {
-  console.log(`Proxy running on port ${PORT}`);
+  console.log("Proxy running on port", PORT);
 });
