@@ -1204,17 +1204,6 @@ window.history.replaceState({}, document.title, window.location.pathname);
     progress.package.paymentSource,
   ]);
 
-  useEffect(() => {
-  if (
-    progress.currentStage === "payment" &&
-    getPaymentOrCreatorAccess(progress)
-  ) {
-    window.setTimeout(() => {
-      goToStage("module-1-wallet");
-    }, 0);
-  }
-}, [progress.currentStage, progress.package.paymentStatus, progress.package.paymentSource]);
-
       useEffect(() => {
     if (!progress.trial.passed) return;
 
@@ -1328,6 +1317,21 @@ if (
       };
     });
   }
+
+  useEffect(() => {
+  if (
+    progress.currentStage === "payment" &&
+    getPaymentOrCreatorAccess(progress)
+  ) {
+    window.setTimeout(() => {
+      goToStage("module-1-wallet");
+    }, 0);
+  }
+}, [
+  progress.currentStage,
+  progress.package.paymentStatus,
+  progress.package.paymentSource,
+]);
 
     function goBackStage(stage: Gate2Stage) {
     setVerifyMessage("");
