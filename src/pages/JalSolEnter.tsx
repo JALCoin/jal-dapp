@@ -1661,12 +1661,20 @@ if (
 
   try {
     setLoading(true);
-    setVerifyMessage("");
+    setVerifyMessage("Preparing transfer...");
 
     const destination = new PublicKey(progress.transaction.destination);
     const lamports = Math.round(progress.transaction.amountSol * LAMPORTS_PER_SOL);
 
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+    setVerifyMessage("Checking wallet balance...");
+    const balance = await connection.getBalance(publicKey, "confirmed");
+    if (balance < lamports + 5000) {
+      throw new Error("Insufficient SOL for transfer and network fee.");
+    }
+
+    setVerifyMessage("Fetching latest blockhash...");
+    const { blockhash, lastValidBlockHeight } =
+      await connection.getLatestBlockhash("confirmed");
 
     const tx = new Transaction({
       feePayer: publicKey,
@@ -1679,12 +1687,14 @@ if (
       })
     );
 
+    setVerifyMessage("Opening wallet approval...");
     const signature = await sendTransaction(tx, connection, {
       skipPreflight: false,
       preflightCommitment: "confirmed",
       maxRetries: 3,
     });
 
+    setVerifyMessage("Waiting for network confirmation...");
     await connection.confirmTransaction(
       {
         signature,
@@ -1708,6 +1718,8 @@ if (
       },
       currentStage: "verify",
     }));
+
+    setVerifyMessage("");
   } catch (error) {
     console.error("Gate 02 transfer failed:", error);
 
@@ -2824,6 +2836,7 @@ if (
                 source, destination, signature, explorer URL, and confirmation truth
                 separately.
               </p>
+              {verifyMessage ? <p className="jal-note">{verifyMessage}</p> : null}
 
               <div className="jal-bullets">
                 <article className="jal-bullet">
