@@ -1176,29 +1176,44 @@ export default function JalSolEnter() {
   }
 
     patchProgress((prev) => {
-      return {
-        ...prev,
-        package: {
-          ...prev.package,
-          checkoutStarted: true,
-          stripeSessionId: prev.package.stripeSessionId || createMockSessionId(),
-          stripeReceiptNumber:
-            prev.package.stripeReceiptNumber || createMockReceiptNumber(),
-          stripeCustomerEmail: prev.profile.email,
-          paymentStatus: "paid",
-          paymentSource: "verified",
-          paidAt: prev.package.paidAt ?? Date.now(),
-        },
-        currentStage: "module-1-wallet",
-      };
-    });
+  return {
+    ...prev,
+    package: {
+      ...prev.package,
+      checkoutStarted: true,
+      stripeSessionId: prev.package.stripeSessionId || createMockSessionId(),
+      stripeReceiptNumber:
+        prev.package.stripeReceiptNumber || createMockReceiptNumber(),
+      stripeCustomerEmail: prev.profile.email,
+      paymentStatus: "paid",
+      paymentSource: "verified",
+      paidAt: prev.package.paidAt ?? Date.now(),
+    },
+    currentStage: "module-1-wallet",
+  };
+});
 
-    window.history.replaceState({}, document.title, window.location.pathname);
+window.setTimeout(() => {
+  goToStage("module-1-wallet");
+}, 0);
+
+window.history.replaceState({}, document.title, window.location.pathname);
   }, [
     progress.profile.created,
     progress.package.paymentStatus,
     progress.package.paymentSource,
   ]);
+
+  useEffect(() => {
+  if (
+    progress.currentStage === "payment" &&
+    getPaymentOrCreatorAccess(progress)
+  ) {
+    window.setTimeout(() => {
+      goToStage("module-1-wallet");
+    }, 0);
+  }
+}, [progress.currentStage, progress.package.paymentStatus, progress.package.paymentSource]);
 
       useEffect(() => {
     if (!progress.trial.passed) return;
