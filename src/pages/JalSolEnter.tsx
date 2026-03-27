@@ -2242,18 +2242,6 @@ if (
             </div>
             <span className="jal-emerging-chip">UNLOCK</span>
           </div>
-
-          <div className="jal-emerging-row">
-            <div>
-              <div className="jal-emerging-label">Requirement</div>
-              <div className="jal-emerging-note">
-  Verified payment tied to your participant shell, unless the exact creator identity
-  JAL / 358jal@gmail.com is used for creator bypass.
-</div>
-            </div>
-            <span className="jal-emerging-chip">REQUIRED</span>
-          </div>
-        </div>
       </section>
 
       <section className="jal-bay">
