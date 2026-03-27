@@ -1110,6 +1110,8 @@ export default function JalSolEnter() {
   const [profileError, setProfileError] = useState("");
   const [showProfileOverlay, setShowProfileOverlay] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState("");
+  const [showPaymentCeremony, setShowPaymentCeremony] = useState(false);
+  const [paymentCommitChecked, setPaymentCommitChecked] = useState(false);
 
   function patchProgress(recipe: (prev: Gate2ProgressState) => Gate2ProgressState) {
     setProgress((prev) => {
@@ -2289,14 +2291,17 @@ if (
               Continue As Creator
             </button>
           ) : (
-            <a
-              href={GATE2_PAYMENT_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="button gold"
-            >
-              Open Gate 02
-            </a>
+            <button
+  type="button"
+  className="button gold"
+  onClick={() => {
+    setPaymentCommitChecked(false);
+    setShowPaymentCeremony(true);
+  }}
+  disabled={loading}
+>
+  Proceed To Gate 02 — $5
+</button>
           )}
         </div>
       </section>
@@ -3185,6 +3190,117 @@ if (
           )}
         </section>
       </div>
+
+      {showPaymentCeremony &&
+  createPortal(
+    <div
+      className="jal-overlay jal-payment-ceremony-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Gate 02 commitment"
+    >
+      <div
+        className="jal-overlay-backdrop"
+        onClick={() => {
+          setShowPaymentCeremony(false);
+          setPaymentCommitChecked(false);
+        }}
+      />
+
+      <section className="jal-overlay-panel jal-bay jal-bay-wide jal-payment-ceremony-panel">
+        <div className="jal-payment-ceremony-glow" />
+
+        <div className="jal-bay-head">
+          <div className="jal-bay-title">Gate 02 — Commitment</div>
+          <div className="jal-bay-note">Observer becomes participant</div>
+        </div>
+
+        <div className="jal-payment-ceremony-center">
+          <p className="jal-payment-ceremony-kicker">This is not a purchase.</p>
+
+          <h2 className="jal-payment-ceremony-title">
+            This is the threshold
+            <br />
+            where observation ends.
+          </h2>
+
+          <p className="jal-payment-ceremony-copy">
+            You are about to enter a controlled participation layer.
+            Gate 02 requires real movement, real authority, and real proof.
+          </p>
+        </div>
+
+        <div className="jal-payment-ceremony-grid">
+          <article className="jal-payment-ceremony-card">
+            <div className="jal-payment-ceremony-card-k">You will use</div>
+            <div className="jal-payment-ceremony-card-v">A real wallet</div>
+          </article>
+
+          <article className="jal-payment-ceremony-card">
+            <div className="jal-payment-ceremony-card-k">You will prove</div>
+            <div className="jal-payment-ceremony-card-v">Real authority</div>
+          </article>
+
+          <article className="jal-payment-ceremony-card">
+            <div className="jal-payment-ceremony-card-k">You will execute</div>
+            <div className="jal-payment-ceremony-card-v">A real transaction</div>
+          </article>
+
+          <article className="jal-payment-ceremony-card">
+            <div className="jal-payment-ceremony-card-k">You will unlock</div>
+            <div className="jal-payment-ceremony-card-v">Participant state</div>
+          </article>
+        </div>
+
+        <div className="jal-payment-ceremony-statement">
+          No simulation. No shortcuts. No false proof.
+        </div>
+
+        <label className="jal-check jal-payment-ceremony-check">
+          <input
+            type="checkbox"
+            checked={paymentCommitChecked}
+            onChange={(e) => setPaymentCommitChecked(e.target.checked)}
+          />
+          <span>
+            I understand Gate 02 requires real on-chain action and verified movement.
+          </span>
+        </label>
+
+        <div className="jal-bay-actions jal-bay-actions-center">
+          <button
+            type="button"
+            className="button ghost"
+            onClick={() => {
+              setShowPaymentCeremony(false);
+              setPaymentCommitChecked(false);
+            }}
+            disabled={loading}
+          >
+            Return
+          </button>
+
+          <a
+            href={paymentCommitChecked ? GATE2_PAYMENT_LINK : undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`button gold ${paymentCommitChecked ? "" : "is-disabled"}`}
+            onClick={(e) => {
+              if (!paymentCommitChecked) {
+                e.preventDefault();
+              } else {
+                setShowPaymentCeremony(false);
+              }
+            }}
+            aria-disabled={!paymentCommitChecked}
+          >
+            Enter Gate 02 — $5
+          </a>
+        </div>
+      </section>
+    </div>,
+    document.body
+  )}
 
       {loading && (
         <div

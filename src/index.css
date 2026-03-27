@@ -1126,6 +1126,128 @@ a.button[aria-disabled="true"]{
 
 /* ---------- THREE GATES ---------- */
 
+.jal-payment-ceremony-overlay {
+  backdrop-filter: blur(10px);
+}
+
+.jal-payment-ceremony-panel {
+  position: relative;
+  width: min(980px, 100%);
+  overflow: hidden;
+  padding: 36px 32px 30px;
+}
+
+.jal-payment-ceremony-glow {
+  position: absolute;
+  inset: -20% 10% auto 10%;
+  height: 340px;
+  background:
+    radial-gradient(circle, rgba(17, 241, 167, 0.18) 0%, rgba(17, 241, 167, 0.07) 28%, rgba(17, 241, 167, 0) 72%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.jal-payment-ceremony-center {
+  position: relative;
+  text-align: center;
+  padding: 8px 0 18px;
+}
+
+.jal-payment-ceremony-kicker {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(220, 235, 255, 0.72);
+}
+
+.jal-payment-ceremony-title {
+  margin: 0 0 14px;
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 1.02;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(245, 250, 255, 0.96);
+  text-shadow: 0 0 24px rgba(17, 241, 167, 0.15);
+}
+
+.jal-payment-ceremony-copy {
+  max-width: 720px;
+  margin: 0 auto;
+  line-height: 1.8;
+  color: rgba(220, 235, 255, 0.82);
+}
+
+.jal-payment-ceremony-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0 20px;
+}
+
+.jal-payment-ceremony-card {
+  padding: 18px 18px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(120, 220, 255, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.jal-payment-ceremony-card-k {
+  margin-bottom: 8px;
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(220, 235, 255, 0.62);
+}
+
+.jal-payment-ceremony-card-v {
+  font-size: 1.08rem;
+  color: rgba(245, 250, 255, 0.95);
+}
+
+.jal-payment-ceremony-statement {
+  margin: 8px 0 18px;
+  text-align: center;
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(244, 200, 106, 0.88);
+}
+
+.jal-payment-ceremony-check {
+  justify-self: center;
+  max-width: 760px;
+  margin: 0 auto 20px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(120, 220, 255, 0.12);
+  background: rgba(8, 14, 24, 0.7);
+}
+
+.button.is-disabled {
+  pointer-events: none;
+  opacity: 0.48;
+  filter: saturate(0.7);
+}
+
+@media (max-width: 760px) {
+  .jal-payment-ceremony-panel {
+    padding: 24px 18px 20px;
+  }
+
+  .jal-payment-ceremony-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jal-payment-ceremony-title {
+    font-size: clamp(1.7rem, 9vw, 2.6rem);
+  }
+}
+
 .jal-gate-grid{
   display:grid;
   grid-template-columns:repeat(3, minmax(0, 1fr));
