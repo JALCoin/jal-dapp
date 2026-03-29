@@ -298,9 +298,9 @@ export default function TokenFitGame({
   const canStart = safeUsername.length >= 3;
 
   const isSmallViewport = sceneScale < 0.72;
-  const useMobileNativeScene = mobileLiteMode && isFullscreen;
-  const renderWidth = useMobileNativeScene ? sceneWidth : worldWidth;
-  const renderHeight = useMobileNativeScene ? sceneHeight : worldHeight;
+  const useMobileNativeScene = false;
+  const renderWidth = worldWidth;
+  const renderHeight = worldHeight;
 
   const difficulty = useMemo(() => {
     const progress = Math.max(0, highScore - minScore);
@@ -448,12 +448,18 @@ export default function TokenFitGame({
   }, [difficulty.jumpForce, resetWorld]);
 
   const beginPlaying = useCallback(() => {
-    if (!canStart) return;
-    resetWorld();
+  if (!canStart) return;
+  resetWorld();
+
+  if (mobileLiteMode) {
+    setIsFullscreen(false);
+  } else {
     setIsFullscreen(true);
-    setGameState("countdown");
-    gameStateRef.current = "countdown";
-  }, [canStart, resetWorld]);
+  }
+
+  setGameState("countdown");
+  gameStateRef.current = "countdown";
+}, [canStart, mobileLiteMode, resetWorld]);
 
   const closeTrial = useCallback(() => {
     setIsFullscreen(false);
@@ -625,8 +631,8 @@ export default function TokenFitGame({
 
     canvas.width = Math.round(worldWidth * dpr);
     canvas.height = Math.round(worldHeight * dpr);
-    canvas.style.width = `${renderWidth}px`;
-    canvas.style.height = `${renderHeight}px`;
+    canvas.style.width = `${worldWidth}px`;
+    canvas.style.height = `${worldHeight}px`;
 
     drawScene(
       ctx,
@@ -901,8 +907,12 @@ export default function TokenFitGame({
       )}
 
       <div
-        className={isFullscreen ? "jal-tokenfit-fullscreen" : "jal-tokenfit-stage-wrap"}
-      >
+  className={
+    isFullscreen && !mobileLiteMode
+      ? "jal-tokenfit-fullscreen"
+      : "jal-tokenfit-stage-wrap"
+  }
+>
         <div
           role="button"
           tabIndex={0}
@@ -923,42 +933,39 @@ export default function TokenFitGame({
         >
           <div
             style={{
-              position: "absolute",
-              left: isFullscreen ? "50%" : 0,
-              top: isFullscreen ? "50%" : 0,
-              width: `${renderWidth}px`,
-              height: `${renderHeight}px`,
-              background: "#02060e",
-              transform: isFullscreen
-                ? useMobileNativeScene
-                  ? "translate(-50%, -50%)"
-                  : `translate(-50%, -50%) scale(${sceneScale})`
-                : useMobileNativeScene
-                ? "none"
-                : `scale(${sceneScale})`,
-              transformOrigin: isFullscreen ? "center center" : "top left",
-              overflow: "hidden",
-              borderRadius: isFullscreen ? "0px" : "28px",
-              border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
-              boxShadow:
-                isFullscreen || mobileLiteMode
-                  ? "none"
-                  : "inset 0 0 0 1px rgba(0,255,180,0.04)",
-              backfaceVisibility: "hidden",
-            }}
+  position: "absolute",
+  left: isFullscreen && !mobileLiteMode ? "50%" : 0,
+  top: isFullscreen && !mobileLiteMode ? "50%" : 0,
+  width: `${worldWidth}px`,
+  height: `${worldHeight}px`,
+  background: "#02060e",
+  transform:
+    isFullscreen && !mobileLiteMode
+      ? `translate(-50%, -50%) scale(${sceneScale})`
+      : `scale(${sceneScale})`,
+  transformOrigin: isFullscreen && !mobileLiteMode ? "center center" : "top left",
+  overflow: "hidden",
+  borderRadius: isFullscreen ? "0px" : "28px",
+  border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
+  boxShadow:
+    isFullscreen || mobileLiteMode
+      ? "none"
+      : "inset 0 0 0 1px rgba(0,255,180,0.04)",
+  backfaceVisibility: "hidden",
+}}
           >
             <canvas
-              ref={canvasRef}
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: `${renderWidth}px`,
-                height: `${renderHeight}px`,
-                display: "block",
-                zIndex: 1,
-                pointerEvents: "none",
-              }}
-            />
+  ref={canvasRef}
+  style={{
+    position: "absolute",
+    inset: 0,
+    width: `${worldWidth}px`,
+    height: `${worldHeight}px`,
+    display: "block",
+    zIndex: 1,
+    pointerEvents: "none",
+  }}
+/>
 
             {!hideLeftPillsOnMobile && (
               <div
