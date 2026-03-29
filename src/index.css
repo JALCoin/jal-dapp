@@ -6388,19 +6388,21 @@ button.home-route-band{
 
 .jal-tokenfit-shell{
   width:100%;
+  display:grid;
+  gap:1rem;
 }
 
 .jal-tokenfit-inline-head{
   display:grid;
   gap:.75rem;
-  margin-bottom:1rem;
 }
 
 .jal-tokenfit-stage-wrap{
+  width:100%;
   display:flex;
   justify-content:center;
   align-items:center;
-  width:100%;
+  overflow:hidden;
 }
 
 .jal-tokenfit-fullscreen{
@@ -6417,25 +6419,38 @@ button.home-route-band{
   background:#020810;
   overflow:hidden;
   overscroll-behavior:none;
-  touch-action:none;
   -webkit-tap-highlight-color:transparent;
 }
 
 .jal-tokenfit-scene-frame{
   position:relative;
-  margin:0;
-  width:100%;
-  height:100%;
-  max-width:100vw;
-  max-height:100dvh;
+  display:block;
+  overflow:hidden;
   cursor:pointer;
   user-select:none;
   -webkit-user-select:none;
-  -webkit-tap-highlight-color:transparent;
   -webkit-touch-callout:none;
-  touch-action:none;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
   outline:none;
-  flex:0 0 auto;
+  isolation:isolate;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(0,255,180,.08), rgba(4,9,18,.96) 55%, rgba(2,6,14,1) 100%);
+}
+
+.jal-tokenfit-scene-frame canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  z-index:1;
+  pointer-events:none;
+}
+
+.jal-tokenfit-scene-frame > *:not(canvas){
+  position:relative;
+  z-index:2;
 }
 
 .jal-trial-entry,
@@ -6486,6 +6501,7 @@ button,
     min-width:0;
   }
 }
+
 .jal-pass-banner {
   margin-top: 14px;
   padding: 12px 16px;
@@ -7360,9 +7376,10 @@ button,
 
 /* ---------- TokenFit HUD and coherence ---------- */
 
-.jal-tokenfit-shell{
-  display:grid;
-  gap:1rem;
+.jal-tokenfit-shell {
+  width: 100%;
+  display: grid;
+  gap: 1rem;
 }
 
 .jal-tokenfit-inline-head{
@@ -7370,7 +7387,12 @@ button,
 }
 
 .jal-tokenfit-stage-wrap{
-  border-radius:1.2rem;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  width:100%;
+  min-height:clamp(420px, 72vh, 820px);
+  overflow:hidden;
 }
 
 .jal-tokenfit-scene-frame{
