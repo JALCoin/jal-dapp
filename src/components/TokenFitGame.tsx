@@ -680,6 +680,7 @@ export default function TokenFitGame({
   if (!ctx) return;
 
   const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
+
   canvas.width = Math.round(worldWidth * dpr);
   canvas.height = Math.round(worldHeight * dpr);
   canvas.style.width = `${worldWidth}px`;
@@ -699,7 +700,16 @@ export default function TokenFitGame({
     velocityRef.current,
     pipesRef.current
   );
-}, [ceilingHeight, difficulty.pipeGap, floorHeight, pipeWidth, tokenX, worldHeight, worldWidth]);
+}, [
+  ceilingHeight,
+  difficulty.pipeGap,
+  floorHeight,
+  pipeWidth,
+  tokenX,
+  worldHeight,
+  worldWidth,
+  gameState,
+]);
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -999,53 +1009,52 @@ export default function TokenFitGame({
           }
         >
             <div
-            style={{
-              position: "absolute",
-              left: isFullscreen ? "50%" : 0,
-              top: isFullscreen ? "50%" : 0,
-              width: `${worldWidth}px`,
-              height: `${worldHeight}px`,
-              background:
-                "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
-              transform: isFullscreen
-                ? `translate(-50%, -50%) scale(${sceneScale})`
-                : `scale(${sceneScale})`,
-              transformOrigin: isFullscreen ? "center center" : "top left",
-              overflow: "hidden",
-              borderRadius: isFullscreen ? "0px" : "28px",
-              border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
-              boxShadow: isFullscreen
-                ? "none"
-                : "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
-              backfaceVisibility: "hidden",
-            }}
-          >
-              <canvas
-  ref={canvasRef}
   style={{
     position: "absolute",
-    inset: 0,
+    left: isFullscreen ? "50%" : 0,
+    top: isFullscreen ? "50%" : 0,
     width: `${worldWidth}px`,
     height: `${worldHeight}px`,
-    display: "block",
-    zIndex: 1,
-    pointerEvents: "none",
-    border: "1px solid rgba(255,0,0,0.7)",
+    background: "#02060e",
+    transform: isFullscreen
+      ? `translate(-50%, -50%) scale(${sceneScale})`
+      : `scale(${sceneScale})`,
+    transformOrigin: isFullscreen ? "center center" : "top left",
+    overflow: "hidden",
+    borderRadius: isFullscreen ? "0px" : "28px",
+    border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
+    boxShadow: isFullscreen
+      ? "none"
+      : "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
+    backfaceVisibility: "hidden",
   }}
-/>
+>
+  <canvas
+    ref={canvasRef}
+    style={{
+      position: "absolute",
+      inset: 0,
+      width: `${worldWidth}px`,
+      height: `${worldHeight}px`,
+      display: "block",
+      zIndex: 1,
+      pointerEvents: "none",
+      border: "1px solid rgba(255,0,0,0.7)",
+    }}
+  />
 
-            <div
-              style={{
-                position: "absolute",
-                left: hudSide,
-                top: hudTop,
-                display: "flex",
-                gap: hudGap,
-                alignItems: "center",
-                zIndex: 5,
-                maxWidth: `calc(100% - ${hudSide * 2}px - ${hudStatWidth * 2 + hudGap * 3}px)`,
-              }}
-            >
+  <div
+    style={{
+      position: "absolute",
+      left: hudSide,
+      top: hudTop,
+      display: "flex",
+      gap: hudGap,
+      alignItems: "center",
+      zIndex: 5,
+      maxWidth: `calc(100% - ${hudSide * 2}px - ${hudStatWidth * 2 + hudGap * 3}px)`,
+    }}
+  >
               <div
                 style={{
                   padding: hudPad,
