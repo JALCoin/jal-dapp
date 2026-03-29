@@ -36,8 +36,8 @@ const STORAGE_KEY = "jal_observe_token_fit_high_score_v2";
 const LANDSCAPE_WORLD_WIDTH = 800;
 const LANDSCAPE_WORLD_HEIGHT = 450;
 
-const PORTRAIT_WORLD_WIDTH = 360;
-const PORTRAIT_WORLD_HEIGHT = 700;
+const PORTRAIT_WORLD_WIDTH = 320;
+const PORTRAIT_WORLD_HEIGHT = 620;
 
 const TOKEN_SIZE = 42;
 
@@ -54,7 +54,8 @@ const LEADERBOARD_LIMIT = 10;
    PERFORMANCE
 ========================= */
 const MAX_DELTA_MS = 32;
-const HUD_SYNC_INTERVAL_MS = 1000 / 4;
+const MIN_DELTA_MS = 14;
+const HUD_SYNC_INTERVAL_MS = 1000 / 2;
 const DPR_CAP = 1.0;
 
 function clamp(value: number, min: number, max: number) {
@@ -79,7 +80,10 @@ function saveHighScore(score: number) {
 
 function getViewportSize() {
   if (typeof window === "undefined") {
-    return { width: LANDSCAPE_WORLD_WIDTH, height: LANDSCAPE_WORLD_HEIGHT };
+    return {
+      width: LANDSCAPE_WORLD_WIDTH,
+      height: LANDSCAPE_WORLD_HEIGHT,
+    };
   }
 
   const vv = window.visualViewport;
@@ -88,18 +92,6 @@ function getViewportSize() {
     width: Math.round(vv?.width ?? window.innerWidth),
     height: Math.round(vv?.height ?? window.innerHeight),
   };
-}
-
-function getBenchmarkLabel(nextScore: number) {
-  const labels: Record<number, string> = {
-    50: "Gate 01 Complete",
-    60: "Benchmark Reached",
-    70: "Control Stable",
-    80: "Max Pressure",
-    100: "Elite Tier",
-  };
-
-  return labels[nextScore] ?? "";
 }
 
 function drawRoundedRect(
@@ -139,10 +131,10 @@ function drawScene(
   ctx.clearRect(0, 0, worldWidth, worldHeight);
 
   ctx.fillStyle = "#02060e";
-ctx.fillRect(0, 0, worldWidth, worldHeight);
+  ctx.fillRect(0, 0, worldWidth, worldHeight);
 
-ctx.fillStyle = "rgba(0,255,180,0.035)";
-ctx.fillRect(0, 0, worldWidth, worldHeight * 0.55);
+  ctx.fillStyle = "rgba(0,255,180,0.035)";
+  ctx.fillRect(0, 0, worldWidth, worldHeight * 0.55);
 
   for (const pipe of pipes) {
     const topPipeHeight = pipe.gapY - difficultyPipeGap / 2;
@@ -158,7 +150,14 @@ ctx.fillRect(0, 0, worldWidth, worldHeight * 0.55);
 
     ctx.fillStyle = "rgba(0,255,180,0.16)";
     ctx.strokeStyle = "rgba(0,255,180,0.2)";
-    drawRoundedRect(ctx, pipe.x - 8, topPipeHeight - 20, pipeWidth + 16, 20, 12);
+    drawRoundedRect(
+      ctx,
+      pipe.x - 8,
+      topPipeHeight - 20,
+      pipeWidth + 16,
+      20,
+      12
+    );
     ctx.fill();
     ctx.stroke();
 
@@ -228,6 +227,11 @@ export default function TokenFitGame({
   onGameOver,
   onLeaveAfterPass,
 }: TokenFitGameProps) {
+  const mobileLiteMode = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent);
+  }, []);
+
   const [gameState, setGameState] = useState<TokenFitState>("idle");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -239,15 +243,8 @@ export default function TokenFitGame({
   const [sceneWidth, setSceneWidth] = useState(LANDSCAPE_WORLD_WIDTH);
   const [sceneHeight, setSceneHeight] = useState(LANDSCAPE_WORLD_HEIGHT);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
-  const [, setBenchmarkMessage] = useState("");
-  const mobileLiteMode =
-  typeof window !== "undefined" &&
-  /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  const benchmarkTimerRef = useRef<number | null>(null);
-  const shownBenchmarksRef = useRef<Set<number>>(new Set());
 
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
@@ -256,11 +253,9 @@ export default function TokenFitGame({
   const lastHudSyncRef = useRef(0);
   const thresholdReachedRef = useRef(false);
 
-  const initialPortraitY = PORTRAIT_WORLD_HEIGHT / 2 - TOKEN_SIZE / 2;
-
   const scoreRef = useRef(0);
   const gameStateRef = useRef<TokenFitState>("idle");
-  const tokenYRef = useRef(initialPortraitY);
+  const tokenYRef = useRef(PORTRAIT_WORLD_HEIGHT / 2 - TOKEN_SIZE / 2);
   const velocityRef = useRef(0);
   const pipesRef = useRef<Pipe[]>([]);
 
@@ -282,23 +277,30 @@ export default function TokenFitGame({
   const isPortrait = viewMode === "portrait";
 
   const worldWidth = isPortrait ? PORTRAIT_WORLD_WIDTH : LANDSCAPE_WORLD_WIDTH;
-  const worldHeight = isPortrait ? PORTRAIT_WORLD_HEIGHT : LANDSCAPE_WORLD_HEIGHT;
+  const worldHeight = isPortrait
+    ? PORTRAIT_WORLD_HEIGHT
+    : LANDSCAPE_WORLD_HEIGHT;
 
-  const tokenX = isPortrait ? 104 : 180;
-  const pipeWidth = isPortrait ? 78 : 96;
-  const basePipeGap = isPortrait ? 220 : 190;
-  const basePipeSpeed = isPortrait ? 2.6 : 2.3;
+  const tokenX = isPortrait ? 90 : 180;
+  const pipeWidth = isPortrait ? 74 : 96;
+  const basePipeGap = isPortrait ? 210 : 190;
+  const basePipeSpeed = isPortrait ? 2.35 : 2.2;
 
-  const floorHeight = isPortrait ? 110 : 74;
-  const ceilingHeight = isPortrait ? 24 : 18;
+  const floorHeight = isPortrait ? 96 : 70;
+  const ceilingHeight = isPortrait ? 18 : 16;
 
-  const hintBottom = isPortrait ? 140 : 98;
-  const liftButtonRight = 20;
-  const liftButtonBottom = 148;
-  const liftButtonSize = 88;
+  const hintBottom = isPortrait ? 126 : 92;
+  const liftButtonRight = 18;
+  const liftButtonBottom = 128;
+  const liftButtonSize = 82;
 
   const safeUsername = sanitizeUsername(username);
   const canStart = safeUsername.length >= 3;
+
+  const isSmallViewport = sceneScale < 0.72;
+  const useMobileNativeScene = mobileLiteMode && isFullscreen;
+  const renderWidth = useMobileNativeScene ? sceneWidth : worldWidth;
+  const renderHeight = useMobileNativeScene ? sceneHeight : worldHeight;
 
   const difficulty = useMemo(() => {
     const progress = Math.max(0, highScore - minScore);
@@ -307,11 +309,21 @@ export default function TokenFitGame({
     return {
       gravity: BASE_GRAVITY + steps * 0.012,
       jumpForce: BASE_JUMP_FORCE - steps * 0.06,
-      pipeSpawnEvery: Math.max(mobileLiteMode ? 1050 : 920, BASE_PIPE_SPAWN_EVERY - steps * 70),
-      pipeGap: Math.max(isPortrait ? 150 : 132, basePipeGap - steps * 9),
-      pipeSpeed: basePipeSpeed + steps * 0.12,
+      pipeSpawnEvery: Math.max(
+        mobileLiteMode ? 1100 : 940,
+        BASE_PIPE_SPAWN_EVERY - steps * 65
+      ),
+      pipeGap: Math.max(isPortrait ? 145 : 130, basePipeGap - steps * 8),
+      pipeSpeed: basePipeSpeed + steps * 0.11,
     };
-  }, [basePipeGap, basePipeSpeed, highScore, isPortrait, minScore]);
+  }, [
+    basePipeGap,
+    basePipeSpeed,
+    highScore,
+    isPortrait,
+    minScore,
+    mobileLiteMode,
+  ]);
 
   const fetchLeaderboard = useCallback(async () => {
     const { data, error } = await supabase
@@ -336,36 +348,9 @@ export default function TokenFitGame({
     fetchLeaderboard();
   }, [fetchLeaderboard]);
 
-  useEffect(() => {
-    return () => {
-      if (benchmarkTimerRef.current) {
-        window.clearTimeout(benchmarkTimerRef.current);
-      }
-    };
-  }, []);
-
   const syncHudState = useCallback(() => {
     setScore(scoreRef.current);
   }, []);
-
-  const showBenchmark = useCallback((nextScore: number) => {
-  if (mobileLiteMode) return;
-
-  const message = getBenchmarkLabel(nextScore);
-  if (!message || shownBenchmarksRef.current.has(nextScore)) return;
-
-  shownBenchmarksRef.current.add(nextScore);
-  setBenchmarkMessage(message);
-
-  if (benchmarkTimerRef.current) {
-    window.clearTimeout(benchmarkTimerRef.current);
-  }
-
-  benchmarkTimerRef.current = window.setTimeout(() => {
-    setBenchmarkMessage("");
-    benchmarkTimerRef.current = null;
-  }, 1500);
-}, [mobileLiteMode]);
 
   const resetWorld = useCallback(() => {
     const startY = worldHeight / 2 - TOKEN_SIZE / 2;
@@ -383,14 +368,6 @@ export default function TokenFitGame({
     spawnTimerRef.current = 0;
     nextPipeIdRef.current = 1;
     lastHudSyncRef.current = 0;
-
-    shownBenchmarksRef.current = new Set();
-    setBenchmarkMessage("");
-
-    if (benchmarkTimerRef.current) {
-      window.clearTimeout(benchmarkTimerRef.current);
-      benchmarkTimerRef.current = null;
-    }
   }, [worldHeight]);
 
   const finalizeRun = useCallback(
@@ -513,6 +490,7 @@ export default function TokenFitGame({
   useEffect(() => {
     if (
       !isFullscreen ||
+      mobileLiteMode ||
       typeof document === "undefined" ||
       typeof window === "undefined"
     ) {
@@ -555,7 +533,7 @@ export default function TokenFitGame({
       window.scrollTo(0, prev.scrollY);
       scrollLockRef.current = null;
     };
-  }, [isFullscreen]);
+  }, [isFullscreen, mobileLiteMode]);
 
   useEffect(() => {
     let raf: number | null = null;
@@ -637,43 +615,45 @@ export default function TokenFitGame({
   }, [closeTrial, flap, isFullscreen]);
 
   useEffect(() => {
-  const canvas = canvasRef.current;
-  if (!canvas) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-  const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
+    const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
 
-  canvas.width = Math.round(worldWidth * dpr);
-  canvas.height = Math.round(worldHeight * dpr);
-  canvas.style.width = `${worldWidth}px`;
-  canvas.style.height = `${worldHeight}px`;
+    canvas.width = Math.round(worldWidth * dpr);
+    canvas.height = Math.round(worldHeight * dpr);
+    canvas.style.width = `${renderWidth}px`;
+    canvas.style.height = `${renderHeight}px`;
 
-  drawScene(
-    ctx,
-    dpr,
-    worldWidth,
-    worldHeight,
+    drawScene(
+      ctx,
+      dpr,
+      worldWidth,
+      worldHeight,
+      ceilingHeight,
+      floorHeight,
+      difficulty.pipeGap,
+      pipeWidth,
+      tokenX,
+      tokenYRef.current,
+      velocityRef.current,
+      pipesRef.current
+    );
+  }, [
     ceilingHeight,
-    floorHeight,
     difficulty.pipeGap,
+    floorHeight,
     pipeWidth,
     tokenX,
-    tokenYRef.current,
-    velocityRef.current,
-    pipesRef.current
-  );
-}, [
-  ceilingHeight,
-  difficulty.pipeGap,
-  floorHeight,
-  pipeWidth,
-  tokenX,
-  worldHeight,
-  worldWidth,
-  gameState,
-]);
+    worldHeight,
+    worldWidth,
+    renderWidth,
+    renderHeight,
+    gameState,
+  ]);
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -687,8 +667,8 @@ export default function TokenFitGame({
     const topBound = ceilingHeight;
     const bottomBound = worldHeight - floorHeight - TOKEN_SIZE;
 
-    const gapPaddingTop = isPortrait ? 110 : 76;
-    const gapPaddingBottom = isPortrait ? 150 : 104;
+    const gapPaddingTop = isPortrait ? 98 : 72;
+    const gapPaddingBottom = isPortrait ? 126 : 98;
     const minGapY = gapPaddingTop + difficulty.pipeGap / 2;
     const maxGapY =
       worldHeight - floorHeight - gapPaddingBottom - difficulty.pipeGap / 2;
@@ -704,7 +684,7 @@ export default function TokenFitGame({
       }
 
       const rawDelta = now - lastFrameRef.current;
-      const deltaMs = clamp(rawDelta, 14, MAX_DELTA_MS);
+      const deltaMs = clamp(rawDelta, MIN_DELTA_MS, MAX_DELTA_MS);
       lastFrameRef.current = now;
 
       const frameScale = deltaMs / 16.6667;
@@ -764,7 +744,6 @@ export default function TokenFitGame({
         if (!nextPipe.scored && nextX + pipeWidth < tokenX) {
           nextPipe = { ...nextPipe, scored: true };
           scoreRef.current += 1;
-          showBenchmark(scoreRef.current);
 
           const nextHighScore = Math.max(highScore, scoreRef.current);
 
@@ -802,29 +781,30 @@ export default function TokenFitGame({
 
       pipesRef.current = nextPipes;
 
-      if (now - lastHudSyncRef.current >= HUD_SYNC_INTERVAL_MS) {
+      const hudInterval = mobileLiteMode ? 700 : HUD_SYNC_INTERVAL_MS;
+      if (now - lastHudSyncRef.current >= hudInterval) {
         lastHudSyncRef.current = now;
         syncHudState();
       }
 
       if (canvas && ctx) {
-  const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
+        const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
 
-  drawScene(
-    ctx,
-    dpr,
-    worldWidth,
-    worldHeight,
-    ceilingHeight,
-    floorHeight,
-    difficulty.pipeGap,
-    pipeWidth,
-    tokenX,
-    tokenYRef.current,
-    velocityRef.current,
-    pipesRef.current
-  );
-}
+        drawScene(
+          ctx,
+          dpr,
+          worldWidth,
+          worldHeight,
+          ceilingHeight,
+          floorHeight,
+          difficulty.pipeGap,
+          pipeWidth,
+          tokenX,
+          tokenYRef.current,
+          velocityRef.current,
+          pipesRef.current
+        );
+      }
 
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -850,9 +830,9 @@ export default function TokenFitGame({
     highScore,
     isPortrait,
     minScore,
+    mobileLiteMode,
     onPass,
     pipeWidth,
-    showBenchmark,
     syncHudState,
     tokenX,
     worldHeight,
@@ -869,15 +849,12 @@ export default function TokenFitGame({
     return "Trial Available";
   }, [endlessMode, gameState]);
 
-  const showCompactEntry = gameState === "idle";
-
-  const isSmallViewport = sceneScale < 0.72;
-  const hudTop = isSmallViewport ? 12 : 22;
-  const hudSide = isSmallViewport ? 12 : 24;
+  const hudTop = isSmallViewport ? 10 : 20;
+  const hudSide = isSmallViewport ? 10 : 22;
   const hudGap = isSmallViewport ? 6 : 10;
   const hudPad = isSmallViewport ? "7px 9px" : "10px 14px";
   const hudFont = isSmallViewport ? 11 : 14;
-  const hudStatWidth = isSmallViewport ? 70 : 102;
+  const hudStatWidth = isSmallViewport ? 66 : 102;
   const hudStatValue = isSmallViewport ? 16 : 24;
   const overlayCardWidth = isSmallViewport ? "92%" : 420;
 
@@ -892,47 +869,19 @@ export default function TokenFitGame({
     flap();
   };
 
-  const leaderboardView = (
-    <section className="jal-trial-leaderboard">
-      <div className="jal-trial-leaderboard-head">
-        <div className="jal-trial-leaderboard-title">
-          Gate 01 Global Leaderboard
-        </div>
-        <div className="jal-trial-leaderboard-note">
-          Global Top {LEADERBOARD_LIMIT}
-        </div>
-      </div>
+  const scoreDisplay = gameState === "playing" ? scoreRef.current : score;
+  const showCompactEntry = gameState === "idle";
+  const hideLeftPillsOnMobile = mobileLiteMode && gameState === "playing";
 
-      <div className="jal-trial-leaderboard-list">
-        {leaderboard.length === 0 ? (
-          <div className="jal-trial-leaderboard-empty">
-            No global entries yet. Start the trial to set the first record.
-          </div>
-        ) : (
-          leaderboard.map((entry, index) => (
-            <article
-              key={entry.id}
-              className={`jal-trial-leaderboard-row ${
-                index === 0 ? "is-rank-1" : ""
-              }`}
-            >
-              <div className="jal-trial-leaderboard-rank">#{index + 1}</div>
-
-              <div className="jal-trial-leaderboard-player">
-                <div className="jal-trial-leaderboard-name">{entry.username}</div>
-                <div className="jal-trial-leaderboard-sub">Gate 01 Trial</div>
-              </div>
-
-              <div className="jal-trial-leaderboard-score">
-                <div className="jal-trial-leaderboard-score-k">Score</div>
-                <div className="jal-trial-leaderboard-score-v">{entry.score}</div>
-              </div>
-            </article>
-          ))
-        )}
-      </div>
-    </section>
-  );
+  const hudCardStyle = {
+    borderRadius: 14,
+    background: mobileLiteMode
+      ? "rgba(5,14,22,0.92)"
+      : "rgba(5,14,22,0.72)",
+    border: mobileLiteMode
+      ? "1px solid rgba(255,255,255,0.06)"
+      : "1px solid rgba(255,255,255,0.1)",
+  } as const;
 
   const gameView = (
     <div className="jal-tokenfit-shell" aria-label="JAL's Trials Token Fit">
@@ -972,86 +921,89 @@ export default function TokenFitGame({
               : { width: `${sceneWidth}px`, height: `${sceneHeight}px` }
           }
         >
-            <div
-  style={{
-    position: "absolute",
-    left: isFullscreen ? "50%" : 0,
-    top: isFullscreen ? "50%" : 0,
-    width: `${worldWidth}px`,
-    height: `${worldHeight}px`,
-    background: "#02060e",
-    transform: isFullscreen
-      ? `translate(-50%, -50%) scale(${sceneScale})`
-      : `scale(${sceneScale})`,
-    transformOrigin: isFullscreen ? "center center" : "top left",
-    overflow: "hidden",
-    borderRadius: isFullscreen ? "0px" : "28px",
-    border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
-    boxShadow: isFullscreen
-  ? "none"
-  : "inset 0 0 0 1px rgba(0,255,180,0.04)",
-    backfaceVisibility: "hidden",
-  }}
->
-  <canvas
-    ref={canvasRef}
-    style={{
-      position: "absolute",
-      inset: 0,
-      width: `${worldWidth}px`,
-      height: `${worldHeight}px`,
-      display: "block",
-      zIndex: 1,
-      pointerEvents: "none",
-    }}
-  />
+          <div
+            style={{
+              position: "absolute",
+              left: isFullscreen ? "50%" : 0,
+              top: isFullscreen ? "50%" : 0,
+              width: `${renderWidth}px`,
+              height: `${renderHeight}px`,
+              background: "#02060e",
+              transform: isFullscreen
+                ? useMobileNativeScene
+                  ? "translate(-50%, -50%)"
+                  : `translate(-50%, -50%) scale(${sceneScale})`
+                : useMobileNativeScene
+                ? "none"
+                : `scale(${sceneScale})`,
+              transformOrigin: isFullscreen ? "center center" : "top left",
+              overflow: "hidden",
+              borderRadius: isFullscreen ? "0px" : "28px",
+              border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
+              boxShadow:
+                isFullscreen || mobileLiteMode
+                  ? "none"
+                  : "inset 0 0 0 1px rgba(0,255,180,0.04)",
+              backfaceVisibility: "hidden",
+            }}
+          >
+            <canvas
+              ref={canvasRef}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: `${renderWidth}px`,
+                height: `${renderHeight}px`,
+                display: "block",
+                zIndex: 1,
+                pointerEvents: "none",
+              }}
+            />
 
-  <div
-    style={{
-      position: "absolute",
-      left: hudSide,
-      top: hudTop,
-      display: "flex",
-      gap: hudGap,
-      alignItems: "center",
-      zIndex: 5,
-      maxWidth: `calc(100% - ${hudSide * 2}px - ${hudStatWidth * 2 + hudGap * 3}px)`,
-    }}
-  >
+            {!hideLeftPillsOnMobile && (
               <div
                 style={{
-                  padding: hudPad,
-                  borderRadius: 14,
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  background: "rgba(5,14,22,0.72)",
-                  color: "#f6fffb",
-                  fontSize: hudFont,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  whiteSpace: "nowrap",
+                  position: "absolute",
+                  left: hudSide,
+                  top: hudTop,
+                  display: "flex",
+                  gap: hudGap,
+                  alignItems: "center",
+                  zIndex: 5,
+                  maxWidth: `calc(100% - ${hudSide * 2}px - ${hudStatWidth * 2 + hudGap * 3}px)`,
                 }}
               >
-                JAL’s Trials
-              </div>
-
-              {!isSmallViewport && (
                 <div
                   style={{
+                    ...hudCardStyle,
                     padding: hudPad,
-                    borderRadius: 14,
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    background: "rgba(5,14,22,0.72)",
-                    color: "#c7fce8",
+                    color: "#f6fffb",
                     fontSize: hudFont,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {endlessMode ? "Token Fit Endless" : "Token Fit"}
+                  JAL’s Trials
                 </div>
-              )}
-            </div>
+
+                {!isSmallViewport && (
+                  <div
+                    style={{
+                      ...hudCardStyle,
+                      padding: hudPad,
+                      color: "#c7fce8",
+                      fontSize: hudFont,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {endlessMode ? "Token Fit Endless" : "Token Fit"}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div
               style={{
@@ -1066,11 +1018,9 @@ export default function TokenFitGame({
             >
               <div
                 style={{
+                  ...hudCardStyle,
                   minWidth: hudStatWidth,
                   padding: hudPad,
-                  borderRadius: 14,
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  background: "rgba(5,14,22,0.72)",
                   color: "#ffffff",
                   textAlign: "center",
                 }}
@@ -1086,17 +1036,15 @@ export default function TokenFitGame({
                   Score
                 </div>
                 <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>
-  {gameState === "playing" ? scoreRef.current : score}
-</div>
+                  {scoreDisplay}
+                </div>
               </div>
 
               <div
                 style={{
+                  ...hudCardStyle,
                   minWidth: hudStatWidth,
                   padding: hudPad,
-                  borderRadius: 14,
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  background: "rgba(5,14,22,0.72)",
                   color: "#ffffff",
                   textAlign: "center",
                 }}
@@ -1129,10 +1077,8 @@ export default function TokenFitGame({
                     closeTrial();
                   }}
                   style={{
+                    ...hudCardStyle,
                     padding: hudPad,
-                    borderRadius: 14,
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    background: "rgba(8,18,28,0.82)",
                     color: "#ffffff",
                     fontSize: hudFont,
                     cursor: "pointer",
@@ -1163,7 +1109,9 @@ export default function TokenFitGame({
                     borderRadius: 24,
                     background: "rgba(4,12,18,0.88)",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    boxShadow: "0 0 22px rgba(0,255,180,0.08)",
+                    boxShadow: mobileLiteMode
+                      ? "none"
+                      : "0 0 22px rgba(0,255,180,0.08)",
                   }}
                 >
                   <div
@@ -1213,7 +1161,9 @@ export default function TokenFitGame({
                     borderRadius: 24,
                     background: "rgba(4,12,18,0.9)",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    boxShadow: "0 0 24px rgba(0,255,180,0.08)",
+                    boxShadow: mobileLiteMode
+                      ? "none"
+                      : "0 0 24px rgba(0,255,180,0.08)",
                   }}
                 >
                   <div
@@ -1323,7 +1273,7 @@ export default function TokenFitGame({
               </div>
             )}
 
-            {gameState === "playing" && (
+            {gameState === "playing" && !mobileLiteMode && (
               <div
                 style={{
                   position: "absolute",
@@ -1362,14 +1312,16 @@ export default function TokenFitGame({
                   width: liftButtonSize,
                   height: liftButtonSize,
                   borderRadius: "50%",
-                  border: "1px solid rgba(0,255,180,0.28)",
+                  border: "1px solid rgba(0,255,180,0.22)",
                   background: "rgba(0,255,180,0.10)",
                   color: "#d9fff1",
                   fontSize: 14,
                   fontWeight: 800,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
-                  boxShadow: "0 0 24px rgba(0,255,180,0.12)",
+                  boxShadow: mobileLiteMode
+                    ? "none"
+                    : "0 0 24px rgba(0,255,180,0.12)",
                   zIndex: 7,
                   cursor: "pointer",
                   WebkitTapHighlightColor: "transparent",
@@ -1382,6 +1334,46 @@ export default function TokenFitGame({
         </div>
       </div>
     </div>
+  );
+
+  const leaderboardView = (
+    <section className="jal-trial-leaderboard">
+      <div className="jal-trial-leaderboard-head">
+        <div className="jal-trial-leaderboard-title">Gate 01 Global Leaderboard</div>
+        <div className="jal-trial-leaderboard-note">
+          Global Top {LEADERBOARD_LIMIT}
+        </div>
+      </div>
+
+      <div className="jal-trial-leaderboard-list">
+        {leaderboard.length === 0 ? (
+          <div className="jal-trial-leaderboard-empty">
+            No global entries yet. Start the trial to set the first record.
+          </div>
+        ) : (
+          leaderboard.map((entry, index) => (
+            <article
+              key={entry.id}
+              className={`jal-trial-leaderboard-row ${
+                index === 0 ? "is-rank-1" : ""
+              }`}
+            >
+              <div className="jal-trial-leaderboard-rank">#{index + 1}</div>
+
+              <div className="jal-trial-leaderboard-player">
+                <div className="jal-trial-leaderboard-name">{entry.username}</div>
+                <div className="jal-trial-leaderboard-sub">Gate 01 Trial</div>
+              </div>
+
+              <div className="jal-trial-leaderboard-score">
+                <div className="jal-trial-leaderboard-score-k">Score</div>
+                <div className="jal-trial-leaderboard-score-v">{entry.score}</div>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+    </section>
   );
 
   if (showCompactEntry) {
@@ -1468,7 +1460,12 @@ export default function TokenFitGame({
     );
   }
 
-  if (isFullscreen && typeof document !== "undefined" && document.body) {
+  if (
+    isFullscreen &&
+    !mobileLiteMode &&
+    typeof document !== "undefined" &&
+    document.body
+  ) {
     return createPortal(gameView, document.body);
   }
 
