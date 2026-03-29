@@ -33,11 +33,11 @@ const STORAGE_KEY = "jal_observe_token_fit_high_score_v2";
 /* =========================
    WORLD SIZING
 ========================= */
-const LANDSCAPE_WORLD_WIDTH = 960;
-const LANDSCAPE_WORLD_HEIGHT = 540;
+const LANDSCAPE_WORLD_WIDTH = 800;
+const LANDSCAPE_WORLD_HEIGHT = 450;
 
-const PORTRAIT_WORLD_WIDTH = 420;
-const PORTRAIT_WORLD_HEIGHT = 820;
+const PORTRAIT_WORLD_WIDTH = 360;
+const PORTRAIT_WORLD_HEIGHT = 700;
 
 const TOKEN_SIZE = 42;
 
@@ -54,7 +54,7 @@ const LEADERBOARD_LIMIT = 10;
    PERFORMANCE
 ========================= */
 const MAX_DELTA_MS = 32;
-const HUD_SYNC_INTERVAL_MS = 1000 / 8;
+const HUD_SYNC_INTERVAL_MS = 1000 / 4;
 const DPR_CAP = 1.0;
 
 function clamp(value: number, min: number, max: number) {
@@ -240,6 +240,9 @@ export default function TokenFitGame({
   const [sceneHeight, setSceneHeight] = useState(LANDSCAPE_WORLD_HEIGHT);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [benchmarkMessage, setBenchmarkMessage] = useState("");
+  const mobileLiteMode =
+  typeof window !== "undefined" &&
+  /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -304,7 +307,7 @@ export default function TokenFitGame({
     return {
       gravity: BASE_GRAVITY + steps * 0.012,
       jumpForce: BASE_JUMP_FORCE - steps * 0.06,
-      pipeSpawnEvery: Math.max(920, BASE_PIPE_SPAWN_EVERY - steps * 70),
+      pipeSpawnEvery: Math.max(mobileLiteMode ? 1050 : 920, BASE_PIPE_SPAWN_EVERY - steps * 70),
       pipeGap: Math.max(isPortrait ? 150 : 132, basePipeGap - steps * 9),
       pipeSpeed: basePipeSpeed + steps * 0.12,
     };
@@ -346,21 +349,23 @@ export default function TokenFitGame({
   }, []);
 
   const showBenchmark = useCallback((nextScore: number) => {
-    const message = getBenchmarkLabel(nextScore);
-    if (!message || shownBenchmarksRef.current.has(nextScore)) return;
+  if (mobileLiteMode) return;
 
-    shownBenchmarksRef.current.add(nextScore);
-    setBenchmarkMessage(message);
+  const message = getBenchmarkLabel(nextScore);
+  if (!message || shownBenchmarksRef.current.has(nextScore)) return;
 
-    if (benchmarkTimerRef.current) {
-      window.clearTimeout(benchmarkTimerRef.current);
-    }
+  shownBenchmarksRef.current.add(nextScore);
+  setBenchmarkMessage(message);
 
-    benchmarkTimerRef.current = window.setTimeout(() => {
-      setBenchmarkMessage("");
-      benchmarkTimerRef.current = null;
-    }, 1500);
-  }, []);
+  if (benchmarkTimerRef.current) {
+    window.clearTimeout(benchmarkTimerRef.current);
+  }
+
+  benchmarkTimerRef.current = window.setTimeout(() => {
+    setBenchmarkMessage("");
+    benchmarkTimerRef.current = null;
+  }, 1500);
+}, [mobileLiteMode]);
 
   const resetWorld = useCallback(() => {
     const startY = worldHeight / 2 - TOKEN_SIZE / 2;
@@ -699,7 +704,7 @@ export default function TokenFitGame({
       }
 
       const rawDelta = now - lastFrameRef.current;
-      const deltaMs = clamp(rawDelta, 12, MAX_DELTA_MS);
+      const deltaMs = clamp(rawDelta, 14, MAX_DELTA_MS);
       lastFrameRef.current = now;
 
       const frameScale = deltaMs / 16.6667;
@@ -1080,7 +1085,9 @@ export default function TokenFitGame({
                 >
                   Score
                 </div>
-                <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>{score}</div>
+                <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>
+  {gameState === "playing" ? scoreRef.current : score}
+</div>
               </div>
 
               <div
@@ -1137,32 +1144,6 @@ export default function TokenFitGame({
                 </button>
               )}
             </div>
-
-            {benchmarkMessage && gameState === "playing" && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: isSmallViewport ? 64 : 82,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  padding: isSmallViewport ? "8px 12px" : "10px 16px",
-                  borderRadius: 999,
-                  background: "rgba(4,12,18,0.82)",
-                  border: "1px solid rgba(244,200,106,0.28)",
-                  color: "#ffe7ad",
-                  fontSize: isSmallViewport ? 11 : 13,
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  whiteSpace: "nowrap",
-                  zIndex: 6,
-                  boxShadow: "0 0 18px rgba(244,200,106,0.12)",
-                  pointerEvents: "none",
-                }}
-              >
-                {benchmarkMessage}
-              </div>
-            )}
 
             {gameState === "countdown" && (
               <div
