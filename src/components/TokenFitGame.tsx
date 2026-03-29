@@ -133,8 +133,10 @@ function drawScene(
   ctx.fillStyle = "#02060e";
   ctx.fillRect(0, 0, worldWidth, worldHeight);
 
+  if (worldWidth > PORTRAIT_WORLD_WIDTH) {
   ctx.fillStyle = "rgba(0,255,180,0.035)";
   ctx.fillRect(0, 0, worldWidth, worldHeight * 0.55);
+}
 
   for (const pipe of pipes) {
     const topPipeHeight = pipe.gapY - difficultyPipeGap / 2;
@@ -148,18 +150,20 @@ function drawScene(
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(0,255,180,0.16)";
-    ctx.strokeStyle = "rgba(0,255,180,0.2)";
-    drawRoundedRect(
-      ctx,
-      pipe.x - 8,
-      topPipeHeight - 20,
-      pipeWidth + 16,
-      20,
-      12
-    );
-    ctx.fill();
-    ctx.stroke();
+    if (worldWidth > PORTRAIT_WORLD_WIDTH) {
+  ctx.fillStyle = "rgba(0,255,180,0.16)";
+  ctx.strokeStyle = "rgba(0,255,180,0.2)";
+  drawRoundedRect(
+    ctx,
+    pipe.x - 8,
+    topPipeHeight - 20,
+    pipeWidth + 16,
+    20,
+    12
+  );
+  ctx.fill();
+  ctx.stroke();
+}
 
     ctx.fillStyle = "rgba(8,40,34,0.96)";
     ctx.strokeStyle = "rgba(0,255,180,0.22)";
@@ -167,12 +171,14 @@ function drawScene(
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(0,255,180,0.16)";
-    ctx.strokeStyle = "rgba(0,255,180,0.2)";
-    drawRoundedRect(ctx, pipe.x - 8, bottomPipeY, pipeWidth + 16, 20, 12);
-    ctx.fill();
-    ctx.stroke();
-  }
+            if (worldWidth > PORTRAIT_WORLD_WIDTH) {
+  ctx.fillStyle = "rgba(0,255,180,0.16)";
+  ctx.strokeStyle = "rgba(0,255,180,0.2)";
+  drawRoundedRect(ctx, pipe.x - 8, bottomPipeY, pipeWidth + 16, 20, 12);
+  ctx.fill();
+  ctx.stroke();
+}
+}
 
   ctx.fillStyle = "rgba(255,255,255,0.05)";
   ctx.fillRect(0, 0, worldWidth, ceilingHeight);
@@ -250,6 +256,7 @@ export default function TokenFitGame({
   const lastFrameRef = useRef<number | null>(null);
   const spawnTimerRef = useRef(0);
   const nextPipeIdRef = useRef(1);
+  const lastDisplayedScoreRef = useRef(0);
   const lastHudSyncRef = useRef(0);
   const thresholdReachedRef = useRef(false);
   const passNotifiedRef = useRef(false);
@@ -366,6 +373,7 @@ export default function TokenFitGame({
     spawnTimerRef.current = 0;
     nextPipeIdRef.current = 1;
     lastHudSyncRef.current = 0;
+    lastDisplayedScoreRef.current = 0;
   }, [worldHeight]);
 
   const finalizeRun = useCallback(
@@ -620,12 +628,15 @@ export default function TokenFitGame({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+const ctx = canvas.getContext("2d", {
+  alpha: false,
+  desynchronized: true,
+});
+if (!ctx) return;
 
-    const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
+const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
 
     canvas.width = Math.round(worldWidth * dpr);
     canvas.height = Math.round(worldHeight * dpr);
@@ -676,7 +687,13 @@ export default function TokenFitGame({
       worldHeight - floorHeight - gapPaddingBottom - difficulty.pipeGap / 2;
 
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
+if (!canvas) return;
+
+const ctx = canvas.getContext("2d", {
+  alpha: false,
+  desynchronized: true,
+});
+if (!ctx) return;
 
     const tick = (now: number) => {
       if (gameStateRef.current !== "playing") return;
@@ -738,33 +755,33 @@ export default function TokenFitGame({
 
         if (nextX + pipeWidth <= -60) continue;
 
-        let nextPipe = pipe;
-        if (nextX !== pipe.x) {
-          nextPipe = { ...nextPipe, x: nextX };
-        }
+        pipe.x = nextX;
+      const nextPipe = pipe;
 
         if (!nextPipe.scored && nextX + pipeWidth < tokenX) {
-          nextPipe = { ...nextPipe, scored: true };
-          scoreRef.current += 1;
+  nextPipe.scored = true;
+  scoreRef.current += 1;
 
-          const nextHighScore = Math.max(highScore, scoreRef.current);
+  const nextHighScore = scoreRef.current > highScore ? scoreRef.current : highScore;
 
-          if (!thresholdReachedRef.current && nextHighScore >= minScore) {
-            thresholdReachedRef.current = true;
+  if (!thresholdReachedRef.current && nextHighScore >= minScore) {
+    thresholdReachedRef.current = true;
 
-            if (!passNotifiedRef.current) {
-              passNotifiedRef.current = true;
-              onPass(scoreRef.current, nextHighScore);
-            }
+    if (!passNotifiedRef.current) {
+      passNotifiedRef.current = true;
+      requestAnimationFrame(() => {
+        onPass(scoreRef.current, nextHighScore);
+      });
+    }
 
-            if (!endlessMode) {
-              nextPipes.push(nextPipe);
-              pipesRef.current = nextPipes;
-              endGame("passed");
-              return;
-            }
-          }
-        }
+    if (!endlessMode) {
+      nextPipes.push(nextPipe);
+      pipesRef.current = nextPipes;
+      endGame("passed");
+      return;
+    }
+  }
+}
 
         const pipeLeft = nextX;
         const pipeRight = nextX + pipeWidth;
@@ -788,10 +805,15 @@ export default function TokenFitGame({
       pipesRef.current = nextPipes;
 
       const hudInterval = mobileLiteMode ? 700 : HUD_SYNC_INTERVAL_MS;
-      if (now - lastHudSyncRef.current >= hudInterval) {
-        lastHudSyncRef.current = now;
-        syncHudState();
-      }
+
+if (scoreRef.current !== lastDisplayedScoreRef.current) {
+  lastDisplayedScoreRef.current = scoreRef.current;
+  syncHudState();
+  lastHudSyncRef.current = now;
+} else if (now - lastHudSyncRef.current >= hudInterval) {
+  lastHudSyncRef.current = now;
+  syncHudState();
+}
 
       if (canvas && ctx) {
         const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
