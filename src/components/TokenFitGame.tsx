@@ -239,7 +239,7 @@ export default function TokenFitGame({
   const [sceneWidth, setSceneWidth] = useState(LANDSCAPE_WORLD_WIDTH);
   const [sceneHeight, setSceneHeight] = useState(LANDSCAPE_WORLD_HEIGHT);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
-  const [benchmarkMessage, setBenchmarkMessage] = useState("");
+  const [, setBenchmarkMessage] = useState("");
   const mobileLiteMode =
   typeof window !== "undefined" &&
   /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent);
