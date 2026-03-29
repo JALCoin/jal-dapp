@@ -298,7 +298,6 @@ export default function TokenFitGame({
   const canStart = safeUsername.length >= 3;
 
   const isSmallViewport = sceneScale < 0.72;
-  const useMobileNativeScene = false;
   const renderWidth = worldWidth;
   const renderHeight = worldHeight;
 
