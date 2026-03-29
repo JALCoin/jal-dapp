@@ -6265,276 +6265,6 @@ button.home-route-band{
   width:100%;
 }
 /* =========================================
-   JAL'S TRIALS — TOKEN FIT
-========================================= */
-
-.jal-trial-entry{
-  display:grid;
-  gap:1rem;
-  padding:1rem;
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:1.25rem;
-  background:
-    radial-gradient(680px 180px at 50% 0%, rgba(0,255,180,.06), transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.02),
-    0 18px 34px rgba(0,0,0,.24);
-}
-
-.jal-trial-note{
-  margin:0;
-  max-width:64ch;
-  line-height:1.7;
-  opacity:.84;
-}
-
-.jal-trial-preview{
-  position:relative;
-  overflow:hidden;
-  display:grid;
-  gap:.55rem;
-  min-height:140px;
-  padding:1rem 1rem 1.05rem;
-  border-radius:1.1rem;
-  border:1px solid rgba(255,255,255,.08);
-  background:
-    radial-gradient(500px 140px at 50% 0%, rgba(0,255,180,.08), transparent 64%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
-}
-
-.jal-trial-preview::after{
-  content:"";
-  position:absolute;
-  inset:auto 0 0 0;
-  height:1px;
-  background:linear-gradient(90deg, transparent, rgba(0,255,180,.35), transparent);
-  opacity:.7;
-}
-
-.jal-trial-preview-badge{
-  font-size:.72rem;
-  text-transform:uppercase;
-  letter-spacing:.16em;
-  opacity:.68;
-}
-
-.jal-trial-preview-title{
-  font-size:1.14rem;
-  line-height:1.15;
-  font-weight:700;
-  color:rgba(245,255,251,.96);
-}
-
-.jal-trial-preview-line{
-  max-width:52ch;
-  line-height:1.65;
-  color:rgba(225,244,236,.82);
-}
-
-.jal-trial-grid{
-  display:grid;
-  grid-template-columns:repeat(3, minmax(0, 1fr));
-  gap:.9rem;
-}
-
-.jal-trial-card{
-  position:relative;
-  overflow:hidden;
-  padding:1rem;
-  border-radius:1rem;
-  border:1px solid rgba(255,255,255,.08);
-  background:
-    radial-gradient(560px 120px at 50% 0%, rgba(0,255,180,.05), transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.012));
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.02),
-    0 12px 26px rgba(0,0,0,.22);
-}
-
-.jal-trial-card::after{
-  content:"";
-  position:absolute;
-  inset:auto 0 0 0;
-  height:1px;
-  background:linear-gradient(90deg, transparent, rgba(0,255,180,.35), transparent);
-  opacity:.65;
-}
-
-.jal-trial-k{
-  font-size:.72rem;
-  text-transform:uppercase;
-  letter-spacing:.14em;
-  opacity:.66;
-  margin-bottom:.42rem;
-}
-
-.jal-trial-v{
-  font-size:.94rem;
-  line-height:1.62;
-  color:rgba(231,255,247,.9);
-}
-
-.jal-trial-actions{
-  display:flex;
-  gap:.75rem;
-  flex-wrap:wrap;
-  margin-top:.2rem;
-}
-
-.jal-trial-actions .button{
-  min-width:180px;
-}
-
-.jal-tokenfit-shell{
-  width:100%;
-  display:grid;
-  gap:1rem;
-}
-
-.jal-tokenfit-inline-head{
-  display:grid;
-  gap:.75rem;
-}
-
-.jal-tokenfit-stage-wrap{
-  width:100%;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  overflow:hidden;
-}
-
-.jal-tokenfit-fullscreen{
-  position:fixed;
-  inset:0;
-  z-index:9999;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:100vw;
-  height:100dvh;
-  min-height:100dvh;
-  padding:0;
-  background:#020810;
-  overflow:hidden;
-  overscroll-behavior:none;
-  -webkit-tap-highlight-color:transparent;
-}
-
-.jal-tokenfit-scene-frame{
-  position:relative;
-  display:block;
-  overflow:hidden;
-  cursor:pointer;
-  user-select:none;
-  -webkit-user-select:none;
-  -webkit-touch-callout:none;
-  -webkit-tap-highlight-color:transparent;
-  touch-action:manipulation;
-  outline:none;
-  isolation:isolate;
-  background:
-    radial-gradient(circle at 50% 35%, rgba(0,255,180,.08), rgba(4,9,18,.96) 55%, rgba(2,6,14,1) 100%);
-}
-
-.jal-tokenfit-scene-frame canvas{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  display:block;
-  z-index:1;
-  pointer-events:none;
-}
-
-.jal-tokenfit-scene-frame > *:not(canvas){
-  position:relative;
-  z-index:2;
-}
-
-.jal-trial-entry,
-.jal-trial-entry *,
-.jal-tokenfit-fullscreen,
-.jal-tokenfit-fullscreen *{
-  -webkit-tap-highlight-color:transparent;
-}
-
-.jal-trial-entry button,
-.jal-trial-entry .button,
-.jal-tokenfit-fullscreen button,
-.jal-tokenfit-fullscreen [role="button"]{
-  -webkit-tap-highlight-color:transparent;
-  touch-action:manipulation;
-}
-
-button,
-[role="button"]{
-  -webkit-tap-highlight-color:transparent;
-}
-
-@media (max-width:760px){
-  .jal-trial-entry{
-    padding:.95rem;
-    border-radius:1rem;
-  }
-
-  .jal-trial-preview{
-    min-height:unset;
-    padding:.95rem;
-  }
-
-  .jal-trial-preview-title{
-    font-size:1.02rem;
-  }
-
-  .jal-trial-grid{
-    grid-template-columns:1fr;
-  }
-
-  .jal-trial-actions{
-    flex-direction:column;
-  }
-
-  .jal-trial-actions .button{
-    width:100%;
-    min-width:0;
-  }
-}
-
-.jal-pass-banner {
-  margin-top: 14px;
-  padding: 12px 16px;
-  border: 1px solid rgba(255, 215, 0, 0.28);
-  border-radius: 14px;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-  background: rgba(255, 215, 0, 0.05);
-  color: rgba(255, 230, 150, 0.95);
-  letter-spacing: 0.06em;
-  font-size: 0.84rem;
-}
-
-.jal-checklist {
-  list-style: disc;
-  padding-left: 20px;
-  margin: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.jal-checklist li {
-  margin: 0;
-}
-
-.jal-inline-link {
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-/* =========================================
    GATE 02 — STAGE BAR, SEQUENCE PROGRESS, OVERLAY
 ========================================= */
 
@@ -7374,43 +7104,6 @@ button,
   background:rgba(255,255,255,.015);
 }
 
-/* ---------- TokenFit HUD and coherence ---------- */
-
-.jal-tokenfit-shell {
-  width: 100%;
-  display: grid;
-  gap: 1rem;
-}
-
-.jal-tokenfit-inline-head{
-  padding:0;
-}
-
-.jal-tokenfit-stage-wrap{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  width:100%;
-  min-height:clamp(420px, 72vh, 820px);
-  overflow:hidden;
-}
-
-.jal-tokenfit-scene-frame{
-  border-radius:1.2rem;
-  box-shadow:
-    0 20px 40px rgba(0,0,0,.28),
-    0 0 18px rgba(0,255,180,.05);
-}
-
-.jal-tokenfit-fullscreen{
-  background:
-    radial-gradient(circle at center, rgba(0,255,180,.06), rgba(2,8,16,.96) 58%, rgba(0,0,0,.98) 100%);
-}
-
-.jal-tokenfit-shell .jal-lock-text{
-  max-width:72ch;
-}
-
 /* ---------- Observe step completion state ---------- */
 
 .jal-observe-status-light{
@@ -7509,5 +7202,86 @@ button,
   .jal-observe-nav-button,
   .jal-observe-trial-input{
     transition:none;
+  }
+}
+/* =========================================
+   22) TOKEN FIT — FULLSCREEN SCENE ARCHITECTURE
+   For rewritten TokenFitGame.tsx
+========================================= */
+
+.jal-tokenfit-shell{
+  width:100%;
+  display:grid;
+  gap:1rem;
+}
+
+.jal-tokenfit-inline-head{
+  display:grid;
+  gap:.75rem;
+}
+
+.jal-tokenfit-stage-wrap{
+  width:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+}
+
+.jal-tokenfit-fullscreen{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100vw;
+  height:100dvh;
+  min-height:100dvh;
+  padding:0;
+  background:#020810;
+  overflow:hidden;
+  overscroll-behavior:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+.jal-tokenfit-scene-frame{
+  position:relative;
+  display:block;
+  overflow:hidden;
+  cursor:pointer;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  outline:none;
+  isolation:isolate;
+  background:#020810;
+}
+
+.jal-tokenfit-scene-frame canvas{
+  display:block;
+  pointer-events:none;
+}
+
+.jal-tokenfit-shell,
+.jal-tokenfit-shell *,
+.jal-tokenfit-fullscreen,
+.jal-tokenfit-fullscreen *{
+  -webkit-tap-highlight-color:transparent;
+}
+
+.jal-tokenfit-shell button,
+.jal-tokenfit-shell .button,
+.jal-tokenfit-fullscreen button,
+.jal-tokenfit-fullscreen [role="button"]{
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+
+@media (max-width:760px){
+  .jal-tokenfit-fullscreen{
+    background:#02060e;
   }
 }
