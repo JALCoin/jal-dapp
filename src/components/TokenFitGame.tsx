@@ -128,12 +128,14 @@ function drawScene(
   pipes: Pipe[]
 ) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, worldWidth, worldHeight);
+ctx.clearRect(0, 0, worldWidth, worldHeight);
 
-  ctx.fillStyle = "#02060e";
-  ctx.fillRect(0, 0, worldWidth, worldHeight);
+ctx.fillStyle = "#02060e";
+ctx.fillRect(0, 0, worldWidth, worldHeight);
 
-  if (worldWidth > PORTRAIT_WORLD_WIDTH) {
+const isMobileWorld = worldWidth === PORTRAIT_WORLD_WIDTH;
+
+  if (!isMobileWorld) {
   ctx.fillStyle = "rgba(0,255,180,0.035)";
   ctx.fillRect(0, 0, worldWidth, worldHeight * 0.55);
 }
@@ -150,7 +152,7 @@ function drawScene(
     ctx.fill();
     ctx.stroke();
 
-    if (worldWidth > PORTRAIT_WORLD_WIDTH) {
+    if (!isMobileWorld) {
   ctx.fillStyle = "rgba(0,255,180,0.16)";
   ctx.strokeStyle = "rgba(0,255,180,0.2)";
   drawRoundedRect(
@@ -171,7 +173,7 @@ function drawScene(
     ctx.fill();
     ctx.stroke();
 
-            if (worldWidth > PORTRAIT_WORLD_WIDTH) {
+            if (!isMobileWorld) {
   ctx.fillStyle = "rgba(0,255,180,0.16)";
   ctx.strokeStyle = "rgba(0,255,180,0.2)";
   drawRoundedRect(ctx, pipe.x - 8, bottomPipeY, pipeWidth + 16, 20, 12);
