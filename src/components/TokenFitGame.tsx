@@ -55,8 +55,8 @@ const LEADERBOARD_LIMIT = 10;
 ========================= */
 const MAX_DELTA_MS = 32;
 const MIN_DELTA_MS = 8;
-const HUD_SYNC_INTERVAL_MS = 1000 / 12;
-const DPR_CAP = 1.5;
+const HUD_SYNC_INTERVAL_MS = 1000 / 8;
+const DPR_CAP = 1.0;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -139,39 +139,18 @@ function drawScene(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, worldWidth, worldHeight);
 
-  const bg = ctx.createRadialGradient(
-    worldWidth * 0.5,
-    worldHeight * 0.35,
-    20,
-    worldWidth * 0.5,
-    worldHeight * 0.35,
-    worldHeight * 0.9
-  );
-  bg.addColorStop(0, "rgba(0,255,180,0.08)");
-  bg.addColorStop(0.55, "rgba(4,9,18,0.96)");
-  bg.addColorStop(1, "rgba(2,6,14,1)");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, worldWidth, worldHeight);
+  ctx.fillStyle = "#02060e";
+ctx.fillRect(0, 0, worldWidth, worldHeight);
 
-  const overlay = ctx.createLinearGradient(0, 0, 0, worldHeight);
-  overlay.addColorStop(0, "rgba(255,255,255,0.05)");
-  overlay.addColorStop(0.22, "rgba(255,255,255,0)");
-  overlay.addColorStop(0.7, "rgba(0,255,180,0.03)");
-  overlay.addColorStop(1, "rgba(0,0,0,0.18)");
-  ctx.fillStyle = overlay;
-  ctx.fillRect(0, 0, worldWidth, worldHeight);
+ctx.fillStyle = "rgba(0,255,180,0.035)";
+ctx.fillRect(0, 0, worldWidth, worldHeight * 0.55);
 
   for (const pipe of pipes) {
     const topPipeHeight = pipe.gapY - difficultyPipeGap / 2;
     const bottomPipeY = pipe.gapY + difficultyPipeGap / 2;
     const bottomPipeHeight = worldHeight - floorHeight - bottomPipeY;
 
-    const topGrad = ctx.createLinearGradient(0, 0, 0, topPipeHeight);
-    topGrad.addColorStop(0, "rgba(0,255,180,0.16)");
-    topGrad.addColorStop(0.2, "rgba(0,255,180,0.08)");
-    topGrad.addColorStop(1, "rgba(10,24,24,0.92)");
-
-    ctx.fillStyle = topGrad;
+    ctx.fillStyle = "rgba(8,40,34,0.96)";
     ctx.strokeStyle = "rgba(0,255,180,0.22)";
     ctx.lineWidth = 1;
     drawRoundedRect(ctx, pipe.x, 0, pipeWidth, topPipeHeight, 20);
@@ -184,17 +163,7 @@ function drawScene(
     ctx.fill();
     ctx.stroke();
 
-    const bottomGrad = ctx.createLinearGradient(
-      0,
-      bottomPipeY,
-      0,
-      bottomPipeY + bottomPipeHeight
-    );
-    bottomGrad.addColorStop(0, "rgba(10,24,24,0.92)");
-    bottomGrad.addColorStop(0.8, "rgba(0,255,180,0.08)");
-    bottomGrad.addColorStop(1, "rgba(0,255,180,0.16)");
-
-    ctx.fillStyle = bottomGrad;
+    ctx.fillStyle = "rgba(8,40,34,0.96)";
     ctx.strokeStyle = "rgba(0,255,180,0.22)";
     drawRoundedRect(ctx, pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight, 20);
     ctx.fill();
@@ -213,16 +182,7 @@ function drawScene(
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   ctx.fillRect(0, worldHeight - floorHeight, worldWidth, 1);
 
-  const floorGrad = ctx.createLinearGradient(
-    0,
-    worldHeight - floorHeight,
-    0,
-    worldHeight
-  );
-  floorGrad.addColorStop(0, "rgba(13,22,18,0.96)");
-  floorGrad.addColorStop(0.65, "rgba(7,13,10,1)");
-  floorGrad.addColorStop(1, "rgba(3,6,5,1)");
-  ctx.fillStyle = floorGrad;
+  ctx.fillStyle = "#07110d";
   ctx.fillRect(0, worldHeight - floorHeight, worldWidth, floorHeight);
 
   const rotationDeg = clamp(velocity * 4.5, -28, 60);
@@ -740,7 +700,7 @@ export default function TokenFitGame({
       }
 
       const rawDelta = now - lastFrameRef.current;
-      const deltaMs = clamp(rawDelta, MIN_DELTA_MS, MAX_DELTA_MS);
+      const deltaMs = clamp(rawDelta, 12, MAX_DELTA_MS);
       lastFrameRef.current = now;
 
       const frameScale = deltaMs / 16.6667;
@@ -1024,8 +984,8 @@ export default function TokenFitGame({
     borderRadius: isFullscreen ? "0px" : "28px",
     border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
     boxShadow: isFullscreen
-      ? "none"
-      : "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
+  ? "none"
+  : "inset 0 0 0 1px rgba(0,255,180,0.04)",
     backfaceVisibility: "hidden",
   }}
 >
@@ -1039,7 +999,6 @@ export default function TokenFitGame({
       display: "block",
       zIndex: 1,
       pointerEvents: "none",
-      border: "1px solid rgba(255,0,0,0.7)",
     }}
   />
 
