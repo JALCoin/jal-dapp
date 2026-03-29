@@ -145,12 +145,17 @@ const isMobileWorld = worldWidth === PORTRAIT_WORLD_WIDTH;
     const bottomPipeY = pipe.gapY + difficultyPipeGap / 2;
     const bottomPipeHeight = worldHeight - floorHeight - bottomPipeY;
 
-    ctx.fillStyle = "rgba(8,40,34,0.96)";
-    ctx.strokeStyle = "rgba(0,255,180,0.22)";
-    ctx.lineWidth = 1;
-    drawRoundedRect(ctx, pipe.x, 0, pipeWidth, topPipeHeight, 20);
-    ctx.fill();
-    ctx.stroke();
+    if (isMobileWorld) {
+  ctx.fillStyle = "rgba(8,40,34,0.96)";
+  ctx.fillRect(pipe.x, 0, pipeWidth, topPipeHeight);
+} else {
+  ctx.fillStyle = "rgba(8,40,34,0.96)";
+  ctx.strokeStyle = "rgba(0,255,180,0.22)";
+  ctx.lineWidth = 1;
+  drawRoundedRect(ctx, pipe.x, 0, pipeWidth, topPipeHeight, 20);
+  ctx.fill();
+  ctx.stroke();
+}
 
     if (!isMobileWorld) {
   ctx.fillStyle = "rgba(0,255,180,0.16)";
@@ -167,11 +172,17 @@ const isMobileWorld = worldWidth === PORTRAIT_WORLD_WIDTH;
   ctx.stroke();
 }
 
-    ctx.fillStyle = "rgba(8,40,34,0.96)";
-    ctx.strokeStyle = "rgba(0,255,180,0.22)";
-    drawRoundedRect(ctx, pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight, 20);
-    ctx.fill();
-    ctx.stroke();
+    if (isMobileWorld) {
+  ctx.fillStyle = "rgba(8,40,34,0.96)";
+  ctx.fillRect(pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight);
+} else {
+  ctx.fillStyle = "rgba(8,40,34,0.96)";
+  ctx.strokeStyle = "rgba(0,255,180,0.22)";
+  ctx.lineWidth = 1;
+  drawRoundedRect(ctx, pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight, 20);
+  ctx.fill();
+  ctx.stroke();
+}
 
             if (!isMobileWorld) {
   ctx.fillStyle = "rgba(0,255,180,0.16)";
@@ -182,11 +193,13 @@ const isMobileWorld = worldWidth === PORTRAIT_WORLD_WIDTH;
 }
 }
 
+  if (!isMobileWorld) {
   ctx.fillStyle = "rgba(255,255,255,0.05)";
   ctx.fillRect(0, 0, worldWidth, ceilingHeight);
 
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   ctx.fillRect(0, worldHeight - floorHeight, worldWidth, 1);
+}
 
   ctx.fillStyle = "#07110d";
   ctx.fillRect(0, worldHeight - floorHeight, worldWidth, floorHeight);
@@ -806,7 +819,7 @@ if (!ctx) return;
 
       pipesRef.current = nextPipes;
 
-      const hudInterval = mobileLiteMode ? 700 : HUD_SYNC_INTERVAL_MS;
+      const hudInterval = mobileLiteMode ? 1000 : HUD_SYNC_INTERVAL_MS;
 
 if (scoreRef.current !== lastDisplayedScoreRef.current) {
   lastDisplayedScoreRef.current = scoreRef.current;
@@ -899,7 +912,7 @@ if (scoreRef.current !== lastDisplayedScoreRef.current) {
     flap();
   };
 
-  const scoreDisplay = gameState === "playing" ? scoreRef.current : score;
+  const scoreDisplay = score;
   const showCompactEntry = gameState === "idle";
   const hideLeftPillsOnMobile = mobileLiteMode && gameState === "playing";
 
