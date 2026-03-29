@@ -54,7 +54,6 @@ const LEADERBOARD_LIMIT = 10;
    PERFORMANCE
 ========================= */
 const MAX_DELTA_MS = 32;
-const MIN_DELTA_MS = 8;
 const HUD_SYNC_INTERVAL_MS = 1000 / 8;
 const DPR_CAP = 1.0;
 
