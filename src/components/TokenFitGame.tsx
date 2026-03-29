@@ -42,20 +42,21 @@ const PORTRAIT_WORLD_HEIGHT = 820;
 const TOKEN_SIZE = 42;
 
 /* =========================
-   TUNING
+   BASE TUNING
 ========================= */
-const GRAVITY = 0.34;
-const JUMP_FORCE = -5.9;
-const PIPE_SPAWN_EVERY = 1500;
+const BASE_GRAVITY = 0.34;
+const BASE_JUMP_FORCE = -5.9;
+const BASE_PIPE_SPAWN_EVERY = 1500;
 const COUNTDOWN_SECONDS = 3;
 const LEADERBOARD_LIMIT = 10;
 
 /* =========================
-   RENDER / PERF
+   PERFORMANCE
 ========================= */
 const MAX_DELTA_MS = 32;
 const MIN_DELTA_MS = 8;
-const RENDER_INTERVAL_MS = 1000 / 30;
+const HUD_SYNC_INTERVAL_MS = 1000 / 12;
+const DPR_CAP = 1.5;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -90,6 +91,37 @@ function getViewportSize() {
   };
 }
 
+function getBenchmarkLabel(nextScore: number) {
+  const labels: Record<number, string> = {
+    50: "Gate 01 Complete",
+    60: "Benchmark Reached",
+    70: "Control Stable",
+    80: "Max Pressure",
+    100: "Elite Tier",
+  };
+
+  return labels[nextScore] ?? "";
+}
+
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  const r = Math.min(radius, width / 2, height / 2);
+
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
 export default function TokenFitGame({
   minScore,
   username,
@@ -108,13 +140,10 @@ export default function TokenFitGame({
   const [sceneScale, setSceneScale] = useState(1);
   const [sceneWidth, setSceneWidth] = useState(LANDSCAPE_WORLD_WIDTH);
   const [sceneHeight, setSceneHeight] = useState(LANDSCAPE_WORLD_HEIGHT);
-
-  const initialPortraitY = PORTRAIT_WORLD_HEIGHT / 2 - TOKEN_SIZE / 2;
-  const [tokenY, setTokenY] = useState(initialPortraitY);
-  const [velocity, setVelocity] = useState(0);
-  const [pipes, setPipes] = useState<Pipe[]>([]);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [benchmarkMessage, setBenchmarkMessage] = useState("");
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const benchmarkTimerRef = useRef<number | null>(null);
   const shownBenchmarksRef = useRef<Set<number>>(new Set());
@@ -123,8 +152,10 @@ export default function TokenFitGame({
   const lastFrameRef = useRef<number | null>(null);
   const spawnTimerRef = useRef(0);
   const nextPipeIdRef = useRef(1);
-  const lastRenderRef = useRef(0);
+  const lastHudSyncRef = useRef(0);
   const thresholdReachedRef = useRef(false);
+
+  const initialPortraitY = PORTRAIT_WORLD_HEIGHT / 2 - TOKEN_SIZE / 2;
 
   const scoreRef = useRef(0);
   const gameStateRef = useRef<TokenFitState>("idle");
@@ -147,22 +178,6 @@ export default function TokenFitGame({
     gameStateRef.current = gameState;
   }, [gameState]);
 
-  useEffect(() => {
-    scoreRef.current = score;
-  }, [score]);
-
-  useEffect(() => {
-    tokenYRef.current = tokenY;
-  }, [tokenY]);
-
-  useEffect(() => {
-    velocityRef.current = velocity;
-  }, [velocity]);
-
-  useEffect(() => {
-    pipesRef.current = pipes;
-  }, [pipes]);
-
   const isPortrait = viewMode === "portrait";
 
   const worldWidth = isPortrait ? PORTRAIT_WORLD_WIDTH : LANDSCAPE_WORLD_WIDTH;
@@ -170,8 +185,8 @@ export default function TokenFitGame({
 
   const tokenX = isPortrait ? 104 : 180;
   const pipeWidth = isPortrait ? 78 : 96;
-  const pipeGap = isPortrait ? 220 : 190;
-  const pipeSpeed = isPortrait ? 2.6 : 2.3;
+  const basePipeGap = isPortrait ? 220 : 190;
+  const basePipeSpeed = isPortrait ? 2.6 : 2.3;
 
   const floorHeight = isPortrait ? 110 : 74;
   const ceilingHeight = isPortrait ? 24 : 18;
@@ -184,12 +199,18 @@ export default function TokenFitGame({
   const safeUsername = sanitizeUsername(username);
   const canStart = safeUsername.length >= 3;
 
-  const syncVisualState = useCallback(() => {
-    setVelocity(velocityRef.current);
-    setTokenY(tokenYRef.current);
-    setPipes([...pipesRef.current]);
-    setScore(scoreRef.current);
-  }, []);
+  const difficulty = useMemo(() => {
+    const progress = Math.max(0, highScore - minScore);
+    const steps = Math.floor(progress / 10);
+
+    return {
+      gravity: BASE_GRAVITY + steps * 0.012,
+      jumpForce: BASE_JUMP_FORCE - steps * 0.06,
+      pipeSpawnEvery: Math.max(920, BASE_PIPE_SPAWN_EVERY - steps * 70),
+      pipeGap: Math.max(isPortrait ? 150 : 132, basePipeGap - steps * 9),
+      pipeSpeed: basePipeSpeed + steps * 0.12,
+    };
+  }, [basePipeGap, basePipeSpeed, highScore, isPortrait, minScore]);
 
   const fetchLeaderboard = useCallback(async () => {
     const { data, error } = await supabase
@@ -222,46 +243,12 @@ export default function TokenFitGame({
     };
   }, []);
 
-  const resetWorld = useCallback(() => {
-    const startY = worldHeight / 2 - TOKEN_SIZE / 2;
+  const syncHudState = useCallback(() => {
+    setScore(scoreRef.current);
+  }, []);
 
-    scoreRef.current = 0;
-    velocityRef.current = 0;
-    tokenYRef.current = startY;
-    pipesRef.current = [];
-    thresholdReachedRef.current = false;
-
-    setScore(0);
-    setVelocity(0);
-    setTokenY(startY);
-    setPipes([]);
-
-    setCountdown(COUNTDOWN_SECONDS);
-
-    lastFrameRef.current = null;
-    spawnTimerRef.current = 0;
-    nextPipeIdRef.current = 1;
-    lastRenderRef.current = 0;
-
-    shownBenchmarksRef.current = new Set();
-    setBenchmarkMessage("");
-
-    if (benchmarkTimerRef.current) {
-      window.clearTimeout(benchmarkTimerRef.current);
-      benchmarkTimerRef.current = null;
-    }
-  }, [worldHeight]);
-
-  function showBenchmark(nextScore: number) {
-    const labels: Record<number, string> = {
-      50: "Gate 01 Complete",
-      60: "Benchmark Reached",
-      70: "Control Stable",
-      80: "Max Pressure",
-      100: "Elite Tier",
-    };
-
-    const message = labels[nextScore];
+  const showBenchmark = useCallback((nextScore: number) => {
+    const message = getBenchmarkLabel(nextScore);
     if (!message || shownBenchmarksRef.current.has(nextScore)) return;
 
     shownBenchmarksRef.current.add(nextScore);
@@ -275,7 +262,33 @@ export default function TokenFitGame({
       setBenchmarkMessage("");
       benchmarkTimerRef.current = null;
     }, 1500);
-  }
+  }, []);
+
+  const resetWorld = useCallback(() => {
+    const startY = worldHeight / 2 - TOKEN_SIZE / 2;
+
+    scoreRef.current = 0;
+    velocityRef.current = 0;
+    tokenYRef.current = startY;
+    pipesRef.current = [];
+    thresholdReachedRef.current = false;
+
+    setScore(0);
+    setCountdown(COUNTDOWN_SECONDS);
+
+    lastFrameRef.current = null;
+    spawnTimerRef.current = 0;
+    nextPipeIdRef.current = 1;
+    lastHudSyncRef.current = 0;
+
+    shownBenchmarksRef.current = new Set();
+    setBenchmarkMessage("");
+
+    if (benchmarkTimerRef.current) {
+      window.clearTimeout(benchmarkTimerRef.current);
+      benchmarkTimerRef.current = null;
+    }
+  }, [worldHeight]);
 
   const finalizeRun = useCallback(
     (finalScore: number) => {
@@ -287,7 +300,7 @@ export default function TokenFitGame({
       }
 
       if (safeUsername && finalScore > 0) {
-        (async () => {
+        void (async () => {
           const { data: existing } = await supabase
             .from("gate1_leaderboard")
             .select("score")
@@ -315,7 +328,7 @@ export default function TokenFitGame({
 
       return { nextHighScore };
     },
-    [highScore, safeUsername, fetchLeaderboard]
+    [fetchLeaderboard, highScore, safeUsername]
   );
 
   const endGame = useCallback(
@@ -328,8 +341,7 @@ export default function TokenFitGame({
 
       setGameState(nextState);
       gameStateRef.current = nextState;
-
-      syncVisualState();
+      syncHudState();
 
       if (nextState === "passed") {
         onPass(finalScore, nextHighScore);
@@ -337,7 +349,7 @@ export default function TokenFitGame({
         onGameOver?.(finalScore, nextHighScore);
       }
     },
-    [finalizeRun, onGameOver, onPass, syncVisualState]
+    [finalizeRun, onGameOver, onPass, syncHudState]
   );
 
   const flap = useCallback(() => {
@@ -352,9 +364,8 @@ export default function TokenFitGame({
       return;
     }
 
-    velocityRef.current = JUMP_FORCE;
-    setVelocity(JUMP_FORCE);
-  }, [resetWorld]);
+    velocityRef.current = difficulty.jumpForce;
+  }, [difficulty.jumpForce, resetWorld]);
 
   const beginPlaying = useCallback(() => {
     if (!canStart) return;
@@ -522,7 +533,147 @@ export default function TokenFitGame({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeTrial, flap, isFullscreen]);
 
-  const showCompactEntry = gameState === "idle";
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
+    canvas.width = Math.round(worldWidth * dpr);
+    canvas.height = Math.round(worldHeight * dpr);
+    canvas.style.width = `${worldWidth}px`;
+    canvas.style.height = `${worldHeight}px`;
+
+    const renderFrame = () => {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, worldWidth, worldHeight);
+
+      const bg = ctx.createRadialGradient(
+        worldWidth * 0.5,
+        worldHeight * 0.35,
+        20,
+        worldWidth * 0.5,
+        worldHeight * 0.35,
+        worldHeight * 0.9
+      );
+      bg.addColorStop(0, "rgba(0,255,180,0.08)");
+      bg.addColorStop(0.55, "rgba(4,9,18,0.96)");
+      bg.addColorStop(1, "rgba(2,6,14,1)");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, worldWidth, worldHeight);
+
+      const overlay = ctx.createLinearGradient(0, 0, 0, worldHeight);
+      overlay.addColorStop(0, "rgba(255,255,255,0.05)");
+      overlay.addColorStop(0.22, "rgba(255,255,255,0)");
+      overlay.addColorStop(0.7, "rgba(0,255,180,0.03)");
+      overlay.addColorStop(1, "rgba(0,0,0,0.18)");
+      ctx.fillStyle = overlay;
+      ctx.fillRect(0, 0, worldWidth, worldHeight);
+
+      for (const pipe of pipesRef.current) {
+        const topPipeHeight = pipe.gapY - difficulty.pipeGap / 2;
+        const bottomPipeY = pipe.gapY + difficulty.pipeGap / 2;
+        const bottomPipeHeight = worldHeight - floorHeight - bottomPipeY;
+
+        const topGrad = ctx.createLinearGradient(0, 0, 0, topPipeHeight);
+        topGrad.addColorStop(0, "rgba(0,255,180,0.16)");
+        topGrad.addColorStop(0.2, "rgba(0,255,180,0.08)");
+        topGrad.addColorStop(1, "rgba(10,24,24,0.92)");
+
+        ctx.fillStyle = topGrad;
+        ctx.strokeStyle = "rgba(0,255,180,0.22)";
+        ctx.lineWidth = 1;
+        drawRoundedRect(ctx, pipe.x, 0, pipeWidth, topPipeHeight, 20);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(0,255,180,0.16)";
+        ctx.strokeStyle = "rgba(0,255,180,0.2)";
+        drawRoundedRect(ctx, pipe.x - 8, topPipeHeight - 20, pipeWidth + 16, 20, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        const bottomGrad = ctx.createLinearGradient(
+          0,
+          bottomPipeY,
+          0,
+          bottomPipeY + bottomPipeHeight
+        );
+        bottomGrad.addColorStop(0, "rgba(10,24,24,0.92)");
+        bottomGrad.addColorStop(0.8, "rgba(0,255,180,0.08)");
+        bottomGrad.addColorStop(1, "rgba(0,255,180,0.16)");
+
+        ctx.fillStyle = bottomGrad;
+        ctx.strokeStyle = "rgba(0,255,180,0.22)";
+        drawRoundedRect(ctx, pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight, 20);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(0,255,180,0.16)";
+        ctx.strokeStyle = "rgba(0,255,180,0.2)";
+        drawRoundedRect(ctx, pipe.x - 8, bottomPipeY, pipeWidth + 16, 20, 12);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "rgba(255,255,255,0.05)";
+      ctx.fillRect(0, 0, worldWidth, ceilingHeight);
+
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.fillRect(0, worldHeight - floorHeight, worldWidth, 1);
+
+      const floorGrad = ctx.createLinearGradient(
+        0,
+        worldHeight - floorHeight,
+        0,
+        worldHeight
+      );
+      floorGrad.addColorStop(0, "rgba(13,22,18,0.96)");
+      floorGrad.addColorStop(0.65, "rgba(7,13,10,1)");
+      floorGrad.addColorStop(1, "rgba(3,6,5,1)");
+      ctx.fillStyle = floorGrad;
+      ctx.fillRect(0, worldHeight - floorHeight, worldWidth, floorHeight);
+
+      const rotationDeg = clamp(velocityRef.current * 4.5, -28, 60);
+      const rotationRad = (rotationDeg * Math.PI) / 180;
+      const centerX = tokenX + TOKEN_SIZE / 2;
+      const centerY = tokenYRef.current + TOKEN_SIZE / 2;
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(rotationRad);
+
+      const tokenGrad = ctx.createRadialGradient(
+        -TOKEN_SIZE * 0.15,
+        -TOKEN_SIZE * 0.18,
+        2,
+        0,
+        0,
+        TOKEN_SIZE * 0.56
+      );
+      tokenGrad.addColorStop(0, "rgba(255,255,255,0.92)");
+      tokenGrad.addColorStop(0.2, "rgba(227,205,112,0.95)");
+      tokenGrad.addColorStop(0.58, "rgba(170,120,32,0.96)");
+      tokenGrad.addColorStop(1, "rgba(70,40,8,1)");
+
+      ctx.fillStyle = tokenGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, TOKEN_SIZE / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, TOKEN_SIZE / 2 - 7, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+    };
+
+    renderFrame();
+  }, [ceilingHeight, difficulty.pipeGap, floorHeight, pipeWidth, tokenX, worldHeight, worldWidth]);
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -538,8 +689,12 @@ export default function TokenFitGame({
 
     const gapPaddingTop = isPortrait ? 110 : 76;
     const gapPaddingBottom = isPortrait ? 150 : 104;
-    const minGapY = gapPaddingTop + pipeGap / 2;
-    const maxGapY = worldHeight - floorHeight - gapPaddingBottom - pipeGap / 2;
+    const minGapY = gapPaddingTop + difficulty.pipeGap / 2;
+    const maxGapY =
+      worldHeight - floorHeight - gapPaddingBottom - difficulty.pipeGap / 2;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
 
     const tick = (now: number) => {
       if (gameStateRef.current !== "playing") return;
@@ -554,21 +709,19 @@ export default function TokenFitGame({
 
       const frameScale = deltaMs / 16.6667;
 
-      let nextVelocity = velocityRef.current + GRAVITY * frameScale;
+      let nextVelocity = velocityRef.current + difficulty.gravity * frameScale;
       let nextY = tokenYRef.current + nextVelocity * frameScale;
 
       if (nextY <= topBound) {
-        nextY = topBound;
+        tokenYRef.current = topBound;
         velocityRef.current = nextVelocity;
-        tokenYRef.current = nextY;
         endGame("gameover");
         return;
       }
 
       if (nextY >= bottomBound) {
-        nextY = bottomBound;
+        tokenYRef.current = bottomBound;
         velocityRef.current = nextVelocity;
-        tokenYRef.current = nextY;
         endGame("gameover");
         return;
       }
@@ -578,8 +731,8 @@ export default function TokenFitGame({
 
       spawnTimerRef.current += deltaMs;
 
-      while (spawnTimerRef.current >= PIPE_SPAWN_EVERY) {
-        spawnTimerRef.current -= PIPE_SPAWN_EVERY;
+      while (spawnTimerRef.current >= difficulty.pipeSpawnEvery) {
+        spawnTimerRef.current -= difficulty.pipeSpawnEvery;
 
         const gapY = Math.random() * (maxGapY - minGapY) + minGapY;
 
@@ -599,7 +752,7 @@ export default function TokenFitGame({
       const nextPipes: Pipe[] = [];
 
       for (const pipe of pipesRef.current) {
-        const nextX = pipe.x - pipeSpeed * frameScale;
+        const nextX = pipe.x - difficulty.pipeSpeed * frameScale;
 
         if (nextX + pipeWidth <= -60) continue;
 
@@ -633,8 +786,8 @@ export default function TokenFitGame({
         const withinX = tokenRight > pipeLeft && tokenLeft < pipeRight;
 
         if (withinX) {
-          const gapTop = nextPipe.gapY - pipeGap / 2;
-          const gapBottom = nextPipe.gapY + pipeGap / 2;
+          const gapTop = nextPipe.gapY - difficulty.pipeGap / 2;
+          const gapBottom = nextPipe.gapY + difficulty.pipeGap / 2;
 
           if (tokenTop < gapTop || tokenBottom > gapBottom) {
             nextPipes.push(nextPipe);
@@ -649,10 +802,137 @@ export default function TokenFitGame({
 
       pipesRef.current = nextPipes;
 
-      const nowRender = performance.now();
-      if (nowRender - lastRenderRef.current >= RENDER_INTERVAL_MS) {
-        lastRenderRef.current = nowRender;
-        syncVisualState();
+      if (now - lastHudSyncRef.current >= HUD_SYNC_INTERVAL_MS) {
+        lastHudSyncRef.current = now;
+        syncHudState();
+      }
+
+      if (canvas && ctx) {
+        const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, worldWidth, worldHeight);
+
+        const bg = ctx.createRadialGradient(
+          worldWidth * 0.5,
+          worldHeight * 0.35,
+          20,
+          worldWidth * 0.5,
+          worldHeight * 0.35,
+          worldHeight * 0.9
+        );
+        bg.addColorStop(0, "rgba(0,255,180,0.08)");
+        bg.addColorStop(0.55, "rgba(4,9,18,0.96)");
+        bg.addColorStop(1, "rgba(2,6,14,1)");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, worldWidth, worldHeight);
+
+        const overlay = ctx.createLinearGradient(0, 0, 0, worldHeight);
+        overlay.addColorStop(0, "rgba(255,255,255,0.05)");
+        overlay.addColorStop(0.22, "rgba(255,255,255,0)");
+        overlay.addColorStop(0.7, "rgba(0,255,180,0.03)");
+        overlay.addColorStop(1, "rgba(0,0,0,0.18)");
+        ctx.fillStyle = overlay;
+        ctx.fillRect(0, 0, worldWidth, worldHeight);
+
+        for (const pipe of pipesRef.current) {
+          const topPipeHeight = pipe.gapY - difficulty.pipeGap / 2;
+          const bottomPipeY = pipe.gapY + difficulty.pipeGap / 2;
+          const bottomPipeHeight = worldHeight - floorHeight - bottomPipeY;
+
+          const topGrad = ctx.createLinearGradient(0, 0, 0, topPipeHeight);
+          topGrad.addColorStop(0, "rgba(0,255,180,0.16)");
+          topGrad.addColorStop(0.2, "rgba(0,255,180,0.08)");
+          topGrad.addColorStop(1, "rgba(10,24,24,0.92)");
+
+          ctx.fillStyle = topGrad;
+          ctx.strokeStyle = "rgba(0,255,180,0.22)";
+          ctx.lineWidth = 1;
+          drawRoundedRect(ctx, pipe.x, 0, pipeWidth, topPipeHeight, 20);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = "rgba(0,255,180,0.16)";
+          ctx.strokeStyle = "rgba(0,255,180,0.2)";
+          drawRoundedRect(ctx, pipe.x - 8, topPipeHeight - 20, pipeWidth + 16, 20, 12);
+          ctx.fill();
+          ctx.stroke();
+
+          const bottomGrad = ctx.createLinearGradient(
+            0,
+            bottomPipeY,
+            0,
+            bottomPipeY + bottomPipeHeight
+          );
+          bottomGrad.addColorStop(0, "rgba(10,24,24,0.92)");
+          bottomGrad.addColorStop(0.8, "rgba(0,255,180,0.08)");
+          bottomGrad.addColorStop(1, "rgba(0,255,180,0.16)");
+
+          ctx.fillStyle = bottomGrad;
+          ctx.strokeStyle = "rgba(0,255,180,0.22)";
+          drawRoundedRect(ctx, pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight, 20);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = "rgba(0,255,180,0.16)";
+          ctx.strokeStyle = "rgba(0,255,180,0.2)";
+          drawRoundedRect(ctx, pipe.x - 8, bottomPipeY, pipeWidth + 16, 20, 12);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "rgba(255,255,255,0.05)";
+        ctx.fillRect(0, 0, worldWidth, ceilingHeight);
+
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillRect(0, worldHeight - floorHeight, worldWidth, 1);
+
+        const floorGrad = ctx.createLinearGradient(
+          0,
+          worldHeight - floorHeight,
+          0,
+          worldHeight
+        );
+        floorGrad.addColorStop(0, "rgba(13,22,18,0.96)");
+        floorGrad.addColorStop(0.65, "rgba(7,13,10,1)");
+        floorGrad.addColorStop(1, "rgba(3,6,5,1)");
+        ctx.fillStyle = floorGrad;
+        ctx.fillRect(0, worldHeight - floorHeight, worldWidth, floorHeight);
+
+        const rotationDeg = clamp(velocityRef.current * 4.5, -28, 60);
+        const rotationRad = (rotationDeg * Math.PI) / 180;
+        const centerX = tokenX + TOKEN_SIZE / 2;
+        const centerY = tokenYRef.current + TOKEN_SIZE / 2;
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(rotationRad);
+
+        const tokenGrad = ctx.createRadialGradient(
+          -TOKEN_SIZE * 0.15,
+          -TOKEN_SIZE * 0.18,
+          2,
+          0,
+          0,
+          TOKEN_SIZE * 0.56
+        );
+        tokenGrad.addColorStop(0, "rgba(255,255,255,0.92)");
+        tokenGrad.addColorStop(0.2, "rgba(227,205,112,0.95)");
+        tokenGrad.addColorStop(0.58, "rgba(170,120,32,0.96)");
+        tokenGrad.addColorStop(1, "rgba(70,40,8,1)");
+
+        ctx.fillStyle = tokenGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, TOKEN_SIZE / 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(255,255,255,0.25)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, TOKEN_SIZE / 2 - 7, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
       }
 
       rafRef.current = requestAnimationFrame(tick);
@@ -668,6 +948,10 @@ export default function TokenFitGame({
     };
   }, [
     ceilingHeight,
+    difficulty.gravity,
+    difficulty.pipeGap,
+    difficulty.pipeSpawnEvery,
+    difficulty.pipeSpeed,
     endGame,
     endlessMode,
     floorHeight,
@@ -676,10 +960,9 @@ export default function TokenFitGame({
     isPortrait,
     minScore,
     onPass,
-    pipeGap,
-    pipeSpeed,
     pipeWidth,
-    syncVisualState,
+    showBenchmark,
+    syncHudState,
     tokenX,
     worldHeight,
     worldWidth,
@@ -695,7 +978,7 @@ export default function TokenFitGame({
     return "Trial Available";
   }, [endlessMode, gameState]);
 
-  const tokenRotation = clamp(velocity * 4.5, -28, 60);
+  const showCompactEntry = gameState === "idle";
 
   const isSmallViewport = sceneScale < 0.72;
   const hudTop = isSmallViewport ? 12 : 22;
@@ -794,14 +1077,8 @@ export default function TokenFitGame({
           className="jal-tokenfit-scene-frame"
           style={
             isFullscreen
-              ? {
-                  width: "100vw",
-                  height: "100dvh",
-                }
-              : {
-                  width: `${sceneWidth}px`,
-                  height: `${sceneHeight}px`,
-                }
+              ? { width: "100vw", height: "100dvh" }
+              : { width: `${sceneWidth}px`, height: `${sceneHeight}px` }
           }
         >
           <div
@@ -818,23 +1095,21 @@ export default function TokenFitGame({
               overflow: "hidden",
               borderRadius: isFullscreen ? "0px" : "28px",
               border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
-              background:
-                "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
               boxShadow: isFullscreen
                 ? "none"
                 : "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
-              willChange: "transform",
               contain: "layout paint style",
               backfaceVisibility: "hidden",
             }}
           >
-            <div
+            <canvas
+              ref={canvasRef}
               style={{
                 position: "absolute",
                 inset: 0,
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 22%, rgba(0,255,180,0.03) 70%, rgba(0,0,0,0.18) 100%)",
-                pointerEvents: "none",
+                width: `${worldWidth}px`,
+                height: `${worldHeight}px`,
+                display: "block",
               }}
             />
 
@@ -974,137 +1249,6 @@ export default function TokenFitGame({
                 </button>
               )}
             </div>
-
-            {pipes.map((pipe) => {
-              const topPipeHeight = pipe.gapY - pipeGap / 2;
-              const bottomPipeY = pipe.gapY + pipeGap / 2;
-              const bottomPipeHeight = worldHeight - floorHeight - bottomPipeY;
-
-              return (
-                <div key={pipe.id}>
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: pipe.x,
-                      top: 0,
-                      width: pipeWidth,
-                      height: topPipeHeight,
-                      borderRadius: "0 0 20px 20px",
-                      background:
-                        "linear-gradient(180deg, rgba(0,255,180,0.16), rgba(0,255,180,0.08) 20%, rgba(10,24,24,0.92) 100%)",
-                      border: "1px solid rgba(0,255,180,0.22)",
-                      boxShadow: "0 0 18px rgba(0,255,180,0.09)",
-                      willChange: "transform",
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: pipe.x - 8,
-                      top: topPipeHeight - 20,
-                      width: pipeWidth + 16,
-                      height: 20,
-                      borderRadius: 12,
-                      background: "rgba(0,255,180,0.16)",
-                      border: "1px solid rgba(0,255,180,0.2)",
-                      willChange: "transform",
-                    }}
-                  />
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: pipe.x,
-                      top: bottomPipeY,
-                      width: pipeWidth,
-                      height: bottomPipeHeight,
-                      borderRadius: "20px 20px 0 0",
-                      background:
-                        "linear-gradient(180deg, rgba(10,24,24,0.92), rgba(0,255,180,0.08) 80%, rgba(0,255,180,0.16) 100%)",
-                      border: "1px solid rgba(0,255,180,0.22)",
-                      boxShadow: "0 0 18px rgba(0,255,180,0.09)",
-                      willChange: "transform",
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: pipe.x - 8,
-                      top: bottomPipeY,
-                      width: pipeWidth + 16,
-                      height: 20,
-                      borderRadius: 12,
-                      background: "rgba(0,255,180,0.16)",
-                      border: "1px solid rgba(0,255,180,0.2)",
-                      willChange: "transform",
-                    }}
-                  />
-                </div>
-              );
-            })}
-
-            <div
-              style={{
-                position: "absolute",
-                left: tokenX,
-                top: tokenY,
-                width: TOKEN_SIZE,
-                height: TOKEN_SIZE,
-                transform: `rotate(${tokenRotation}deg)`,
-                transformOrigin: "center center",
-                borderRadius: "50%",
-                background:
-                  "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.92), rgba(227,205,112,0.95) 20%, rgba(170,120,32,0.96) 58%, rgba(70,40,8,1) 100%)",
-                boxShadow:
-                  "0 0 22px rgba(255,208,92,0.45), inset 0 1px 5px rgba(255,255,255,0.42), inset 0 -4px 10px rgba(30,16,2,0.5)",
-                zIndex: 4,
-                willChange: "transform, top",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 7,
-                  borderRadius: "50%",
-                  border: "1px solid rgba(255,255,255,0.25)",
-                }}
-              />
-            </div>
-
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                bottom: floorHeight,
-                height: 1,
-                background: "rgba(255,255,255,0.08)",
-              }}
-            />
-
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: floorHeight,
-                background:
-                  "linear-gradient(180deg, rgba(13,22,18,0.96), rgba(7,13,10,1) 65%, rgba(3,6,5,1) 100%)",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
-              }}
-            />
-
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: 0,
-                height: ceilingHeight,
-                background: "rgba(255,255,255,0.05)",
-              }}
-            />
 
             {benchmarkMessage && gameState === "playing" && (
               <div
