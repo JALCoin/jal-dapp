@@ -125,7 +125,8 @@ function drawScene(
   tokenX: number,
   tokenY: number,
   velocity: number,
-  pipes: Pipe[]
+  pipes: Pipe[],
+  isMobileLite: boolean
 ) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 ctx.clearRect(0, 0, worldWidth, worldHeight);
@@ -204,13 +205,26 @@ const isMobileWorld = worldWidth === PORTRAIT_WORLD_WIDTH;
   ctx.fillStyle = "#07110d";
   ctx.fillRect(0, worldHeight - floorHeight, worldWidth, floorHeight);
 
+  const centerX = tokenX + TOKEN_SIZE / 2;
+const centerY = tokenY + TOKEN_SIZE / 2;
+
+ctx.save();
+ctx.translate(centerX, centerY);
+
+if (isMobileLite) {
+  ctx.fillStyle = "#c8922c";
+  ctx.beginPath();
+  ctx.arc(0, 0, TOKEN_SIZE / 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, 0, TOKEN_SIZE / 2 - 6, 0, Math.PI * 2);
+  ctx.stroke();
+} else {
   const rotationDeg = clamp(velocity * 4.5, -28, 60);
   const rotationRad = (rotationDeg * Math.PI) / 180;
-  const centerX = tokenX + TOKEN_SIZE / 2;
-  const centerY = tokenY + TOKEN_SIZE / 2;
-
-  ctx.save();
-  ctx.translate(centerX, centerY);
   ctx.rotate(rotationRad);
 
   const tokenGrad = ctx.createRadialGradient(
@@ -236,8 +250,9 @@ const isMobileWorld = worldWidth === PORTRAIT_WORLD_WIDTH;
   ctx.beginPath();
   ctx.arc(0, 0, TOKEN_SIZE / 2 - 7, 0, Math.PI * 2);
   ctx.stroke();
+}
 
-  ctx.restore();
+ctx.restore();
 }
 
 export default function TokenFitGame({
@@ -659,29 +674,31 @@ const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
     canvas.style.height = `${worldHeight}px`;
 
     drawScene(
-      ctx,
-      dpr,
-      worldWidth,
-      worldHeight,
-      ceilingHeight,
-      floorHeight,
-      difficulty.pipeGap,
-      pipeWidth,
-      tokenX,
-      tokenYRef.current,
-      velocityRef.current,
-      pipesRef.current
-    );
-  }, [
-    ceilingHeight,
-    difficulty.pipeGap,
-    floorHeight,
-    pipeWidth,
-    tokenX,
-    worldHeight,
-    worldWidth,
-    gameState,
-  ]);
+  ctx,
+  dpr,
+  worldWidth,
+  worldHeight,
+  ceilingHeight,
+  floorHeight,
+  difficulty.pipeGap,
+  pipeWidth,
+  tokenX,
+  tokenYRef.current,
+  velocityRef.current,
+  pipesRef.current,
+  mobileLiteMode
+);
+ }, [
+  ceilingHeight,
+  difficulty.pipeGap,
+  floorHeight,
+  pipeWidth,
+  tokenX,
+  worldHeight,
+  worldWidth,
+  gameState,
+  mobileLiteMode,
+]);
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -819,7 +836,7 @@ if (!ctx) return;
 
       pipesRef.current = nextPipes;
 
-      const hudInterval = mobileLiteMode ? 1000 : HUD_SYNC_INTERVAL_MS;
+      const hudInterval = mobileLiteMode ? 1200 : HUD_SYNC_INTERVAL_MS;
 
 if (scoreRef.current !== lastDisplayedScoreRef.current) {
   lastDisplayedScoreRef.current = scoreRef.current;
@@ -833,20 +850,21 @@ if (scoreRef.current !== lastDisplayedScoreRef.current) {
       if (canvas && ctx) {
         const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
 
-        drawScene(
-          ctx,
-          dpr,
-          worldWidth,
-          worldHeight,
-          ceilingHeight,
-          floorHeight,
-          difficulty.pipeGap,
-          pipeWidth,
-          tokenX,
-          tokenYRef.current,
-          velocityRef.current,
-          pipesRef.current
-        );
+drawScene(
+  ctx,
+  dpr,
+  worldWidth,
+  worldHeight,
+  ceilingHeight,
+  floorHeight,
+  difficulty.pipeGap,
+  pipeWidth,
+  tokenX,
+  tokenYRef.current,
+  velocityRef.current,
+  pipesRef.current,
+  mobileLiteMode
+);
       }
 
       rafRef.current = requestAnimationFrame(tick);
