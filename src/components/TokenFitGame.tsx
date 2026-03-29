@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { supabase } from "../lib/supabase";
 
 export type TokenFitGameProps = {
   minScore: number;
@@ -28,7 +29,6 @@ type LeaderboardEntry = {
 };
 
 const STORAGE_KEY = "jal_observe_token_fit_high_score_v2";
-const LEADERBOARD_STORAGE_KEY = "jal_observe_token_fit_leaderboard_v1";
 
 /* =========================
    WORLD SIZING
@@ -77,75 +77,6 @@ function saveHighScore(score: number) {
   window.localStorage.setItem(STORAGE_KEY, String(score));
 }
 
-function loadLeaderboard(): LeaderboardEntry[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const raw = window.localStorage.getItem(LEADERBOARD_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw) as unknown;
-
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .filter((entry): entry is LeaderboardEntry => {
-        return (
-          entry != null &&
-          typeof entry === "object" &&
-          typeof (entry as LeaderboardEntry).id === "string" &&
-          typeof (entry as LeaderboardEntry).username === "string" &&
-          typeof (entry as LeaderboardEntry).score === "number" &&
-          typeof (entry as LeaderboardEntry).achievedAt === "number"
-        );
-      })
-      .map((entry) => ({
-        ...entry,
-        username: sanitizeUsername(entry.username),
-      }))
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return a.achievedAt - b.achievedAt;
-      })
-      .slice(0, LEADERBOARD_LIMIT);
-  } catch {
-    return [];
-  }
-}
-
-function saveLeaderboard(entries: LeaderboardEntry[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    LEADERBOARD_STORAGE_KEY,
-    JSON.stringify(entries.slice(0, LEADERBOARD_LIMIT))
-  );
-}
-
-function recordLeaderboardScore(username: string, score: number) {
-  const safeUsername = sanitizeUsername(username);
-  if (!safeUsername || score <= 0) {
-    return loadLeaderboard();
-  }
-
-  const nextEntries = [
-    ...loadLeaderboard(),
-    {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-      username: safeUsername,
-      score,
-      achievedAt: Date.now(),
-    },
-  ]
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return a.achievedAt - b.achievedAt;
-    })
-    .slice(0, LEADERBOARD_LIMIT);
-
-  saveLeaderboard(nextEntries);
-  return nextEntries;
-}
-
 function getViewportSize() {
   if (typeof window === "undefined") {
     return { width: LANDSCAPE_WORLD_WIDTH, height: LANDSCAPE_WORLD_HEIGHT };
@@ -172,10 +103,7 @@ export default function TokenFitGame({
 
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => loadHighScore());
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() =>
-    loadLeaderboard()
-  );
-
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("landscape");
   const [sceneScale, setSceneScale] = useState(1);
   const [sceneWidth, setSceneWidth] = useState(LANDSCAPE_WORLD_WIDTH);
@@ -259,6 +187,29 @@ export default function TokenFitGame({
     setScore(scoreRef.current);
   }, []);
 
+  const fetchLeaderboard = useCallback(async () => {
+  const { data, error } = await supabase
+    .from("gate1_leaderboard")
+    .select("*")
+    .order("score", { ascending: false })
+    .limit(LEADERBOARD_LIMIT);
+
+  if (!error && data) {
+    setLeaderboard(
+      data.map((entry) => ({
+        id: entry.username,
+        username: entry.username,
+        score: entry.score,
+        achievedAt: Date.now(),
+      }))
+    );
+  }
+}, []);
+
+useEffect(() => {
+  fetchLeaderboard();
+}, [fetchLeaderboard]);
+
   const resetWorld = useCallback(() => {
     const startY = worldHeight / 2 - TOKEN_SIZE / 2;
 
@@ -282,21 +233,46 @@ export default function TokenFitGame({
   }, [worldHeight]);
 
   const finalizeRun = useCallback(
-    (finalScore: number) => {
-      const nextHighScore = Math.max(highScore, finalScore);
+  (finalScore: number) => {
+    const nextHighScore = Math.max(highScore, finalScore);
 
-      if (nextHighScore !== highScore) {
-        setHighScore(nextHighScore);
-        saveHighScore(nextHighScore);
-      }
+    if (nextHighScore !== highScore) {
+      setHighScore(nextHighScore);
+      saveHighScore(nextHighScore);
+    }
 
-      const nextLeaderboard = recordLeaderboardScore(safeUsername, finalScore);
-      setLeaderboard(nextLeaderboard);
+    // 🔥 FIRE-AND-FORGET (non-blocking)
+    if (safeUsername && finalScore > 0) {
+      (async () => {
+        const { data: existing } = await supabase
+  .from("gate1_leaderboard")
+  .select("score")
+  .eq("username", safeUsername)
+  .maybeSingle();
 
-      return { nextHighScore, nextLeaderboard };
-    },
-    [highScore, safeUsername]
-  );
+        if (!existing) {
+          await supabase.from("gate1_leaderboard").insert({
+            username: safeUsername,
+            score: finalScore,
+          });
+        } else if (finalScore > existing.score) {
+          await supabase
+            .from("gate1_leaderboard")
+            .update({
+              score: finalScore,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("username", safeUsername);
+        }
+
+        fetchLeaderboard();
+      })();
+    }
+
+    return { nextHighScore };
+  },
+  [highScore, safeUsername, fetchLeaderboard]
+);
 
   const endGame = useCallback(
     (nextState: "gameover" | "passed") => {
@@ -693,17 +669,17 @@ export default function TokenFitGame({
   <section className="jal-trial-leaderboard">
     <div className="jal-trial-leaderboard-head">
       <div className="jal-trial-leaderboard-title">
-        Gate 01 Local Leaderboard
+        Gate 01 Global Leaderboard
       </div>
       <div className="jal-trial-leaderboard-note">
-        Top {LEADERBOARD_LIMIT}
+        Global Top {LEADERBOARD_LIMIT}
       </div>
     </div>
 
     <div className="jal-trial-leaderboard-list">
       {leaderboard.length === 0 ? (
         <div className="jal-trial-leaderboard-empty">
-          No entries yet. Start the trial to set the first record.
+          No global entries yet. Start the trial to set the first record.
         </div>
       ) : (
         leaderboard.map((entry, index) => (
