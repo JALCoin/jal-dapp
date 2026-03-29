@@ -114,6 +114,10 @@ export default function TokenFitGame({
   const [velocity, setVelocity] = useState(0);
   const [pipes, setPipes] = useState<Pipe[]>([]);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
+  const [benchmarkMessage, setBenchmarkMessage] = useState("");
+
+  const benchmarkTimerRef = useRef<number | null>(null);
+  const shownBenchmarksRef = useRef<Set<number>>(new Set());
 
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
@@ -188,27 +192,35 @@ export default function TokenFitGame({
   }, []);
 
   const fetchLeaderboard = useCallback(async () => {
-  const { data, error } = await supabase
-    .from("gate1_leaderboard")
-    .select("*")
-    .order("score", { ascending: false })
-    .limit(LEADERBOARD_LIMIT);
+    const { data, error } = await supabase
+      .from("gate1_leaderboard")
+      .select("*")
+      .order("score", { ascending: false })
+      .limit(LEADERBOARD_LIMIT);
 
-  if (!error && data) {
-    setLeaderboard(
-      data.map((entry) => ({
-        id: entry.username,
-        username: entry.username,
-        score: entry.score,
-        achievedAt: Date.now(),
-      }))
-    );
-  }
-}, []);
+    if (!error && data) {
+      setLeaderboard(
+        data.map((entry) => ({
+          id: entry.username,
+          username: entry.username,
+          score: entry.score,
+          achievedAt: Date.now(),
+        }))
+      );
+    }
+  }, []);
 
-useEffect(() => {
-  fetchLeaderboard();
-}, [fetchLeaderboard]);
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
+
+  useEffect(() => {
+    return () => {
+      if (benchmarkTimerRef.current) {
+        window.clearTimeout(benchmarkTimerRef.current);
+      }
+    };
+  }, []);
 
   const resetWorld = useCallback(() => {
     const startY = worldHeight / 2 - TOKEN_SIZE / 2;
@@ -230,49 +242,81 @@ useEffect(() => {
     spawnTimerRef.current = 0;
     nextPipeIdRef.current = 1;
     lastRenderRef.current = 0;
+
+    shownBenchmarksRef.current = new Set();
+    setBenchmarkMessage("");
+
+    if (benchmarkTimerRef.current) {
+      window.clearTimeout(benchmarkTimerRef.current);
+      benchmarkTimerRef.current = null;
+    }
   }, [worldHeight]);
 
+  function showBenchmark(nextScore: number) {
+    const labels: Record<number, string> = {
+      50: "Gate 01 Complete",
+      60: "Benchmark Reached",
+      70: "Control Stable",
+      80: "Max Pressure",
+      100: "Elite Tier",
+    };
+
+    const message = labels[nextScore];
+    if (!message || shownBenchmarksRef.current.has(nextScore)) return;
+
+    shownBenchmarksRef.current.add(nextScore);
+    setBenchmarkMessage(message);
+
+    if (benchmarkTimerRef.current) {
+      window.clearTimeout(benchmarkTimerRef.current);
+    }
+
+    benchmarkTimerRef.current = window.setTimeout(() => {
+      setBenchmarkMessage("");
+      benchmarkTimerRef.current = null;
+    }, 1500);
+  }
+
   const finalizeRun = useCallback(
-  (finalScore: number) => {
-    const nextHighScore = Math.max(highScore, finalScore);
+    (finalScore: number) => {
+      const nextHighScore = Math.max(highScore, finalScore);
 
-    if (nextHighScore !== highScore) {
-      setHighScore(nextHighScore);
-      saveHighScore(nextHighScore);
-    }
+      if (nextHighScore !== highScore) {
+        setHighScore(nextHighScore);
+        saveHighScore(nextHighScore);
+      }
 
-    // 🔥 FIRE-AND-FORGET (non-blocking)
-    if (safeUsername && finalScore > 0) {
-      (async () => {
-        const { data: existing } = await supabase
-  .from("gate1_leaderboard")
-  .select("score")
-  .eq("username", safeUsername)
-  .maybeSingle();
-
-        if (!existing) {
-          await supabase.from("gate1_leaderboard").insert({
-            username: safeUsername,
-            score: finalScore,
-          });
-        } else if (finalScore > existing.score) {
-          await supabase
+      if (safeUsername && finalScore > 0) {
+        (async () => {
+          const { data: existing } = await supabase
             .from("gate1_leaderboard")
-            .update({
+            .select("score")
+            .eq("username", safeUsername)
+            .maybeSingle();
+
+          if (!existing) {
+            await supabase.from("gate1_leaderboard").insert({
+              username: safeUsername,
               score: finalScore,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("username", safeUsername);
-        }
+            });
+          } else if (finalScore > existing.score) {
+            await supabase
+              .from("gate1_leaderboard")
+              .update({
+                score: finalScore,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("username", safeUsername);
+          }
 
-        fetchLeaderboard();
-      })();
-    }
+          fetchLeaderboard();
+        })();
+      }
 
-    return { nextHighScore };
-  },
-  [highScore, safeUsername, fetchLeaderboard]
-);
+      return { nextHighScore };
+    },
+    [highScore, safeUsername, fetchLeaderboard]
+  );
 
   const endGame = useCallback(
     (nextState: "gameover" | "passed") => {
@@ -329,12 +373,14 @@ useEffect(() => {
 
   const leaveTrial = useCallback(() => {
     const wasPlaying = gameStateRef.current === "playing";
-    const passed = thresholdReachedRef.current || gameStateRef.current === "passed";
+    const passed =
+      thresholdReachedRef.current || gameStateRef.current === "passed";
 
     if (wasPlaying && scoreRef.current > 0) {
       const finalScore = scoreRef.current;
       const { nextHighScore } = finalizeRun(finalScore);
       onGameOver?.(finalScore, nextHighScore);
+
       if (nextHighScore >= minScore || finalScore >= minScore) {
         onPass(finalScore, nextHighScore);
       }
@@ -351,7 +397,11 @@ useEffect(() => {
   }, [finalizeRun, minScore, onGameOver, onLeaveAfterPass, onPass, resetWorld]);
 
   useEffect(() => {
-    if (!isFullscreen || typeof document === "undefined" || typeof window === "undefined") {
+    if (
+      !isFullscreen ||
+      typeof document === "undefined" ||
+      typeof window === "undefined"
+    ) {
       return;
     }
 
@@ -561,6 +611,7 @@ useEffect(() => {
         if (!nextPipe.scored && nextX + pipeWidth < tokenX) {
           nextPipe = { ...nextPipe, scored: true };
           scoreRef.current += 1;
+          showBenchmark(scoreRef.current);
 
           const nextHighScore = Math.max(highScore, scoreRef.current);
 
@@ -638,7 +689,9 @@ useEffect(() => {
     if (gameState === "passed") return "Trial Complete";
     if (gameState === "gameover") return "Trial Failed";
     if (gameState === "countdown") return "Prepare";
-    if (gameState === "playing") return endlessMode ? "Endless In Motion" : "In Motion";
+    if (gameState === "playing") {
+      return endlessMode ? "Endless In Motion" : "In Motion";
+    }
     return "Trial Available";
   }, [endlessMode, gameState]);
 
@@ -666,56 +719,46 @@ useEffect(() => {
   };
 
   const leaderboardView = (
-  <section className="jal-trial-leaderboard">
-    <div className="jal-trial-leaderboard-head">
-      <div className="jal-trial-leaderboard-title">
-        Gate 01 Global Leaderboard
-      </div>
-      <div className="jal-trial-leaderboard-note">
-        Global Top {LEADERBOARD_LIMIT}
-      </div>
-    </div>
-
-    <div className="jal-trial-leaderboard-list">
-      {leaderboard.length === 0 ? (
-        <div className="jal-trial-leaderboard-empty">
-          No global entries yet. Start the trial to set the first record.
+    <section className="jal-trial-leaderboard">
+      <div className="jal-trial-leaderboard-head">
+        <div className="jal-trial-leaderboard-title">
+          Gate 01 Global Leaderboard
         </div>
-      ) : (
-        leaderboard.map((entry, index) => (
-          <article
-            key={entry.id}
-            className={`jal-trial-leaderboard-row ${
-              index === 0 ? "is-rank-1" : ""
-            }`}
-          >
-            <div className="jal-trial-leaderboard-rank">
-              #{index + 1}
-            </div>
+        <div className="jal-trial-leaderboard-note">
+          Global Top {LEADERBOARD_LIMIT}
+        </div>
+      </div>
 
-            <div className="jal-trial-leaderboard-player">
-              <div className="jal-trial-leaderboard-name">
-                {entry.username}
-              </div>
-              <div className="jal-trial-leaderboard-sub">
-                Gate 01 Trial
-              </div>
-            </div>
+      <div className="jal-trial-leaderboard-list">
+        {leaderboard.length === 0 ? (
+          <div className="jal-trial-leaderboard-empty">
+            No global entries yet. Start the trial to set the first record.
+          </div>
+        ) : (
+          leaderboard.map((entry, index) => (
+            <article
+              key={entry.id}
+              className={`jal-trial-leaderboard-row ${
+                index === 0 ? "is-rank-1" : ""
+              }`}
+            >
+              <div className="jal-trial-leaderboard-rank">#{index + 1}</div>
 
-            <div className="jal-trial-leaderboard-score">
-              <div className="jal-trial-leaderboard-score-k">
-                Score
+              <div className="jal-trial-leaderboard-player">
+                <div className="jal-trial-leaderboard-name">{entry.username}</div>
+                <div className="jal-trial-leaderboard-sub">Gate 01 Trial</div>
               </div>
-              <div className="jal-trial-leaderboard-score-v">
-                {entry.score}
+
+              <div className="jal-trial-leaderboard-score">
+                <div className="jal-trial-leaderboard-score-k">Score</div>
+                <div className="jal-trial-leaderboard-score-v">{entry.score}</div>
               </div>
-            </div>
-          </article>
-        ))
-      )}
-    </div>
-  </section>
-);
+            </article>
+          ))
+        )}
+      </div>
+    </section>
+  );
 
   const gameView = (
     <div className="jal-tokenfit-shell" aria-label="JAL's Trials Token Fit">
@@ -727,14 +770,16 @@ useEffect(() => {
           </div>
 
           <p className="jal-note">
-            Keep the token stable under movement. Tap the screen or press Space to lift.
-            Reach a best score of <strong>{minScore}</strong>. Endless mode stays live
-            after threshold.
+            Keep the token stable under movement. Tap the screen or press Space
+            to lift. Reach a best score of <strong>{minScore}</strong>. Endless
+            mode stays live after threshold.
           </p>
         </div>
       )}
 
-      <div className={isFullscreen ? "jal-tokenfit-fullscreen" : "jal-tokenfit-stage-wrap"}>
+      <div
+        className={isFullscreen ? "jal-tokenfit-fullscreen" : "jal-tokenfit-stage-wrap"}
+      >
         <div
           role="button"
           tabIndex={0}
@@ -896,7 +941,9 @@ useEffect(() => {
                 >
                   Best
                 </div>
-                <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>{highScore}</div>
+                <div style={{ fontSize: hudStatValue, fontWeight: 700 }}>
+                  {highScore}
+                </div>
               </div>
 
               {isFullscreen && (
@@ -1059,6 +1106,32 @@ useEffect(() => {
               }}
             />
 
+            {benchmarkMessage && gameState === "playing" && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: isSmallViewport ? 64 : 82,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  padding: isSmallViewport ? "8px 12px" : "10px 16px",
+                  borderRadius: 999,
+                  background: "rgba(4,12,18,0.82)",
+                  border: "1px solid rgba(244,200,106,0.28)",
+                  color: "#ffe7ad",
+                  fontSize: isSmallViewport ? 11 : 13,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                  zIndex: 6,
+                  boxShadow: "0 0 18px rgba(244,200,106,0.12)",
+                  pointerEvents: "none",
+                }}
+              >
+                {benchmarkMessage}
+              </div>
+            )}
+
             {gameState === "countdown" && (
               <div
                 style={{
@@ -1165,9 +1238,10 @@ useEffect(() => {
                       color: "rgba(255,255,255,0.82)",
                     }}
                   >
-                    Player: <strong>{safeUsername || "Unassigned"}</strong> · Score:{" "}
-                    <strong>{score}</strong> · Required best: <strong>{minScore}</strong> ·
-                    Best: <strong>{highScore}</strong>
+                    Player: <strong>{safeUsername || "Unassigned"}</strong> ·
+                    Score: <strong>{score}</strong> · Required best:{" "}
+                    <strong>{minScore}</strong> · Best:{" "}
+                    <strong>{highScore}</strong>
                   </p>
 
                   <div
@@ -1308,7 +1382,8 @@ useEffect(() => {
 
           <p className="jal-trial-note">
             Keep the token stable under movement. Reach a best score of{" "}
-            <strong>{minScore}</strong> to complete Gate 01. Endless mode activates after reaching the required score.
+            <strong>{minScore}</strong> to complete Gate 01. Endless mode
+            activates after reaching the required score.
           </p>
 
           <div className="jal-trial-preview">
