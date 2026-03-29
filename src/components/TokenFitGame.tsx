@@ -53,9 +53,9 @@ const LEADERBOARD_LIMIT = 10;
 /* =========================
    RENDER / PERF
 ========================= */
-const MAX_DELTA_MS = 32;
+const MAX_DELTA_MS = 24;
 const MIN_DELTA_MS = 8;
-const RENDER_INTERVAL_MS = 1000 / 30;
+const RENDER_INTERVAL_MS = 1000 / 20;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -812,17 +812,15 @@ export default function TokenFitGame({
               width: `${worldWidth}px`,
               height: `${worldHeight}px`,
               transform: isFullscreen
-                ? `translate(-50%, -50%) scale(${sceneScale})`
-                : `scale(${sceneScale})`,
+  ? "translate(-50%, -50%) scale(1)"
+  : `scale(${sceneScale})`,
               transformOrigin: isFullscreen ? "center center" : "top left",
               overflow: "hidden",
               borderRadius: isFullscreen ? "0px" : "28px",
               border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
               background:
                 "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
-              boxShadow: isFullscreen
-                ? "none"
-                : "inset 0 0 0 1px rgba(0,255,180,0.06), 0 0 24px rgba(0,255,180,0.10)",
+              boxShadow: "none",
               willChange: "transform",
               contain: "layout paint style",
               backfaceVisibility: "hidden",
@@ -976,73 +974,46 @@ export default function TokenFitGame({
             </div>
 
             {pipes.map((pipe) => {
-              const topPipeHeight = pipe.gapY - pipeGap / 2;
-              const bottomPipeY = pipe.gapY + pipeGap / 2;
-              const bottomPipeHeight = worldHeight - floorHeight - bottomPipeY;
+  const topPipeHeight = pipe.gapY - pipeGap / 2;
+  const bottomPipeY = pipe.gapY + pipeGap / 2;
+  const bottomPipeHeight = worldHeight - floorHeight - bottomPipeY;
 
-              return (
-                <div key={pipe.id}>
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: pipe.x,
-                      top: 0,
-                      width: pipeWidth,
-                      height: topPipeHeight,
-                      borderRadius: "0 0 20px 20px",
-                      background:
-                        "linear-gradient(180deg, rgba(0,255,180,0.16), rgba(0,255,180,0.08) 20%, rgba(10,24,24,0.92) 100%)",
-                      border: "1px solid rgba(0,255,180,0.22)",
-                      boxShadow: "0 0 18px rgba(0,255,180,0.09)",
-                      willChange: "transform",
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: pipe.x - 8,
-                      top: topPipeHeight - 20,
-                      width: pipeWidth + 16,
-                      height: 20,
-                      borderRadius: 12,
-                      background: "rgba(0,255,180,0.16)",
-                      border: "1px solid rgba(0,255,180,0.2)",
-                      willChange: "transform",
-                    }}
-                  />
+  return (
+    <div key={pipe.id}>
+      <div
+        style={{
+          position: "absolute",
+          left: pipe.x,
+          top: 0,
+          width: pipeWidth,
+          height: topPipeHeight,
+          borderRadius: "0 0 20px 20px",
+          background:
+            "linear-gradient(180deg, rgba(0,255,180,0.16), rgba(0,255,180,0.08) 20%, rgba(10,24,24,0.92) 100%)",
+          border: "1px solid rgba(0,255,180,0.22)",
+          boxShadow: "none",
+          willChange: "transform",
+        }}
+      />
 
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: pipe.x,
-                      top: bottomPipeY,
-                      width: pipeWidth,
-                      height: bottomPipeHeight,
-                      borderRadius: "20px 20px 0 0",
-                      background:
-                        "linear-gradient(180deg, rgba(10,24,24,0.92), rgba(0,255,180,0.08) 80%, rgba(0,255,180,0.16) 100%)",
-                      border: "1px solid rgba(0,255,180,0.22)",
-                      boxShadow: "0 0 18px rgba(0,255,180,0.09)",
-                      willChange: "transform",
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: pipe.x - 8,
-                      top: bottomPipeY,
-                      width: pipeWidth + 16,
-                      height: 20,
-                      borderRadius: 12,
-                      background: "rgba(0,255,180,0.16)",
-                      border: "1px solid rgba(0,255,180,0.2)",
-                      willChange: "transform",
-                    }}
-                  />
-                </div>
-              );
-            })}
-
+      <div
+        style={{
+          position: "absolute",
+          left: pipe.x,
+          top: bottomPipeY,
+          width: pipeWidth,
+          height: bottomPipeHeight,
+          borderRadius: "20px 20px 0 0",
+          background:
+            "linear-gradient(180deg, rgba(10,24,24,0.92), rgba(0,255,180,0.08) 80%, rgba(0,255,180,0.16) 100%)",
+          border: "1px solid rgba(0,255,180,0.22)",
+          boxShadow: "none",
+          willChange: "transform",
+        }}
+      />
+    </div>
+  );
+})}
             <div
               style={{
                 position: "absolute",
@@ -1055,8 +1026,7 @@ export default function TokenFitGame({
                 borderRadius: "50%",
                 background:
                   "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.92), rgba(227,205,112,0.95) 20%, rgba(170,120,32,0.96) 58%, rgba(70,40,8,1) 100%)",
-                boxShadow:
-                  "0 0 22px rgba(255,208,92,0.45), inset 0 1px 5px rgba(255,255,255,0.42), inset 0 -4px 10px rgba(30,16,2,0.5)",
+                boxShadow: "none",
                 zIndex: 4,
                 willChange: "transform, top",
               }}
@@ -1124,7 +1094,7 @@ export default function TokenFitGame({
                   textTransform: "uppercase",
                   whiteSpace: "nowrap",
                   zIndex: 6,
-                  boxShadow: "0 0 18px rgba(244,200,106,0.12)",
+                  boxShadow: "none",
                   pointerEvents: "none",
                 }}
               >
@@ -1356,7 +1326,7 @@ export default function TokenFitGame({
                   fontWeight: 800,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
-                  boxShadow: "0 0 24px rgba(0,255,180,0.12)",
+                  boxShadow: "none",
                   zIndex: 7,
                   cursor: "pointer",
                   WebkitTapHighlightColor: "transparent",
