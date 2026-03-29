@@ -1001,17 +1001,19 @@ export default function JalSolObserve() {
                 <div className="jal-bay-head">
                   <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
                   <div className="jal-bay-note">
-                    {tokenFitPassed
-                      ? `Unlocked · Best ${tokenFitHighScore}`
-                      : `Minimum required high score: ${MIN_TOKEN_FIT_SCORE}`}
-                  </div>
+  {tokenFitPassed
+    ? `Gate Complete · Best ${tokenFitHighScore}`
+    : hasTrialUsername
+    ? `Trial Active · Best ${tokenFitHighScore}`
+    : `Enter username to unlock trial`}
+</div>
                 </div>
 
                 <p className="jal-note">
-                  Gate 01 now uses a named local trial identity. Enter a Gate 01 username,
-                  then push your best run to at least <strong>{MIN_TOKEN_FIT_SCORE}</strong>.
-                  Endless mode activates after reaching the required score.
-                </p>
+  Enter a Gate 01 username to unlock the trial. Reach a best score of{" "}
+  <strong>{MIN_TOKEN_FIT_SCORE}</strong> to complete Gate 01.
+  Endless mode activates after reaching the required score.
+</p>
 
                 <section className="jal-bay jal-observe-trial-identity" style={{ marginBottom: "1rem" }}>
                   <div className="jal-bay-head">
@@ -1020,9 +1022,8 @@ export default function JalSolObserve() {
                   </div>
 
                   <p className="jal-note">
-                    This username is stored locally for Gate 01 and used on the local
-                    leaderboard.
-                  </p>
+  This username unlocks Gate 01 Trials and is used for the leaderboard display.
+</p>
 
                   <div className="jal-observe-trial-input-wrap">
   <input
@@ -1062,12 +1063,12 @@ export default function JalSolObserve() {
                 />
 
                 <p className="jal-lock-text" style={{ marginTop: "1rem" }}>
-                  {tokenFitPassed
-                    ? `Gate 01 trial unlocked. Last run: ${tokenFitScore}. High Score: ${tokenFitHighScore}.`
-                    : hasTrialUsername
-                    ? `Gate 02 remains locked until your high score reaches ${MIN_TOKEN_FIT_SCORE}. Current best: ${tokenFitHighScore}.`
-                    : "Set your Gate 01 username before starting the trial."}
-                </p>
+  {tokenFitPassed
+    ? `Gate 01 complete. Last run: ${tokenFitScore}. High Score: ${tokenFitHighScore}.`
+    : hasTrialUsername
+    ? `Trial unlocked. Gate 02 remains locked until your high score reaches ${MIN_TOKEN_FIT_SCORE}. Current best: ${tokenFitHighScore}.`
+    : "Set your Gate 01 username to unlock the trial."}
+</p>
               </>
             )}
 
