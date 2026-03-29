@@ -1081,13 +1081,15 @@ export default function TokenFitGame({
               : { width: `${sceneWidth}px`, height: `${sceneHeight}px` }
           }
         >
-          <div
+            <div
             style={{
               position: "absolute",
               left: isFullscreen ? "50%" : 0,
               top: isFullscreen ? "50%" : 0,
               width: `${worldWidth}px`,
               height: `${worldHeight}px`,
+              background:
+                "radial-gradient(circle at 50% 35%, rgba(0,255,180,0.08), rgba(4,9,18,0.96) 55%, rgba(2,6,14,1) 100%)",
               transform: isFullscreen
                 ? `translate(-50%, -50%) scale(${sceneScale})`
                 : `scale(${sceneScale})`,
@@ -1102,7 +1104,7 @@ export default function TokenFitGame({
               backfaceVisibility: "hidden",
             }}
           >
-            <canvas
+              <canvas
               ref={canvasRef}
               style={{
                 position: "absolute",
@@ -1110,6 +1112,8 @@ export default function TokenFitGame({
                 width: `${worldWidth}px`,
                 height: `${worldHeight}px`,
                 display: "block",
+                zIndex: 1,
+                pointerEvents: "none",
               }}
             />
 
