@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 
 export type TokenFitGameProps = {
   minScore: number;
+  username: string;
+  endlessMode?: boolean;
   onPass: (score: number, highScore: number) => void;
   onGameOver?: (score: number, highScore: number) => void;
   onLeaveAfterPass?: () => void;
@@ -18,7 +20,15 @@ type Pipe = {
   scored: boolean;
 };
 
-const STORAGE_KEY = "jal_observe_token_fit_high_score_v1";
+type LeaderboardEntry = {
+  id: string;
+  username: string;
+  score: number;
+  achievedAt: number;
+};
+
+const STORAGE_KEY = "jal_observe_token_fit_high_score_v2";
+const LEADERBOARD_STORAGE_KEY = "jal_observe_token_fit_leaderboard_v1";
 
 /* =========================
    WORLD SIZING
@@ -38,6 +48,7 @@ const GRAVITY = 0.34;
 const JUMP_FORCE = -5.9;
 const PIPE_SPAWN_EVERY = 1500;
 const COUNTDOWN_SECONDS = 3;
+const LEADERBOARD_LIMIT = 10;
 
 /* =========================
    RENDER / PERF
@@ -50,6 +61,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function sanitizeUsername(value: string) {
+  return value.replace(/\s+/g, " ").trim().slice(0, 24);
+}
+
 function loadHighScore() {
   if (typeof window === "undefined") return 0;
   const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -60,6 +75,75 @@ function loadHighScore() {
 function saveHighScore(score: number) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, String(score));
+}
+
+function loadLeaderboard(): LeaderboardEntry[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(LEADERBOARD_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as unknown;
+
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter((entry): entry is LeaderboardEntry => {
+        return (
+          entry != null &&
+          typeof entry === "object" &&
+          typeof (entry as LeaderboardEntry).id === "string" &&
+          typeof (entry as LeaderboardEntry).username === "string" &&
+          typeof (entry as LeaderboardEntry).score === "number" &&
+          typeof (entry as LeaderboardEntry).achievedAt === "number"
+        );
+      })
+      .map((entry) => ({
+        ...entry,
+        username: sanitizeUsername(entry.username),
+      }))
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.achievedAt - b.achievedAt;
+      })
+      .slice(0, LEADERBOARD_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
+function saveLeaderboard(entries: LeaderboardEntry[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    LEADERBOARD_STORAGE_KEY,
+    JSON.stringify(entries.slice(0, LEADERBOARD_LIMIT))
+  );
+}
+
+function recordLeaderboardScore(username: string, score: number) {
+  const safeUsername = sanitizeUsername(username);
+  if (!safeUsername || score <= 0) {
+    return loadLeaderboard();
+  }
+
+  const nextEntries = [
+    ...loadLeaderboard(),
+    {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      username: safeUsername,
+      score,
+      achievedAt: Date.now(),
+    },
+  ]
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.achievedAt - b.achievedAt;
+    })
+    .slice(0, LEADERBOARD_LIMIT);
+
+  saveLeaderboard(nextEntries);
+  return nextEntries;
 }
 
 function getViewportSize() {
@@ -77,6 +161,8 @@ function getViewportSize() {
 
 export default function TokenFitGame({
   minScore,
+  username,
+  endlessMode = false,
   onPass,
   onGameOver,
   onLeaveAfterPass,
@@ -86,6 +172,9 @@ export default function TokenFitGame({
 
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => loadHighScore());
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() =>
+    loadLeaderboard()
+  );
 
   const [viewMode, setViewMode] = useState<ViewMode>("landscape");
   const [sceneScale, setSceneScale] = useState(1);
@@ -103,6 +192,7 @@ export default function TokenFitGame({
   const spawnTimerRef = useRef(0);
   const nextPipeIdRef = useRef(1);
   const lastRenderRef = useRef(0);
+  const thresholdReachedRef = useRef(false);
 
   const scoreRef = useRef(0);
   const gameStateRef = useRef<TokenFitState>("idle");
@@ -159,6 +249,9 @@ export default function TokenFitGame({
   const liftButtonBottom = 148;
   const liftButtonSize = 88;
 
+  const safeUsername = sanitizeUsername(username);
+  const canStart = safeUsername.length >= 3;
+
   const syncVisualState = useCallback(() => {
     setVelocity(velocityRef.current);
     setTokenY(tokenYRef.current);
@@ -173,6 +266,7 @@ export default function TokenFitGame({
     velocityRef.current = 0;
     tokenYRef.current = startY;
     pipesRef.current = [];
+    thresholdReachedRef.current = false;
 
     setScore(0);
     setVelocity(0);
@@ -187,18 +281,30 @@ export default function TokenFitGame({
     lastRenderRef.current = 0;
   }, [worldHeight]);
 
-  const endGame = useCallback(
-    (nextState: "gameover" | "passed") => {
-      const current = gameStateRef.current;
-      if (current === "gameover" || current === "passed") return;
-
-      const finalScore = scoreRef.current;
+  const finalizeRun = useCallback(
+    (finalScore: number) => {
       const nextHighScore = Math.max(highScore, finalScore);
 
       if (nextHighScore !== highScore) {
         setHighScore(nextHighScore);
         saveHighScore(nextHighScore);
       }
+
+      const nextLeaderboard = recordLeaderboardScore(safeUsername, finalScore);
+      setLeaderboard(nextLeaderboard);
+
+      return { nextHighScore, nextLeaderboard };
+    },
+    [highScore, safeUsername]
+  );
+
+  const endGame = useCallback(
+    (nextState: "gameover" | "passed") => {
+      const current = gameStateRef.current;
+      if (current === "gameover" || current === "passed") return;
+
+      const finalScore = scoreRef.current;
+      const { nextHighScore } = finalizeRun(finalScore);
 
       setGameState(nextState);
       gameStateRef.current = nextState;
@@ -211,7 +317,7 @@ export default function TokenFitGame({
         onGameOver?.(finalScore, nextHighScore);
       }
     },
-    [highScore, onGameOver, onPass, syncVisualState]
+    [finalizeRun, onGameOver, onPass, syncVisualState]
   );
 
   const flap = useCallback(() => {
@@ -231,11 +337,12 @@ export default function TokenFitGame({
   }, [resetWorld]);
 
   const beginPlaying = useCallback(() => {
+    if (!canStart) return;
     resetWorld();
     setIsFullscreen(true);
     setGameState("countdown");
     gameStateRef.current = "countdown";
-  }, [resetWorld]);
+  }, [canStart, resetWorld]);
 
   const closeTrial = useCallback(() => {
     setIsFullscreen(false);
@@ -245,7 +352,17 @@ export default function TokenFitGame({
   }, [resetWorld]);
 
   const leaveTrial = useCallback(() => {
-    const passed = gameStateRef.current === "passed";
+    const wasPlaying = gameStateRef.current === "playing";
+    const passed = thresholdReachedRef.current || gameStateRef.current === "passed";
+
+    if (wasPlaying && scoreRef.current > 0) {
+      const finalScore = scoreRef.current;
+      const { nextHighScore } = finalizeRun(finalScore);
+      onGameOver?.(finalScore, nextHighScore);
+      if (nextHighScore >= minScore || finalScore >= minScore) {
+        onPass(finalScore, nextHighScore);
+      }
+    }
 
     setIsFullscreen(false);
     setGameState("idle");
@@ -255,10 +372,12 @@ export default function TokenFitGame({
     if (passed) {
       onLeaveAfterPass?.();
     }
-  }, [onLeaveAfterPass, resetWorld]);
+  }, [finalizeRun, minScore, onGameOver, onLeaveAfterPass, onPass, resetWorld]);
 
   useEffect(() => {
-    if (!isFullscreen || typeof document === "undefined" || typeof window === "undefined") return;
+    if (!isFullscreen || typeof document === "undefined" || typeof window === "undefined") {
+      return;
+    }
 
     const scrollY = window.scrollY;
 
@@ -304,7 +423,8 @@ export default function TokenFitGame({
     function updateSceneScale() {
       const { width: viewportWidth, height: viewportHeight } = getViewportSize();
 
-      const nextMode: ViewMode = viewportHeight > viewportWidth ? "portrait" : "landscape";
+      const nextMode: ViewMode =
+        viewportHeight > viewportWidth ? "portrait" : "landscape";
       const nextWorldWidth =
         nextMode === "portrait" ? PORTRAIT_WORLD_WIDTH : LANDSCAPE_WORLD_WIDTH;
       const nextWorldHeight =
@@ -466,11 +586,18 @@ export default function TokenFitGame({
           nextPipe = { ...nextPipe, scored: true };
           scoreRef.current += 1;
 
-          if (scoreRef.current >= minScore) {
-            nextPipes.push(nextPipe);
-            pipesRef.current = nextPipes;
-            endGame("passed");
-            return;
+          const nextHighScore = Math.max(highScore, scoreRef.current);
+
+          if (!thresholdReachedRef.current && nextHighScore >= minScore) {
+            thresholdReachedRef.current = true;
+            onPass(scoreRef.current, nextHighScore);
+
+            if (!endlessMode) {
+              nextPipes.push(nextPipe);
+              pipesRef.current = nextPipes;
+              endGame("passed");
+              return;
+            }
           }
         }
 
@@ -515,10 +642,13 @@ export default function TokenFitGame({
   }, [
     ceilingHeight,
     endGame,
+    endlessMode,
     floorHeight,
     gameState,
+    highScore,
     isPortrait,
     minScore,
+    onPass,
     pipeGap,
     pipeSpeed,
     pipeWidth,
@@ -532,9 +662,9 @@ export default function TokenFitGame({
     if (gameState === "passed") return "Trial Complete";
     if (gameState === "gameover") return "Trial Failed";
     if (gameState === "countdown") return "Prepare";
-    if (gameState === "playing") return "In Motion";
+    if (gameState === "playing") return endlessMode ? "Endless In Motion" : "In Motion";
     return "Trial Available";
-  }, [gameState]);
+  }, [endlessMode, gameState]);
 
   const tokenRotation = clamp(velocity * 4.5, -28, 60);
 
@@ -559,6 +689,58 @@ export default function TokenFitGame({
     flap();
   };
 
+  const leaderboardView = (
+  <section className="jal-trial-leaderboard">
+    <div className="jal-trial-leaderboard-head">
+      <div className="jal-trial-leaderboard-title">
+        Gate 01 Local Leaderboard
+      </div>
+      <div className="jal-trial-leaderboard-note">
+        Top {LEADERBOARD_LIMIT}
+      </div>
+    </div>
+
+    <div className="jal-trial-leaderboard-list">
+      {leaderboard.length === 0 ? (
+        <div className="jal-trial-leaderboard-empty">
+          No entries yet. Start the trial to set the first record.
+        </div>
+      ) : (
+        leaderboard.map((entry, index) => (
+          <article
+            key={entry.id}
+            className={`jal-trial-leaderboard-row ${
+              index === 0 ? "is-rank-1" : ""
+            }`}
+          >
+            <div className="jal-trial-leaderboard-rank">
+              #{index + 1}
+            </div>
+
+            <div className="jal-trial-leaderboard-player">
+              <div className="jal-trial-leaderboard-name">
+                {entry.username}
+              </div>
+              <div className="jal-trial-leaderboard-sub">
+                Gate 01 Trial
+              </div>
+            </div>
+
+            <div className="jal-trial-leaderboard-score">
+              <div className="jal-trial-leaderboard-score-k">
+                Score
+              </div>
+              <div className="jal-trial-leaderboard-score-v">
+                {entry.score}
+              </div>
+            </div>
+          </article>
+        ))
+      )}
+    </div>
+  </section>
+);
+
   const gameView = (
     <div className="jal-tokenfit-shell" aria-label="JAL's Trials Token Fit">
       {!isFullscreen && (
@@ -569,8 +751,9 @@ export default function TokenFitGame({
           </div>
 
           <p className="jal-note">
-            Keep the token stable under movement. Tap the screen or press Space to lift. Reach at
-            least <strong>{minScore}</strong> points to unlock the trial.
+            Keep the token stable under movement. Tap the screen or press Space to lift.
+            Reach a best score of <strong>{minScore}</strong>. Endless mode stays live
+            after threshold.
           </p>
         </div>
       )}
@@ -676,7 +859,7 @@ export default function TokenFitGame({
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Token Fit
+                  {endlessMode ? "Token Fit Endless" : "Token Fit"}
                 </div>
               )}
             </div>
@@ -1006,8 +1189,9 @@ export default function TokenFitGame({
                       color: "rgba(255,255,255,0.82)",
                     }}
                   >
-                    Score: <strong>{score}</strong> · Required: <strong>{minScore}</strong> · Best:{" "}
-                    <strong>{highScore}</strong>
+                    Player: <strong>{safeUsername || "Unassigned"}</strong> · Score:{" "}
+                    <strong>{score}</strong> · Required best: <strong>{minScore}</strong> ·
+                    Best: <strong>{highScore}</strong>
                   </p>
 
                   <div
@@ -1139,55 +1323,84 @@ export default function TokenFitGame({
 
   if (showCompactEntry) {
     return (
-      <div className="jal-trial-entry" aria-label="JAL's Trials Token Fit">
-        <div className="jal-bay-head">
-          <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
-          <div className="jal-bay-note">Trial Available</div>
-        </div>
-
-        <p className="jal-trial-note">
-          Keep the token stable under movement. Reach at least <strong>{minScore}</strong> points to
-          complete the trial.
-        </p>
-
-        <div className="jal-trial-preview">
-          <div className="jal-trial-preview-badge">Trial 01</div>
-          <div className="jal-trial-preview-title">Hold alignment under pressure.</div>
-          <div className="jal-trial-preview-line">
-            Your token stays in motion. Your job is not panic. Your job is fit.
+      <>
+        <div className="jal-trial-entry" aria-label="JAL's Trials Token Fit">
+          <div className="jal-bay-head">
+            <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
+            <div className="jal-bay-note">Trial Available</div>
           </div>
+
+          <p className="jal-trial-note">
+            Keep the token stable under movement. Reach a best score of{" "}
+            <strong>{minScore}</strong> to complete Gate 01. Endless mode activates after reaching the required score.
+          </p>
+
+          <div className="jal-trial-preview">
+            <div className="jal-trial-preview-badge">Trial 01</div>
+            <div className="jal-trial-preview-title">
+              Hold alignment under pressure.
+            </div>
+            <div className="jal-trial-preview-line">
+              Your token stays in motion. Your job is not panic. Your job is fit.
+            </div>
+          </div>
+
+          <div className="jal-trial-grid">
+            <article className="jal-trial-card">
+              <div className="jal-trial-k">Player</div>
+              <div className="jal-trial-v">
+                {canStart ? safeUsername : "Set Gate 01 username above"}
+              </div>
+            </article>
+
+            <article className="jal-trial-card">
+              <div className="jal-trial-k">Control</div>
+              <div className="jal-trial-v">
+                Tap screen to lift. Desktop also supports Space.
+              </div>
+            </article>
+
+            <article className="jal-trial-card">
+              <div className="jal-trial-k">Threshold</div>
+              <div className="jal-trial-v">Required best score: {minScore}</div>
+            </article>
+
+            <article className="jal-trial-card">
+              <div className="jal-trial-k">Mode</div>
+              <div className="jal-trial-v">
+                {endlessMode ? "Endless active" : "Standard run"}
+              </div>
+            </article>
+
+            <article className="jal-trial-card">
+              <div className="jal-trial-k">Best</div>
+              <div className="jal-trial-v">High Score: {highScore}</div>
+            </article>
+          </div>
+
+          <div className="jal-trial-actions">
+            <button
+              type="button"
+              className="button neon"
+              onClick={(event) => {
+                event.stopPropagation();
+                beginPlaying();
+              }}
+              disabled={!canStart}
+            >
+              Start Trial
+            </button>
+          </div>
+
+          {!canStart && (
+            <p className="jal-lock-text" style={{ marginTop: "1rem" }}>
+              Enter a Gate 01 username with at least 3 characters to start.
+            </p>
+          )}
         </div>
 
-        <div className="jal-trial-grid">
-          <article className="jal-trial-card">
-            <div className="jal-trial-k">Control</div>
-            <div className="jal-trial-v">Tap screen to lift. Desktop also supports Space.</div>
-          </article>
-
-          <article className="jal-trial-card">
-            <div className="jal-trial-k">Threshold</div>
-            <div className="jal-trial-v">Minimum required score: {minScore}</div>
-          </article>
-
-          <article className="jal-trial-card">
-            <div className="jal-trial-k">Best</div>
-            <div className="jal-trial-v">High Score: {highScore}</div>
-          </article>
-        </div>
-
-        <div className="jal-trial-actions">
-          <button
-            type="button"
-            className="button neon"
-            onClick={(event) => {
-              event.stopPropagation();
-              beginPlaying();
-            }}
-          >
-            Start Trial
-          </button>
-        </div>
-      </div>
+        {leaderboardView}
+      </>
     );
   }
 
@@ -1195,5 +1408,10 @@ export default function TokenFitGame({
     return createPortal(gameView, document.body);
   }
 
-  return gameView;
+  return (
+    <>
+      {gameView}
+      {leaderboardView}
+    </>
+  );
 }

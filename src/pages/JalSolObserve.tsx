@@ -52,6 +52,7 @@ type ObserveAccessState = {
   completedIso: string;
   gate: "observe";
   nextGate: "enter";
+  trialUsername: string;
 };
 
 type ObserveProgressState = {
@@ -63,12 +64,15 @@ type ObserveProgressState = {
   tokenFitPassed: boolean;
   tokenFitScore: number;
   tokenFitHighScore: number;
+  trialUsername: string;
 };
 
 const OBSERVE_STORAGE_KEY = "jal_observe_complete_v1";
 const OBSERVE_PROGRESS_KEY = "jal_observe_progress_v1";
+const OBSERVE_TRIAL_USERNAME_KEY = "jal_observe_trial_username_v1";
+
 const PASS_MARK = 4;
-const MIN_TOKEN_FIT_SCORE = 12;
+const MIN_TOKEN_FIT_SCORE = 50;
 
 const OBSERVE_STEPS: ObserveStep[] = [
   {
@@ -210,6 +214,17 @@ const DEFAULT_ANSWERS: Record<string, number | null> = {
   q4: null,
 };
 
+function sanitizeTrialUsername(value: string) {
+  return value.replace(/\s+/g, " ").trim().slice(0, 24);
+}
+
+function readStoredTrialUsername() {
+  if (typeof window === "undefined") return "";
+  return sanitizeTrialUsername(
+    window.localStorage.getItem(OBSERVE_TRIAL_USERNAME_KEY) ?? ""
+  );
+}
+
 function readProgress(): ObserveProgressState | null {
   if (typeof window === "undefined") return null;
 
@@ -228,7 +243,9 @@ function readProgress(): ObserveProgressState | null {
 
     const validCardIds = new Set<LearnCardId>(LEARN_CARDS.map((card) => card.id));
     const safeOpenedCards = Array.isArray(parsed.openedCards)
-      ? parsed.openedCards.filter((id): id is LearnCardId => validCardIds.has(id as LearnCardId))
+      ? parsed.openedCards.filter((id): id is LearnCardId =>
+          validCardIds.has(id as LearnCardId)
+        )
       : [];
 
     const safeAnswers =
@@ -263,7 +280,12 @@ function readProgress(): ObserveProgressState | null {
       tokenFitScore:
         typeof parsed.tokenFitScore === "number" ? parsed.tokenFitScore : 0,
       tokenFitHighScore:
-        typeof parsed.tokenFitHighScore === "number" ? parsed.tokenFitHighScore : 0,
+        typeof parsed.tokenFitHighScore === "number"
+          ? parsed.tokenFitHighScore
+          : 0,
+      trialUsername: sanitizeTrialUsername(
+        typeof parsed.trialUsername === "string" ? parsed.trialUsername : ""
+      ),
     };
   } catch {
     return null;
@@ -289,7 +311,9 @@ export default function JalSolObserve() {
   const stepDelayRef = useRef<number | null>(null);
 
   const [restoredProgress] = useState<ObserveProgressState | null>(() => readProgress());
-  const [completedAccess] = useState<ObserveAccessState | null>(() => readCompletedAccess());
+  const [completedAccess] = useState<ObserveAccessState | null>(() =>
+    readCompletedAccess()
+  );
 
   const [loading, setLoading] = useState(false);
   const [stepIndex, setStepIndex] = useState(() => {
@@ -318,6 +342,11 @@ export default function JalSolObserve() {
   const [tokenFitHighScore, setTokenFitHighScore] = useState(
     completedAccess?.tokenFitHighScore ?? restoredProgress?.tokenFitHighScore ?? 0
   );
+  const [trialUsername, setTrialUsername] = useState(
+    completedAccess?.trialUsername ??
+      restoredProgress?.trialUsername ??
+      readStoredTrialUsername()
+  );
 
   const currentStep = OBSERVE_STEPS[stepIndex];
   const isLastStep = stepIndex === OBSERVE_STEPS.length - 1;
@@ -334,6 +363,14 @@ export default function JalSolObserve() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      OBSERVE_TRIAL_USERNAME_KEY,
+      sanitizeTrialUsername(trialUsername)
+    );
+  }, [trialUsername]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     if (completedAccess?.passed) return;
 
     const progress: ObserveProgressState = {
@@ -345,6 +382,7 @@ export default function JalSolObserve() {
       tokenFitPassed,
       tokenFitScore,
       tokenFitHighScore,
+      trialUsername: sanitizeTrialUsername(trialUsername),
     };
 
     window.localStorage.setItem(OBSERVE_PROGRESS_KEY, JSON.stringify(progress));
@@ -358,6 +396,7 @@ export default function JalSolObserve() {
     tokenFitPassed,
     tokenFitScore,
     tokenFitHighScore,
+    trialUsername,
   ]);
 
   useEffect(() => {
@@ -442,12 +481,16 @@ export default function JalSolObserve() {
     (question) => answers[question.id] !== null
   );
 
+  const hasTrialUsername = sanitizeTrialUsername(trialUsername).length >= 3;
+
   const nextDisabled = useMemo(() => {
     if (!canContinue) return true;
     if (currentStep.id === "structure" && !structureComplete) return true;
     if (currentStep.id === "stillness" && !stillnessAccepted) return true;
     if (currentStep.id === "test" && !testPassed) return true;
-    if (currentStep.id === "token-fit" && !tokenFitPassed) return true;
+    if (currentStep.id === "token-fit" && (!tokenFitPassed || !hasTrialUsername)) {
+      return true;
+    }
     return false;
   }, [
     canContinue,
@@ -456,6 +499,7 @@ export default function JalSolObserve() {
     stillnessAccepted,
     testPassed,
     tokenFitPassed,
+    hasTrialUsername,
   ]);
 
   function handleNext() {
@@ -464,7 +508,8 @@ export default function JalSolObserve() {
     if (isLastStep) {
       const alreadyPassed = Boolean(completedAccess?.passed);
       const quizPassedNow = alreadyPassed || testScore >= PASS_MARK;
-      const tokenFitPassedNow = alreadyPassed || tokenFitPassed;
+      const tokenFitPassedNow =
+        alreadyPassed || tokenFitPassed || tokenFitHighScore >= MIN_TOKEN_FIT_SCORE;
       const passed = quizPassedNow && tokenFitPassedNow;
 
       const payload: ObserveAccessState = {
@@ -487,6 +532,11 @@ export default function JalSolObserve() {
           : new Date().toISOString(),
         gate: "observe",
         nextGate: "enter",
+        trialUsername: sanitizeTrialUsername(
+          alreadyPassed
+            ? completedAccess?.trialUsername ?? trialUsername
+            : trialUsername
+        ),
       };
 
       localStorage.setItem(OBSERVE_STORAGE_KEY, JSON.stringify(payload));
@@ -503,7 +553,11 @@ export default function JalSolObserve() {
   }
 
   const completionReady =
-    currentStep.id === "token-fit" ? tokenFitPassed : currentStep.id === "test" ? testPassed : true;
+    currentStep.id === "token-fit"
+      ? tokenFitPassed && hasTrialUsername
+      : currentStep.id === "test"
+      ? testPassed
+      : true;
 
   const frameContribution =
     currentStep.id === "orientation"
@@ -530,10 +584,11 @@ export default function JalSolObserve() {
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
           <section
-            className={`jal-hero jal-world-hero ${useCompactHeader ? "jal-observe-hero--compact" : ""}`}
+            className={`jal-hero jal-world-hero ${
+              useCompactHeader ? "jal-observe-hero--compact" : ""
+            }`}
             aria-label="Observe gate hero"
           >
-
             <div className="jal-hero-top">
               <div className="jal-kicker">JAL/SOL • GATE 01</div>
 
@@ -555,19 +610,20 @@ export default function JalSolObserve() {
               {!useCompactHeader ? (
                 <>
                   <p className="home-lead">
-                    This gate is not for action. It is for stabilisation. The user is slowed down,
-                    misinformation is removed, and the environment becomes understandable before any
-                    irreversible step is introduced.
+                    This gate is not for action. It is for stabilisation. The user is
+                    slowed down, misinformation is removed, and the environment becomes
+                    understandable before any irreversible step is introduced.
                   </p>
 
                   <p className="jal-sublead">
-                    The goal is simple: turn an unaware visitor into an informed observer. No hype.
-                    No pressure. No “buy now” behaviour.
+                    The goal is simple: turn an unaware visitor into an informed observer.
+                    No hype. No pressure. No “buy now” behaviour.
                   </p>
                 </>
               ) : (
                 <p className="jal-sublead">
-                  {currentStep.label} active. Gate 01 is still conditioning the user before Entry.
+                  {currentStep.label} active. Gate 01 is still conditioning the user
+                  before Entry.
                 </p>
               )}
             </div>
@@ -582,12 +638,14 @@ export default function JalSolObserve() {
           <section className="jal-bay jal-bay-wide" aria-label="Observe progress tracker">
             <div className="jal-bay-head">
               <div className="jal-bay-title">Observe Sequence</div>
-              <div className="jal-bay-note">{stepIndex + 1} / {OBSERVE_STEPS.length}</div>
+              <div className="jal-bay-note">
+                {stepIndex + 1} / {OBSERVE_STEPS.length}
+              </div>
             </div>
 
             <p className="jal-note">
-              This gate is completed in order. One frame is active at a time. Progression is paced
-              so the user slows down before entering the next state.
+              This gate is completed in order. One frame is active at a time. Progression
+              is paced so the user slows down before entering the next state.
             </p>
 
             <div className="jal-observe-sequence-grid">
@@ -629,9 +687,9 @@ export default function JalSolObserve() {
                 </div>
 
                 <p className="jal-note">
-                  Most people enter markets through urgency, imitation, or fragmented information.
-                  This gate does the opposite. It slows the user down and restores order before
-                  action is even considered.
+                  Most people enter markets through urgency, imitation, or fragmented
+                  information. This gate does the opposite. It slows the user down and
+                  restores order before action is even considered.
                 </p>
 
                 <p className="jal-lock-text">This is preparation, not participation.</p>
@@ -715,14 +773,15 @@ export default function JalSolObserve() {
                   <article className="jal-bullet">
                     <div className="jal-bullet-k">Market</div>
                     <div className="jal-bullet-v">
-                      Not guaranteed opportunity. A system of participants with uneven understanding.
+                      Not guaranteed opportunity. A system of participants with uneven
+                      understanding.
                     </div>
                   </article>
                 </div>
 
                 <p className="jal-note">
-                  If the user does not understand the system, the system decides the outcome for
-                  them.
+                  If the user does not understand the system, the system decides the
+                  outcome for them.
                 </p>
               </>
             )}
@@ -739,8 +798,8 @@ export default function JalSolObserve() {
                 </div>
 
                 <p className="jal-note">
-                  Awareness here is intentional. Each block must be opened before progression
-                  continues.
+                  Awareness here is intentional. Each block must be opened before
+                  progression continues.
                 </p>
 
                 <div className="jal-grid">
@@ -751,14 +810,16 @@ export default function JalSolObserve() {
                       <section key={card.id} className="jal-bay">
                         <div className="jal-bay-head">
                           <div className="jal-bay-title">{card.title}</div>
-                          <div className="jal-bay-note">{isOpened ? "Opened" : "Pending"}</div>
+                          <div className="jal-bay-note">
+                            {isOpened ? "Opened" : "Pending"}
+                          </div>
                         </div>
 
                         {!isOpened ? (
                           <>
                             <p className="jal-note">
-                              Open this module to reveal the minimum structure required before
-                              entry.
+                              Open this module to reveal the minimum structure required
+                              before entry.
                             </p>
 
                             <div className="jal-bay-actions">
@@ -827,8 +888,8 @@ export default function JalSolObserve() {
                 </div>
 
                 <p className="jal-lock-text">
-                  The user is not pressing a harmless button. They are authorising a real state
-                  transition.
+                  The user is not pressing a harmless button. They are authorising a real
+                  state transition.
                 </p>
               </>
             )}
@@ -841,8 +902,8 @@ export default function JalSolObserve() {
                 </div>
 
                 <p className="jal-note">
-                  If the user feels rushed, they are not ready for irreversible movement. Entry
-                  should begin from calm understanding, not pressure.
+                  If the user feels rushed, they are not ready for irreversible movement.
+                  Entry should begin from calm understanding, not pressure.
                 </p>
 
                 <p className="jal-lock-text">
@@ -874,8 +935,8 @@ export default function JalSolObserve() {
                 </div>
 
                 <p className="jal-note">
-                  This final step checks whether the user understood the system they are about to
-                  enter. Gate 02 should not open from scrolling alone.
+                  This final step checks whether the user understood the system they are
+                  about to enter. Gate 02 should not open from scrolling alone.
                 </p>
 
                 <div className="jal-steps">
@@ -892,7 +953,9 @@ export default function JalSolObserve() {
                         >
                           {question.options.map((option, index) => {
                             const isSelected = selected === index;
-                            const buttonClass = isSelected ? "button gold" : "button ghost";
+                            const buttonClass = isSelected
+                              ? "button gold"
+                              : "button ghost";
 
                             return (
                               <button
@@ -939,24 +1002,60 @@ export default function JalSolObserve() {
                   <div className="jal-bay-title">JAL’s Trials ~ Token Fit</div>
                   <div className="jal-bay-note">
                     {tokenFitPassed
-                      ? `Passed · ${tokenFitScore} score`
-                      : `Minimum required: ${MIN_TOKEN_FIT_SCORE}`}
+                      ? `Unlocked · Best ${tokenFitHighScore}`
+                      : `Minimum required high score: ${MIN_TOKEN_FIT_SCORE}`}
                   </div>
                 </div>
 
                 <p className="jal-note">
-                  This trial checks controlled movement, not just understanding. Reach the minimum
-                  score to unlock Gate 02.
+                  Gate 01 now uses a named local trial identity. Enter a Gate 01 username,
+                  then push your best run to at least <strong>{MIN_TOKEN_FIT_SCORE}</strong>.
+                  Endless mode activates after reaching the required score.
                 </p>
+
+                <section className="jal-bay jal-observe-trial-identity" style={{ marginBottom: "1rem" }}>
+                  <div className="jal-bay-head">
+                    <div className="jal-bay-title">Gate 01 trial username</div>
+                    <div className="jal-bay-note">Local to this browser</div>
+                  </div>
+
+                  <p className="jal-note">
+                    This username is stored locally for Gate 01 and used on the local
+                    leaderboard.
+                  </p>
+
+                  <div className="jal-observe-trial-input-wrap">
+  <input
+    type="text"
+    className="jal-observe-trial-input"
+    value={trialUsername}
+    onChange={(event) =>
+      setTrialUsername(sanitizeTrialUsername(event.target.value))
+    }
+    placeholder="Enter Gate 01 username"
+    maxLength={24}
+    disabled={loading}
+  />
+
+  {hasTrialUsername && (
+    <span className="jal-observe-trial-identity-ready">
+      identity ready
+    </span>
+  )}
+</div>
+</section>
 
                 <TokenFitGame
                   minScore={MIN_TOKEN_FIT_SCORE}
+                  username={sanitizeTrialUsername(trialUsername)}
+                  endlessMode
                   onPass={(score, highScore) => {
-                    setTokenFitPassed(true);
+                    setTokenFitPassed(highScore >= MIN_TOKEN_FIT_SCORE);
                     setTokenFitScore(score);
                     setTokenFitHighScore(highScore);
                   }}
                   onGameOver={(score, highScore) => {
+                    setTokenFitPassed(highScore >= MIN_TOKEN_FIT_SCORE);
                     setTokenFitScore(score);
                     setTokenFitHighScore(highScore);
                   }}
@@ -964,8 +1063,10 @@ export default function JalSolObserve() {
 
                 <p className="jal-lock-text" style={{ marginTop: "1rem" }}>
                   {tokenFitPassed
-                    ? `Trial passed. Score: ${tokenFitScore}. High Score: ${tokenFitHighScore}.`
-                    : "Gate 02 remains locked until this trial is passed."}
+                    ? `Gate 01 trial unlocked. Last run: ${tokenFitScore}. High Score: ${tokenFitHighScore}.`
+                    : hasTrialUsername
+                    ? `Gate 02 remains locked until your high score reaches ${MIN_TOKEN_FIT_SCORE}. Current best: ${tokenFitHighScore}.`
+                    : "Set your Gate 01 username before starting the trial."}
                 </p>
               </>
             )}
@@ -998,8 +1099,12 @@ export default function JalSolObserve() {
               </button>
 
               <span
-                className={`jal-observe-status-light ${completionReady ? "is-green" : "is-red"}`}
-                aria-label={completionReady ? "Current step ready" : "Current step incomplete"}
+                className={`jal-observe-status-light ${
+                  completionReady ? "is-green" : "is-red"
+                }`}
+                aria-label={
+                  completionReady ? "Current step ready" : "Current step incomplete"
+                }
               />
 
               <button

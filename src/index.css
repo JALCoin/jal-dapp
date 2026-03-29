@@ -6978,3 +6978,514 @@ button,
     width:100%;
   }
 }
+/* =========================================
+   21) GATE 01 — FINAL TRIAL CONSOLIDATION
+   Put at very bottom of index.css
+   Covers:
+   - trial username input
+   - leaderboard
+   - endless mode support
+   - coherence pass for Observe trial surfaces
+========================================= */
+
+.jal-observe-hero--compact{
+  min-height:0;
+  padding:72px 24px 42px;
+}
+
+.jal-observe-sequence-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:14px;
+}
+
+.jal-observe-sequence-card{
+  min-height:132px;
+  transition:
+    transform var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    opacity var(--t-fast);
+}
+
+.jal-observe-sequence-card:hover{
+  transform:translateY(-2px);
+}
+
+.jal-observe-sequence-card.is-complete{
+  box-shadow:0 0 0 1px rgba(22,214,173,.08) inset;
+}
+
+.jal-observe-sequence-card.is-active{
+  background:
+    radial-gradient(760px 180px at 50% 0%, rgba(244,200,106,.08), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+}
+
+.jal-trial-entry{
+  position:relative;
+  overflow:hidden;
+  gap:1.1rem;
+  padding:1.1rem;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:1.3rem;
+  background:
+    radial-gradient(720px 220px at 50% 0%, rgba(0,255,180,.07), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    0 18px 36px rgba(0,0,0,.26);
+}
+
+.jal-trial-entry::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.03), transparent 44%);
+  opacity:.78;
+}
+
+.jal-trial-note{
+  position:relative;
+  z-index:1;
+  margin:0;
+  max-width:68ch;
+  line-height:1.72;
+  color:rgba(231,255,247,.84);
+}
+
+.jal-trial-preview{
+  position:relative;
+  z-index:1;
+  min-height:148px;
+  padding:1rem 1rem 1.05rem;
+  border-radius:1.1rem;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(600px 140px at 50% 0%, rgba(0,255,180,.08), transparent 64%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    0 10px 24px rgba(0,0,0,.16);
+}
+
+.jal-trial-preview-badge{
+  color:rgba(225,255,242,.68);
+}
+
+.jal-trial-preview-title{
+  font-size:1.14rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+
+.jal-trial-preview-line{
+  max-width:58ch;
+  color:rgba(225,244,236,.82);
+}
+
+.jal-trial-grid{
+  position:relative;
+  z-index:1;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:.95rem;
+}
+
+.jal-trial-card{
+  min-height:102px;
+  transition:
+    transform var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
+}
+
+.jal-trial-card:hover{
+  transform:translateY(-2px);
+  border-color:rgba(17,241,167,.24);
+  box-shadow:
+    0 14px 28px rgba(0,0,0,.22),
+    0 0 14px rgba(17,241,167,.08);
+}
+
+.jal-trial-k{
+  color:rgba(231,255,247,.66);
+}
+
+.jal-trial-v{
+  color:rgba(231,255,247,.9);
+}
+
+.jal-trial-actions{
+  position:relative;
+  z-index:1;
+  align-items:center;
+}
+
+.jal-trial-actions .button{
+  min-width:180px;
+}
+
+/* ---------- Gate 01 username input ---------- */
+
+.jal-observe-trial-identity{
+  position:relative;
+  overflow:hidden;
+}
+
+.jal-observe-trial-identity::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(560px 140px at 50% 0%, rgba(244,200,106,.05), transparent 64%);
+  opacity:.8;
+}
+
+.jal-observe-trial-input-wrap{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  width:100%;
+}
+
+.jal-observe-trial-input{
+  width:100%;
+  max-width:420px;
+  min-height:52px;
+  padding:14px 16px;
+  border-radius:16px;
+  border:1px solid rgba(120,220,255,.18);
+  background:
+    linear-gradient(180deg, rgba(10,16,28,.96), rgba(8,13,22,.92));
+  color:var(--text);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    0 0 0 0 rgba(17,241,167,0);
+  outline:none;
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    transform var(--t-fast),
+    background var(--t-fast);
+}
+
+.jal-observe-trial-input::placeholder{
+  color:rgba(185,205,220,.46);
+}
+
+.jal-observe-trial-input:hover{
+  border-color:rgba(244,200,106,.24);
+}
+
+.jal-observe-trial-input:focus{
+  border-color:rgba(17,241,167,.42);
+  box-shadow:
+    0 0 0 1px rgba(17,241,167,.16),
+    0 0 18px rgba(17,241,167,.10);
+}
+
+.jal-observe-trial-identity-ready{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:34px;
+  padding:.45rem .75rem;
+  border-radius:999px;
+  border:1px solid rgba(17,241,167,.24);
+  background:rgba(17,241,167,.08);
+  color:#b8ffe1;
+  font-size:.72rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  box-shadow:0 0 12px rgba(17,241,167,.08);
+}
+
+.jal-observe-trial-identity-ready::before{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:#11f1a7;
+  box-shadow:0 0 10px rgba(17,241,167,.6);
+}
+
+/* ---------- Gate 01 leaderboard ---------- */
+
+.jal-trial-leaderboard{
+  display:grid;
+  gap:1rem;
+  padding:1rem;
+  border-radius:1.15rem;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(700px 200px at 50% 0%, rgba(0,240,255,.05), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.012));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    0 14px 30px rgba(0,0,0,.22);
+}
+
+.jal-trial-leaderboard-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  border-bottom:1px solid rgba(0,240,255,.08);
+  padding-bottom:12px;
+}
+
+.jal-trial-leaderboard-title{
+  font-size:1rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.jal-trial-leaderboard-note{
+  font-size:.78rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.62);
+}
+
+.jal-trial-leaderboard-list{
+  display:grid;
+  gap:10px;
+}
+
+.jal-trial-leaderboard-row{
+  display:grid;
+  grid-template-columns:72px minmax(0, 1fr) 110px;
+  align-items:center;
+  gap:12px;
+  min-height:64px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.18));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.015);
+  transition:
+    transform var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
+}
+
+.jal-trial-leaderboard-row:hover{
+  transform:translateY(-1px);
+  border-color:rgba(0,240,255,.24);
+  box-shadow:
+    0 10px 20px rgba(0,0,0,.18),
+    0 0 12px rgba(0,240,255,.06);
+}
+
+.jal-trial-leaderboard-row.is-rank-1{
+  border-color:rgba(244,200,106,.26);
+  box-shadow:
+    inset 0 0 0 1px rgba(244,200,106,.06),
+    0 0 14px rgba(244,200,106,.08);
+}
+
+.jal-trial-leaderboard-rank{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:.35rem .65rem;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.22);
+  font-size:.76rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.84);
+}
+
+.jal-trial-leaderboard-row.is-rank-1 .jal-trial-leaderboard-rank{
+  border-color:rgba(244,200,106,.34);
+  color:#ffe2a2;
+  box-shadow:0 0 12px rgba(244,200,106,.08);
+}
+
+.jal-trial-leaderboard-player{
+  min-width:0;
+}
+
+.jal-trial-leaderboard-name{
+  font-size:.98rem;
+  font-weight:700;
+  line-height:1.35;
+  color:rgba(245,255,251,.96);
+  word-break:break-word;
+}
+
+.jal-trial-leaderboard-sub{
+  margin-top:4px;
+  font-size:.78rem;
+  color:rgba(231,255,247,.56);
+  letter-spacing:.06em;
+}
+
+.jal-trial-leaderboard-score{
+  justify-self:end;
+  text-align:right;
+}
+
+.jal-trial-leaderboard-score-k{
+  font-size:.66rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.54);
+}
+
+.jal-trial-leaderboard-score-v{
+  margin-top:4px;
+  font-size:1.18rem;
+  font-weight:800;
+  line-height:1;
+  color:rgba(231,255,247,.96);
+}
+
+.jal-trial-leaderboard-empty{
+  padding:14px 16px;
+  border-radius:14px;
+  border:1px dashed rgba(255,255,255,.12);
+  color:rgba(231,255,247,.66);
+  background:rgba(255,255,255,.015);
+}
+
+/* ---------- TokenFit HUD and coherence ---------- */
+
+.jal-tokenfit-shell{
+  display:grid;
+  gap:1rem;
+}
+
+.jal-tokenfit-inline-head{
+  padding:0;
+}
+
+.jal-tokenfit-stage-wrap{
+  border-radius:1.2rem;
+}
+
+.jal-tokenfit-scene-frame{
+  border-radius:1.2rem;
+  box-shadow:
+    0 20px 40px rgba(0,0,0,.28),
+    0 0 18px rgba(0,255,180,.05);
+}
+
+.jal-tokenfit-fullscreen{
+  background:
+    radial-gradient(circle at center, rgba(0,255,180,.06), rgba(2,8,16,.96) 58%, rgba(0,0,0,.98) 100%);
+}
+
+.jal-tokenfit-shell .jal-lock-text{
+  max-width:72ch;
+}
+
+/* ---------- Observe step completion state ---------- */
+
+.jal-observe-status-light{
+  transition:
+    background var(--t-fast),
+    box-shadow var(--t-fast),
+    transform var(--t-fast);
+}
+
+.jal-observe-status-light.is-green{
+  transform:scale(1.04);
+}
+
+.jal-observe-nav-button{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    0 8px 18px rgba(0,0,0,.16);
+}
+
+.jal-observe-nav-button:hover:not(:disabled){
+  box-shadow:
+    0 0 16px rgba(227,190,92,.12),
+    0 10px 20px rgba(0,0,0,.18);
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 1040px){
+  .jal-observe-sequence-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px){
+  .jal-observe-hero--compact{
+    padding:62px 16px 34px;
+  }
+
+  .jal-trial-grid{
+    grid-template-columns:1fr;
+  }
+
+  .jal-trial-leaderboard-row{
+    grid-template-columns:64px minmax(0, 1fr) 90px;
+    gap:10px;
+  }
+}
+
+@media (max-width: 640px){
+  .jal-observe-sequence-grid{
+    grid-template-columns:1fr;
+  }
+
+  .jal-trial-entry,
+  .jal-trial-leaderboard{
+    padding:.95rem;
+    border-radius:1rem;
+  }
+
+  .jal-observe-trial-input{
+    min-height:50px;
+    max-width:none;
+  }
+
+  .jal-trial-leaderboard-row{
+    grid-template-columns:1fr;
+    align-items:start;
+  }
+
+  .jal-trial-leaderboard-rank{
+    width:max-content;
+  }
+
+  .jal-trial-leaderboard-score{
+    justify-self:start;
+    text-align:left;
+  }
+
+  .jal-trial-actions{
+    flex-direction:column;
+  }
+
+  .jal-trial-actions .button{
+    width:100%;
+    min-width:0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .jal-observe-sequence-card,
+  .jal-trial-card,
+  .jal-trial-leaderboard-row,
+  .jal-observe-status-light,
+  .jal-observe-nav-button,
+  .jal-observe-trial-input{
+    transition:none;
+  }
+}
