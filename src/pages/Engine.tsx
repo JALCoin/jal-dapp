@@ -18,7 +18,7 @@ type Snapshot = {
   lastOkAt: number;
   lastOkIso: string | null;
   lastPollAt?: number | null;
-  lastPollIso?: number | null;
+  lastPollIso?: string | null;
   err: string | null;
   counts: { all: number; aud: number; watch: number };
   watch: string[];
@@ -30,7 +30,7 @@ type Feed = "all" | "aud" | "watch";
 type SortKey = "coin" | "spread" | "mid";
 type SortDir = "asc" | "desc";
 type ViewMode = "simple" | "advanced";
-type Section = "ledger" | "events" | "about";
+type Section = "overview" | "ledger" | "events" | "about";
 
 type SlotState =
   | "WAITING_ENTRY"
@@ -80,7 +80,6 @@ type SlotRow = {
 
   grossPct?: number | null;
   netPct?: number | null;
-
   peakBid?: number | null;
   drawdownPct?: number | null;
 
@@ -104,6 +103,7 @@ type SlotRow = {
   feeBps?: number | null;
   frictionModel?: string | null;
   executorVersion?: string | null;
+  managerVersion?: string | null;
   paperOnly?: boolean;
 
   liveExecutionMode?: string | null;
@@ -198,15 +198,34 @@ type SlotRow = {
   subslotConfirmTicks?: number | null;
   subslotSignalState?: string | null;
   subslotSignalReason?: string | null;
+  subslotEntryMode?: string | null;
+
+  regime?: string | null;
+  regimeStrength?: number | null;
+  regimeTrendScore?: number | null;
+  regimeFlipCount?: number | null;
+  regimeUpdatedAt?: number | null;
+  regimeFastEma?: number | null;
+  regimeSlowEma?: number | null;
+  regimeFastSlopePct?: number | null;
+  regimeSlowSlopePct?: number | null;
+  regimeRangePct?: number | null;
+  regimeLastMid?: number | null;
+
+  consolidationState?: string | null;
+  consolidationRangeHigh?: number | null;
+  consolidationRangeLow?: number | null;
+  consolidationRangePct?: number | null;
+  consolidationTicks?: number | null;
+  consolidationCompressionScore?: number | null;
+  consolidationBreakoutReady?: boolean | null;
 
   rotationEligibleOut?: boolean | null;
   rotationScoreOut?: number | null;
   rotationOutBlockedReason?: string | null;
-
   rotationEligibleIn?: boolean | null;
   rotationScoreIn?: number | null;
   rotationInBlockedReason?: string | null;
-
   rotationEdgeScore?: number | null;
   rotationTargetSlotId?: string | null;
   rotationTargetCoin?: string | null;
@@ -572,13 +591,15 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
   let visibleRealized = 0;
 
   for (const s of slotRows) {
-    const unitAud = Number(s.unitAud);
+    const baseAud = Number(
+  s.combinedEntryAud ?? s.entryAud ?? s.unitAud
+    );
     const netPct = Number(s.netPct);
     const profitAud = Number(s.profitAud);
 
-    if (isHoldingFamilyState(s.state) && Number.isFinite(unitAud) && Number.isFinite(netPct)) {
-      openPnl += unitAud * (netPct / 100);
-    }
+if (isHoldingFamilyState(s.state) && Number.isFinite(baseAud) && Number.isFinite(netPct)) {
+  openPnl += baseAud * (netPct / 100);
+}
 
     if (Number.isFinite(profitAud)) {
       visibleRealized += profitAud;
@@ -591,93 +612,11 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
   };
 }
 
-function subslotLabel(s: SlotRow) {
-  const sub = String(s.subslotState || "").toUpperCase();
-  const signal = String(s.subslotSignalState || "").toUpperCase();
-
-  if (sub === "BUY_SUBMITTED") return "SUBSLOT: ENTRY PENDING";
-  if (sub === "ACTIVE") return "SUBSLOT: ACTIVE";
-  if (sub === "SELL_SUBMITTED") return "SUBSLOT: EXIT PENDING";
-  if (sub === "CLOSED") return "SUBSLOT: CLOSED";
-
-  if (signal === "REVERSAL_CONFIRMING") return "SUBSLOT: SIGNAL";
-  if (signal === "BOUNCE_SEEN") return "SUBSLOT: BOUNCE";
-  if (signal === "TRACKING") return "SUBSLOT: TRACK";
-  if (signal === "NO_MARKET") return "SUBSLOT: NO MARKET";
-
-  return "SUBSLOT: IDLE";
-}
-
-function subslotToneClass(s: SlotRow) {
-  const sub = String(s.subslotState || "").toUpperCase();
-  const signal = String(s.subslotSignalState || "").toUpperCase();
-
-  if (sub === "BUY_SUBMITTED") return "is-deploying";
-  if (sub === "ACTIVE") return "is-holding";
-  if (sub === "SELL_SUBMITTED") return "is-exiting";
-
-  if (sub === "CLOSED") return "is-muted";
-
-  if (signal === "REVERSAL_CONFIRMING") return "is-deploying";
-  if (signal === "BOUNCE_SEEN" || signal === "TRACKING") return "is-tracking";
-  if (signal === "NO_MARKET") return "is-muted";
-
-  return "is-muted";
-}
-function isIdleSubslot(s: SlotRow) {
-  const sub = String(s.subslotState || "").toUpperCase();
-  const signal = String(s.subslotSignalState || "").toUpperCase();
-
-  return !sub || sub === "CLOSED" || (!signal || signal === "NO_MARKET");
-}
-
-function subslotSummaryRows(s: SlotRow, nowMs: number) {
-  return [
-    { k: "Role", v: subslotLabel(s) },
-    { k: "State", v: s.subslotState ?? "—" },
-    { k: "Signal", v: s.subslotSignalState ?? "—" },
-    { k: "Requested AUD", v: moneyAud(s.subslotRequestedAud) },
-    { k: "Actual AUD", v: moneyAud(s.subslotActualAud) },
-    { k: "Requested Qty", v: fmt(s.subslotRequestedCoinQty) },
-    { k: "Actual Qty", v: fmt(s.subslotActualCoinQty) },
-    { k: "Submitted Rate", v: fmt(s.subslotSubmittedRate) },
-    { k: "Actual Rate", v: fmt(s.subslotActualRate) },
-    { k: "Net %", v: pctNum(s.subslotNetPct) },
-    { k: "Profit AUD", v: moneyAud(s.subslotProfitAud) },
-    { k: "Pending Merge", v: moneyAud(s.subslotPendingMergeAud) },
-    { k: "Lifetime Profit", v: moneyAud(s.subslotLifetimeProfitAud) },
-    { k: "Lifetime Cycles", v: String(s.subslotLifetimeCycles ?? 0) },
-    {
-      k: "Last reconcile",
-      v: s.subslotLastReconcileAt ? ageLabel(nowMs - s.subslotLastReconcileAt) : "—",
-    },
-    { k: "Reconcile note", v: s.subslotLastReconcileNote ?? "—" },
-    { k: "Last error", v: s.subslotLastError ?? "—" },
-  ];
-}
-
-function useIsDesktop(bpPx = 980) {
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia(`(min-width: ${bpPx}px)`).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia(`(min-width: ${bpPx}px)`);
-    const onChange = () => setIsDesktop(mq.matches);
-
-    onChange();
-    if (typeof mq.addEventListener === "function") mq.addEventListener("change", onChange);
-    else (mq as any).addListener(onChange);
-
-    return () => {
-      if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", onChange);
-      else (mq as any).removeListener(onChange);
-    };
-  }, [bpPx]);
-
-  return isDesktop;
+function stateClassName(value: string | null | undefined) {
+  const normalized = String(value || "")
+    .toUpperCase()
+    .replace(/_/g, "-");
+  return normalized ? `state-${normalized}` : "";
 }
 
 function stateToneClass(slot: SlotRow) {
@@ -715,11 +654,208 @@ function stateToneClass(slot: SlotRow) {
   return "is-neutral";
 }
 
-function stateClassName(value: string | null | undefined) {
-  const normalized = String(value || "")
-    .toUpperCase()
-    .replace(/_/g, "-");
-  return normalized ? `state-${normalized}` : "";
+function regimeLabel(s: SlotRow) {
+  return s.regime || s.consolidationState || "UNCLASSIFIED";
+}
+
+function regimeToneClass(s: SlotRow) {
+  const regime = String(regimeLabel(s)).toUpperCase();
+
+  if (regime.includes("UPTREND") || regime.includes("BULL")) return "is-holding";
+  if (regime.includes("DOWNTREND") || regime.includes("BEAR")) return "is-exiting";
+  if (regime.includes("CONSOLIDATION")) return "is-tracking";
+  return "is-muted";
+}
+
+function regimeSummary(s: SlotRow) {
+  const regime = String(regimeLabel(s)).toUpperCase();
+  const breakout = s.consolidationBreakoutReady === true;
+
+  if (regime === "UPTREND") return "Trend pressure is upward.";
+  if (regime === "DOWNTREND") return "Trend pressure is downward.";
+  if (regime === "CONSOLIDATION_BULL")
+    return breakout
+      ? "Bullish compression with breakout readiness."
+      : "Bullish compression, still waiting for release.";
+  if (regime === "CONSOLIDATION_BEAR")
+    return breakout
+      ? "Bearish compression with breakdown readiness."
+      : "Bearish compression, still waiting for release.";
+  if (regime.includes("CONSOLIDATION")) return "Compression detected. Waiting for direction.";
+  return "Market behavior still being classified.";
+}
+
+function subslotModeLabel(s: SlotRow) {
+  const mode = String(s.subslotEntryMode || "").toUpperCase();
+  const regime = String(regimeLabel(s)).toUpperCase();
+
+  if (mode) return mode.replace(/_/g, " ");
+  if (regime.includes("CONSOLIDATION")) return "CONSOLIDATION CAPTURE";
+  if (regime.includes("UPTREND")) return "UPTREND CAPTURE";
+  if (regime.includes("DOWNTREND") || regime.includes("BEAR")) return "COUNTER-TREND CAPTURE";
+  return "TACTICAL CAPTURE";
+}
+
+function subslotDecisionLabel(s: SlotRow) {
+  const sub = String(s.subslotState || "").toUpperCase();
+  const signal = String(s.subslotSignalState || "").toUpperCase();
+
+  if (sub === "BUY_SUBMITTED") return "Entry pending";
+  if (sub === "ACTIVE") return "Trade active";
+  if (sub === "SELL_SUBMITTED") return "Exit pending";
+  if (sub === "CLOSED" && s.subslotExitReason) return "Last trade closed";
+
+  if (signal === "REVERSAL_CONFIRMING") return "Waiting for confirmation";
+  if (signal === "BOUNCE_SEEN") return "Bounce detected";
+  if (signal === "TRACKING") return "Tracking move";
+  if (signal === "ARMED") return "Armed";
+  if (signal === "NO_MARKET") return "No usable market";
+  return "Idle";
+}
+
+function subslotReasonLabel(s: SlotRow) {
+  const sub = String(s.subslotState || "").toUpperCase();
+  const signal = String(s.subslotSignalState || "").toUpperCase();
+
+  if (sub === "BUY_SUBMITTED") return "A live entry has been submitted and is awaiting confirmation.";
+  if (sub === "ACTIVE") return "A tactical capture is currently open inside the parent slot.";
+  if (sub === "SELL_SUBMITTED") return "A live exit has been submitted and is awaiting confirmation.";
+  if (sub === "CLOSED" && s.subslotExitReason) {
+    return `Last exit reason: ${reasonLabel(s.subslotExitReason)}.`;
+  }
+
+  if (signal === "REVERSAL_CONFIRMING") return "Bounce, trend, and confirmation checks are aligning.";
+  if (signal === "BOUNCE_SEEN") return "A bounce was detected, but confirmation is not complete yet.";
+  if (signal === "TRACKING") return "The system is watching for structure before entry.";
+  if (signal === "ARMED") return "The setup is armed but waiting for movement.";
+  if (signal === "NO_MARKET") return "The system does not have a usable live market read.";
+  return "No tactical action is currently active.";
+}
+
+function subslotToneClass(s: SlotRow) {
+  const sub = String(s.subslotState || "").toUpperCase();
+  const signal = String(s.subslotSignalState || "").toUpperCase();
+
+  if (sub === "BUY_SUBMITTED") return "is-deploying";
+  if (sub === "ACTIVE") return "is-holding";
+  if (sub === "SELL_SUBMITTED") return "is-exiting";
+  if (sub === "CLOSED") return "is-muted";
+
+  if (signal === "REVERSAL_CONFIRMING") return "is-deploying";
+  if (signal === "BOUNCE_SEEN" || signal === "TRACKING" || signal === "ARMED") return "is-tracking";
+  if (signal === "NO_MARKET") return "is-muted";
+
+  return "is-muted";
+}
+
+function isIdleSubslot(s: SlotRow) {
+  const sub = String(s.subslotState || "").toUpperCase();
+  const signal = String(s.subslotSignalState || "").toUpperCase();
+
+  return sub === "CLOSED" && (!signal || signal === "NO_MARKET");
+}
+
+function engineDecisionLabel(s: SlotRow) {
+  const state = String(s.state || "").toUpperCase();
+
+  if (state === "WAITING_ENTRY") return "Waiting";
+  if (state === "DEPLOYING") return "Entering";
+  if (state === "EXITING") return "Exiting";
+  if (state === "LVL4_TRAIL") return "Trailing";
+  if (state === "LVL3_LOCK" || state === "LVL2_LOCK" || state === "LVL1_LOCK") return "Locked";
+  if (state === "HOLDING") return "Holding";
+  return "Watching";
+}
+
+function entryPhaseLabel(s: SlotRow) {
+  const state = String(s.state || "").toUpperCase();
+  const tracking = String(s.trackingState || "").toUpperCase();
+
+  if (state === "WAITING_ENTRY" && s.reentryTargetMid != null) return "Waiting for re-entry level";
+  if (tracking === "REVERSAL_CONFIRMING") return "Reversal confirming";
+  if (tracking === "DRAWDOWN_SEEN") return "Drawdown observed";
+  if (tracking === "TRACKING") return "Tracking structure";
+  if (tracking === "SPREAD_BLOCKED") return "Spread blocked";
+  if (tracking === "NO_MARKET") return "No market";
+  if (state === "DEPLOYING") return "Deploying";
+  if (isHoldingFamilyState(state)) return "Position established";
+  if (state === "EXITING") return "Exit in progress";
+  return "Idle";
+}
+
+function breakoutLabel(s: SlotRow) {
+  if (s.consolidationBreakoutReady === true) return "READY";
+  if (String(regimeLabel(s)).toUpperCase().includes("CONSOLIDATION")) return "BUILDING";
+  return "NO";
+}
+
+function useIsDesktop(bpPx = 980) {
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(`(min-width: ${bpPx}px)`).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia(`(min-width: ${bpPx}px)`);
+    const onChange = () => setIsDesktop(mq.matches);
+
+    onChange();
+    if (typeof mq.addEventListener === "function") mq.addEventListener("change", onChange);
+    else (mq as any).addListener(onChange);
+
+    return () => {
+      if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", onChange);
+      else (mq as any).removeListener(onChange);
+    };
+  }, [bpPx]);
+
+  return isDesktop;
+}
+
+function describeDecision(s: SlotRow) {
+  const state = String(s.state || "").toUpperCase();
+
+  if (state === "WAITING_ENTRY") {
+    if (s.reentryTargetMid != null) return `Waiting for price to revisit ${fmt(s.reentryTargetMid)}.`;
+    return "Waiting for a new qualified entry.";
+  }
+
+  if (state === "DEPLOYING") return "Submitting and confirming a live entry.";
+  if (state === "EXITING") return "Submitting or confirming a live exit.";
+  if (state === "LVL4_TRAIL") return "Holding with the highest trail protection engaged.";
+  if (state === "LVL3_LOCK") return "Holding with level 3 lock protection.";
+  if (state === "LVL2_LOCK") return "Holding with level 2 lock protection.";
+  if (state === "LVL1_LOCK") return "Holding with level 1 lock protection.";
+  if (state === "HOLDING") return "Holding the parent position and monitoring tactical conditions.";
+
+  return "Monitoring slot conditions.";
+}
+
+function detailRowsForSlot(s: SlotRow, nowMs: number) {
+  return [
+    { k: "Slot", v: s.id },
+    { k: "Coin", v: slotCoin(s) },
+    { k: "Market", v: s.market ?? "—" },
+    { k: "State", v: stateLabel(s) },
+    { k: "Tracking", v: trackingLabel(s) },
+    { k: "Decision", v: engineDecisionLabel(s) },
+    { k: "Regime", v: regimeLabel(s) },
+    { k: "Regime strength", v: s.regimeStrength != null ? String(s.regimeStrength) : "—" },
+    { k: "Trend score", v: s.regimeTrendScore != null ? String(s.regimeTrendScore) : "—" },
+    { k: "Breakout ready", v: s.consolidationBreakoutReady == null ? "—" : s.consolidationBreakoutReady ? "YES" : "NO" },
+    { k: "Entry", v: effectiveEntryLabel(s) },
+    { k: "Now", v: effectiveNowLabel(s) },
+    { k: "Spread", v: pctNum(s.nowSpreadPct) },
+    { k: "Net", v: pctNum(s.netPct) },
+    { k: "Gross", v: pctNum(s.grossPct) },
+    { k: "Unit", v: moneyAud(s.unitAud) },
+    { k: "Cycles", v: String(s.cycles ?? 0) },
+    { k: "Lifetime net", v: pctNum(s.lifetimeNetPct) },
+    { k: "Drawdown", v: pctNum(s.drawdownPct) },
+    { k: "Lock", v: lockDisplay(s) },
+    { k: "Last seen", v: s.lastSeenAt ? ageLabel(nowMs - s.lastSeenAt) : "—" },
+  ];
 }
 
 /* =========================
@@ -742,7 +878,7 @@ export default function Engine() {
   const [query, setQuery] = useState("");
 
   const [view, setView] = useState<ViewMode>("simple");
-  const [section, setSection] = useState<Section>("ledger");
+  const [section, setSection] = useState<Section>("overview");
   const [eventsOpen, setEventsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
@@ -857,29 +993,6 @@ export default function Engine() {
     return () => window.clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSelectedSlotId(null);
-      if (e.key === "ArrowRight") {
-        setCarouselIndex((i) => (slotRows.length ? (i + 1) % slotRows.length : 0));
-      }
-      if (e.key === "ArrowLeft") {
-        setCarouselIndex((i) => (slotRows.length ? (i - 1 + slotRows.length) % slotRows.length : 0));
-      }
-    };
-
-    window.addEventListener("keydown", onKey);
-
-    if (selectedSlotId) {
-      document.body.style.overflow = "hidden";
-    }
-
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [selectedSlotId, slotRows.length]);
-
   const filteredMarketRows = useMemo(() => {
     const q = query.trim().toUpperCase();
     const watchSet = new Set((snap?.watch ?? []).map((c) => String(c).toUpperCase()));
@@ -916,20 +1029,18 @@ export default function Engine() {
 
     if (q) {
       list = list.filter((s) => {
-        const coin = (s.coin ?? "").toUpperCase();
-        const market = (s.market ?? "").toUpperCase();
-        const id = (s.id ?? "").toUpperCase();
-        const tracking = (s.trackingState ?? "").toUpperCase();
-        const subslot = (s.subslotState ?? "").toUpperCase();
-        const rotation = (s.rotationStage ?? "").toUpperCase();
-        return (
-          coin.includes(q) ||
-          market.includes(q) ||
-          id.includes(q) ||
-          tracking.includes(q) ||
-          subslot.includes(q) ||
-          rotation.includes(q)
-        );
+        const fields = [
+          s.coin ?? "",
+          s.market ?? "",
+          s.id ?? "",
+          s.trackingState ?? "",
+          s.subslotState ?? "",
+          s.rotationStage ?? "",
+          s.regime ?? "",
+          s.consolidationState ?? "",
+        ];
+
+        return fields.some((x) => String(x).toUpperCase().includes(q));
       });
     }
 
@@ -946,25 +1057,43 @@ export default function Engine() {
     });
   }, [query, slotRows, sortDir, sortKey]);
 
-  useEffect(() => {
-    if (!filteredSlots.length) {
-      setCarouselIndex(0);
-      return;
-    }
-    if (carouselIndex > filteredSlots.length - 1) {
-      setCarouselIndex(0);
-    }
-  }, [filteredSlots.length, carouselIndex]);
+  const prioritizedSlots = useMemo(() => {
+  const score = (s: SlotRow) => {
+    if (isHoldingFamilyState(s.state)) return 5;
+    if (String(s.subslotState || "").toUpperCase() === "ACTIVE") return 4;
+    if (String(s.subslotState || "").toUpperCase() === "BUY_SUBMITTED") return 3;
+    if (String(s.trackingState || "").toUpperCase() === "REVERSAL_CONFIRMING") return 2;
+    if (String(s.trackingState || "").toUpperCase() === "TRACKING") return 1;
+    return 0;
+  };
+
+  return [...filteredSlots].sort((a, b) => score(b) - score(a));
+}, [filteredSlots]);
+
+const carouselSlot = useMemo(() => {
+  if (!prioritizedSlots.length) return null;
+  return prioritizedSlots[Math.max(0, Math.min(carouselIndex, prioritizedSlots.length - 1))] ?? null;
+}, [prioritizedSlots, carouselIndex]);
 
   useEffect(() => {
-    if (!filteredSlots.length || carouselPaused) return;
+  if (!prioritizedSlots.length) {
+    setCarouselIndex(0);
+    return;
+  }
+  if (carouselIndex > prioritizedSlots.length - 1) {
+    setCarouselIndex(0);
+  }
+}, [prioritizedSlots.length, carouselIndex]);
 
-    const t = window.setInterval(() => {
-      setCarouselIndex((i) => (i + 1) % filteredSlots.length);
-    }, CAROUSEL_INTERVAL_MS);
+  useEffect(() => {
+  if (!prioritizedSlots.length || carouselPaused) return;
 
-    return () => window.clearInterval(t);
-  }, [filteredSlots.length, carouselPaused]);
+  const t = window.setInterval(() => {
+    setCarouselIndex((i) => (i + 1) % prioritizedSlots.length);
+  }, CAROUSEL_INTERVAL_MS);
+
+  return () => window.clearInterval(t);
+}, [prioritizedSlots.length, carouselPaused]);
 
   const selectedSlot = useMemo(
     () => slotRows.find((s) => s.id === selectedSlotId) ?? null,
@@ -975,11 +1104,6 @@ export default function Engine() {
     if (!selectedSlotId) return [];
     return events.filter((e) => e.slotId === selectedSlotId);
   }, [events, selectedSlotId]);
-
-  const carouselSlot = useMemo(() => {
-    if (!filteredSlots.length) return null;
-    return filteredSlots[Math.max(0, Math.min(carouselIndex, filteredSlots.length - 1))] ?? null;
-  }, [filteredSlots, carouselIndex]);
 
   const fixedAllowlist = meta?.fixedSlots?.allowlist ?? [];
   const fixedExpected = meta?.fixedSlots?.expected ?? fixedAllowlist.length;
@@ -1023,6 +1147,29 @@ export default function Engine() {
       .join(", ");
   }, [filteredSlots]);
 
+  const overviewCounts = useMemo(() => {
+    const out = {
+      bull: 0,
+      bear: 0,
+      consolidation: 0,
+      breakoutReady: 0,
+      waiting: 0,
+      activeSubslots: 0,
+    };
+
+    for (const s of filteredSlots) {
+      const regime = String(regimeLabel(s)).toUpperCase();
+      if (regime.includes("UPTREND") || regime.includes("BULL")) out.bull += 1;
+      if (regime.includes("DOWNTREND") || regime.includes("BEAR")) out.bear += 1;
+      if (regime.includes("CONSOLIDATION")) out.consolidation += 1;
+      if (s.consolidationBreakoutReady === true) out.breakoutReady += 1;
+      if (String(s.state).toUpperCase() === "WAITING_ENTRY") out.waiting += 1;
+      if (String(s.subslotState || "").toUpperCase() === "ACTIVE") out.activeSubslots += 1;
+    }
+
+    return out;
+  }, [filteredSlots]);
+
   const showEventsUnderLedger = isDesktop && section === "ledger";
 
   return (
@@ -1040,7 +1187,7 @@ export default function Engine() {
 
                 <div className="engine-hero-center">
                   <h1 className="engine-title">$JAL~Engine</h1>
-                  <div className="engine-sub">Deterministic fixed-slot Jeroid ledger.</div>
+                  <div className="engine-sub">Fixed-slot market machine with public runtime proof.</div>
 
                   {view === "advanced" ? (
                     <div className="card machine-surface panel-frame engine-telemetry engine-telemetry--compact">
@@ -1088,8 +1235,7 @@ export default function Engine() {
                   </div>
 
                   <div className="engine-auth-hint">
-                    Estimated open parent PnL is floating. Window harvest is event-slice realized flow. External transfers
-                    are ignored.
+                    The frontend now prioritizes decision clarity first, raw diagnostics second.
                   </div>
                 </aside>
               </header>
@@ -1124,6 +1270,16 @@ export default function Engine() {
                     <span>Tracking {trackingStates.TRACKING ?? 0}</span>
                     <span>•</span>
                     <span>Holding {(counts.holding ?? 0) + (counts.locked ?? 0)}</span>
+                  </div>
+                </div>
+
+                <div className="engine-capture card machine-surface panel-frame">
+                  <div className="cap-k">Breakout Ready</div>
+                  <div className="cap-v">{overviewCounts.breakoutReady}</div>
+                  <div className="cap-sub">
+                    <span>Consolidation {overviewCounts.consolidation}</span>
+                    <span>•</span>
+                    <span>Active subslots {overviewCounts.activeSubslots}</span>
                   </div>
                 </div>
               </div>
@@ -1199,7 +1355,7 @@ export default function Engine() {
                     className="engine-filter"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Filter coins / slots…"
+                    placeholder="Filter coins / states / regime…"
                     aria-label="Filter"
                   />
                 </div>
@@ -1216,7 +1372,7 @@ export default function Engine() {
                   <div>
                     <div className="engine-telemetry-title">Live JRD Status</div>
                     <div className="engine-telemetry-note">
-                      One fixed Jeroid position at a time. Click the card to open full details.
+                      A public-facing explanation of what each fixed slot is doing right now.
                     </div>
                   </div>
 
@@ -1226,7 +1382,7 @@ export default function Engine() {
                       className="button ghost"
                       onClick={() =>
                         setCarouselIndex((i) =>
-                          filteredSlots.length ? (i - 1 + filteredSlots.length) % filteredSlots.length : 0
+                          prioritizedSlots.length ? (i - 1 + prioritizedSlots.length) % prioritizedSlots.length : 0
                         )
                       }
                       aria-label="Previous JRD"
@@ -1235,14 +1391,14 @@ export default function Engine() {
                     </button>
 
                     <div className="engine-carousel-counter">
-                      {filteredSlots.length ? `${carouselIndex + 1} / ${filteredSlots.length}` : "0 / 0"}
+                      {prioritizedSlots.length ? `${carouselIndex + 1} / ${prioritizedSlots.length}` : "0 / 0"}
                     </div>
 
                     <button
                       type="button"
                       className="button ghost"
                       onClick={() =>
-                        setCarouselIndex((i) => (filteredSlots.length ? (i + 1) % filteredSlots.length : 0))
+                        setCarouselIndex((i) => (prioritizedSlots.length ? (i + 1) % prioritizedSlots.length : 0))
                       }
                       aria-label="Next JRD"
                     >
@@ -1271,16 +1427,30 @@ export default function Engine() {
 
                       <div className="engine-carousel-grid">
                         <div className="engine-carousel-metric">
-                          <div className="engine-carousel-k">State</div>
+                          <div className="engine-carousel-k">Market</div>
+                          <div className={`engine-carousel-v ${regimeToneClass(carouselSlot)}`}>
+                            {regimeLabel(carouselSlot)}
+                          </div>
+                        </div>
+
+                        <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">Decision</div>
+                          <div className={`engine-carousel-v ${stateClassName(stateLabel(carouselSlot))}`}>
+                            {engineDecisionLabel(carouselSlot)}
+                          </div>
+                        </div>
+
+                        <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">Position</div>
                           <div className={`engine-carousel-v ${stateClassName(stateLabel(carouselSlot))}`}>
                             {stateLabel(carouselSlot)}
                           </div>
                         </div>
 
                         <div className="engine-carousel-metric">
-                          <div className="engine-carousel-k">Tracking</div>
+                          <div className="engine-carousel-k">Entry Phase</div>
                           <div className={`engine-carousel-v ${stateClassName(trackingLabel(carouselSlot))}`}>
-                            {trackingLabel(carouselSlot)}
+                            {entryPhaseLabel(carouselSlot)}
                           </div>
                         </div>
 
@@ -1290,65 +1460,59 @@ export default function Engine() {
                         </div>
 
                         <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">Spread</div>
+                          <div className="engine-carousel-v">{pctNum(carouselSlot.nowSpreadPct)}</div>
+                        </div>
+
+                        <div className="engine-carousel-metric">
+                          <div className="engine-carousel-k">Breakout</div>
+                          <div className="engine-carousel-v">{breakoutLabel(carouselSlot)}</div>
+                        </div>
+
+                        <div className="engine-carousel-metric">
                           <div className="engine-carousel-k">Cycles</div>
                           <div className="engine-carousel-v">{carouselSlot.cycles ?? 0}</div>
-                        </div>
-
-                        <div className="engine-carousel-metric">
-                          <div className="engine-carousel-k">Unit</div>
-                          <div className="engine-carousel-v">{moneyAud(carouselSlot.unitAud)}</div>
-                        </div>
-
-                        <div className="engine-carousel-metric">
-                          <div className="engine-carousel-k">Now</div>
-                          <div className="engine-carousel-v">{effectiveNowLabel(carouselSlot)}</div>
                         </div>
                       </div>
 
                       <div className="engine-carousel-foot">
-                        <span>Entry {effectiveEntryLabel(carouselSlot)}</span>
-                        <span>•</span>
-                        <span>Level {carouselSlot.level ? `LVL${carouselSlot.level}` : "—"}</span>
-                        <span>•</span>
-                        <span>View Details</span>
+                        <span>{regimeSummary(carouselSlot)}</span>
                       </div>
 
-<div className={`engine-subslot ${subslotToneClass(carouselSlot)}`}>
-  <div className="engine-subslot-head">
-    <span className="engine-subslot-title">{subslotLabel(carouselSlot)}</span>
-    <span className="engine-subslot-state">
-      {carouselSlot.subslotState ?? carouselSlot.subslotSignalState ?? "—"}
-    </span>
-  </div>
+                      <div className={`engine-subslot ${subslotToneClass(carouselSlot)}`}>
+                        <div className="engine-subslot-head">
+                          <span className="engine-subslot-title">{subslotModeLabel(carouselSlot)}</span>
+                          <span className="engine-subslot-state">{subslotDecisionLabel(carouselSlot)}</span>
+                        </div>
 
-  {!isIdleSubslot(carouselSlot) ? (
-    <div className="engine-subslot-grid">
-      <div className="engine-subslot-item">
-        <div className="engine-subslot-k">Subslot Net</div>
-        <div className="engine-subslot-v">{pctNum(carouselSlot.subslotNetPct)}</div>
-      </div>
+                        <div className="engine-subslot-copy">{subslotReasonLabel(carouselSlot)}</div>
 
-      <div className="engine-subslot-item">
-        <div className="engine-subslot-k">Profit AUD</div>
-        <div className="engine-subslot-v">{moneyAud(carouselSlot.subslotProfitAud)}</div>
-      </div>
+                        {!isIdleSubslot(carouselSlot) ? (
+                          <div className="engine-subslot-grid">
+                            <div className="engine-subslot-item">
+                              <div className="engine-subslot-k">Signal</div>
+                              <div className="engine-subslot-v">{carouselSlot.subslotSignalState ?? "—"}</div>
+                            </div>
 
-      <div className="engine-subslot-item">
-        <div className="engine-subslot-k">Pending Merge</div>
-        <div className="engine-subslot-v">{moneyAud(carouselSlot.subslotPendingMergeAud)}</div>
-      </div>
+                            <div className="engine-subslot-item">
+                              <div className="engine-subslot-k">Confirm</div>
+                              <div className="engine-subslot-v">
+                                {carouselSlot.subslotConfirmTicks != null ? carouselSlot.subslotConfirmTicks : "—"}
+                              </div>
+                            </div>
 
-      <div className="engine-subslot-item">
-        <div className="engine-subslot-k">Last Reconcile</div>
-        <div className="engine-subslot-v">
-          {carouselSlot.subslotLastReconcileAt
-            ? ageLabel(nowMs - carouselSlot.subslotLastReconcileAt)
-            : "—"}
-        </div>
-      </div>
-    </div>
-  ) : null}
-</div>
+                            <div className="engine-subslot-item">
+                              <div className="engine-subslot-k">Bounce</div>
+                              <div className="engine-subslot-v">{pctNum(carouselSlot.subslotBouncePct)}</div>
+                            </div>
+
+                            <div className="engine-subslot-item">
+                              <div className="engine-subslot-k">EMA Gap</div>
+                              <div className="engine-subslot-v">{pctNum(carouselSlot.subslotEmaGapPct)}</div>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
                     </button>
 
                     <div
@@ -1356,7 +1520,7 @@ export default function Engine() {
                       onMouseEnter={() => setCarouselPaused(true)}
                       onMouseLeave={() => setCarouselPaused(false)}
                     >
-                      {filteredSlots.map((slot, idx) => (
+                      {prioritizedSlots.map((slot, idx) => (
                         <button
                           key={slot.id}
                           type="button"
@@ -1376,7 +1540,7 @@ export default function Engine() {
                 <div className="engine-bay engine-bay--narrow">
                   <div className="bay-head">
                     <div className="bay-title">Machine Summary</div>
-                    <div className="bay-note">Fixed-slot runtime state.</div>
+                    <div className="bay-note">Public machine state, simplified for clarity.</div>
                   </div>
 
                   <div className="card machine-surface panel-frame engine-telemetry" aria-label="Machine Summary">
@@ -1402,15 +1566,25 @@ export default function Engine() {
                       </div>
 
                       <div className="engine-telemetry-item">
-                        <div className="engine-telemetry-k">Tracking coins</div>
-                        <div className="engine-telemetry-v">{trackingStates.TRACKING ?? 0}</div>
-                        <div className="engine-telemetry-sub">{topTrackingCoins || "—"}</div>
+                        <div className="engine-telemetry-k">Consolidation</div>
+                        <div className="engine-telemetry-v">{overviewCounts.consolidation}</div>
+                        <div className="engine-telemetry-sub">
+                          Breakout ready {overviewCounts.breakoutReady}
+                        </div>
                       </div>
 
                       <div className="engine-telemetry-item">
-                        <div className="engine-telemetry-k">No market</div>
-                        <div className="engine-telemetry-v">{trackingStates.NO_MARKET ?? 0}</div>
-                        <div className="engine-telemetry-sub">Spread blocked {trackingStates.SPREAD_BLOCKED ?? 0}</div>
+                        <div className="engine-telemetry-k">Bull / Bear</div>
+                        <div className="engine-telemetry-v">
+                          {overviewCounts.bull} / {overviewCounts.bear}
+                        </div>
+                        <div className="engine-telemetry-sub">Trend classification</div>
+                      </div>
+
+                      <div className="engine-telemetry-item">
+                        <div className="engine-telemetry-k">Tracking coins</div>
+                        <div className="engine-telemetry-v">{trackingStates.TRACKING ?? 0}</div>
+                        <div className="engine-telemetry-sub">{topTrackingCoins || "—"}</div>
                       </div>
 
                       <div className="engine-telemetry-item">
@@ -1544,6 +1718,14 @@ export default function Engine() {
               <div className="engine-section-tabs" aria-label="Engine sections">
                 <button
                   type="button"
+                  className={`engine-section-tab ${section === "overview" ? "active" : ""}`}
+                  onClick={() => setSection("overview")}
+                >
+                  Overview
+                </button>
+
+                <button
+                  type="button"
                   className={`engine-section-tab ${section === "ledger" ? "active" : ""}`}
                   onClick={() => setSection("ledger")}
                 >
@@ -1566,6 +1748,54 @@ export default function Engine() {
                   About
                 </button>
               </div>
+
+              {section === "overview" ? (
+                <div className="card machine-surface panel-frame engine-ledger" aria-label="Overview cards">
+                  <div className="engine-ledger-top">
+                    <div>
+                      <div className="engine-ledger-title">Decision Overview</div>
+                      <div className="engine-ledger-note">
+                        Every slot explained by market behavior, machine decision, and tactical capture status.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="ledger-table">
+                    <div className="ledger-head">
+                      <div>Slot</div>
+                      <div>Market</div>
+                      <div>Decision</div>
+                      <div>Position</div>
+                      <div>Subslot</div>
+                      <div className="num">Net</div>
+                      <div className="num">Spread</div>
+                      <div className="num">More</div>
+                    </div>
+
+                    {filteredSlots.length ? (
+                      filteredSlots.map((s) => (
+                        <button
+                          type="button"
+                          className="ledger-row"
+                          key={s.id}
+                          onClick={() => setSelectedSlotId(s.id)}
+                        >
+                          <div className="ledger-slotid">{s.id}</div>
+                          <div className={regimeToneClass(s)}>{regimeLabel(s)}</div>
+                          <div>{engineDecisionLabel(s)}</div>
+                          <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
+                          <div className={subslotToneClass(s)}>{subslotDecisionLabel(s)}</div>
+                          <div className="num">{pctNum(s.netPct)}</div>
+                          <div className="num">{pctNum(s.nowSpreadPct)}</div>
+                          <div className="num ledger-view">Open</div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="ledger-empty">No fixed slots available.</div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
 
               {section === "ledger" ? (
                 <>
@@ -1606,7 +1836,7 @@ export default function Engine() {
                       <div>
                         <div className="engine-ledger-title">Permanent Slots Ledger</div>
                         <div className="engine-ledger-note">
-                          Read-only public machine proof. Each slot belongs to one fixed coin identity.
+                          Click a row to expand the public proof layer. Open full details for diagnostics.
                         </div>
                       </div>
 
@@ -1621,17 +1851,16 @@ export default function Engine() {
                         <div>Coin</div>
                         <div>Market</div>
                         <div>State</div>
-                        <div>Tracking</div>
+                        <div>Regime</div>
                         <div className="num">Unit</div>
                         <div className="num">Net</div>
-                        <div className="num">Cycles</div>
                         <div className="num">More</div>
                       </div>
 
                       {filteredSlots.length ? (
                         filteredSlots.map((s) => {
                           const expanded = expandedLedgerSlotId === s.id;
-                          const subslotRows = subslotSummaryRows(s, nowMs);
+                          const rows = detailRowsForSlot(s, nowMs);
 
                           return (
                             <div key={s.id} className={`ledger-entry ${expanded ? "is-expanded" : ""}`}>
@@ -1641,33 +1870,36 @@ export default function Engine() {
                                 onClick={() =>
                                   setExpandedLedgerSlotId((prev) => (prev === s.id ? null : s.id))
                                 }
-                                title="Toggle subslot tracker"
+                                title="Toggle detail layer"
                                 aria-expanded={expanded}
                               >
                                 <div className="ledger-slotid">{s.id}</div>
                                 <div>{slotCoin(s)}</div>
                                 <div>{s.market ?? "—"}</div>
                                 <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
-                                <div className={stateClassName(trackingLabel(s))}>{trackingLabel(s)}</div>
+                                <div className={regimeToneClass(s)}>{regimeLabel(s)}</div>
                                 <div className="num">{moneyAud(s.unitAud)}</div>
                                 <div className="num">{pctNum(s.netPct)}</div>
-                                <div className="num">{s.cycles ?? 0}</div>
                                 <div className="num ledger-view">{expanded ? "Hide" : "Show"}</div>
                               </button>
 
                               {expanded ? (
                                 <div className="ledger-subpanel">
-                                  <div className={`ledger-subpanel-badge ${subslotToneClass(s)}`}>
-                                    {subslotLabel(s)}
+                                  <div className={`ledger-subpanel-badge ${regimeToneClass(s)}`}>
+                                    {regimeSummary(s)}
                                   </div>
 
                                   <div className="ledger-subpanel-grid">
-                                    {subslotRows.map((row) => (
+                                    {rows.map((row) => (
                                       <div key={row.k} className="ledger-subpanel-item">
                                         <div className="ledger-subpanel-k">{row.k}</div>
                                         <div className="ledger-subpanel-v">{row.v}</div>
                                       </div>
                                     ))}
+                                  </div>
+
+                                  <div className={`ledger-subpanel-badge ${subslotToneClass(s)}`}>
+                                    {subslotModeLabel(s)} • {subslotDecisionLabel(s)}
                                   </div>
 
                                   <div className="ledger-subpanel-actions">
@@ -1791,33 +2023,38 @@ export default function Engine() {
                       <div className="engine-about-title">Fixed-Slot Jeroid Ledger</div>
 
                       <p>
-                        This page reflects the permanent-slot backend architecture. Each Jeroid slot belongs to one fixed market
-                        identity and independently waits, deploys, holds, exits, and re-enters under the same machine rules.
+                        This page presents the machine in public-facing language. Each Jeroid slot belongs to one fixed
+                        market identity and independently waits, deploys, holds, exits, and re-enters under the same
+                        rules.
                       </p>
 
                       <p>
-                        <strong>Tracking State</strong> describes pre-entry market readiness for that specific slot’s coin.
+                        <strong>Market</strong> shows the detected regime.
                         <br />
-                        <strong>State</strong> describes lifecycle ownership inside the ledger.
+                        <strong>Decision</strong> shows what the engine is doing with that regime.
+                        <br />
+                        <strong>Position</strong> shows the parent slot lifecycle.
+                        <br />
+                        <strong>Subslot</strong> shows the tactical capture layer inside the hold window.
                       </p>
 
                       <div className="engine-about-h">Machine order</div>
                       <ul>
-                        <li>Harvester ensures the fixed slot registry exists.</li>
-                        <li>Executor evaluates only each slot’s own coin.</li>
-                        <li>Manager controls hold / lock / exit / re-entry lifecycle.</li>
-                        <li>Rotation policy remains read-only; rotation executor bridges capital handoff.</li>
-                        <li>Ledger persists public machine proof for UI inspection.</li>
+                        <li>Harvester maintains the fixed slot registry.</li>
+                        <li>Executor evaluates each slot’s own coin only.</li>
+                        <li>Manager controls hold, lock, exit, subslot logic, and regime interpretation.</li>
+                        <li>Rotation remains a separate capital-handling layer.</li>
+                        <li>Ledger persists public machine proof for inspection.</li>
                       </ul>
 
                       <div className="engine-about-h">Key truths</div>
                       <ul>
                         <li>Slot identity is permanent coin identity.</li>
-                        <li>No anonymous queued selector pool is used anymore.</li>
                         <li>Open parent PnL is floating and not harvested.</li>
-                        <li>Tactical subslot PnL remains separate until merge on parent reset.</li>
+                        <li>Subslot PnL remains separate until merge on parent reset.</li>
                         <li>Window harvest reflects recent realized event flow only.</li>
                         <li>External transfers are excluded from displayed totals.</li>
+                        <li>The UI is now organized for clarity first and diagnostics second.</li>
                       </ul>
                     </div>
                   ) : null}
@@ -1858,13 +2095,78 @@ export default function Engine() {
                   <div className="slot-modal-sub">
                     {slotCoin(selectedSlot)} • {selectedSlot.market ?? "—"} •{" "}
                     <span className={stateClassName(stateLabel(selectedSlot))}>{stateLabel(selectedSlot)}</span> •{" "}
-                    <span className={stateClassName(trackingLabel(selectedSlot))}>{trackingLabel(selectedSlot)}</span>
+                    <span className={regimeToneClass(selectedSlot)}>{regimeLabel(selectedSlot)}</span>
                   </div>
                 </div>
 
                 <div className="slot-modal-meta">
                   <span className="slot-modal-chip">Esc to close</span>
                   <span className="slot-modal-chip">Diagnostic Chamber</span>
+                </div>
+              </div>
+
+              <div className="slot-section">Decision Summary</div>
+
+              <div className="slot-modal-grid">
+                <div>
+                  <div className="slot-k">Market</div>
+                  <div className={`slot-v ${regimeToneClass(selectedSlot)}`}>{regimeLabel(selectedSlot)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Decision</div>
+                  <div className="slot-v">{engineDecisionLabel(selectedSlot)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Position</div>
+                  <div className={`slot-v ${stateClassName(stateLabel(selectedSlot))}`}>{stateLabel(selectedSlot)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Entry Phase</div>
+                  <div className={`slot-v ${stateClassName(trackingLabel(selectedSlot))}`}>
+                    {entryPhaseLabel(selectedSlot)}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Regime Strength</div>
+                  <div className="slot-v">
+                    {selectedSlot.regimeStrength != null ? selectedSlot.regimeStrength : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Trend Score</div>
+                  <div className="slot-v">
+                    {selectedSlot.regimeTrendScore != null ? selectedSlot.regimeTrendScore : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Flip Count</div>
+                  <div className="slot-v">
+                    {selectedSlot.regimeFlipCount != null ? selectedSlot.regimeFlipCount : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Breakout Ready</div>
+                  <div className="slot-v">{breakoutLabel(selectedSlot)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Consolidation State</div>
+                  <div className="slot-v">{selectedSlot.consolidationState ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Consolidation Range</div>
+                  <div className="slot-v">{pctNum(selectedSlot.consolidationRangePct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Compression Score</div>
+                  <div className="slot-v">
+                    {selectedSlot.consolidationCompressionScore != null
+                      ? selectedSlot.consolidationCompressionScore
+                      : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Decision Note</div>
+                  <div className="slot-v">{describeDecision(selectedSlot)}</div>
                 </div>
               </div>
 
@@ -1900,14 +2202,16 @@ export default function Engine() {
                   <div className="slot-v">{selectedSlot.level ? `LVL${selectedSlot.level}` : "—"}</div>
                 </div>
                 <div>
-                  <div className="slot-k">Subslot</div>
-                  <div className={`slot-v slot-subslot ${subslotToneClass(selectedSlot)}`}>
-                    {subslotLabel(selectedSlot)}
-                  </div>
-                </div>
-                <div>
                   <div className="slot-k">Lock</div>
                   <div className="slot-v">{lockDisplay(selectedSlot)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Spread</div>
+                  <div className="slot-v">{pctNum(selectedSlot.nowSpreadPct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Drawdown</div>
+                  <div className="slot-v">{pctNum(selectedSlot.drawdownPct)}</div>
                 </div>
                 <div>
                   <div className="slot-k">Re-entry target</div>
@@ -1933,18 +2237,38 @@ export default function Engine() {
 
               <div className="slot-modal-grid">
                 <div>
-                  <div className="slot-k">Subslot Role</div>
+                  <div className="slot-k">Mode</div>
                   <div className={`slot-v slot-subslot ${subslotToneClass(selectedSlot)}`}>
-                    {subslotLabel(selectedSlot)}
+                    {subslotModeLabel(selectedSlot)}
                   </div>
                 </div>
                 <div>
-                  <div className="slot-k">Subslot State</div>
+                  <div className="slot-k">Decision</div>
+                  <div className={`slot-v slot-subslot ${subslotToneClass(selectedSlot)}`}>
+                    {subslotDecisionLabel(selectedSlot)}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">State</div>
                   <div className="slot-v">{selectedSlot.subslotState ?? "—"}</div>
                 </div>
                 <div>
-                  <div className="slot-k">Signal State</div>
+                  <div className="slot-k">Signal</div>
                   <div className="slot-v">{selectedSlot.subslotSignalState ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="slot-k">Confirm Ticks</div>
+                  <div className="slot-v">
+                    {selectedSlot.subslotConfirmTicks != null ? selectedSlot.subslotConfirmTicks : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="slot-k">Bounce</div>
+                  <div className="slot-v">{pctNum(selectedSlot.subslotBouncePct)}</div>
+                </div>
+                <div>
+                  <div className="slot-k">EMA Gap</div>
+                  <div className="slot-v">{pctNum(selectedSlot.subslotEmaGapPct)}</div>
                 </div>
                 <div>
                   <div className="slot-k">Requested AUD</div>
@@ -2078,8 +2402,10 @@ export default function Engine() {
                   <div className="slot-v">{fmt(selectedSlot.candidateLowMid)}</div>
                 </div>
                 <div>
-                  <div className="slot-k">Spread</div>
-                  <div className="slot-v">{pctNum(selectedSlot.nowSpreadPct ?? selectedSlot.candidateSpreadPrevPct)}</div>
+                  <div className="slot-k">Candidate Spread</div>
+                  <div className="slot-v">
+                    {pctNum(selectedSlot.nowSpreadPct ?? selectedSlot.candidateSpreadPrevPct)}
+                  </div>
                 </div>
               </div>
 
@@ -2110,13 +2436,21 @@ export default function Engine() {
                     <div>
                       <div className="slot-k">Eligible Out</div>
                       <div className="slot-v">
-                        {selectedSlot.rotationEligibleOut == null ? "—" : selectedSlot.rotationEligibleOut ? "YES" : "NO"}
+                        {selectedSlot.rotationEligibleOut == null
+                          ? "—"
+                          : selectedSlot.rotationEligibleOut
+                          ? "YES"
+                          : "NO"}
                       </div>
                     </div>
                     <div>
                       <div className="slot-k">Eligible In</div>
                       <div className="slot-v">
-                        {selectedSlot.rotationEligibleIn == null ? "—" : selectedSlot.rotationEligibleIn ? "YES" : "NO"}
+                        {selectedSlot.rotationEligibleIn == null
+                          ? "—"
+                          : selectedSlot.rotationEligibleIn
+                          ? "YES"
+                          : "NO"}
                       </div>
                     </div>
                     <div>
@@ -2277,9 +2611,9 @@ export default function Engine() {
 
               <div className="slot-rules">
                 <div>Permanent identity: one slot belongs to one fixed coin market.</div>
-                <div>WAITING_ENTRY is the latch before deployment.</div>
-                <div>Deploy / hold / lock / exit decisions remain deterministic.</div>
-                <div>Tactical subslot accounting remains separate until merge on parent reset.</div>
+                <div>Market regime now leads the explanation layer.</div>
+                <div>Parent slot and tactical subslot remain separate accounting layers.</div>
+                <div>Deploy, hold, lock, exit, and re-entry decisions remain deterministic.</div>
                 <div className="slot-rules-note">
                   This slot is part of the fixed-slot Jeroid ledger, not a selector pool.
                 </div>
