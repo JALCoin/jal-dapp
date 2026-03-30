@@ -5717,6 +5717,331 @@ a.button[aria-disabled="true"]{
     padding:9px 10px;
   }
 }
+
+/* =========================================
+   ENGINE DESKTOP FIT / ALIGNMENT TUNE
+   Put at very bottom of index.css
+========================================= */
+
+@media (min-width: 981px){
+
+  .engine-shell .home-wrap{
+    width:min(100% - 2rem, 1280px);
+    gap:18px;
+  }
+
+  .engine-window{
+    padding:16px;
+  }
+
+  .engine-foreground{
+    gap:18px;
+  }
+
+  .engine-zone{
+    gap:16px;
+  }
+
+  /* ---------- hero tightening ---------- */
+
+  .engine-hero{
+    grid-template-columns:72px minmax(0, 1fr) 280px;
+    gap:16px;
+    padding:18px;
+    min-height:0;
+  }
+
+  .engine-hero-left{
+    min-height:84px;
+    border-radius:16px;
+  }
+
+  .engine-hero-center{
+    gap:8px;
+  }
+
+  .engine-title{
+    font-size:clamp(1.8rem, 2.4vw, 2.5rem);
+    line-height:1;
+  }
+
+  .engine-sub{
+    font-size:.96rem;
+    line-height:1.58;
+    max-width:52ch;
+  }
+
+  .engine-hero-right{
+    gap:10px;
+  }
+
+  .engine-auth-hint{
+    padding:10px 12px;
+    font-size:.82rem;
+    line-height:1.5;
+  }
+
+  /* ---------- capture cards ---------- */
+
+  .engine-capture-grid{
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:10px;
+  }
+
+  .engine-capture{
+    padding:14px;
+    min-height:132px;
+  }
+
+  .cap-v{
+    font-size:1.32rem;
+  }
+
+  .cap-sub{
+    gap:6px;
+    font-size:.8rem;
+    line-height:1.45;
+  }
+
+  /* ---------- controls ---------- */
+
+  .engine-controls-wrap{
+    gap:8px;
+  }
+
+  .engine-controls{
+    gap:8px;
+  }
+
+  .engine-controls .button{
+    min-height:42px;
+    padding:.72rem .95rem;
+  }
+
+  .engine-filter{
+    min-width:260px;
+    min-height:42px;
+    padding:.72rem .9rem;
+  }
+
+  /* ---------- live rail ---------- */
+
+  .engine-status-rail{
+    padding:16px;
+    gap:12px;
+  }
+
+  .engine-carousel-card{
+    padding:16px;
+    gap:12px;
+    border-radius:20px;
+  }
+
+  .engine-carousel-card-top{
+    align-items:center;
+  }
+
+  .engine-carousel-id{
+    font-size:.72rem;
+  }
+
+  .engine-carousel-coin{
+    font-size:1.02rem;
+  }
+
+  .engine-carousel-grid{
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:8px;
+  }
+
+  .engine-carousel-metric{
+    padding:10px 11px;
+    min-height:76px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+
+  .engine-carousel-k{
+    font-size:.64rem;
+  }
+
+  .engine-carousel-v{
+    margin-top:4px;
+    font-size:.9rem;
+    line-height:1.22;
+  }
+
+  .engine-carousel-foot{
+    gap:6px;
+    font-size:.78rem;
+    line-height:1.42;
+  }
+
+  .engine-subslot{
+    padding:10px 12px;
+    gap:8px;
+  }
+
+  .engine-subslot-grid{
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:8px;
+  }
+
+  .engine-subslot-item{
+    padding:8px 10px;
+    min-height:68px;
+  }
+
+  .engine-subslot-v{
+    font-size:.84rem;
+  }
+
+  /* ---------- machine summary / market surface ---------- */
+
+  .engine-grid--asym{
+    grid-template-columns:minmax(320px, .78fr) minmax(0, 1.22fr);
+    align-items:stretch;
+  }
+
+  .engine-bay{
+    gap:10px;
+  }
+
+  .engine-bay .engine-telemetry{
+    height:100%;
+  }
+
+  .engine-telemetry{
+    padding:14px;
+    gap:12px;
+  }
+
+  .engine-telemetry-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+  }
+
+  .engine-telemetry-item{
+    padding:10px 11px;
+    min-height:92px;
+  }
+
+  .engine-telemetry-v{
+    font-size:1rem;
+  }
+
+  .engine-telemetry-sub{
+    font-size:.78rem;
+    line-height:1.45;
+  }
+
+  .market-console{
+    height:100%;
+  }
+
+  .market-head,
+  .market-row{
+    grid-template-columns:minmax(0, 1.5fr) 104px 92px;
+    gap:8px;
+  }
+
+  .market-head{
+    padding:11px 12px;
+  }
+
+  .market-row{
+    padding:11px 12px;
+  }
+
+  /* ---------- section divider / tabs ---------- */
+
+  .engine-divider{
+    gap:10px;
+    margin-top:2px;
+  }
+
+  .engine-section-tabs{
+    gap:8px;
+  }
+
+  .engine-section-tab{
+    min-height:40px;
+    padding:.66rem .92rem;
+  }
+
+  /* ---------- overview + ledger tables ---------- */
+
+  .engine-ledger{
+    padding:16px;
+    gap:12px;
+  }
+
+  .ledger-table{
+    border-radius:16px;
+  }
+
+  .ledger-head,
+  .ledger-row{
+    grid-template-columns:1.05fr .95fr .9fr .95fr .92fr .75fr .7fr .55fr;
+    gap:8px;
+  }
+
+  .ledger-head{
+    padding:11px 12px;
+    font-size:.66rem;
+  }
+
+  .ledger-row{
+    padding:11px 12px;
+    font-size:.9rem;
+  }
+
+  .ledger-slotid{
+    font-size:.74rem;
+  }
+
+  .ledger-view{
+    font-size:.7rem;
+  }
+
+  .num{
+    text-align:right;
+  }
+
+  .ledger-subpanel{
+    padding:12px;
+    gap:10px;
+  }
+
+  .ledger-subpanel-grid{
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:8px;
+  }
+
+  .ledger-subpanel-item{
+    padding:9px 10px;
+  }
+
+  .ledger-subpanel-v{
+    font-size:.8rem;
+  }
+
+  /* ---------- events / footer spacing ---------- */
+
+  .engine-events{
+    padding:16px;
+  }
+
+  .event-row{
+    padding:9px 10px;
+  }
+
+  .jal-footer{
+    margin-top:40px;
+    padding-bottom:28px;
+  }
+}
 /* =========================================
    20) HOME — IDENTITY / ROADMAP / ROUTE BANDS
 ========================================= */
