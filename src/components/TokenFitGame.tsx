@@ -30,9 +30,6 @@ type LeaderboardEntry = {
 
 const STORAGE_KEY = "jal_observe_token_fit_high_score_v2";
 
-/* =========================
-   WORLD SIZING
-========================= */
 const LANDSCAPE_WORLD_WIDTH = 800;
 const LANDSCAPE_WORLD_HEIGHT = 450;
 
@@ -41,22 +38,16 @@ const PORTRAIT_WORLD_HEIGHT = 620;
 
 const TOKEN_SIZE = 42;
 
-/* =========================
-   BASE TUNING
-========================= */
 const BASE_GRAVITY = 0.34;
 const BASE_JUMP_FORCE = -5.9;
 const BASE_PIPE_SPAWN_EVERY = 1500;
 const COUNTDOWN_SECONDS = 3;
 const LEADERBOARD_LIMIT = 10;
 
-/* =========================
-   PERFORMANCE
-========================= */
 const MAX_DELTA_MS = 32;
 const MIN_DELTA_MS = 14;
 const HUD_SYNC_INTERVAL_MS = 1000 / 2;
-const DPR_CAP = 1.0;
+const DPR_CAP = 1.25;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -122,6 +113,7 @@ function drawScene(
   floorHeight: number,
   difficultyPipeGap: number,
   pipeWidth: number,
+  tokenSize: number,
   tokenX: number,
   tokenY: number,
   velocity: number,
@@ -129,130 +121,119 @@ function drawScene(
   isMobileLite: boolean
 ) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-ctx.clearRect(0, 0, worldWidth, worldHeight);
+  ctx.clearRect(0, 0, worldWidth, worldHeight);
 
-ctx.fillStyle = "#02060e";
-ctx.fillRect(0, 0, worldWidth, worldHeight);
+  ctx.fillStyle = "#02060e";
+  ctx.fillRect(0, 0, worldWidth, worldHeight);
 
-const isMobileWorld = worldWidth === PORTRAIT_WORLD_WIDTH;
+  const decorativeWorld = !isMobileLite;
 
-  if (!isMobileWorld) {
-  ctx.fillStyle = "rgba(0,255,180,0.035)";
-  ctx.fillRect(0, 0, worldWidth, worldHeight * 0.55);
-}
+  if (decorativeWorld) {
+    ctx.fillStyle = "rgba(0,255,180,0.035)";
+    ctx.fillRect(0, 0, worldWidth, worldHeight * 0.55);
+  }
 
   for (const pipe of pipes) {
     const topPipeHeight = pipe.gapY - difficultyPipeGap / 2;
     const bottomPipeY = pipe.gapY + difficultyPipeGap / 2;
     const bottomPipeHeight = worldHeight - floorHeight - bottomPipeY;
 
-    if (isMobileWorld) {
-  ctx.fillStyle = "rgba(8,40,34,0.96)";
-  ctx.fillRect(pipe.x, 0, pipeWidth, topPipeHeight);
-} else {
-  ctx.fillStyle = "rgba(8,40,34,0.96)";
-  ctx.strokeStyle = "rgba(0,255,180,0.22)";
-  ctx.lineWidth = 1;
-  drawRoundedRect(ctx, pipe.x, 0, pipeWidth, topPipeHeight, 20);
-  ctx.fill();
-  ctx.stroke();
-}
+    if (isMobileLite) {
+      ctx.fillStyle = "rgba(8,40,34,0.96)";
+      ctx.fillRect(pipe.x, 0, pipeWidth, topPipeHeight);
+    } else {
+      ctx.fillStyle = "rgba(8,40,34,0.96)";
+      ctx.strokeStyle = "rgba(0,255,180,0.22)";
+      ctx.lineWidth = 1;
+      drawRoundedRect(ctx, pipe.x, 0, pipeWidth, topPipeHeight, 20);
+      ctx.fill();
+      ctx.stroke();
 
-    if (!isMobileWorld) {
-  ctx.fillStyle = "rgba(0,255,180,0.16)";
-  ctx.strokeStyle = "rgba(0,255,180,0.2)";
-  drawRoundedRect(
-    ctx,
-    pipe.x - 8,
-    topPipeHeight - 20,
-    pipeWidth + 16,
-    20,
-    12
-  );
-  ctx.fill();
-  ctx.stroke();
-}
+      ctx.fillStyle = "rgba(0,255,180,0.16)";
+      ctx.strokeStyle = "rgba(0,255,180,0.2)";
+      drawRoundedRect(ctx, pipe.x - 8, topPipeHeight - 20, pipeWidth + 16, 20, 12);
+      ctx.fill();
+      ctx.stroke();
+    }
 
-    if (isMobileWorld) {
-  ctx.fillStyle = "rgba(8,40,34,0.96)";
-  ctx.fillRect(pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight);
-} else {
-  ctx.fillStyle = "rgba(8,40,34,0.96)";
-  ctx.strokeStyle = "rgba(0,255,180,0.22)";
-  ctx.lineWidth = 1;
-  drawRoundedRect(ctx, pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight, 20);
-  ctx.fill();
-  ctx.stroke();
-}
+    if (isMobileLite) {
+      ctx.fillStyle = "rgba(8,40,34,0.96)";
+      ctx.fillRect(pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight);
+    } else {
+      ctx.fillStyle = "rgba(8,40,34,0.96)";
+      ctx.strokeStyle = "rgba(0,255,180,0.22)";
+      ctx.lineWidth = 1;
+      drawRoundedRect(ctx, pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight, 20);
+      ctx.fill();
+      ctx.stroke();
 
-            if (!isMobileWorld) {
-  ctx.fillStyle = "rgba(0,255,180,0.16)";
-  ctx.strokeStyle = "rgba(0,255,180,0.2)";
-  drawRoundedRect(ctx, pipe.x - 8, bottomPipeY, pipeWidth + 16, 20, 12);
-  ctx.fill();
-  ctx.stroke();
-}
-}
+      ctx.fillStyle = "rgba(0,255,180,0.16)";
+      ctx.strokeStyle = "rgba(0,255,180,0.2)";
+      drawRoundedRect(ctx, pipe.x - 8, bottomPipeY, pipeWidth + 16, 20, 12);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
 
-  if (!isMobileWorld) {
-  ctx.fillStyle = "rgba(255,255,255,0.05)";
-  ctx.fillRect(0, 0, worldWidth, ceilingHeight);
+  if (decorativeWorld) {
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    ctx.fillRect(0, 0, worldWidth, ceilingHeight);
 
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  ctx.fillRect(0, worldHeight - floorHeight, worldWidth, 1);
-}
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    ctx.fillRect(0, worldHeight - floorHeight, worldWidth, 1);
+  }
 
   ctx.fillStyle = "#07110d";
   ctx.fillRect(0, worldHeight - floorHeight, worldWidth, floorHeight);
 
-  const centerX = tokenX + TOKEN_SIZE / 2;
-const centerY = tokenY + TOKEN_SIZE / 2;
+  const centerX = tokenX + tokenSize / 2;
+  const centerY = tokenY + tokenSize / 2;
 
-ctx.save();
-ctx.translate(centerX, centerY);
+  ctx.save();
+  ctx.translate(centerX, centerY);
 
-if (isMobileLite) {
-  ctx.fillStyle = "#c8922c";
-  ctx.beginPath();
-  ctx.arc(0, 0, TOKEN_SIZE / 2, 0, Math.PI * 2);
-  ctx.fill();
+  if (isMobileLite) {
+    ctx.fillStyle = "#c8922c";
+    ctx.beginPath();
+    ctx.arc(0, 0, tokenSize / 2, 0, Math.PI * 2);
+    ctx.fill();
 
-  ctx.strokeStyle = "rgba(255,255,255,0.16)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.arc(0, 0, TOKEN_SIZE / 2 - 6, 0, Math.PI * 2);
-  ctx.stroke();
-} else {
-  const rotationDeg = clamp(velocity * 4.5, -28, 60);
-  const rotationRad = (rotationDeg * Math.PI) / 180;
-  ctx.rotate(rotationRad);
+    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, tokenSize / 2 - Math.max(4, tokenSize * 0.14), 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    const rotationDeg = clamp(velocity * 4.5, -28, 60);
+    const rotationRad = (rotationDeg * Math.PI) / 180;
+    ctx.rotate(rotationRad);
 
-  const tokenGrad = ctx.createRadialGradient(
-    -TOKEN_SIZE * 0.15,
-    -TOKEN_SIZE * 0.18,
-    2,
-    0,
-    0,
-    TOKEN_SIZE * 0.56
-  );
-  tokenGrad.addColorStop(0, "rgba(255,255,255,0.92)");
-  tokenGrad.addColorStop(0.2, "rgba(227,205,112,0.95)");
-  tokenGrad.addColorStop(0.58, "rgba(170,120,32,0.96)");
-  tokenGrad.addColorStop(1, "rgba(70,40,8,1)");
+    const tokenGrad = ctx.createRadialGradient(
+      -tokenSize * 0.15,
+      -tokenSize * 0.18,
+      2,
+      0,
+      0,
+      tokenSize * 0.56
+    );
+    tokenGrad.addColorStop(0, "rgba(255,255,255,0.92)");
+    tokenGrad.addColorStop(0.2, "rgba(227,205,112,0.95)");
+    tokenGrad.addColorStop(0.58, "rgba(170,120,32,0.96)");
+    tokenGrad.addColorStop(1, "rgba(70,40,8,1)");
 
-  ctx.fillStyle = tokenGrad;
-  ctx.beginPath();
-  ctx.arc(0, 0, TOKEN_SIZE / 2, 0, Math.PI * 2);
-  ctx.fill();
+    ctx.fillStyle = tokenGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, tokenSize / 2, 0, Math.PI * 2);
+    ctx.fill();
 
-  ctx.strokeStyle = "rgba(255,255,255,0.25)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.arc(0, 0, TOKEN_SIZE / 2 - 7, 0, Math.PI * 2);
-  ctx.stroke();
-}
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, tokenSize / 2 - 7, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
-ctx.restore();
+  ctx.restore();
 }
 
 export default function TokenFitGame({
@@ -314,41 +295,88 @@ export default function TokenFitGame({
 
   const isPortrait = viewMode === "portrait";
 
-  const worldWidth = isPortrait ? PORTRAIT_WORLD_WIDTH : LANDSCAPE_WORLD_WIDTH;
-  const worldHeight = isPortrait
-    ? PORTRAIT_WORLD_HEIGHT
-    : LANDSCAPE_WORLD_HEIGHT;
+  const worldWidth = mobileLiteMode
+    ? sceneWidth
+    : isPortrait
+      ? PORTRAIT_WORLD_WIDTH
+      : LANDSCAPE_WORLD_WIDTH;
 
-  const tokenX = isPortrait ? 90 : 180;
-  const pipeWidth = isPortrait ? 74 : 96;
-  const basePipeGap = isPortrait ? 210 : 190;
-  const basePipeSpeed = isPortrait ? 2.35 : 2.2;
+  const worldHeight = mobileLiteMode
+    ? sceneHeight
+    : isPortrait
+      ? PORTRAIT_WORLD_HEIGHT
+      : LANDSCAPE_WORLD_HEIGHT;
 
-  const floorHeight = isPortrait ? 96 : 70;
-  const ceilingHeight = isPortrait ? 18 : 16;
+  const tokenSize = mobileLiteMode
+    ? clamp(Math.round(worldWidth * 0.11), 34, 48)
+    : TOKEN_SIZE;
 
-  const hintBottom = isPortrait ? 126 : 92;
+  const tokenX = mobileLiteMode
+    ? Math.round(worldWidth * 0.22)
+    : isPortrait
+      ? 90
+      : 180;
+
+  const pipeWidth = mobileLiteMode
+    ? clamp(Math.round(worldWidth * 0.18), 62, 92)
+    : isPortrait
+      ? 74
+      : 96;
+
+  const basePipeGap = mobileLiteMode
+    ? clamp(Math.round(worldHeight * 0.3), 180, 250)
+    : isPortrait
+      ? 210
+      : 190;
+
+  const basePipeSpeed = mobileLiteMode ? 2.1 : isPortrait ? 2.35 : 2.2;
+
+  const floorHeight = mobileLiteMode
+    ? clamp(Math.round(worldHeight * 0.12), 72, 110)
+    : isPortrait
+      ? 96
+      : 70;
+
+  const ceilingHeight = mobileLiteMode
+    ? clamp(Math.round(worldHeight * 0.025), 12, 22)
+    : isPortrait
+      ? 18
+      : 16;
+
+  const hintBottom = mobileLiteMode
+    ? Math.max(floorHeight + 18, 92)
+    : isPortrait
+      ? 126
+      : 92;
+
   const liftButtonRight = 18;
-  const liftButtonBottom = 128;
-  const liftButtonSize = 82;
+  const liftButtonBottom = Math.max(floorHeight + 18, 90);
+  const liftButtonSize = mobileLiteMode ? 76 : 82;
 
   const safeUsername = sanitizeUsername(username);
   const canStart = safeUsername.length >= 3;
-  const isSmallViewport = sceneScale < 0.72;
+  const isSmallViewport = mobileLiteMode ? sceneWidth < 420 : sceneScale < 0.72;
 
   const difficulty = useMemo(() => {
     const progress = Math.max(0, highScore - minScore);
     const steps = Math.floor(progress / 10);
 
     return {
-      gravity: BASE_GRAVITY + steps * 0.012,
-      jumpForce: BASE_JUMP_FORCE - steps * 0.06,
+      gravity: mobileLiteMode
+        ? BASE_GRAVITY + steps * 0.01
+        : BASE_GRAVITY + steps * 0.012,
+      jumpForce: mobileLiteMode
+        ? BASE_JUMP_FORCE + 0.2 - steps * 0.05
+        : BASE_JUMP_FORCE - steps * 0.06,
       pipeSpawnEvery: Math.max(
-        mobileLiteMode ? 1100 : 940,
+        mobileLiteMode ? 1180 : 940,
         BASE_PIPE_SPAWN_EVERY - steps * 65
       ),
-      pipeGap: Math.max(isPortrait ? 145 : 130, basePipeGap - steps * 8),
-      pipeSpeed: basePipeSpeed + steps * 0.11,
+      pipeGap: Math.max(
+        mobileLiteMode ? Math.round(worldHeight * 0.23) : isPortrait ? 145 : 130,
+        basePipeGap - steps * (mobileLiteMode ? 6 : 8)
+      ),
+      pipeSpeed: basePipeSpeed + steps * (mobileLiteMode ? 0.09 : 0.11),
     };
   }, [
     basePipeGap,
@@ -357,6 +385,7 @@ export default function TokenFitGame({
     isPortrait,
     minScore,
     mobileLiteMode,
+    worldHeight,
   ]);
 
   const fetchLeaderboard = useCallback(async () => {
@@ -387,7 +416,7 @@ export default function TokenFitGame({
   }, []);
 
   const resetWorld = useCallback(() => {
-    const startY = worldHeight / 2 - TOKEN_SIZE / 2;
+    const startY = worldHeight / 2 - tokenSize / 2;
 
     scoreRef.current = 0;
     velocityRef.current = 0;
@@ -404,7 +433,7 @@ export default function TokenFitGame({
     nextPipeIdRef.current = 1;
     lastHudSyncRef.current = 0;
     lastDisplayedScoreRef.current = 0;
-  }, [worldHeight]);
+  }, [tokenSize, worldHeight]);
 
   const finalizeRun = useCallback(
     (finalScore: number) => {
@@ -580,11 +609,24 @@ export default function TokenFitGame({
   useEffect(() => {
     let raf: number | null = null;
 
-    function updateSceneScale() {
+    function updateSceneMetrics() {
       const { width: viewportWidth, height: viewportHeight } = getViewportSize();
 
       const nextMode: ViewMode =
         viewportHeight > viewportWidth ? "portrait" : "landscape";
+
+      setViewMode(nextMode);
+
+      if (mobileLiteMode) {
+        const nextWidth = Math.max(280, viewportWidth);
+        const nextHeight = Math.max(360, viewportHeight);
+
+        setSceneScale(1);
+        setSceneWidth(nextWidth);
+        setSceneHeight(nextHeight);
+        return;
+      }
+
       const nextWorldWidth =
         nextMode === "portrait" ? PORTRAIT_WORLD_WIDTH : LANDSCAPE_WORLD_WIDTH;
       const nextWorldHeight =
@@ -597,31 +639,30 @@ export default function TokenFitGame({
       const scaleY = availableHeight / nextWorldHeight;
       const nextScale = Math.min(scaleX, scaleY);
 
-      setViewMode(nextMode);
       setSceneScale(nextScale);
       setSceneWidth(Math.round(nextWorldWidth * nextScale));
       setSceneHeight(Math.round(nextWorldHeight * nextScale));
     }
 
-    function requestScaleUpdate() {
+    function requestMetricsUpdate() {
       if (raf != null) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(updateSceneScale);
+      raf = requestAnimationFrame(updateSceneMetrics);
     }
 
-    requestScaleUpdate();
+    requestMetricsUpdate();
 
     const vv = window.visualViewport;
-    window.addEventListener("resize", requestScaleUpdate);
-    window.addEventListener("orientationchange", requestScaleUpdate);
-    vv?.addEventListener("resize", requestScaleUpdate);
+    window.addEventListener("resize", requestMetricsUpdate);
+    window.addEventListener("orientationchange", requestMetricsUpdate);
+    vv?.addEventListener("resize", requestMetricsUpdate);
 
     return () => {
       if (raf != null) cancelAnimationFrame(raf);
-      window.removeEventListener("resize", requestScaleUpdate);
-      window.removeEventListener("orientationchange", requestScaleUpdate);
-      vv?.removeEventListener("resize", requestScaleUpdate);
+      window.removeEventListener("resize", requestMetricsUpdate);
+      window.removeEventListener("orientationchange", requestMetricsUpdate);
+      vv?.removeEventListener("resize", requestMetricsUpdate);
     };
-  }, []);
+  }, [mobileLiteMode]);
 
   useEffect(() => {
     if (gameState !== "countdown") return;
@@ -658,15 +699,15 @@ export default function TokenFitGame({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-if (!canvas) return;
+    if (!canvas) return;
 
-const ctx = canvas.getContext("2d", {
-  alpha: false,
-  desynchronized: true,
-});
-if (!ctx) return;
+    const ctx = canvas.getContext("2d", {
+      alpha: false,
+      desynchronized: true,
+    });
+    if (!ctx) return;
 
-const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
+    const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
 
     canvas.width = Math.round(worldWidth * dpr);
     canvas.height = Math.round(worldHeight * dpr);
@@ -674,31 +715,33 @@ const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
     canvas.style.height = `${worldHeight}px`;
 
     drawScene(
-  ctx,
-  dpr,
-  worldWidth,
-  worldHeight,
-  ceilingHeight,
-  floorHeight,
-  difficulty.pipeGap,
-  pipeWidth,
-  tokenX,
-  tokenYRef.current,
-  velocityRef.current,
-  pipesRef.current,
-  mobileLiteMode
-);
- }, [
-  ceilingHeight,
-  difficulty.pipeGap,
-  floorHeight,
-  pipeWidth,
-  tokenX,
-  worldHeight,
-  worldWidth,
-  gameState,
-  mobileLiteMode,
-]);
+      ctx,
+      dpr,
+      worldWidth,
+      worldHeight,
+      ceilingHeight,
+      floorHeight,
+      difficulty.pipeGap,
+      pipeWidth,
+      tokenSize,
+      tokenX,
+      tokenYRef.current,
+      velocityRef.current,
+      pipesRef.current,
+      mobileLiteMode
+    );
+  }, [
+    ceilingHeight,
+    difficulty.pipeGap,
+    floorHeight,
+    mobileLiteMode,
+    pipeWidth,
+    tokenSize,
+    tokenX,
+    worldHeight,
+    worldWidth,
+    gameState,
+  ]);
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -710,22 +753,32 @@ const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
     }
 
     const topBound = ceilingHeight;
-    const bottomBound = worldHeight - floorHeight - TOKEN_SIZE;
+    const bottomBound = worldHeight - floorHeight - tokenSize;
 
-    const gapPaddingTop = isPortrait ? 98 : 72;
-    const gapPaddingBottom = isPortrait ? 126 : 98;
+    const gapPaddingTop = mobileLiteMode
+      ? clamp(Math.round(worldHeight * 0.12), 78, 120)
+      : isPortrait
+        ? 98
+        : 72;
+
+    const gapPaddingBottom = mobileLiteMode
+      ? clamp(Math.round(worldHeight * 0.17), 102, 150)
+      : isPortrait
+        ? 126
+        : 98;
+
     const minGapY = gapPaddingTop + difficulty.pipeGap / 2;
     const maxGapY =
       worldHeight - floorHeight - gapPaddingBottom - difficulty.pipeGap / 2;
 
     const canvas = canvasRef.current;
-if (!canvas) return;
+    if (!canvas) return;
 
-const ctx = canvas.getContext("2d", {
-  alpha: false,
-  desynchronized: true,
-});
-if (!ctx) return;
+    const ctx = canvas.getContext("2d", {
+      alpha: false,
+      desynchronized: true,
+    });
+    if (!ctx) return;
 
     const tick = (now: number) => {
       if (gameStateRef.current !== "playing") return;
@@ -769,16 +822,16 @@ if (!ctx) return;
 
         pipesRef.current.push({
           id: nextPipeIdRef.current++,
-          x: worldWidth + 40,
+          x: worldWidth + pipeWidth + 40,
           gapY,
           scored: false,
         });
       }
 
       const tokenLeft = tokenX;
-      const tokenRight = tokenX + TOKEN_SIZE;
+      const tokenRight = tokenX + tokenSize;
       const tokenTop = tokenYRef.current;
-      const tokenBottom = tokenYRef.current + TOKEN_SIZE;
+      const tokenBottom = tokenYRef.current + tokenSize;
 
       const nextPipes: Pipe[] = [];
 
@@ -788,32 +841,33 @@ if (!ctx) return;
         if (nextX + pipeWidth <= -60) continue;
 
         pipe.x = nextX;
-      const nextPipe = pipe;
+        const nextPipe = pipe;
 
         if (!nextPipe.scored && nextX + pipeWidth < tokenX) {
-  nextPipe.scored = true;
-  scoreRef.current += 1;
+          nextPipe.scored = true;
+          scoreRef.current += 1;
 
-  const nextHighScore = scoreRef.current > highScore ? scoreRef.current : highScore;
+          const nextHighScore =
+            scoreRef.current > highScore ? scoreRef.current : highScore;
 
-  if (!thresholdReachedRef.current && nextHighScore >= minScore) {
-    thresholdReachedRef.current = true;
+          if (!thresholdReachedRef.current && nextHighScore >= minScore) {
+            thresholdReachedRef.current = true;
 
-    if (!passNotifiedRef.current) {
-      passNotifiedRef.current = true;
-      requestAnimationFrame(() => {
-        onPass(scoreRef.current, nextHighScore);
-      });
-    }
+            if (!passNotifiedRef.current) {
+              passNotifiedRef.current = true;
+              requestAnimationFrame(() => {
+                onPass(scoreRef.current, nextHighScore);
+              });
+            }
 
-    if (!endlessMode) {
-      nextPipes.push(nextPipe);
-      pipesRef.current = nextPipes;
-      endGame("passed");
-      return;
-    }
-  }
-}
+            if (!endlessMode) {
+              nextPipes.push(nextPipe);
+              pipesRef.current = nextPipes;
+              endGame("passed");
+              return;
+            }
+          }
+        }
 
         const pipeLeft = nextX;
         const pipeRight = nextX + pipeWidth;
@@ -836,36 +890,35 @@ if (!ctx) return;
 
       pipesRef.current = nextPipes;
 
-      const hudInterval = mobileLiteMode ? 1200 : HUD_SYNC_INTERVAL_MS;
+      const hudInterval = mobileLiteMode ? 900 : HUD_SYNC_INTERVAL_MS;
 
-if (scoreRef.current !== lastDisplayedScoreRef.current) {
-  lastDisplayedScoreRef.current = scoreRef.current;
-  syncHudState();
-  lastHudSyncRef.current = now;
-} else if (now - lastHudSyncRef.current >= hudInterval) {
-  lastHudSyncRef.current = now;
-  syncHudState();
-}
-
-      if (canvas && ctx) {
-        const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
-
-drawScene(
-  ctx,
-  dpr,
-  worldWidth,
-  worldHeight,
-  ceilingHeight,
-  floorHeight,
-  difficulty.pipeGap,
-  pipeWidth,
-  tokenX,
-  tokenYRef.current,
-  velocityRef.current,
-  pipesRef.current,
-  mobileLiteMode
-);
+      if (scoreRef.current !== lastDisplayedScoreRef.current) {
+        lastDisplayedScoreRef.current = scoreRef.current;
+        syncHudState();
+        lastHudSyncRef.current = now;
+      } else if (now - lastHudSyncRef.current >= hudInterval) {
+        lastHudSyncRef.current = now;
+        syncHudState();
       }
+
+      const dpr = clamp(window.devicePixelRatio || 1, 1, DPR_CAP);
+
+      drawScene(
+        ctx,
+        dpr,
+        worldWidth,
+        worldHeight,
+        ceilingHeight,
+        floorHeight,
+        difficulty.pipeGap,
+        pipeWidth,
+        tokenSize,
+        tokenX,
+        tokenYRef.current,
+        velocityRef.current,
+        pipesRef.current,
+        mobileLiteMode
+      );
 
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -895,6 +948,7 @@ drawScene(
     onPass,
     pipeWidth,
     syncHudState,
+    tokenSize,
     tokenX,
     worldHeight,
     worldWidth,
@@ -944,6 +998,49 @@ drawScene(
       : "1px solid rgba(255,255,255,0.1)",
   } as const;
 
+  const frameSizeStyle = isFullscreen
+    ? { width: "100vw", height: "100dvh" }
+    : mobileLiteMode
+      ? {
+          width: "100%",
+          height: "min(78vh, 680px)",
+          minHeight: "480px",
+        }
+      : { width: `${sceneWidth}px`, height: `${sceneHeight}px` };
+
+  const worldStyle = mobileLiteMode
+    ? {
+        position: "absolute" as const,
+        inset: 0,
+        width: `${worldWidth}px`,
+        height: `${worldHeight}px`,
+        background: "#02060e",
+        overflow: "hidden",
+        borderRadius: isFullscreen ? "0px" : "20px",
+        border: "none",
+        boxShadow: "none",
+      }
+    : {
+        position: "absolute" as const,
+        left: isFullscreen ? "50%" : 0,
+        top: isFullscreen ? "50%" : 0,
+        width: `${worldWidth}px`,
+        height: `${worldHeight}px`,
+        background: "#02060e",
+        transform: isFullscreen
+          ? `translate(-50%, -50%) scale(${sceneScale})`
+          : `scale(${sceneScale})`,
+        transformOrigin: isFullscreen ? "center center" : "top left",
+        overflow: "hidden",
+        borderRadius: isFullscreen ? "0px" : "28px",
+        border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
+        boxShadow:
+          isFullscreen || mobileLiteMode
+            ? "none"
+            : "inset 0 0 0 1px rgba(0,255,180,0.04)",
+        backfaceVisibility: "hidden" as const,
+      };
+
   const gameView = (
     <div className="jal-tokenfit-shell" aria-label="JAL's Trials Token Fit">
       {!isFullscreen && (
@@ -980,35 +1077,9 @@ drawScene(
             }
           }}
           className="jal-tokenfit-scene-frame"
-          style={
-            isFullscreen
-              ? { width: "100vw", height: "100dvh" }
-              : { width: `${sceneWidth}px`, height: `${sceneHeight}px` }
-          }
+          style={frameSizeStyle}
         >
-          {/* Scaled canvas world only */}
-          <div
-            style={{
-              position: "absolute",
-              left: isFullscreen ? "50%" : 0,
-              top: isFullscreen ? "50%" : 0,
-              width: `${worldWidth}px`,
-              height: `${worldHeight}px`,
-              background: "#02060e",
-              transform: isFullscreen
-                ? `translate(-50%, -50%) scale(${sceneScale})`
-                : `scale(${sceneScale})`,
-              transformOrigin: isFullscreen ? "center center" : "top left",
-              overflow: "hidden",
-              borderRadius: isFullscreen ? "0px" : "28px",
-              border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.12)",
-              boxShadow:
-                isFullscreen || mobileLiteMode
-                  ? "none"
-                  : "inset 0 0 0 1px rgba(0,255,180,0.04)",
-              backfaceVisibility: "hidden",
-            }}
-          >
+          <div style={worldStyle}>
             <canvas
               ref={canvasRef}
               style={{
@@ -1023,7 +1094,6 @@ drawScene(
             />
           </div>
 
-          {/* Unscaled HUD / overlays */}
           {!hideLeftPillsOnMobile && (
             <div
               style={{
@@ -1051,7 +1121,7 @@ drawScene(
                 JAL’s Trials
               </div>
 
-              {!isSmallViewport && (
+              {!isSmallViewport && !mobileLiteMode && (
                 <div
                   style={{
                     ...hudCardStyle,
@@ -1359,7 +1429,7 @@ drawScene(
             </div>
           )}
 
-          {gameState === "playing" && isPortrait && (
+          {gameState === "playing" && mobileLiteMode && (
             <button
               type="button"
               onPointerDown={(event) => {
@@ -1382,12 +1452,11 @@ drawScene(
                 fontWeight: 800,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                boxShadow: mobileLiteMode
-                  ? "none"
-                  : "0 0 24px rgba(0,255,180,0.12)",
+                boxShadow: "none",
                 zIndex: 7,
                 cursor: "pointer",
                 WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
               }}
             >
               Lift
