@@ -3940,6 +3940,128 @@ a.button[aria-disabled="true"]{
    19) ENGINE SYSTEM (Integrity Layer)
    Calm for truth. Energy for change.
 ========================================= */
+.engine-carousel-insight {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.engine-carousel-k {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+  margin-bottom: 4px;
+}
+
+.engine-carousel-v {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.engine-subslot {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, rgba(0,255,200,0.03), rgba(0,0,0,0.4));
+}
+
+.engine-subslot-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.engine-subslot-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.engine-subslot-state {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.engine-subslot-copy {
+  font-size: 12px;
+  opacity: 0.65;
+  margin-bottom: 10px;
+}
+
+.engine-subslot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.engine-subslot-item {
+  background: rgba(0,0,0,0.3);
+  padding: 6px 8px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.engine-subslot-k {
+  font-size: 9px;
+  opacity: 0.5;
+}
+
+.engine-subslot-v {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.engine-carousel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.engine-carousel-metric {
+  background: rgba(0,0,0,0.25);
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.engine-carousel-k {
+  font-size: 9px;
+  opacity: 0.5;
+}
+
+.engine-carousel-v {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.is-holding {
+  color: #00ffcc;
+}
+
+.is-deploying {
+  color: #4cc9ff;
+}
+
+.is-exiting {
+  color: #ff6b6b;
+}
+
+.is-tracking {
+  color: #f1c40f;
+}
+
+.is-muted {
+  opacity: 0.5;
+}
+
+.engine-carousel-card:hover {
+  box-shadow: 0 0 25px rgba(0,255,200,0.12);
+}
+
+
+
 
 .engine-shell .home-wrap{
   gap:20px;
