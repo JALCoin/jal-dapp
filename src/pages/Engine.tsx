@@ -1256,7 +1256,9 @@ const PriorityRail = React.memo(function PriorityRail(props: {
       <div className="engine-telemetry-head">
         <div>
           <div className="engine-telemetry-title">Machine Priority</div>
-          <div className="engine-telemetry-note">The most important fixed-slot conditions right now.</div>
+          <div className="engine-telemetry-note">
+            The most important fixed-slot conditions right now.
+          </div>
         </div>
       </div>
 
@@ -1270,14 +1272,18 @@ const PriorityRail = React.memo(function PriorityRail(props: {
           >
             <div className="engine-priority-top">
               <span className="engine-priority-id">{s.id}</span>
-              <span className={`engine-priority-chip ${regimeToneClass(s)}`}>{priorityRailLabel(s)}</span>
+              <span className={`engine-priority-chip ${regimeToneClass(s)}`}>
+                {priorityRailLabel(s)}
+              </span>
             </div>
 
             <div className="engine-priority-line">
               <strong>{slotCoin(s)}</strong> • {regimeLabel(s)}
             </div>
 
-            <div className="engine-priority-story">{machineStory(s)}</div>
+            <div className="engine-priority-story">
+              {machineStory(s)}
+            </div>
 
             <div className="engine-priority-stats">
               <span>Net {pctNum(s.netPct)}</span>
