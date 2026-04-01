@@ -3936,6 +3936,135 @@ a.button[aria-disabled="true"]{
 .home-topbar .terminal-time {
   animation: jalTimePulse 2s ease-in-out infinite;
 }
+
+/* =========================================
+   HOME SUPPORT LAYER
+========================================= */
+
+.home-support-window{
+  position:relative;
+  overflow:hidden;
+  padding:20px;
+  background:
+    radial-gradient(900px 320px at 50% 0%, rgba(244,200,106,.05), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
+}
+
+.home-support-head{
+  margin-bottom:16px;
+}
+
+.home-support-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}
+
+.home-support-card{
+  position:relative;
+  overflow:hidden;
+  padding:18px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.09);
+  background:
+    radial-gradient(600px 140px at 0% 0%, rgba(255,255,255,.04), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(0,0,0,.18));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    0 12px 30px rgba(0,0,0,.24);
+  display:grid;
+  gap:12px;
+}
+
+.home-support-card-kicker{
+  font-size:.72rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.62;
+}
+
+.home-support-card-title{
+  margin:0;
+  font-size:1.08rem;
+  font-weight:900;
+  letter-spacing:.02em;
+  line-height:1.2;
+}
+
+.home-support-card-copy{
+  margin:0;
+  line-height:1.62;
+  opacity:.8;
+}
+
+.home-support-actions{
+  margin-top:auto;
+}
+
+.home-support-wallet{
+  display:grid;
+  gap:8px;
+  margin-top:auto;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.22);
+}
+
+.home-support-wallet-label{
+  font-size:.7rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.58;
+}
+
+.home-support-wallet-code{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size:.84rem;
+  line-height:1.55;
+  color:rgba(231,255,247,.88);
+  word-break:break-all;
+}
+
+.home-route-preview{
+  opacity:.72;
+  transform:translateX(10px) scale(.992);
+  filter:blur(.4px) saturate(.92);
+}
+
+.home-route-band:hover .home-route-preview,
+.home-route-band[open] .home-route-preview{
+  opacity:1;
+  transform:translateX(0) scale(1);
+  filter:none;
+}
+
+.home-route-preview-overlay{
+  justify-content:flex-end;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.72));
+}
+
+.home-route-preview-title{
+  font-size:1.04rem;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+
+.home-route-preview-desc{
+  opacity:.88;
+}
+
+@media (max-width:760px){
+  .home-support-window{
+    padding:16px;
+  }
+
+  .home-support-grid{
+    grid-template-columns:1fr;
+  }
+}
+
 /* =========================================
    19) ENGINE SYSTEM (Integrity Layer)
    Calm for truth. Energy for change.
@@ -4399,134 +4528,6 @@ a.button[aria-disabled="true"]{
   font-size:.92rem;
   color:rgba(231,255,247,.88);
   word-break:break-word;
-}
-
-/* =========================================
-   HOME SUPPORT LAYER
-========================================= */
-
-.home-support-window{
-  position:relative;
-  overflow:hidden;
-  padding:20px;
-  background:
-    radial-gradient(900px 320px at 50% 0%, rgba(244,200,106,.05), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
-}
-
-.home-support-head{
-  margin-bottom:16px;
-}
-
-.home-support-grid{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:14px;
-}
-
-.home-support-card{
-  position:relative;
-  overflow:hidden;
-  padding:18px;
-  border-radius:20px;
-  border:1px solid rgba(255,255,255,.09);
-  background:
-    radial-gradient(600px 140px at 0% 0%, rgba(255,255,255,.04), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.025), rgba(0,0,0,.18));
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.02),
-    0 12px 30px rgba(0,0,0,.24);
-  display:grid;
-  gap:12px;
-}
-
-.home-support-card-kicker{
-  font-size:.72rem;
-  letter-spacing:.16em;
-  text-transform:uppercase;
-  opacity:.62;
-}
-
-.home-support-card-title{
-  margin:0;
-  font-size:1.08rem;
-  font-weight:900;
-  letter-spacing:.02em;
-  line-height:1.2;
-}
-
-.home-support-card-copy{
-  margin:0;
-  line-height:1.62;
-  opacity:.8;
-}
-
-.home-support-actions{
-  margin-top:auto;
-}
-
-.home-support-wallet{
-  display:grid;
-  gap:8px;
-  margin-top:auto;
-  padding:12px 14px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.08);
-  background:rgba(0,0,0,.22);
-}
-
-.home-support-wallet-label{
-  font-size:.7rem;
-  letter-spacing:.16em;
-  text-transform:uppercase;
-  opacity:.58;
-}
-
-.home-support-wallet-code{
-  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-  font-size:.84rem;
-  line-height:1.55;
-  color:rgba(231,255,247,.88);
-  word-break:break-all;
-}
-
-.home-route-preview{
-  opacity:.72;
-  transform:translateX(10px) scale(.992);
-  filter:blur(.4px) saturate(.92);
-}
-
-.home-route-band:hover .home-route-preview,
-.home-route-band[open] .home-route-preview{
-  opacity:1;
-  transform:translateX(0) scale(1);
-  filter:none;
-}
-
-.home-route-preview-overlay{
-  justify-content:flex-end;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.72));
-}
-
-.home-route-preview-title{
-  font-size:1.04rem;
-  font-weight:900;
-  letter-spacing:.02em;
-}
-
-.home-route-preview-desc{
-  opacity:.88;
-}
-
-@media (max-width:760px){
-  .home-support-window{
-    padding:16px;
-  }
-
-  .home-support-grid{
-    grid-template-columns:1fr;
-  }
 }
 
 /* =========================================
@@ -5154,202 +5155,429 @@ a.button[aria-disabled="true"]{
 
 /* -----------------------------------------
    Ledger
+   Neatened for Overview + Permanent Slots
 ----------------------------------------- */
 
-.ledger-table {
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.engine-ledger{
+  padding:18px;
+  display:grid;
+  gap:16px;
+}
+
+.engine-ledger-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+.engine-ledger-title{
+  font-size:1rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.engine-ledger-note{
+  margin-top:4px;
+  font-size:.84rem;
+  color:rgba(231,255,247,.68);
+  line-height:1.6;
+  max-width:72ch;
+}
+
+.engine-ledger-counts{
+  font-size:.84rem;
+  color:rgba(231,255,247,.66);
+  white-space:nowrap;
+}
+
+.engine-ledger-topgrid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:14px;
+}
+
+.engine-ledger-topgrid .engine-capture{
+  min-height:150px;
+  justify-content:space-between;
+}
+
+/* base table shell */
+
+.ledger-table{
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.18));
 }
 
 .ledger-head,
-.ledger-row {
-  display: grid;
-  gap: 8px;
-  align-items: start;
+.ledger-row{
+  display:grid;
+  gap:12px;
+  align-items:start;
 }
 
-.ledger-head {
-  padding: 11px 12px;
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(231, 255, 247, 0.54);
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+.ledger-head{
+  padding:14px 16px;
+  font-size:.68rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.54);
+  background:rgba(255,255,255,.03);
+  border-bottom:1px solid rgba(255,255,255,.06);
 }
 
 .ledger-head > div,
-.ledger-row > div {
-  min-width: 0;
+.ledger-row > div{
+  min-width:0;
 }
 
-.ledger-entry {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.ledger-entry{
+  border-bottom:1px solid rgba(255,255,255,.05);
 }
 
-.ledger-entry:last-child {
-  border-bottom: 0;
+.ledger-entry:last-child{
+  border-bottom:0;
 }
 
-.ledger-slotid {
-  font-size: 0.74rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(231, 255, 247, 0.76);
+.ledger-row{
+  width:100%;
+  text-align:left;
+  padding:14px 16px;
+  min-height:72px;
+  transition:background var(--t-fast);
 }
 
-.ledger-analysis {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  line-height: 1.4;
-  font-size: 0.78rem;
-  color: rgba(231, 255, 247, 0.82);
+.ledger-row:hover{
+  background:rgba(255,255,255,.022);
 }
 
-.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.ledger-slotid{
+  font-size:.78rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.76);
+  white-space:nowrap;
 }
 
-.ledger-view {
-  color: rgba(17, 241, 167, 0.9);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.7rem;
+.num{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
 }
 
-.ledger-subpanel {
-  padding: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.18);
-  display: grid;
-  gap: 10px;
+.ledger-view{
+  color:rgba(17,241,167,.9);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-size:.72rem;
+  font-weight:700;
+  white-space:nowrap;
 }
 
-.ledger-subpanel-badge {
-  display: inline-flex;
-  align-items: flex-start;
-  width: 100%;
-  min-height: 30px;
-  padding: 0.55rem 0.75rem;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  line-height: 1.45;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.ledger-subpanel-badge.is-holding {
-  border-color: rgba(0, 240, 255, 0.26);
-  color: #b8f5ff;
-}
-
-.ledger-subpanel-badge.is-tracking {
-  border-color: rgba(17, 241, 167, 0.28);
-  color: #b8ffe1;
-}
-
-.ledger-subpanel-badge.is-deploying {
-  border-color: rgba(244, 200, 106, 0.28);
-  color: #ffe2a2;
-}
-
-.ledger-subpanel-badge.is-exiting {
-  border-color: rgba(255, 107, 107, 0.26);
-  color: #ffd0d0;
-}
-
-.ledger-subpanel-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.ledger-subpanel-item {
-  min-width: 0;
-  padding: 9px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.ledger-subpanel-k {
-  font-size: 0.66rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(231, 255, 247, 0.52);
-}
-
-.ledger-subpanel-v {
-  margin-top: 5px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1.45;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.ledger-subpanel-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.ledger-empty {
-  padding: 18px;
-  color: rgba(231, 255, 247, 0.66);
-}
-
-/* Ledger column layouts */
-.engine-ledger .ledger-head,
-.engine-ledger .ledger-row {
-  grid-template-columns: 1.05fr 0.95fr 0.9fr 0.95fr 0.92fr 0.75fr 0.7fr 0.55fr;
-}
-
-.engine-ledger .ledger-row {
-  padding: 11px 12px;
-  font-size: 0.9rem;
-}
-
-.engine-ledger .ledger-analysis {
-  grid-column: auto;
-}
+/* overview table specifically */
 
 .engine-ledger[aria-label="Overview cards"] .ledger-head,
-.engine-ledger[aria-label="Overview cards"] .ledger-row {
+.engine-ledger[aria-label="Overview cards"] .ledger-row{
   grid-template-columns:
-    1.05fr
-    0.95fr
-    0.95fr
-    0.95fr
-    0.95fr
-    3fr
-    0.9fr
-    0.72fr
-    0.72fr;
+    1.05fr   /* Slot */
+    .95fr    /* Market */
+    .9fr     /* Decision */
+    .95fr    /* Position */
+    .95fr    /* Subslot */
+    2.9fr    /* Live analysis */
+    .92fr    /* Health */
+    .78fr    /* Net */
+    .56fr;   /* More */
 }
 
-.engine-ledger[aria-label="Overview cards"] .ledger-row {
-  width: 100%;
-  text-align: left;
-  padding: 12px 14px;
-  min-height: 64px;
-  height: auto;
-  transition: background var(--t-fast);
+.engine-ledger[aria-label="Overview cards"] .ledger-row{
+  min-height:86px;
 }
 
-.engine-ledger[aria-label="Overview cards"] .ledger-row:hover {
-  background: rgba(255, 255, 255, 0.02);
+.engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(2),
+.engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(3),
+.engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(4),
+.engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(5),
+.engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(7){
+  line-height:1.45;
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 
-.engine-ledger[aria-label="Overview cards"] .ledger-analysis {
-  grid-column: 6;
+.engine-ledger[aria-label="Overview cards"] .ledger-analysis{
+  grid-column:6;
+  line-height:1.55;
+  font-size:.79rem;
+  color:rgba(231,255,247,.82);
+  white-space:normal;
+  overflow:visible;
+  text-overflow:unset;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  max-width:62ch;
+}
+
+.engine-ledger[aria-label="Overview cards"] .ledger-row > div:last-child{
+  justify-self:end;
+}
+
+/* permanent slots ledger specifically */
+
+.engine-ledger[aria-label="Slots Ledger"] .ledger-head,
+.engine-ledger[aria-label="Slots Ledger"] .ledger-row{
+  grid-template-columns:
+    1.05fr   /* Slot ID */
+    .75fr    /* Coin */
+    .95fr    /* Market */
+    .9fr     /* State */
+    1.05fr   /* Regime */
+    .95fr    /* Health */
+    .82fr    /* Unit */
+    .7fr     /* Net */
+    .48fr;   /* More */
+}
+
+.engine-ledger[aria-label="Slots Ledger"] .ledger-row{
+  min-height:70px;
+}
+
+.engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(4),
+.engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(5),
+.engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(6){
+  line-height:1.45;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+}
+
+.engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:last-child{
+  justify-self:end;
+}
+
+.engine-ledger[aria-label="Slots Ledger"] .ledger-head > div:last-child{
+  justify-self:end;
+}
+
+/* subpanel */
+
+.ledger-subpanel{
+  padding:14px;
+  border-top:1px solid rgba(255,255,255,.06);
+  background:rgba(0,0,0,.18);
+  display:grid;
+  gap:12px;
+}
+
+.ledger-subpanel-badge{
+  display:inline-flex;
+  align-items:flex-start;
+  width:100%;
+  min-height:32px;
+  padding:.62rem .8rem;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  font-size:.74rem;
+  line-height:1.5;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+.ledger-subpanel-badge.is-holding{
+  border-color:rgba(0,240,255,.26);
+  color:#b8f5ff;
+}
+
+.ledger-subpanel-badge.is-tracking{
+  border-color:rgba(17,241,167,.28);
+  color:#b8ffe1;
+}
+
+.ledger-subpanel-badge.is-deploying{
+  border-color:rgba(244,200,106,.28);
+  color:#ffe2a2;
+}
+
+.ledger-subpanel-badge.is-exiting{
+  border-color:rgba(255,107,107,.26);
+  color:#ffd0d0;
+}
+
+.ledger-subpanel-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:10px;
+}
+
+.ledger-subpanel-item{
+  min-width:0;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.02);
+}
+
+.ledger-subpanel-k{
+  font-size:.66rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.52);
+}
+
+.ledger-subpanel-v{
+  margin-top:5px;
+  font-size:.82rem;
+  font-weight:700;
+  line-height:1.48;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+}
+
+.ledger-subpanel-actions{
+  display:flex;
+  justify-content:flex-end;
+}
+
+.ledger-empty{
+  padding:18px;
+  color:rgba(231,255,247,.66);
+}
+
+/* events panel when shown under ledger */
+
+.engine-events{
+  padding:18px;
+  display:grid;
+  gap:14px;
+}
+
+/* -----------------------------------------
+   Ledger responsive
+----------------------------------------- */
+
+@media (max-width:1180px){
+  .engine-ledger-topgrid{
+    grid-template-columns:1fr;
+  }
+
+  .engine-ledger[aria-label="Overview cards"] .ledger-head,
+  .engine-ledger[aria-label="Overview cards"] .ledger-row{
+    grid-template-columns:
+      .95fr
+      .88fr
+      .82fr
+      .88fr
+      .9fr
+      2.4fr
+      .88fr
+      .72fr
+      .52fr;
+    gap:10px;
+  }
+
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-head,
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row{
+    grid-template-columns:
+      .95fr
+      .68fr
+      .88fr
+      .84fr
+      .95fr
+      .86fr
+      .78fr
+      .64fr
+      .46fr;
+    gap:10px;
+  }
+
+  .ledger-subpanel-grid{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+}
+
+@media (max-width:980px){
+  .engine-ledger{
+    padding:16px;
+  }
+
+  .engine-ledger[aria-label="Overview cards"] .ledger-head,
+  .engine-ledger[aria-label="Overview cards"] .ledger-row{
+    grid-template-columns:
+      .95fr
+      .84fr
+      .8fr
+      .84fr
+      .84fr
+      2fr
+      .8fr
+      .68fr
+      .5fr;
+    gap:9px;
+  }
+
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-head,
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row{
+    grid-template-columns:
+      .92fr
+      .66fr
+      .82fr
+      .8fr
+      .9fr
+      .82fr
+      .74fr
+      .62fr
+      .44fr;
+    gap:9px;
+  }
+
+  .engine-ledger[aria-label="Overview cards"] .ledger-analysis{
+    max-width:none;
+  }
+}
+
+@media (max-width:760px){
+  .ledger-head{
+    display:none;
+  }
+
+  .engine-ledger[aria-label="Overview cards"] .ledger-row,
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+    padding:12px;
+    min-height:auto;
+    border:none;
+    background:transparent;
+    cursor:pointer;
+  }
+
+  .engine-ledger[aria-label="Overview cards"] .ledger-analysis,
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-analysis{
+    grid-column:auto;
+    max-width:none;
+  }
+
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div,
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div{
+    text-align:left;
+    justify-self:start;
+  }
+
+  .num{
+    text-align:left;
+  }
+
+  .ledger-view{
+    font-size:.72rem;
+  }
+
+  .ledger-subpanel-grid{
+    grid-template-columns:1fr;
+  }
 }
 
 /* -----------------------------------------
