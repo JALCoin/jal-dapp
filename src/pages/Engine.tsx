@@ -555,6 +555,49 @@ function isHoldingFamilyState(state: SlotState | string | null | undefined) {
   );
 }
 
+function isTrackingFamilyState(state: string | null | undefined) {
+  const s = String(state || "").toUpperCase();
+  return (
+    s === "TRACKING" ||
+    s === "ARMED" ||
+    s === "DRAWDOWN_SEEN" ||
+    s === "REVERSAL_CONFIRMING" ||
+    s === "DEPLOYING" ||
+    s === "BUY_SUBMITTING" ||
+    s === "BUY_SUBMITTED" ||
+    s === "BUY_LOCK_SUBMITTED" ||
+    s === "SELL_SUBMITTED" ||
+    s === "SPREAD_BLOCKED" ||
+    s === "NO_MARKET"
+  );
+}
+
+function slotHeartbeatLabel(s: SlotRow, nowMs: number) {
+  if (s.updatedAt && Number.isFinite(s.updatedAt)) {
+    return ageLabel(nowMs - s.updatedAt);
+  }
+  if (s.lastSeenAt && Number.isFinite(s.lastSeenAt)) {
+    return ageLabel(nowMs - s.lastSeenAt);
+  }
+  return "—";
+}
+
+function subslotLiveNowLabel(s: SlotRow) {
+  if (s.subslotNowMid != null && Number.isFinite(s.subslotNowMid)) return fmt(s.subslotNowMid);
+  if (s.nowMid != null && Number.isFinite(s.nowMid)) return fmt(s.nowMid);
+  return "—";
+}
+
+function subslotHeartbeatLabel(s: SlotRow, nowMs: number) {
+  if (s.updatedAt && Number.isFinite(s.updatedAt)) {
+    return ageLabel(nowMs - s.updatedAt);
+  }
+  if (s.subslotLastReconcileAt && Number.isFinite(s.subslotLastReconcileAt)) {
+    return ageLabel(nowMs - s.subslotLastReconcileAt);
+  }
+  return "—";
+}
+
 function computeSlotFinancials(slotRows: SlotRow[]) {
   let openPnl = 0;
   let visibleRealized = 0;
@@ -562,14 +605,19 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
   for (const s of slotRows) {
     const baseAud = Number(s.combinedEntryAud ?? s.entryAud ?? s.unitAud);
     const netPct = Number(s.netPct);
-    const profitAud = Number(s.profitAud);
+    const parentProfitAud = Number(s.profitAud);
+    const subslotProfitAud = Number(s.subslotProfitAud);
 
     if (isHoldingFamilyState(s.state) && Number.isFinite(baseAud) && Number.isFinite(netPct)) {
       openPnl += baseAud * (netPct / 100);
     }
 
-    if (Number.isFinite(profitAud)) {
-      visibleRealized += profitAud;
+    if (Number.isFinite(parentProfitAud)) {
+      visibleRealized += parentProfitAud;
+    }
+
+    if (Number.isFinite(subslotProfitAud)) {
+      visibleRealized += subslotProfitAud;
     }
   }
 
@@ -812,7 +860,7 @@ function detailRowsForSlot(s: SlotRow, nowMs: number) {
     { k: "Lifetime net", v: pctNum(s.lifetimeNetPct) },
     { k: "Drawdown", v: pctNum(s.drawdownPct) },
     { k: "Lock", v: lockDisplay(s) },
-    { k: "Last seen", v: s.lastSeenAt ? ageLabel(nowMs - s.lastSeenAt) : "—" },
+    { k: "Updated", v: slotHeartbeatLabel(s, nowMs) },
   ];
 }
 
@@ -918,27 +966,14 @@ function slotHealthLabel(s: SlotRow) {
 }
 
 function getActiveTrackingCount(trackingStates: Record<string, number>) {
-  return (
-    (trackingStates.TRACKING ?? 0) +
-    (trackingStates.ARMED ?? 0) +
-    (trackingStates.DRAWDOWN_SEEN ?? 0) +
-    (trackingStates.REVERSAL_CONFIRMING ?? 0) +
-    (trackingStates.SPREAD_BLOCKED ?? 0)
-  );
+  return Object.entries(trackingStates).reduce((sum, [k, v]) => {
+    return isTrackingFamilyState(k) ? sum + Number(v || 0) : sum;
+  }, 0);
 }
 
 function getActiveTrackingCoins(slots: SlotRow[]) {
   return slots
-    .filter((s) => {
-      const t = String(s.trackingState || "").toUpperCase();
-      return (
-        t === "TRACKING" ||
-        t === "ARMED" ||
-        t === "DRAWDOWN_SEEN" ||
-        t === "REVERSAL_CONFIRMING" ||
-        t === "SPREAD_BLOCKED"
-      );
-    })
+    .filter((s) => isTrackingFamilyState(s.trackingState))
     .map((s) => s.coin)
     .filter(Boolean)
     .slice(0, 6)
@@ -1962,7 +1997,7 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Re-entry target</div><div className="slot-v">{fmt(slot.reentryTargetMid)}</div></div>
               <div><div className="slot-k">Exit reason</div><div className="slot-v">{slot.exitReason ?? "—"}</div></div>
               <div><div className="slot-k">Created</div><div className="slot-v">{ageLabel(nowMs - slot.createdAt)}</div></div>
-              <div><div className="slot-k">Last seen</div><div className="slot-v">{slot.lastSeenAt ? ageLabel(nowMs - slot.lastSeenAt) : "—"}</div></div>
+              <div><div className="slot-k">Updated</div><div className="slot-v">{slotHeartbeatLabel(slot, nowMs)}</div></div>
             </div>
           </CollapsibleBlock>
 
@@ -1983,6 +2018,7 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Actual Qty</div><div className="slot-v">{fmt(slot.subslotActualCoinQty)}</div></div>
               <div><div className="slot-k">Submitted Rate</div><div className="slot-v">{fmt(slot.subslotSubmittedRate)}</div></div>
               <div><div className="slot-k">Actual Rate</div><div className="slot-v">{fmt(slot.subslotActualRate)}</div></div>
+              <div><div className="slot-k">Live Now</div><div className="slot-v">{subslotLiveNowLabel(slot)}</div></div>
               <div><div className="slot-k">Subslot Gross</div><div className="slot-v">{pctNum(slot.subslotGrossPct)}</div></div>
               <div><div className="slot-k">Subslot Net</div><div className="slot-v">{pctNum(slot.subslotNetPct)}</div></div>
               <div><div className="slot-k">Peak Bid</div><div className="slot-v">{fmt(slot.subslotPeakBid)}</div></div>
@@ -1994,7 +2030,7 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Last Merged</div><div className="slot-v">{moneyAud(slot.subslotLastMergedAud)}</div></div>
               <div><div className="slot-k">Lifetime Profit</div><div className="slot-v">{moneyAud(slot.subslotLifetimeProfitAud)}</div></div>
               <div><div className="slot-k">Lifetime Cycles</div><div className="slot-v">{slot.subslotLifetimeCycles ?? 0}</div></div>
-              <div><div className="slot-k">Last Reconcile</div><div className="slot-v">{slot.subslotLastReconcileAt ? ageLabel(nowMs - slot.subslotLastReconcileAt) : "—"}</div></div>
+              <div><div className="slot-k">Updated</div><div className="slot-v">{subslotHeartbeatLabel(slot, nowMs)}</div></div>
               <div><div className="slot-k">Reconcile Note</div><div className="slot-v">{slot.subslotLastReconcileNote ?? "—"}</div></div>
               <div><div className="slot-k">Last Error</div><div className="slot-v">{slot.subslotLastError ?? "—"}</div></div>
             </div>
@@ -2189,13 +2225,6 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   </div>
 </div>
 
-<div className="engine-mini-row">
-  <div className="mini-k">Last OK</div>
-  <div className="mini-v">
-    {props.meta?.market?.snapshot?.lastOkIso ?? "—"}
-  </div>
-</div>
-
           <div className="engine-mini-row">
             <div className="mini-k">Last OK</div>
             <div className="mini-v">
@@ -2375,31 +2404,31 @@ export default function Engine() {
     snapshotAgeMs != null && Number.isFinite(snapshotAgeMs) ? snapshotAgeMs <= 10000 : false;
 
   const topTrackingCoins = useMemo(() => {
-  return getActiveTrackingCoins(filteredSlots);
-}, [filteredSlots]);
+  return getActiveTrackingCoins(slotRows);
+}, [slotRows]);
 
   const overviewCounts = useMemo(() => {
-    const out = {
-      bull: 0,
-      bear: 0,
-      consolidation: 0,
-      breakoutReady: 0,
-      waiting: 0,
-      activeSubslots: 0,
-    };
+  const out = {
+    bull: 0,
+    bear: 0,
+    consolidation: 0,
+    breakoutReady: 0,
+    waiting: 0,
+    activeSubslots: 0,
+  };
 
-    for (const s of filteredSlots) {
-      const regime = String(regimeLabel(s)).toUpperCase();
-      if (regime.includes("UPTREND") || regime.includes("BULL")) out.bull += 1;
-      if (regime.includes("DOWNTREND") || regime.includes("BEAR")) out.bear += 1;
-      if (regime.includes("CONSOLIDATION")) out.consolidation += 1;
-      if (s.consolidationBreakoutReady === true) out.breakoutReady += 1;
-      if (String(s.state).toUpperCase() === "WAITING_ENTRY") out.waiting += 1;
-      if (String(s.subslotState || "").toUpperCase() === "ACTIVE") out.activeSubslots += 1;
-    }
+  for (const s of slotRows) {
+    const regime = String(regimeLabel(s)).toUpperCase();
+    if (regime.includes("UPTREND") || regime.includes("BULL")) out.bull += 1;
+    if (regime.includes("DOWNTREND") || regime.includes("BEAR")) out.bear += 1;
+    if (regime.includes("CONSOLIDATION")) out.consolidation += 1;
+    if (s.consolidationBreakoutReady === true) out.breakoutReady += 1;
+    if (String(s.state).toUpperCase() === "WAITING_ENTRY") out.waiting += 1;
+    if (String(s.subslotState || "").toUpperCase() === "ACTIVE") out.activeSubslots += 1;
+  }
 
-    return out;
-  }, [filteredSlots]);
+  return out;
+}, [slotRows]);
 
   const showEventsUnderLedger = isDesktop && section === "ledger";
 
@@ -2544,7 +2573,7 @@ export default function Engine() {
                     </div>
 
                     <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
-  <div className="cap-k">Tracking states</div>
+  <div className="cap-k">Tracking family</div>
   <div className="cap-v">{getActiveTrackingCount(trackingStates)}</div>
   <div className="cap-sub">
     <span>TRACKING {trackingStates.TRACKING ?? 0}</span>
