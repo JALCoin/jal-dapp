@@ -2386,7 +2386,6 @@ export default function Engine() {
   const counts = meta?.counts ?? {};
   const trackingStates = meta?.trackingStates ?? {};
 
-  const windowHarvest = useMemo(() => parseWindowHarvestFromEvents(events), [events]);
   const slotFinancials = useMemo(() => computeSlotFinancials(slotRows), [slotRows]);
   const slotHarvest = useMemo(() => computeWindowHarvestFromSlots(slotRows), [slotRows]);
 
