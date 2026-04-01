@@ -838,6 +838,142 @@ function machineStory(s: SlotRow) {
   return `${slotCoin(s)} is under observation while the machine evaluates structure.`;
 }
 
+function liveParentAnalysis(s: SlotRow, nowMs: number) {
+  const parts: string[] = [];
+
+  const nowMid = s.nowMid;
+  const netPct = s.netPct;
+  const spreadPct = s.nowSpreadPct;
+  const dd = s.drawdownPct;
+  const breakout = s.consolidationBreakoutReady === true;
+  const tracking = String(s.trackingState || "").toUpperCase();
+  const state = String(s.state || "").toUpperCase();
+  const regime = String(regimeLabel(s)).toUpperCase();
+  const updated = slotHeartbeatLabel(s, nowMs);
+
+  if (state === "EXITING") {
+    parts.push("Parent exit is being resolved live.");
+  } else if (state === "DEPLOYING") {
+    parts.push("Parent entry is being confirmed live.");
+  } else if (state === "LVL4_TRAIL") {
+    parts.push("Parent is in high-protection trailing mode.");
+  } else if (isHoldingFamilyState(state)) {
+    parts.push("Parent position is live and being managed.");
+  } else if (state === "WAITING_ENTRY") {
+    parts.push("Parent is waiting for a qualified re-entry.");
+  } else {
+    parts.push("Parent slot is being observed.");
+  }
+
+  if (Number.isFinite(nowMid)) {
+    parts.push(`Now ${fmt(nowMid)}.`);
+  }
+
+  if (Number.isFinite(netPct)) {
+    if (Number(netPct) > 0) parts.push(`Net is green at ${pctNum(netPct)}.`);
+    else if (Number(netPct) < 0) parts.push(`Net is red at ${pctNum(netPct)}.`);
+    else parts.push(`Net is flat at ${pctNum(netPct)}.`);
+  }
+
+  if (Number.isFinite(spreadPct)) {
+    parts.push(`Spread is ${pctNum(spreadPct)}.`);
+  }
+
+  if (Number.isFinite(dd)) {
+    parts.push(`Drawdown is ${pctNum(dd)}.`);
+  }
+
+  if (tracking === "REVERSAL_CONFIRMING") {
+    parts.push("Reversal confirmation is building.");
+  } else if (tracking === "DRAWDOWN_SEEN") {
+    parts.push("A drawdown has been detected.");
+  } else if (tracking === "TRACKING") {
+    parts.push("Tracking structure is still forming.");
+  } else if (tracking === "SPREAD_BLOCKED") {
+    parts.push("Spread is blocking action.");
+  }
+
+  if (regime.includes("CONSOLIDATION")) {
+    parts.push(
+      breakout
+        ? "Compression is ready to break."
+        : "Compression is still building."
+    );
+  } else if (regime.includes("UPTREND") || regime.includes("BULL")) {
+    parts.push("Trend pressure remains upward.");
+  } else if (regime.includes("DOWNTREND") || regime.includes("BEAR")) {
+    parts.push("Trend pressure remains downward.");
+  }
+
+  if (updated !== "—") {
+    parts.push(`Updated ${updated} ago.`);
+  }
+
+  return parts.join(" ");
+}
+
+function liveSubslotAnalysis(s: SlotRow, nowMs: number) {
+  const parts: string[] = [];
+
+  const subState = String(s.subslotState || "").toUpperCase();
+  const signal = String(s.subslotSignalState || "").toUpperCase();
+  const netPct = s.subslotNetPct;
+  const bouncePct = s.subslotBouncePct;
+  const emaGapPct = s.subslotEmaGapPct;
+  const liveNow = s.subslotNowMid ?? s.nowMid;
+  const updated = subslotHeartbeatLabel(s, nowMs);
+
+  if (subState === "BUY_SUBMITTED") {
+    parts.push("Subslot entry is pending.");
+  } else if (subState === "ACTIVE") {
+    parts.push("Subslot trade is live.");
+  } else if (subState === "SELL_SUBMITTED") {
+    parts.push("Subslot exit is pending.");
+  } else if (subState === "CLOSED") {
+    parts.push("Subslot is closed.");
+  } else {
+    parts.push("Subslot is idle.");
+  }
+
+  if (signal === "REVERSAL_CONFIRMING") {
+    parts.push("Signal is confirming.");
+  } else if (signal === "BOUNCE_SEEN") {
+    parts.push("Bounce has been detected.");
+  } else if (signal === "TRACKING") {
+    parts.push("Subslot is tracking structure.");
+  } else if (signal === "ARMED") {
+    parts.push("Subslot is armed.");
+  } else if (signal === "SPREAD_BLOCKED") {
+    parts.push("Subslot is blocked by spread.");
+  } else if (signal === "NO_MARKET") {
+    parts.push("No usable live market read.");
+  }
+
+  if (Number.isFinite(liveNow)) {
+    parts.push(`Live now ${fmt(liveNow)}.`);
+  }
+
+  if (Number.isFinite(netPct)) {
+    if (Number(netPct) > 0) parts.push(`Subslot net is green at ${pctNum(netPct)}.`);
+    else if (Number(netPct) < 0) parts.push(`Subslot net is red at ${pctNum(netPct)}.`);
+    else parts.push(`Subslot net is flat at ${pctNum(netPct)}.`);
+  }
+
+  if (Number.isFinite(bouncePct)) {
+    parts.push(`Bounce is ${pctNum(bouncePct)}.`);
+  }
+
+  if (Number.isFinite(emaGapPct)) {
+    parts.push(`EMA gap is ${pctNum(emaGapPct)}.`);
+  }
+
+  if (updated !== "—") {
+    parts.push(`Updated ${updated} ago.`);
+  }
+
+  return parts.join(" ");
+}
+
 function detailRowsForSlot(s: SlotRow, nowMs: number) {
   return [
     { k: "Slot", v: s.id },
@@ -1250,6 +1386,7 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
 const PriorityRail = React.memo(function PriorityRail(props: {
   slots: SlotRow[];
   onOpenSlot: (id: string) => void;
+  nowMs: number;
 }) {
   const top = props.slots.slice(0, 3);
 
@@ -1286,8 +1423,8 @@ const PriorityRail = React.memo(function PriorityRail(props: {
             </div>
 
             <div className="engine-priority-story">
-              {machineStory(s)}
-            </div>
+  {liveParentAnalysis(s, props.nowMs)}
+</div>
 
             <div className="engine-priority-stats">
               <span>Net {pctNum(s.netPct)}</span>
@@ -1403,6 +1540,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
   onOpenSlot: (id: string) => void;
   paused: boolean;
   setPaused: React.Dispatch<React.SetStateAction<boolean>>;
+  nowMs: number;
 }) {
   const carouselSlot = props.slots[Math.max(0, Math.min(props.currentIndex, props.slots.length - 1))] ?? null;
 
@@ -1519,13 +1657,13 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
             </div>
 
             <div className="engine-carousel-foot">
-              <span>{machineStory(carouselSlot)}</span>
-            </div>
+  <span>{liveParentAnalysis(carouselSlot, props.nowMs)}</span>
+</div>
 
-            <div className="engine-carousel-insight">
-              <div className="engine-carousel-k">Market Insight</div>
-              <div className="engine-carousel-v">{regimeSummary(carouselSlot)}</div>
-            </div>
+<div className="engine-carousel-insight">
+  <div className="engine-carousel-k">Live Market Insight</div>
+  <div className="engine-carousel-v">{regimeSummary(carouselSlot)}</div>
+</div>
 
             <div className={`engine-subslot ${subslotToneClass(carouselSlot)}`}>
               <div className="engine-subslot-head">
@@ -1533,7 +1671,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                 <span className="engine-subslot-state">{subslotDecisionLabel(carouselSlot)}</span>
               </div>
 
-              <div className="engine-subslot-copy">{subslotReasonLabel(carouselSlot)}</div>
+              <div className="engine-subslot-copy">{liveSubslotAnalysis(carouselSlot, props.nowMs)}</div>
 
               {!isIdleSubslot(carouselSlot) ? (
                 <div className="engine-subslot-grid">
@@ -1636,6 +1774,7 @@ const MarketSurface = React.memo(function MarketSurface(props: {
 const OverviewTable = React.memo(function OverviewTable(props: {
   slots: SlotRow[];
   onOpenSlot: (id: string) => void;
+  nowMs: number;
 }) {
   return (
     <div className="card machine-surface panel-frame engine-ledger" aria-label="Overview cards">
@@ -1650,28 +1789,32 @@ const OverviewTable = React.memo(function OverviewTable(props: {
 
       <div className="ledger-table">
         <div className="ledger-head">
-          <div>Slot</div>
-          <div>Market</div>
-          <div>Decision</div>
-          <div>Position</div>
-          <div>Subslot</div>
-          <div>Health</div>
-          <div className="num">Net</div>
-          <div className="num">More</div>
-        </div>
+  <div>Slot</div>
+  <div>Market</div>
+  <div>Decision</div>
+  <div>Position</div>
+  <div>Subslot</div>
+  <div>Live Analysis</div>
+  <div>Health</div>
+  <div className="num">Net</div>
+  <div className="num">More</div>
+</div>
 
         {props.slots.length ? (
           props.slots.map((s) => (
             <button type="button" className="ledger-row" key={s.id} onClick={() => props.onOpenSlot(s.id)}>
-              <div className="ledger-slotid">{s.id}</div>
-              <div className={regimeToneClass(s)}>{regimeLabel(s)}</div>
-              <div>{engineDecisionLabel(s)}</div>
-              <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
-              <div className={subslotToneClass(s)}>{subslotDecisionLabel(s)}</div>
-              <div>{slotHealthLabel(s)}</div>
-              <div className="num">{pctNum(s.netPct)}</div>
-              <div className="num ledger-view">Open</div>
-            </button>
+  <div className="ledger-slotid">{s.id}</div>
+  <div className={regimeToneClass(s)}>{regimeLabel(s)}</div>
+  <div>{engineDecisionLabel(s)}</div>
+  <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
+  <div className={subslotToneClass(s)}>{subslotDecisionLabel(s)}</div>
+  <div className="ledger-analysis">
+  {liveParentAnalysis(s, props.nowMs)}
+</div>
+  <div>{slotHealthLabel(s)}</div>
+  <div className="num">{pctNum(s.netPct)}</div>
+  <div className="num ledger-view">Open</div>
+</button>
           ))
         ) : (
           <div className="ledger-empty">No fixed slots available.</div>
@@ -1745,7 +1888,9 @@ const LedgerTable = React.memo(function LedgerTable(props: {
 
                 {expanded ? (
                   <div className="ledger-subpanel">
-                    <div className={`ledger-subpanel-badge ${regimeToneClass(s)}`}>{machineStory(s)}</div>
+                    <div className={`ledger-subpanel-badge ${regimeToneClass(s)}`}>
+  {liveParentAnalysis(s, props.nowMs)}
+</div>
 
                     <div className="ledger-subpanel-grid">
                       {rows.map((row) => (
@@ -1757,8 +1902,8 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                     </div>
 
                     <div className={`ledger-subpanel-badge ${subslotToneClass(s)}`}>
-                      {subslotModeLabel(s)} • {subslotDecisionLabel(s)}
-                    </div>
+  {liveSubslotAnalysis(s, props.nowMs)}
+</div>
 
                     <div className="ledger-subpanel-actions">
                       <button
@@ -1974,9 +2119,9 @@ const SlotModal = React.memo(function SlotModal(props: {
                 <div className="slot-v">{slotHealthLabel(slot)}</div>
               </div>
               <div>
-                <div className="slot-k">Decision Note</div>
-                <div className="slot-v">{describeDecision(slot)}</div>
-              </div>
+  <div className="slot-k">Decision Note</div>
+  <div className="slot-v">{liveParentAnalysis(slot, nowMs)}</div>
+</div>
             </div>
           </CollapsibleBlock>
 
@@ -2002,6 +2147,16 @@ const SlotModal = React.memo(function SlotModal(props: {
           </CollapsibleBlock>
 
           <CollapsibleBlock title="Tactical Subslot" defaultOpen>
+
+            <div>
+  <div className="slot-k">Live Analysis</div>
+  <div className="slot-v">{liveSubslotAnalysis(slot, nowMs)}</div>
+</div>
+<div>
+  <div className="slot-k">Live Now</div>
+  <div className="slot-v">{subslotLiveNowLabel(slot)}</div>
+</div>
+
             <div className="slot-section">Subslot Snapshot</div>
 
             <div className="slot-modal-grid">
@@ -2469,7 +2624,11 @@ export default function Engine() {
                 activeSubslots={overviewCounts.activeSubslots}
               />
 
-              <PriorityRail slots={prioritizedSlots} onOpenSlot={setSelectedSlotId} />
+              <PriorityRail
+  slots={prioritizedSlots}
+  onOpenSlot={setSelectedSlotId}
+  nowMs={nowMs}
+/>
 
               <ControlsBar
                 view={view}
@@ -2490,14 +2649,14 @@ export default function Engine() {
               ) : null}
 
               <CarouselPanel
-                slots={prioritizedSlots}
-                currentIndex={carouselIndex}
-                setCurrentIndex={setCarouselIndex}
-                onOpenSlot={setSelectedSlotId}
-                paused={carouselPaused}
-                setPaused={setCarouselPaused}
-              />
-
+  slots={prioritizedSlots}
+  currentIndex={carouselIndex}
+  setCurrentIndex={setCarouselIndex}
+  onOpenSlot={setSelectedSlotId}
+  paused={carouselPaused}
+  setPaused={setCarouselPaused}
+  nowMs={nowMs}
+/>
               <div className="engine-grid engine-grid--asym" aria-label="Engine bays">
                 <SummaryPanel
                   meta={meta}
@@ -2556,7 +2715,7 @@ export default function Engine() {
               </div>
 
               {section === "overview" ? (
-                <OverviewTable slots={filteredSlots} onOpenSlot={setSelectedSlotId} />
+                <OverviewTable slots={filteredSlots} onOpenSlot={setSelectedSlotId} nowMs={nowMs} />
               ) : null}
 
               {section === "ledger" ? (
