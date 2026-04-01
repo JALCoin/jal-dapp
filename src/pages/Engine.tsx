@@ -555,45 +555,6 @@ function isHoldingFamilyState(state: SlotState | string | null | undefined) {
   );
 }
 
-function parseWindowHarvestFromEvents(events: SlotEvent[]) {
-  const out = { window: 0, last24h: 0, last7d: 0 };
-  if (!events?.length) return out;
-
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const weekMs = 7 * dayMs;
-
-  const grab = (msg: string) => {
-    const profitAud =
-      msg.match(/profitAud=([+-]?\d+(\.\d+)?)/i) ??
-      msg.match(/HARVEST[_\s-]*AUD(?:[_\s-]*DELTA)?\s*[:=]?\s*([+-]?\d+(\.\d+)?)/i) ??
-      msg.match(/AUD\s*HARVEST\s*[:=]?\s*([+-]?\d+(\.\d+)?)/i) ??
-      msg.match(/\(([+-]?\$?\d+(\.\d+)?)\,/i);
-
-    if (!profitAud) return null;
-
-    const raw = String(profitAud[1]).replace(/\$/g, "");
-    const v = Number(raw);
-    return Number.isFinite(v) ? v : null;
-  };
-
-  for (const e of events) {
-    const v = grab(String(e.msg ?? ""));
-    if (v == null) continue;
-
-    out.window += v;
-    const age = now - (e.at || 0);
-    if (age <= dayMs) out.last24h += v;
-    if (age <= weekMs) out.last7d += v;
-  }
-
-  out.window = roundMoney(out.window);
-  out.last24h = roundMoney(out.last24h);
-  out.last7d = roundMoney(out.last7d);
-
-  return out;
-}
-
 function computeSlotFinancials(slotRows: SlotRow[]) {
   let openPnl = 0;
   let visibleRealized = 0;
