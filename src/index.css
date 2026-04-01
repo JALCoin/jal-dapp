@@ -6213,6 +6213,74 @@ a.button[aria-disabled="true"]{
   }
 }
 /* =========================================
+   ENGINE PATCH — FIT & ALIGNMENT FIXES
+   (MUST BE LAST IN ENGINE SECTION)
+========================================= */
+
+/* 1. Column rebalance (Overview table only) */
+.engine-ledger[aria-label="Overview cards"] .ledger-head,
+.engine-ledger[aria-label="Overview cards"] .ledger-row{
+  grid-template-columns:
+    1fr
+    .85fr
+    .8fr
+    .9fr
+    .9fr
+    2.4fr
+    .9fr
+    .7fr
+    .6fr;
+}
+
+/* 2. Prevent ugly wrapping everywhere */
+.engine-ledger .ledger-row > div{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* 3. Allow ONLY analysis to wrap */
+.engine-ledger .ledger-analysis{
+  white-space:normal;
+}
+
+/* 4. Fix regime breaking */
+.engine-ledger .ledger-row > div:nth-child(5){
+  white-space:nowrap;
+  font-size:.82rem;
+  letter-spacing:.04em;
+}
+
+/* 5. Calm analysis dominance */
+.engine-ledger .ledger-analysis{
+  font-size:.74rem;
+  line-height:1.35;
+  opacity:.82;
+}
+
+/* 6. Row alignment consistency */
+.engine-ledger .ledger-row{
+  align-items:center;
+  min-height:56px;
+}
+
+/* 7. Action column alignment */
+.engine-ledger .ledger-row > div:last-child{
+  text-align:right;
+  font-weight:600;
+}
+
+/* 8. Header clarity */
+.engine-ledger .ledger-head{
+  opacity:.78;
+  letter-spacing:.16em;
+}
+
+/* 9. Container tightening */
+.engine-shell .home-wrap{
+  max-width:1240px;
+}
+/* =========================================
    20) HOME — IDENTITY / ROADMAP / ROUTE BANDS
 ========================================= */
 
