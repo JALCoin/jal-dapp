@@ -968,50 +968,61 @@ function useEngineData(BASE: string): EngineData {
   const [events, setEvents] = useState<SlotEvent[]>([]);
   const [err, setErr] = useState<string | null>(null);
 
-  const marketRef = useRef<number | null>(null);
-  const machineRef = useRef<number | null>(null);
-  const eventsRef = useRef<number | null>(null);
+  const disposedRef = useRef(false);
+  const latestPollRef = useRef(0);
+
+  const fetchJson = useCallback(async <T,>(path: string, signal?: AbortSignal): Promise<T> => {
+    const sep = path.includes("?") ? "&" : "?";
+    const url = `${BASE}${path}${sep}ts=${Date.now()}`;
+
+    const r = await fetch(url, {
+      method: "GET",
+      signal,
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+      },
+    });
+
+    if (!r.ok) {
+      throw new Error(`${path} HTTP ${r.status}`);
+    }
+
+    return (await r.json()) as T;
+  }, [BASE]);
 
   const fetchMarketRows = useCallback(async (signal?: AbortSignal) => {
-    const r = await fetch(`${BASE}/api/market/aud`, { method: "GET", signal });
-    if (!r.ok) throw new Error(`market/aud HTTP ${r.status}`);
-    const j = await r.json();
-    return Array.isArray(j?.rows) ? (j.rows as MarketRow[]) : [];
-  }, [BASE]);
+    const j = await fetchJson<{ rows?: MarketRow[] }>("/api/market/aud", signal);
+    return Array.isArray(j?.rows) ? j.rows : [];
+  }, [fetchJson]);
 
   const fetchSnap = useCallback(async (signal?: AbortSignal) => {
-    const r = await fetch(`${BASE}/api/market/snapshot`, { method: "GET", signal });
-    if (!r.ok) throw new Error(`market/snapshot HTTP ${r.status}`);
-    const j = await r.json();
-    return (j?.snapshot ?? j) as Snapshot;
-  }, [BASE]);
+    const j = await fetchJson<{ snapshot?: Snapshot } | Snapshot>("/api/market/snapshot", signal);
+    return ("snapshot" in (j as { snapshot?: Snapshot }) ? (j as { snapshot?: Snapshot }).snapshot : j) as Snapshot;
+  }, [fetchJson]);
 
   const fetchMeta = useCallback(async (signal?: AbortSignal) => {
-    const r = await fetch(`${BASE}/api/public/meta`, { method: "GET", signal });
-    if (!r.ok) throw new Error(`public/meta HTTP ${r.status}`);
-    return (await r.json()) as PublicMetaResponse;
-  }, [BASE]);
+    return await fetchJson<PublicMetaResponse>("/api/public/meta", signal);
+  }, [fetchJson]);
 
   const fetchPublicSlots = useCallback(async (signal?: AbortSignal) => {
-    const r = await fetch(`${BASE}/api/public/slots`, { method: "GET", signal });
-    if (!r.ok) throw new Error(`public/slots HTTP ${r.status}`);
-    const j = (await r.json()) as PublicSlotsResponse;
+    const j = await fetchJson<PublicSlotsResponse>("/api/public/slots", signal);
     const list = Array.isArray(j?.rows) ? j.rows : [];
     return list.sort((a, b) => String(a.id).localeCompare(String(b.id)));
-  }, [BASE]);
+  }, [fetchJson]);
 
   const fetchPublicEvents = useCallback(async (signal?: AbortSignal) => {
-    const r = await fetch(`${BASE}/api/public/events?limit=200`, { method: "GET", signal });
-    if (!r.ok) throw new Error(`public/events HTTP ${r.status}`);
-    const j = (await r.json()) as PublicEventsResponse;
+    const j = await fetchJson<PublicEventsResponse>("/api/public/events?limit=200", signal);
     const list = Array.isArray(j?.rows) ? j.rows : [];
     return list.sort((a, b) => (b.at || 0) - (a.at || 0));
-  }, [BASE]);
+  }, [fetchJson]);
 
-  const refreshAll = useCallback(async () => {
+  const pollAll = useCallback(async () => {
+    const pollId = ++latestPollRef.current;
     const ctrl = new AbortController();
+
     try {
-      setErr(null);
       const [marketRows, snapshot, metaRes, slotsRes, eventsRes] = await Promise.all([
         fetchMarketRows(ctrl.signal),
         fetchSnap(ctrl.signal),
@@ -1019,89 +1030,42 @@ function useEngineData(BASE: string): EngineData {
         fetchPublicSlots(ctrl.signal),
         fetchPublicEvents(ctrl.signal),
       ]);
+
+      if (disposedRef.current) return;
+      if (pollId !== latestPollRef.current) return;
+
       setRows(marketRows);
       setSnap(snapshot);
       setMeta(metaRes);
       setSlotRows(slotsRes);
       setEvents(eventsRes);
+      setErr(null);
     } catch (e: unknown) {
+      if (disposedRef.current) return;
+      if (pollId !== latestPollRef.current) return;
+
       const msg = e instanceof Error ? e.message : String(e);
       setErr(`${msg}\nENGINE_BASE: ${BASE}`);
     } finally {
       ctrl.abort();
     }
-  }, [BASE, fetchMarketRows, fetchMeta, fetchPublicEvents, fetchPublicSlots, fetchSnap]);
+  }, [BASE, fetchMarketRows, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
 
   useEffect(() => {
-    const marketCtrl = new AbortController();
-    const machineCtrl = new AbortController();
-    const eventsCtrl = new AbortController();
+    disposedRef.current = false;
 
-    const tickMarket = async () => {
-      try {
-        const [marketRows, snapshot] = await Promise.all([
-          fetchMarketRows(marketCtrl.signal),
-          fetchSnap(marketCtrl.signal),
-        ]);
-        setRows(marketRows);
-        setSnap(snapshot);
-        setErr(null);
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        setErr(`${msg}\nENGINE_BASE: ${BASE}`);
-      }
-    };
-
-    const tickMachine = async () => {
-      try {
-        const [metaRes, slotsRes] = await Promise.all([
-          fetchMeta(machineCtrl.signal),
-          fetchPublicSlots(machineCtrl.signal),
-        ]);
-        setMeta(metaRes);
-        setSlotRows(slotsRes);
-        setErr(null);
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        setErr(`${msg}\nENGINE_BASE: ${BASE}`);
-      }
-    };
-
-    const tickEvents = async () => {
-      try {
-        const eventsRes = await fetchPublicEvents(eventsCtrl.signal);
-        setEvents(eventsRes);
-        setErr(null);
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        setErr(`${msg}\nENGINE_BASE: ${BASE}`);
-      }
-    };
-
-    void tickMarket();
-    void tickMachine();
-    void tickEvents();
-
-    marketRef.current = window.setInterval(() => void tickMarket(), 2500);
-    machineRef.current = window.setInterval(() => void tickMachine(), 3000);
-    eventsRef.current = window.setInterval(() => void tickEvents(), 5000);
+    void pollAll();
+    const id = window.setInterval(() => {
+      void pollAll();
+    }, 3000);
 
     return () => {
-      marketCtrl.abort();
-      machineCtrl.abort();
-      eventsCtrl.abort();
-
-      if (marketRef.current) window.clearInterval(marketRef.current);
-      if (machineRef.current) window.clearInterval(machineRef.current);
-      if (eventsRef.current) window.clearInterval(eventsRef.current);
-
-      marketRef.current = null;
-      machineRef.current = null;
-      eventsRef.current = null;
+      disposedRef.current = true;
+      window.clearInterval(id);
     };
-  }, [BASE, fetchMarketRows, fetchMeta, fetchPublicEvents, fetchPublicSlots, fetchSnap]);
+  }, [pollAll]);
 
-  return { rows, snap, meta, slotRows, events, err, refresh: refreshAll };
+  return { rows, snap, meta, slotRows, events, err, refresh: pollAll };
 }
 
 /* =========================
@@ -1173,8 +1137,10 @@ const EngineHero = React.memo(function EngineHero(props: {
           </span>
         </div>
 
-        <div className="engine-auth-hint">
+                <div className="engine-auth-hint">
           Clarity first. Diagnostics second. Every slot is explained as a machine decision.
+          <br />
+          Snapshot: {snap?.lastPollIso ?? snap?.lastOkIso ?? "—"}
         </div>
       </aside>
     </header>
@@ -1578,121 +1544,6 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
       ) : (
         <div className="ledger-empty">No fixed slots available.</div>
       )}
-    </div>
-  );
-});
-
-const SummaryPanel = React.memo(function SummaryPanel(props: {
-  meta: PublicMetaResponse | null;
-  fixedAllowlist: string[];
-  fixedMissing: string[];
-  trackingStates: Record<string, number>;
-  overviewCounts: {
-    bull: number;
-    bear: number;
-    consolidation: number;
-    breakoutReady: number;
-    waiting: number;
-    activeSubslots: number;
-  };
-  topTrackingCoins: string;
-  executionMode: string;
-  view: ViewMode;
-}) {
-  return (
-    <div className="engine-bay engine-bay--narrow">
-      <div className="bay-head">
-        <div className="bay-title">Machine Summary</div>
-        <div className="bay-note">Public machine state, simplified for clarity.</div>
-      </div>
-
-      <div className="card machine-surface panel-frame engine-telemetry" aria-label="Machine Summary">
-        <div className="engine-telemetry-grid">
-          <div className="engine-telemetry-item">
-            <div className="engine-telemetry-k">Expected slots</div>
-            <div className="engine-telemetry-v">{props.meta?.fixedSlots?.expected ?? props.fixedAllowlist.length}</div>
-            <div className="engine-telemetry-sub">Present {props.meta?.fixedSlots?.present ?? 0}</div>
-          </div>
-
-          <div className="engine-telemetry-item">
-            <div className="engine-telemetry-k">Waiting</div>
-            <div className="engine-telemetry-v">{props.meta?.counts?.waiting ?? 0}</div>
-            <div className="engine-telemetry-sub">Deploying {props.meta?.counts?.deploying ?? 0}</div>
-          </div>
-
-          <div className="engine-telemetry-item">
-            <div className="engine-telemetry-k">Holding family</div>
-            <div className="engine-telemetry-v">{(props.meta?.counts?.holding ?? 0) + (props.meta?.counts?.locked ?? 0)}</div>
-            <div className="engine-telemetry-sub">
-              L1 {props.meta?.counts?.lvl1 ?? 0} • L2 {props.meta?.counts?.lvl2 ?? 0} • L3 {props.meta?.counts?.lvl3 ?? 0} • L4 {props.meta?.counts?.lvl4 ?? 0}
-            </div>
-          </div>
-
-          <div className="engine-telemetry-item">
-            <div className="engine-telemetry-k">Consolidation</div>
-            <div className="engine-telemetry-v">{props.overviewCounts.consolidation}</div>
-            <div className="engine-telemetry-sub">Breakout ready {props.overviewCounts.breakoutReady}</div>
-          </div>
-
-          <div className="engine-telemetry-item">
-            <div className="engine-telemetry-k">Bull / Bear</div>
-            <div className="engine-telemetry-v">
-              {props.overviewCounts.bull} / {props.overviewCounts.bear}
-            </div>
-            <div className="engine-telemetry-sub">Trend classification</div>
-          </div>
-
-          <div className="engine-telemetry-item">
-            <div className="engine-telemetry-k">Tracking coins</div>
-            <div className="engine-telemetry-v">{props.trackingStates.TRACKING ?? 0}</div>
-            <div className="engine-telemetry-sub">{props.topTrackingCoins || "—"}</div>
-          </div>
-
-          <div className="engine-telemetry-item">
-            <div className="engine-telemetry-k">Allowlist</div>
-            <div className="engine-telemetry-v">{props.fixedAllowlist.length}</div>
-            <div className="engine-telemetry-sub">
-              {props.fixedMissing.length ? `Missing ${props.fixedMissing.join(", ")}` : "No missing fixed ids"}
-            </div>
-          </div>
-
-          <div className="engine-telemetry-item">
-            <div className="engine-telemetry-k">Execution</div>
-            <div className="engine-telemetry-v">{props.executionMode}</div>
-            <div className="engine-telemetry-sub">
-              {props.meta?.engine?.liveTradingEnabled ? "LIVE READY" : "SIM ONLY"}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {props.view === "advanced" ? (
-        <div className="card machine-surface panel-frame engine-telemetry" aria-label="Worker Status">
-          <div className="engine-telemetry-head">
-            <div className="engine-telemetry-title">Worker Status</div>
-            <div className="engine-telemetry-note">Backend runtime wiring</div>
-          </div>
-
-          <div className="engine-telemetry-grid">
-           {(
-  [
-    ["Harvester", props.meta?.harvester],
-    ["Executor", props.meta?.executor],
-    ["Manager", props.meta?.manager],
-    ["Rotation", props.meta?.rotation],
-    ["Rotation Exec", props.meta?.rotationExecutor],
-    ["Top-up", props.meta?.topup],
-  ] as [string, WorkerStatus | undefined][]
-).map(([label, worker]) => (
-              <div key={label} className="engine-telemetry-item">
-                <div className="engine-telemetry-k">{label}</div>
-                <div className="engine-telemetry-v">{worker?.mode ?? "—"}</div>
-                <div className="engine-telemetry-sub">{worker?.running ? "RUNNING" : "STOPPED"}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 });
@@ -2425,6 +2276,16 @@ export default function Engine() {
   const marketCounts = snap?.counts ?? { all: 0, aud: 0, watch: 0 };
   const feedCount = feed === "all" ? marketCounts.all : feed === "aud" ? marketCounts.aud : marketCounts.watch;
 
+    const snapshotAgeMs =
+    snap?.lastPollAt != null
+      ? nowMs - snap.lastPollAt
+      : snap?.lastOkAt != null
+      ? nowMs - snap.lastOkAt
+      : null;
+
+  const snapshotFresh =
+    snapshotAgeMs != null && Number.isFinite(snapshotAgeMs) ? snapshotAgeMs <= 10000 : false;
+
   const topTrackingCoins = useMemo(() => {
     return filteredSlots
       .filter(
@@ -2474,14 +2335,14 @@ export default function Engine() {
 
           <div className="engine-foreground">
             <div className="engine-zone" data-zone="engine">
-              <EngineHero
+                            <EngineHero
                 snap={snap}
                 meta={meta}
                 architecture={architecture}
                 executionMode={executionMode}
                 fixedPresent={fixedPresent}
                 feedCount={feedCount}
-                lastAction={lastAction}
+                lastAction={`${lastAction} • ${snapshotFresh ? "FRESH" : "STALE"}`}
                 view={view}
               />
 
