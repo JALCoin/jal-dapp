@@ -1049,7 +1049,7 @@ function useEngineData(BASE: string): EngineData {
     } finally {
       ctrl.abort();
     }
-  }, [BASE, fetchMarketRows, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
+    }, [fetchMarketRows, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
 
   useEffect(() => {
     disposedRef.current = false;
@@ -2119,6 +2119,88 @@ const SlotModal = React.memo(function SlotModal(props: {
   );
 });
 
+const SummaryPanel = React.memo(function SummaryPanel(props: {
+  meta: PublicMetaResponse | null;
+  fixedAllowlist: string[];
+  fixedMissing: string[];
+  trackingStates: Record<string, number>;
+  overviewCounts: {
+    bull: number;
+    bear: number;
+    consolidation: number;
+    breakoutReady: number;
+    waiting: number;
+    activeSubslots: number;
+  };
+  topTrackingCoins: string;
+  executionMode: string;
+  view: ViewMode;
+}) {
+  return (
+    <div className="engine-bay">
+      <div className="bay-head">
+        <div className="bay-title">Engine Summary</div>
+        <div className="bay-note">Machine state + structure overview.</div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry">
+        <div className="engine-telemetry-head">
+          <div className="engine-telemetry-title">System State</div>
+        </div>
+
+        <div className="engine-mini">
+          <div className="engine-mini-row">
+            <div className="mini-k">Execution</div>
+            <div className="mini-v">{props.executionMode}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Tracking</div>
+            <div className="mini-v">{props.trackingStates.TRACKING ?? 0}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Breakouts Ready</div>
+            <div className="mini-v">{props.overviewCounts.breakoutReady}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Consolidation</div>
+            <div className="mini-v">{props.overviewCounts.consolidation}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Active Subslots</div>
+            <div className="mini-v">{props.overviewCounts.activeSubslots}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Tracking Coins</div>
+            <div className="mini-v">{props.topTrackingCoins || "—"}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Missing Slots</div>
+            <div className="mini-v">{props.fixedMissing.length}</div>
+          </div>
+                    <div className="engine-mini-row">
+            <div className="mini-k">Snapshot Poll</div>
+            <div className="mini-v">
+              {props.meta?.market?.snapshot?.lastPollIso ?? props.meta?.market?.snapshot?.lastOkIso ?? "—"}
+            </div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Last OK</div>
+            <div className="mini-v">
+              {props.meta?.market?.snapshot?.lastOkIso ?? "—"}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 /* =========================
    Main Component
 ========================= */
