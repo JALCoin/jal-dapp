@@ -736,25 +736,6 @@ function subslotDecisionLabel(s: SlotRow) {
   return "Idle";
 }
 
-function subslotReasonLabel(s: SlotRow) {
-  const sub = String(s.subslotState || "").toUpperCase();
-  const signal = String(s.subslotSignalState || "").toUpperCase();
-
-  if (sub === "BUY_SUBMITTED") return "A live entry has been submitted and is awaiting confirmation.";
-  if (sub === "ACTIVE") return "A tactical capture is currently open inside the parent slot.";
-  if (sub === "SELL_SUBMITTED") return "A live exit has been submitted and is awaiting confirmation.";
-  if (sub === "CLOSED" && s.subslotExitReason) {
-    return `Last exit reason: ${reasonLabel(s.subslotExitReason)}.`;
-  }
-
-  if (signal === "REVERSAL_CONFIRMING") return "Bounce, trend, and confirmation checks are aligning.";
-  if (signal === "BOUNCE_SEEN") return "A bounce was detected, but confirmation is not complete yet.";
-  if (signal === "TRACKING") return "The system is watching for structure before entry.";
-  if (signal === "ARMED") return "The setup is armed but waiting for movement.";
-  if (signal === "NO_MARKET") return "The system does not have a usable live market read.";
-  return "No tactical action is currently active.";
-}
-
 function subslotToneClass(s: SlotRow) {
   const sub = String(s.subslotState || "").toUpperCase();
   const signal = String(s.subslotSignalState || "").toUpperCase();
@@ -808,34 +789,6 @@ function breakoutLabel(s: SlotRow) {
   if (s.consolidationBreakoutReady === true) return "READY";
   if (String(regimeLabel(s)).toUpperCase().includes("CONSOLIDATION")) return "BUILDING";
   return "NO";
-}
-
-function machineStory(s: SlotRow) {
-  const state = String(s.state || "").toUpperCase();
-  const regime = String(regimeLabel(s)).toUpperCase();
-
-  if (state === "WAITING_ENTRY" && s.reentryTargetMid != null) {
-    return `${slotCoin(s)} is waiting for price to revisit ${fmt(s.reentryTargetMid)} before a new cycle can begin.`;
-  }
-  if (state === "DEPLOYING") {
-    return `${slotCoin(s)} is submitting and confirming a live parent entry.`;
-  }
-  if (state === "EXITING") {
-    return `${slotCoin(s)} is completing a parent exit and waiting for execution truth.`;
-  }
-  if (state === "LVL4_TRAIL") {
-    return `${slotCoin(s)} is in the highest protection state, trailing the peak while still holding upside.`;
-  }
-  if (state === "LVL3_LOCK" || state === "LVL2_LOCK" || state === "LVL1_LOCK") {
-    return `${slotCoin(s)} is holding a profitable parent position with lock protection active.`;
-  }
-  if (state === "HOLDING" && regime.includes("CONSOLIDATION")) {
-    return `${slotCoin(s)} is holding while the market compresses and waits for directional release.`;
-  }
-  if (state === "HOLDING") {
-    return `${slotCoin(s)} is holding the parent position while monitoring tactical conditions inside the move.`;
-  }
-  return `${slotCoin(s)} is under observation while the machine evaluates structure.`;
 }
 
 function liveParentAnalysis(s: SlotRow, nowMs: number) {
@@ -1022,23 +975,6 @@ function useIsDesktop(bpPx = 980) {
   }, [bpPx]);
 
   return isDesktop;
-}
-
-function describeDecision(s: SlotRow) {
-  const state = String(s.state || "").toUpperCase();
-
-  if (state === "WAITING_ENTRY") {
-    if (s.reentryTargetMid != null) return `Waiting for price to revisit ${fmt(s.reentryTargetMid)}.`;
-    return "Waiting for a new qualified entry.";
-  }
-  if (state === "DEPLOYING") return "Submitting and confirming a live entry.";
-  if (state === "EXITING") return "Submitting or confirming a live exit.";
-  if (state === "LVL4_TRAIL") return "Holding with the highest trail protection engaged.";
-  if (state === "LVL3_LOCK") return "Holding with level 3 lock protection.";
-  if (state === "LVL2_LOCK") return "Holding with level 2 lock protection.";
-  if (state === "LVL1_LOCK") return "Holding with level 1 lock protection.";
-  if (state === "HOLDING") return "Holding the parent position and monitoring tactical conditions.";
-  return "Monitoring slot conditions.";
 }
 
 function sortMarketRows(rows: MarketRow[], sortKey: SortKey, sortDir: SortDir) {
