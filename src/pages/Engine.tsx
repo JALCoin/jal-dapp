@@ -972,25 +972,21 @@ function useEngineData(BASE: string): EngineData {
   const latestPollRef = useRef(0);
 
   const fetchJson = useCallback(async <T,>(path: string, signal?: AbortSignal): Promise<T> => {
-    const sep = path.includes("?") ? "&" : "?";
-    const url = `${BASE}${path}${sep}ts=${Date.now()}`;
+  const sep = path.includes("?") ? "&" : "?";
+  const url = `${BASE}${path}${sep}ts=${Date.now()}`;
 
-    const r = await fetch(url, {
-      method: "GET",
-      signal,
-      cache: "no-store",
-      headers: {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-      },
-    });
+  const r = await fetch(url, {
+    method: "GET",
+    signal,
+    cache: "no-store",
+  });
 
-    if (!r.ok) {
-      throw new Error(`${path} HTTP ${r.status}`);
-    }
+  if (!r.ok) {
+    throw new Error(`${path} HTTP ${r.status}`);
+  }
 
-    return (await r.json()) as T;
-  }, [BASE]);
+  return (await r.json()) as T;
+}, [BASE]);
 
   const fetchMarketRows = useCallback(async (signal?: AbortSignal) => {
     const j = await fetchJson<{ rows?: MarketRow[] }>("/api/market/aud", signal);
@@ -1049,7 +1045,7 @@ function useEngineData(BASE: string): EngineData {
     } finally {
       ctrl.abort();
     }
-    }, [fetchMarketRows, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
+      }, [BASE, fetchMarketRows, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
 
   useEffect(() => {
     disposedRef.current = false;
