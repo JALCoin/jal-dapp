@@ -956,6 +956,52 @@ function slotHealthLabel(s: SlotRow) {
   return "OBSERVING";
 }
 
+function getActiveTrackingCount(trackingStates: Record<string, number>) {
+  return (
+    (trackingStates.TRACKING ?? 0) +
+    (trackingStates.ARMED ?? 0) +
+    (trackingStates.DRAWDOWN_SEEN ?? 0) +
+    (trackingStates.REVERSAL_CONFIRMING ?? 0) +
+    (trackingStates.SPREAD_BLOCKED ?? 0)
+  );
+}
+
+function getActiveTrackingCoins(slots: SlotRow[]) {
+  return slots
+    .filter((s) => {
+      const t = String(s.trackingState || "").toUpperCase();
+      return (
+        t === "TRACKING" ||
+        t === "ARMED" ||
+        t === "DRAWDOWN_SEEN" ||
+        t === "REVERSAL_CONFIRMING" ||
+        t === "SPREAD_BLOCKED"
+      );
+    })
+    .map((s) => s.coin)
+    .filter(Boolean)
+    .slice(0, 6)
+    .join(", ");
+}
+
+function computeWindowHarvestFromSlots(slotRows: SlotRow[]) {
+  let parentRealized = 0;
+  let subslotRealized = 0;
+
+  for (const s of slotRows) {
+    const parent = Number(s.profitAud);
+    const subslot = Number(s.subslotProfitAud);
+
+    if (Number.isFinite(parent)) parentRealized += parent;
+    if (Number.isFinite(subslot)) subslotRealized += subslot;
+  }
+
+  return {
+    parentRealized: roundMoney(parentRealized),
+    subslotRealized: roundMoney(subslotRealized),
+    totalRealized: roundMoney(parentRealized + subslotRealized),
+  };
+}
 /* =========================
    Hooks
 ========================= */
@@ -2151,9 +2197,9 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
           </div>
 
           <div className="engine-mini-row">
-            <div className="mini-k">Tracking</div>
-            <div className="mini-v">{props.trackingStates.TRACKING ?? 0}</div>
-          </div>
+  <div className="mini-k">Tracking</div>
+  <div className="mini-v">{getActiveTrackingCount(props.trackingStates)}</div>
+</div>
 
           <div className="engine-mini-row">
             <div className="mini-k">Breakouts Ready</div>
@@ -2176,15 +2222,18 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
           </div>
 
           <div className="engine-mini-row">
-            <div className="mini-k">Missing Slots</div>
-            <div className="mini-v">{props.fixedMissing.length}</div>
-          </div>
-                    <div className="engine-mini-row">
-            <div className="mini-k">Snapshot Poll</div>
-            <div className="mini-v">
-              {props.meta?.market?.snapshot?.lastPollIso ?? props.meta?.market?.snapshot?.lastOkIso ?? "—"}
-            </div>
-          </div>
+  <div className="mini-k">Snapshot Poll</div>
+  <div className="mini-v">
+    {props.meta?.market?.snapshot?.lastPollIso ?? props.meta?.market?.snapshot?.lastOkIso ?? "—"}
+  </div>
+</div>
+
+<div className="engine-mini-row">
+  <div className="mini-k">Last OK</div>
+  <div className="mini-v">
+    {props.meta?.market?.snapshot?.lastOkIso ?? "—"}
+  </div>
+</div>
 
           <div className="engine-mini-row">
             <div className="mini-k">Last OK</div>
@@ -2339,6 +2388,7 @@ export default function Engine() {
 
   const windowHarvest = useMemo(() => parseWindowHarvestFromEvents(events), [events]);
   const slotFinancials = useMemo(() => computeSlotFinancials(slotRows), [slotRows]);
+  const slotHarvest = useMemo(() => computeWindowHarvestFromSlots(slotRows), [slotRows]);
 
   const nextSweepLabel = msToCountdown(meta?.cadence?.remainingMs ?? null);
   const lastSweepAgo = ageLabel(
@@ -2365,18 +2415,8 @@ export default function Engine() {
     snapshotAgeMs != null && Number.isFinite(snapshotAgeMs) ? snapshotAgeMs <= 10000 : false;
 
   const topTrackingCoins = useMemo(() => {
-    return filteredSlots
-      .filter(
-        (s) =>
-          s.trackingState === "TRACKING" ||
-          s.trackingState === "DRAWDOWN_SEEN" ||
-          s.trackingState === "REVERSAL_CONFIRMING"
-      )
-      .map((s) => s.coin)
-      .filter(Boolean)
-      .slice(0, 6)
-      .join(", ");
-  }, [filteredSlots]);
+  return getActiveTrackingCoins(filteredSlots);
+}, [filteredSlots]);
 
   const overviewCounts = useMemo(() => {
     const out = {
@@ -2426,14 +2466,14 @@ export default function Engine() {
 
               <CaptureGrid
                 openPnl={slotFinancials.openPnl}
-                windowHarvest={windowHarvest.window}
+                windowHarvest={slotHarvest.totalRealized}
                 visibleRealized={slotFinancials.visibleRealized}
                 nextSweepLabel={nextSweepLabel}
                 currentWindow={meta?.cadence?.currentWindow}
                 lastSweepAgo={lastSweepAgo}
                 fixedPresent={fixedPresent}
                 fixedExpected={fixedExpected}
-                trackingCount={trackingStates.TRACKING ?? 0}
+                trackingCount={getActiveTrackingCount(trackingStates)}
                 holdingCount={(counts.holding ?? 0) + (counts.locked ?? 0)}
                 breakoutReady={overviewCounts.breakoutReady}
                 consolidation={overviewCounts.consolidation}
@@ -2544,14 +2584,16 @@ export default function Engine() {
                     </div>
 
                     <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
-                      <div className="cap-k">Tracking states</div>
-                      <div className="cap-v">{Object.keys(trackingStates).length}</div>
-                      <div className="cap-sub">
-                        <span>TRACKING {trackingStates.TRACKING ?? 0}</span>
-                        <span>•</span>
-                        <span>DRAWDOWN {trackingStates.DRAWDOWN_SEEN ?? 0}</span>
-                      </div>
-                    </div>
+  <div className="cap-k">Tracking states</div>
+  <div className="cap-v">{getActiveTrackingCount(trackingStates)}</div>
+  <div className="cap-sub">
+    <span>TRACKING {trackingStates.TRACKING ?? 0}</span>
+    <span>•</span>
+    <span>ARMED {trackingStates.ARMED ?? 0}</span>
+    <span>•</span>
+    <span>BLOCKED {trackingStates.SPREAD_BLOCKED ?? 0}</span>
+  </div>
+</div>
 
                     <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
                       <div className="cap-k">Fixed universe</div>
