@@ -396,15 +396,16 @@ export default function Shop() {
   const [reviewRefreshToken, setReviewRefreshToken] = useState(0);
 
   const supportProducts = useMemo(() => {
-    const all = getActiveProducts();
+  const all = getActiveProducts();
 
-    const getPrice = (p: Product) =>
-      Number((p.priceNote ?? "").replace(/[^0-9.]/g, "")) || 0;
+  const getPrice = (p: Product) =>
+    Number((p.priceNote ?? "").replace(/[^0-9.]/g, "")) || 0;
 
-    return all
-      .filter((p) => p.isSupport === true)
-      .sort((a, b) => getPrice(a) - getPrice(b));
-  }, []);
+  return all
+    .filter((p) => p.isSupport === true)
+    .sort((a, b) => getPrice(a) - getPrice(b))
+    .slice(0, 1);
+}, []);
 
   const storeProducts = useMemo(() => {
     const all = getActiveProducts().filter((p) => p.isSupport !== true);
