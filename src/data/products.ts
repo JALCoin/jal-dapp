@@ -112,7 +112,7 @@ export const PRODUCTS: Product[] = [
     status: "active",
     priceNote: "$25.00 AUD",
     summary:
-      "Optional support for the JALSOL system. This is a voluntary contribution and does not provide access, ownership, or material benefits.This contribution is not a tax-deductible donation. JALSOL is not a DGR-endorsed organisation.Please ensure you are contributing with full understanding. This is an early-stage system under active development.This information is general in nature and does not constitute legal or financial advice.",
+      "Optional support for the JALSOL system. This is a voluntary contribution and does not provide access, ownership, or material benefits. This contribution is not a tax-deductible donation. JALSOL is not a DGR-endorsed organisation. Please ensure you are contributing with full understanding. This is an early-stage system under active development.This information is general in nature and does not constitute legal or financial advice.",
     tags: ["Digital", "Support", "New"],
     image: "/shop/system-support.jpg",
     isSupport: true,
