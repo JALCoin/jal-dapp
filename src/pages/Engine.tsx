@@ -290,6 +290,20 @@ type SlotRow = {
   rotationTargetSlotId?: string | null;
   rotationTargetCoin?: string | null;
   rotationSourceSlotId?: string | null;
+  rotationSourceType?: string | null;
+  rotationWalletReady?: boolean | null;
+  rotationWalletBlockedReason?: string | null;
+  rotationWalletMovableAud?: number | null;
+  rotationWalletAudValue?: number | null;
+  rotationWalletAvailableCoin?: number | null;
+  rotationWalletBasisKnown?: boolean | null;
+  rotationWalletProfitGuardPassed?: boolean | null;
+  rotationWalletBasisAsOf?: number | null;
+  rotationWalletAvgCostAud?: number | null;
+  rotationWalletCostBasisAud?: number | null;
+  rotationWalletUnrealizedNetPct?: number | null;
+  rotationWalletProfitMinNetPct?: number | null;
+  rotationTargetExecutorEligible?: boolean | null;
   rotationRequested?: boolean | null;
   rotationRequestedAt?: number | null;
   rotationReason?: string | null;
@@ -483,6 +497,21 @@ type PublicMetaResponse = {
   rotationExecutor?: WorkerStatus;
   topup?: WorkerStatus;
   market?: { snapshot?: Snapshot | null };
+  runtime?: {
+    warnings?: string[];
+    topupMode?: {
+      raw?: string;
+      normalized?: string;
+      aliasUsed?: boolean;
+      valid?: boolean;
+    };
+    rotationExecutor?: {
+      enabled?: boolean;
+      dryRun?: boolean;
+      liveEntryEnabled?: boolean;
+      liveExitEnabled?: boolean;
+    };
+  };
 };
 
 type PublicCapitalCoin = {
@@ -504,6 +533,20 @@ type PublicCapitalCoin = {
   rotationTargetCoin?: string | null;
   rotationEdgeScore?: number | null;
   rotationReason?: string | null;
+  rotationSourceType?: string | null;
+  rotationWalletReady?: boolean | null;
+  rotationWalletBlockedReason?: string | null;
+  rotationWalletMovableAud?: number | null;
+  rotationWalletAudValue?: number | null;
+  rotationWalletAvailableCoin?: number | null;
+  rotationWalletBasisKnown?: boolean | null;
+  rotationWalletProfitGuardPassed?: boolean | null;
+  rotationWalletBasisAsOf?: number | null;
+  rotationWalletAvgCostAud?: number | null;
+  rotationWalletCostBasisAud?: number | null;
+  rotationWalletUnrealizedNetPct?: number | null;
+  rotationWalletProfitMinNetPct?: number | null;
+  rotationTargetExecutorEligible?: boolean | null;
 };
 
 type PublicCapitalResponse = {
@@ -524,6 +567,9 @@ type PublicCapitalResponse = {
     dryRun?: boolean | null;
     liveEntryEnabled?: boolean | null;
     liveExitEnabled?: boolean | null;
+    requireWaitingEligible?: boolean | null;
+    walletRequireBasis?: boolean | null;
+    walletMinSourceNetPct?: number | null;
   } | null;
   coins?: PublicCapitalCoin[] | null;
 };
@@ -656,20 +702,43 @@ function reasonLabel(reason: string | null | undefined) {
   return String(reason).replace(/_/g, " ");
 }
 
+function yesNo(v: boolean | null | undefined) {
+  if (v == null) return "-";
+  return v ? "YES" : "NO";
+}
+
+function fmtTimestampAge(ts: number | null | undefined, nowMs: number) {
+  if (!ts || !Number.isFinite(ts)) return "-";
+  return ageLabel(nowMs - ts);
+}
+
 function walletReadinessLabel(capitalCoin: PublicCapitalCoin | null | undefined) {
   if (!capitalCoin) return "-";
-  if (capitalCoin.walletSourceReady === true) return "READY";
+  const hasPolicySignal =
+    capitalCoin.rotationWalletReady != null ||
+    capitalCoin.rotationWalletBlockedReason != null ||
+    capitalCoin.rotationWalletProfitGuardPassed != null ||
+    capitalCoin.rotationWalletBasisKnown != null ||
+    capitalCoin.rotationTargetCoin != null ||
+    capitalCoin.rotationTargetSlotId != null ||
+    capitalCoin.rotationEligibleOut === true;
+  if (capitalCoin.rotationWalletProfitGuardPassed === false) return "PROFIT BLOCKED";
+  if (hasPolicySignal && capitalCoin.rotationWalletBasisKnown === false) return "BASIS BLOCKED";
+  if (capitalCoin.rotationWalletReady === true) return "POLICY READY";
+  if (capitalCoin.walletSourceReady === true) return "TREASURY READY";
   const blocked = String(capitalCoin.walletSourceBlockedReason || "").toLowerCase();
   if (blocked === "wallet_rotation_cooldown") return "COOLDOWN";
   if (blocked === "wallet_source_below_min_aud") return "BELOW MIN SIZE";
   if (blocked === "wallet_coin_not_available") return "NO WALLET COIN";
-  if (blocked) return "BLOCKED";
+  if (blocked || capitalCoin.rotationWalletBlockedReason || capitalCoin.rotationOutBlockedReason) return "BLOCKED";
   return "STANDBY";
 }
 
 function walletReadinessTone(capitalCoin: PublicCapitalCoin | null | undefined) {
   const label = walletReadinessLabel(capitalCoin);
-  if (label === "READY") return "state-positive";
+  if (label === "POLICY READY") return "state-positive";
+  if (label === "TREASURY READY") return "state-warn";
+  if (label === "PROFIT BLOCKED" || label === "BASIS BLOCKED") return "state-bad";
   if (label === "COOLDOWN") return "state-warn";
   if (label === "-" || label === "STANDBY") return "state-muted";
   return "state-bad";
@@ -693,15 +762,30 @@ function capitalFreshnessLabel(capital: PublicCapitalResponse | null | undefined
 
 function capitalReasonLabel(coin: PublicCapitalCoin | null | undefined) {
   if (!coin) return "-";
-  if (coin.walletSourceReady && !coin.rotationEligibleOut) {
+  const blockedReason =
+    coin.rotationWalletBlockedReason ||
+    coin.rotationOutBlockedReason ||
+    coin.rotationReason ||
+    coin.walletSourceBlockedReason;
+  if (blockedReason) return reasonLabel(blockedReason);
+  if (
+    coin.walletSourceReady === true &&
+    coin.rotationWalletReady !== true &&
+    !coin.rotationTargetCoin &&
+    !coin.rotationTargetSlotId
+  ) {
     return "Wallet capital is available, but no active rotation recommendation is selected yet.";
   }
-  return reasonLabel(coin.rotationReason ?? coin.rotationOutBlockedReason ?? coin.walletSourceBlockedReason);
+  return "Standby";
 }
 
 function secondaryOverviewSummary(slot: SlotRow) {
   const total = getSecondaryRows(slot).length;
   return `${primarySubslotDecisionLabel(slot)} | ${total}`;
+}
+
+function rotationDoctrineLabel(capital: PublicCapitalResponse | null | undefined) {
+  return `Policy gate ${capital?.rotation?.enabled ? "ON" : "OFF"} | Basis required ${yesNo(capital?.rotation?.walletRequireBasis)} | Live executor ${yesNo(Boolean(capital?.rotation?.executorEnabled && (capital?.rotation?.liveEntryEnabled || capital?.rotation?.liveExitEnabled)))}`;
 }
 
 function topWalletCoins(capital: PublicCapitalResponse | null | undefined, limit = 5) {
@@ -1640,8 +1724,9 @@ const EngineHero = React.memo(function EngineHero(props: {
   feedCount: number;
   lastAction: string;
   view: ViewMode;
+  runtimeWarnings: string[];
 }) {
-  const { snap, meta, architecture, executionMode, fixedPresent, feedCount, lastAction, view } = props;
+  const { snap, meta, architecture, executionMode, fixedPresent, feedCount, lastAction, view, runtimeWarnings } = props;
 
   return (
     <header className="engine-hero" aria-label="Engine header">
@@ -1675,6 +1760,17 @@ const EngineHero = React.memo(function EngineHero(props: {
             </div>
           </div>
         ) : null}
+
+        <div className={`engine-runtime-warnings ${runtimeWarnings.length ? "has-warnings" : "is-clear"}`}>
+          <div className="engine-runtime-title">Runtime Warnings</div>
+          {runtimeWarnings.length ? (
+            runtimeWarnings.map((warning, index) => (
+              <div key={`${warning}-${index}`} className="engine-runtime-warning">{warning}</div>
+            ))
+          ) : (
+            <div className="engine-runtime-warning engine-runtime-warning--muted">No runtime warnings.</div>
+          )}
+        </div>
       </div>
 
       <aside className="engine-hero-right" aria-label="Engine HUD">
@@ -2831,6 +2927,24 @@ const SlotModal = React.memo(function SlotModal(props: {
                 <div><div className="slot-k">Reason</div><div className="slot-v">{slot.rotationReason ?? "-"}</div></div>
                 <div><div className="slot-k">Last Error</div><div className="slot-v">{slot.rotationLastError ?? "-"}</div></div>
               </div>
+
+              <div className="slot-section">Wallet-backed Rotation</div>
+              <div className="slot-modal-grid">
+                <div><div className="slot-k">Source Type</div><div className="slot-v">{String(slot.rotationSourceType ?? "-")}</div></div>
+                <div><div className="slot-k">Wallet Ready</div><div className="slot-v">{yesNo(slot.rotationWalletReady as boolean | null | undefined)}</div></div>
+                <div><div className="slot-k">Wallet Blocked</div><div className="slot-v">{reasonLabel(slot.rotationWalletBlockedReason as string | null | undefined)}</div></div>
+                <div><div className="slot-k">Wallet Movable AUD</div><div className="slot-v">{moneyAud(slot.rotationWalletMovableAud as number | null | undefined)}</div></div>
+                <div><div className="slot-k">Wallet AUD Value</div><div className="slot-v">{moneyAud(slot.rotationWalletAudValue as number | null | undefined)}</div></div>
+                <div><div className="slot-k">Wallet Available Coin</div><div className="slot-v">{fmt(slot.rotationWalletAvailableCoin as number | null | undefined)}</div></div>
+                <div><div className="slot-k">Basis Known</div><div className="slot-v">{yesNo(slot.rotationWalletBasisKnown as boolean | null | undefined)}</div></div>
+                <div><div className="slot-k">Basis As Of</div><div className="slot-v">{fmtTimestampAge(slot.rotationWalletBasisAsOf as number | null | undefined, nowMs)}</div></div>
+                <div><div className="slot-k">Avg Cost AUD</div><div className="slot-v">{moneyAud(slot.rotationWalletAvgCostAud as number | null | undefined)}</div></div>
+                <div><div className="slot-k">Cost Basis AUD</div><div className="slot-v">{moneyAud(slot.rotationWalletCostBasisAud as number | null | undefined)}</div></div>
+                <div><div className="slot-k">Unrealized Net %</div><div className="slot-v">{pctNum(slot.rotationWalletUnrealizedNetPct as number | null | undefined)}</div></div>
+                <div><div className="slot-k">Profit Guard</div><div className="slot-v">{yesNo(slot.rotationWalletProfitGuardPassed as boolean | null | undefined)}</div></div>
+                <div><div className="slot-k">Profit Min Net %</div><div className="slot-v">{pctNum(slot.rotationWalletProfitMinNetPct as number | null | undefined)}</div></div>
+                <div><div className="slot-k">Target Executor Eligible</div><div className="slot-v">{yesNo(slot.rotationTargetExecutorEligible as boolean | null | undefined)}</div></div>
+              </div>
             </CollapsibleBlock>
           )}
 
@@ -2995,7 +3109,7 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
           </div>
 
           <div className="engine-mini-row">
-            <div className="mini-k">Wallet-ready Coins</div>
+            <div className="mini-k">Treasury-ready Coins</div>
             <div className="mini-v">
               {movableWalletCoins(props.capital).filter((coin) => coin.walletSourceReady === true).length}
             </div>
@@ -3031,7 +3145,8 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
 }) {
   const topCoins = useMemo(() => topWalletCoins(props.capital, 5), [props.capital]);
   const movableCoins = useMemo(() => movableWalletCoins(props.capital), [props.capital]);
-  const walletReadyCount = movableCoins.filter((coin) => coin.walletSourceReady === true).length;
+  const treasuryReadyCount = movableCoins.filter((coin) => coin.walletSourceReady === true).length;
+  const policyReadyCount = movableCoins.filter((coin) => coin.rotationWalletReady === true).length;
 
   return (
     <div className="engine-bay">
@@ -3045,8 +3160,9 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
           <div>
             <div className="engine-telemetry-title">Capital Snapshot</div>
             <div className="engine-telemetry-note">
-              Rotation mode {rotationModeLabel(props.capital)} | Wallet-ready {walletReadyCount}
+              Rotation mode {rotationModeLabel(props.capital)} | Treasury-ready {treasuryReadyCount} | Policy-ready {policyReadyCount}
             </div>
+            <div className="engine-telemetry-note">{rotationDoctrineLabel(props.capital)}</div>
           </div>
         </div>
 
@@ -3061,6 +3177,9 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
             <div><div className="slot-k">Movable AUD</div><div className="slot-v">{moneyAud(props.capital?.movableAudEstimate)}</div></div>
             <div><div className="slot-k">Wallet Sources</div><div className="slot-v">{props.capital?.walletSourceEnabled ? "ENABLED" : "DISABLED"}</div></div>
             <div><div className="slot-k">Rotation Mode</div><div className="slot-v">{rotationModeLabel(props.capital)}</div></div>
+            <div><div className="slot-k">Require Waiting Eligible</div><div className="slot-v">{yesNo(props.capital?.rotation?.requireWaitingEligible)}</div></div>
+            <div><div className="slot-k">Require Basis</div><div className="slot-v">{yesNo(props.capital?.rotation?.walletRequireBasis)}</div></div>
+            <div><div className="slot-k">Wallet Profit Floor</div><div className="slot-v">{pctNum(props.capital?.rotation?.walletMinSourceNetPct)}</div></div>
           </div>
         </div>
 
@@ -3079,12 +3198,23 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
               <div key={`top-${coin.coin ?? "coin"}`} className="secondary-card">
                 <div className="secondary-grid capital-coin-grid">
                   <div><div className="slot-k">Coin</div><div className="slot-v">{coin.coin ?? "-"}</div></div>
+                  <div><div className="slot-k">Source Type</div><div className="slot-v">{coin.rotationSourceType ?? "-"}</div></div>
                   <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
+                  <div><div className="slot-k">Treasury Ready</div><div className="slot-v">{yesNo(coin.walletSourceReady)}</div></div>
+                  <div><div className="slot-k">Policy Ready</div><div className="slot-v">{yesNo(coin.rotationWalletReady)}</div></div>
                   <div><div className="slot-k">Available Coin</div><div className="slot-v">{fmt(coin.availableCoin)}</div></div>
                   <div><div className="slot-k">Rate</div><div className="slot-v">{fmt(coin.rate)}</div></div>
                   <div><div className="slot-k">Movable AUD</div><div className="slot-v">{moneyAud(coin.movableAudEstimate)}</div></div>
                   <div><div className="slot-k">Readiness</div><div className={`slot-v ${walletReadinessTone(coin)}`}>{walletReadinessLabel(coin)}</div></div>
-                  <div><div className="slot-k">Blocked</div><div className="slot-v">{reasonLabel(coin.walletSourceBlockedReason)}</div></div>
+                  <div><div className="slot-k">Basis Known</div><div className="slot-v">{yesNo(coin.rotationWalletBasisKnown)}</div></div>
+                  <div><div className="slot-k">Profit Guard</div><div className="slot-v">{yesNo(coin.rotationWalletProfitGuardPassed)}</div></div>
+                  <div><div className="slot-k">Target Executor Eligible</div><div className="slot-v">{yesNo(coin.rotationTargetExecutorEligible)}</div></div>
+                  <div><div className="slot-k">Unrealized Net %</div><div className="slot-v">{pctNum(coin.rotationWalletUnrealizedNetPct)}</div></div>
+                  <div><div className="slot-k">Avg Cost AUD</div><div className="slot-v">{moneyAud(coin.rotationWalletAvgCostAud)}</div></div>
+                  <div><div className="slot-k">Cost Basis AUD</div><div className="slot-v">{moneyAud(coin.rotationWalletCostBasisAud)}</div></div>
+                  <div><div className="slot-k">Basis As Of</div><div className="slot-v">{fmtTimestampAge(coin.rotationWalletBasisAsOf, props.nowMs)}</div></div>
+                  <div><div className="slot-k">Blocked</div><div className="slot-v">{capitalReasonLabel(coin)}</div></div>
+                  <div><div className="slot-k">Policy Block</div><div className="slot-v">{reasonLabel(coin.rotationWalletBlockedReason)}</div></div>
                   <div><div className="slot-k">Target Coin</div><div className="slot-v">{coin.rotationTargetCoin ?? "-"}</div></div>
                 </div>
               </div>
@@ -3101,12 +3231,25 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
               <div key={`move-${coin.coin ?? "coin"}`} className="secondary-card">
                 <div className="secondary-metrics capital-metrics">
                   <div><div className="slot-k">Coin</div><div className="slot-v">{coin.coin ?? "-"}</div></div>
+                  <div><div className="slot-k">Source Type</div><div className="slot-v">{coin.rotationSourceType ?? "-"}</div></div>
                   <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
-                  <div><div className="slot-k">Movable AUD</div><div className="slot-v">{moneyAud(coin.movableAudEstimate)}</div></div>
+                  <div><div className="slot-k">Wallet Movable AUD</div><div className="slot-v">{moneyAud(coin.rotationWalletMovableAud ?? coin.movableAudEstimate)}</div></div>
+                  <div><div className="slot-k">Treasury Ready</div><div className="slot-v">{yesNo(coin.walletSourceReady)}</div></div>
+                  <div><div className="slot-k">Policy Ready</div><div className="slot-v">{yesNo(coin.rotationWalletReady)}</div></div>
                   <div><div className="slot-k">Ready</div><div className={`slot-v ${walletReadinessTone(coin)}`}>{walletReadinessLabel(coin)}</div></div>
+                  <div><div className="slot-k">Basis Known</div><div className="slot-v">{yesNo(coin.rotationWalletBasisKnown)}</div></div>
+                  <div><div className="slot-k">Profit Guard</div><div className="slot-v">{yesNo(coin.rotationWalletProfitGuardPassed)}</div></div>
+                  <div><div className="slot-k">Target Executor Eligible</div><div className="slot-v">{yesNo(coin.rotationTargetExecutorEligible)}</div></div>
+                  <div><div className="slot-k">Wallet AUD Value</div><div className="slot-v">{moneyAud(coin.rotationWalletAudValue)}</div></div>
+                  <div><div className="slot-k">Wallet Available Coin</div><div className="slot-v">{fmt(coin.rotationWalletAvailableCoin)}</div></div>
                   <div><div className="slot-k">Target</div><div className="slot-v">{coin.rotationTargetCoin ?? coin.rotationTargetSlotId ?? "-"}</div></div>
                   <div><div className="slot-k">Edge</div><div className="slot-v">{fmt(coin.rotationEdgeScore ?? coin.rotationScoreOut)}</div></div>
                   <div><div className="slot-k">Reason</div><div className="slot-v">{capitalReasonLabel(coin)}</div></div>
+                  <div><div className="slot-k">Policy Block</div><div className="slot-v">{reasonLabel(coin.rotationWalletBlockedReason)}</div></div>
+                  <div><div className="slot-k">Unrealized Net %</div><div className="slot-v">{pctNum(coin.rotationWalletUnrealizedNetPct)}</div></div>
+                  <div><div className="slot-k">Avg Cost AUD</div><div className="slot-v">{moneyAud(coin.rotationWalletAvgCostAud)}</div></div>
+                  <div><div className="slot-k">Cost Basis AUD</div><div className="slot-v">{moneyAud(coin.rotationWalletCostBasisAud)}</div></div>
+                  <div><div className="slot-k">Basis As Of</div><div className="slot-v">{fmtTimestampAge(coin.rotationWalletBasisAsOf, props.nowMs)}</div></div>
                   <div><div className="slot-k">Cooldown</div><div className="slot-v">{(coin.cooldownRemainingMs ?? 0) > 0 ? msToCountdown(coin.cooldownRemainingMs) : "-"}</div></div>
                 </div>
               </div>
@@ -3262,6 +3405,7 @@ export default function Engine() {
   const fixedExpected = meta?.fixedSlots?.expected ?? fixedAllowlist.length;
   const fixedPresent = meta?.fixedSlots?.present ?? slotRows.length;
   const fixedMissing = meta?.fixedSlots?.missing ?? [];
+  const runtimeWarnings = meta?.runtime?.warnings ?? [];
   const executionMode = meta?.engine?.execution ?? "SIM";
   const architecture = meta?.engine?.architecture ?? "-";
   const counts = meta?.counts ?? {};
@@ -3351,6 +3495,7 @@ export default function Engine() {
                 feedCount={feedCount}
                 lastAction={`${lastAction} | ${snapshotFresh ? "FRESH" : "STALE"}`}
                 view={view}
+                runtimeWarnings={runtimeWarnings}
               />
 
               <CaptureGrid

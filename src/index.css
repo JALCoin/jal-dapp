@@ -4426,6 +4426,37 @@ a.button[aria-disabled="true"]{
   align-content:center;
 }
 
+.engine-runtime-warnings{
+  display:grid;
+  gap:8px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.18);
+}
+
+.engine-runtime-warnings.has-warnings{
+  border-color:rgba(244,200,106,.26);
+  background:linear-gradient(180deg, rgba(244,200,106,.08), rgba(0,0,0,.2));
+}
+
+.engine-runtime-title{
+  font-size:.68rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.6);
+}
+
+.engine-runtime-warning{
+  font-size:.82rem;
+  line-height:1.55;
+  color:rgba(231,255,247,.84);
+}
+
+.engine-runtime-warning--muted{
+  color:rgba(231,255,247,.58);
+}
+
 .engine-title{
   margin:0;
   font-size:clamp(2rem, 3vw, 3rem);
