@@ -59,6 +59,69 @@ type TrackingState =
   | "SPREAD_BLOCKED"
   | "REGISTRY_FAULT"
   | string;
+
+type SubslotRow = {
+  subslotId?: string | null;
+  subslotSequence?: number | null;
+  subslotState?: string | null;
+  subslotEntryMode?: string | null;
+  subslotSignalState?: string | null;
+  subslotSignalReason?: string | null;
+  subslotSignalNeededTicks?: number | null;
+  subslotNowMid?: number | null;
+  subslotEntryMid?: number | null;
+  subslotGrossPct?: number | null;
+  subslotNetPct?: number | null;
+  subslotPeakBid?: number | null;
+  subslotDrawdownPct?: number | null;
+  subslotBouncePct?: number | null;
+  subslotEmaGapPct?: number | null;
+  subslotRecoveredConfirmed?: boolean | null;
+  subslotRecoveredAt?: number | null;
+  subslotRecoveredPeakNetPct?: number | null;
+  subslotProfitAud?: number | null;
+  subslotProfitPct?: number | null;
+  subslotExitReason?: string | null;
+  subslotOpenedAt?: number | null;
+  subslotClosedAt?: number | null;
+  subslotCooldownUntil?: number | null;
+  subslotLastError?: string | null;
+  subslotLastReconcileAt?: number | null;
+  subslotLastReconcileNote?: string | null;
+
+  subslotRequestedAud?: number | null;
+  subslotRequestedCoinQty?: number | null;
+  subslotSubmittedRate?: number | null;
+  subslotActualAud?: number | null;
+  subslotActualCoinQty?: number | null;
+  subslotActualRate?: number | null;
+  subslotOrderId?: string | null;
+  subslotFillStatus?: string | null;
+  subslotPreAudAvailable?: number | null;
+  subslotPreCoinAvailable?: number | null;
+  subslotExitOrderId?: string | null;
+  subslotExitRequestedCoinQty?: number | null;
+  subslotExitSubmittedRate?: number | null;
+  subslotExitExpectedAud?: number | null;
+  subslotExitOrderAt?: number | null;
+  subslotExitActualAud?: number | null;
+  subslotExitActualCoinQty?: number | null;
+  subslotExitActualRate?: number | null;
+  subslotExitFilledAt?: number | null;
+  subslotRealizedAt?: number | null;
+  subslotPendingMergeAud?: number | null;
+  subslotLastMergedAud?: number | null;
+  subslotMergedAt?: number | null;
+  subslotLifetimeProfitAud?: number | null;
+  subslotLifetimeCycles?: number | null;
+  subslotTrackingSince?: number | null;
+  subslotLowMid?: number | null;
+  subslotLastMid?: number | null;
+  subslotEmaFast?: number | null;
+  subslotEmaSlow?: number | null;
+  subslotConfirmTicks?: number | null;
+};
+
 type SlotRow = {
   id: string;
   coin: string | null;
@@ -129,8 +192,9 @@ type SlotRow = {
   liveExitActualRate?: number | null;
   liveExitFilledAt?: number | null;
 
-  // **New**: To track multiple subslots in a parent slot
-  subslots?: SlotRow[] | null; // Array of subslots for the parent slot
+  // Legacy flat `subslot*` fields remain as a fallback for older rows.
+  // `subslots[]` is the authoritative tactical model when present.
+  subslots?: SubslotRow[] | null;
 
   subslotActive?: boolean | null;
   subslotCount?: number | null;
@@ -584,18 +648,142 @@ function slotHeartbeatLabel(s: SlotRow, nowMs: number) {
   return "—";
 }
 
-function subslotLiveNowLabel(s: SlotRow) {
-  if (s.subslotNowMid != null && Number.isFinite(s.subslotNowMid)) return fmt(s.subslotNowMid);
-  if (s.nowMid != null && Number.isFinite(s.nowMid)) return fmt(s.nowMid);
+function getSubslots(slot: SlotRow): SubslotRow[] {
+  if (Array.isArray(slot.subslots) && slot.subslots.length > 0) {
+    return slot.subslots;
+  }
+
+  if (!slot.subslotState) return [];
+
+  return [
+    {
+      subslotId: slot.subslotOrderId ?? `${slot.id}-legacy-subslot`,
+      subslotSequence: slot.subslotCount ?? 1,
+      subslotState: slot.subslotState,
+      subslotEntryMode: slot.subslotEntryMode,
+      subslotSignalState: slot.subslotSignalState,
+      subslotSignalReason: slot.subslotSignalReason,
+      subslotNowMid: slot.subslotNowMid,
+      subslotEntryMid: slot.subslotEntryMid,
+      subslotGrossPct: slot.subslotGrossPct,
+      subslotNetPct: slot.subslotNetPct,
+      subslotPeakBid: slot.subslotPeakBid,
+      subslotDrawdownPct: slot.subslotDrawdownPct,
+      subslotBouncePct: slot.subslotBouncePct,
+      subslotEmaGapPct: slot.subslotEmaGapPct,
+      subslotProfitAud: slot.subslotProfitAud,
+      subslotProfitPct: slot.subslotProfitPct,
+      subslotExitReason: slot.subslotExitReason,
+      subslotOpenedAt: slot.subslotOpenedAt,
+      subslotClosedAt: slot.subslotClosedAt,
+      subslotCooldownUntil: slot.subslotCooldownUntil,
+      subslotLastError: slot.subslotLastError,
+      subslotLastReconcileAt: slot.subslotLastReconcileAt,
+      subslotLastReconcileNote: slot.subslotLastReconcileNote,
+      subslotRequestedAud: slot.subslotRequestedAud,
+      subslotRequestedCoinQty: slot.subslotRequestedCoinQty,
+      subslotSubmittedRate: slot.subslotSubmittedRate,
+      subslotActualAud: slot.subslotActualAud,
+      subslotActualCoinQty: slot.subslotActualCoinQty,
+      subslotActualRate: slot.subslotActualRate,
+      subslotOrderId: slot.subslotOrderId,
+      subslotFillStatus: slot.subslotFillStatus,
+      subslotPreAudAvailable: slot.subslotPreAudAvailable,
+      subslotPreCoinAvailable: slot.subslotPreCoinAvailable,
+      subslotExitOrderId: slot.subslotExitOrderId,
+      subslotExitRequestedCoinQty: slot.subslotExitRequestedCoinQty,
+      subslotExitSubmittedRate: slot.subslotExitSubmittedRate,
+      subslotExitExpectedAud: slot.subslotExitExpectedAud,
+      subslotExitOrderAt: slot.subslotExitOrderAt,
+      subslotExitActualAud: slot.subslotExitActualAud,
+      subslotExitActualCoinQty: slot.subslotExitActualCoinQty,
+      subslotExitActualRate: slot.subslotExitActualRate,
+      subslotExitFilledAt: slot.subslotExitFilledAt,
+      subslotRealizedAt: slot.subslotRealizedAt,
+      subslotPendingMergeAud: slot.subslotPendingMergeAud,
+      subslotLastMergedAud: slot.subslotLastMergedAud,
+      subslotMergedAt: slot.subslotMergedAt,
+      subslotLifetimeProfitAud: slot.subslotLifetimeProfitAud,
+      subslotLifetimeCycles: slot.subslotLifetimeCycles,
+      subslotTrackingSince: slot.subslotTrackingSince,
+      subslotLowMid: slot.subslotLowMid,
+      subslotLastMid: slot.subslotLastMid,
+      subslotEmaFast: slot.subslotEmaFast,
+      subslotEmaSlow: slot.subslotEmaSlow,
+      subslotConfirmTicks: slot.subslotConfirmTicks,
+    },
+  ];
+}
+
+function getPrimarySubslot(slot: SlotRow): SubslotRow | null {
+  const subslots = getSubslots(slot);
+  return subslots.length ? subslots[0] : null;
+}
+
+function isSubslotBusy(subslot: SubslotRow): boolean {
+  const state = String(subslot.subslotState || "").toUpperCase();
+  const signal = String(subslot.subslotSignalState || "").toUpperCase();
+  return (
+    state === "ACTIVE" ||
+    state === "BUY_SUBMITTED" ||
+    state === "SELL_SUBMITTED" ||
+    signal === "TRACKING" ||
+    signal === "ARMED" ||
+    signal === "BOUNCE_SEEN" ||
+    signal === "REVERSAL_CONFIRMING" ||
+    signal === "SPREAD_BLOCKED"
+  );
+}
+
+function getActiveSubslots(slot: SlotRow): SubslotRow[] {
+  return getSubslots(slot).filter((subslot) => String(subslot.subslotState || "").toUpperCase() === "ACTIVE");
+}
+
+function hasAnySubslots(slot: SlotRow) {
+  return getSubslots(slot).length > 0;
+}
+
+function hasActiveSubslots(slot: SlotRow) {
+  return getActiveSubslots(slot).length > 0;
+}
+
+function hasPendingSubslotBuys(slot: SlotRow) {
+  return getSubslots(slot).some((subslot) => String(subslot.subslotState || "").toUpperCase() === "BUY_SUBMITTED");
+}
+
+function hasPendingSubslotSells(slot: SlotRow) {
+  return getSubslots(slot).some((subslot) => String(subslot.subslotState || "").toUpperCase() === "SELL_SUBMITTED");
+}
+
+function getSubslotOpenCount(slot: SlotRow) {
+  return getSubslots(slot).filter((subslot) => {
+    const state = String(subslot.subslotState || "").toUpperCase();
+    return state === "ACTIVE" || state === "BUY_SUBMITTED" || state === "SELL_SUBMITTED";
+  }).length;
+}
+
+function getSubslotRealizedProfit(slot: SlotRow) {
+  return roundMoney(
+    getSubslots(slot).reduce((sum, subslot) => {
+      const profit = Number(subslot.subslotProfitAud);
+      return Number.isFinite(profit) ? sum + profit : sum;
+    }, 0)
+  );
+}
+
+function getClosedSubslotCount(slot: SlotRow) {
+  return getSubslots(slot).filter((subslot) => String(subslot.subslotState || "").toUpperCase() === "CLOSED").length;
+}
+
+function subslotLiveNowLabel(subslot: SubslotRow, parent: SlotRow) {
+  if (subslot.subslotNowMid != null && Number.isFinite(subslot.subslotNowMid)) return fmt(subslot.subslotNowMid);
+  if (parent.nowMid != null && Number.isFinite(parent.nowMid)) return fmt(parent.nowMid);
   return "—";
 }
 
-function subslotHeartbeatLabel(s: SlotRow, nowMs: number) {
-  if (s.updatedAt && Number.isFinite(s.updatedAt)) {
-    return ageLabel(nowMs - s.updatedAt);
-  }
-  if (s.subslotLastReconcileAt && Number.isFinite(s.subslotLastReconcileAt)) {
-    return ageLabel(nowMs - s.subslotLastReconcileAt);
+function subslotHeartbeatLabel(subslot: SubslotRow, nowMs: number) {
+  if (subslot.subslotLastReconcileAt && Number.isFinite(subslot.subslotLastReconcileAt)) {
+    return ageLabel(nowMs - subslot.subslotLastReconcileAt);
   }
   return "—";
 }
@@ -608,7 +796,7 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
     const baseAud = Number(s.combinedEntryAud ?? s.entryAud ?? s.unitAud);
     const netPct = Number(s.netPct);
     const parentProfitAud = Number(s.profitAud);
-    const subslotProfitAud = Number(s.subslotProfitAud);
+    const subslots = getSubslots(s);
 
     if (isHoldingFamilyState(s.state) && Number.isFinite(baseAud) && Number.isFinite(netPct)) {
       openPnl += baseAud * (netPct / 100);
@@ -618,17 +806,17 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
       visibleRealized += parentProfitAud;
     }
 
-    if (Number.isFinite(subslotProfitAud)) {
-      visibleRealized += subslotProfitAud;  // Adding subslot profit to total
-    }
-
-    // If subslots exist, accumulate their financials
-    if (s.subslots) {
-      for (const subslot of s.subslots) {
+    if (subslots.length > 0) {
+      for (const subslot of subslots) {
         const subslotProfit = Number(subslot.subslotProfitAud);
         if (Number.isFinite(subslotProfit)) {
           visibleRealized += subslotProfit;
         }
+      }
+    } else {
+      const subslotProfitAud = Number(s.subslotProfitAud);
+      if (Number.isFinite(subslotProfitAud)) {
+        visibleRealized += subslotProfitAud;
       }
     }
   }
@@ -721,7 +909,8 @@ function regimeSummary(s: SlotRow): string {
 }
 
 function subslotModeLabel(s: SlotRow) {
-  const mode = String(s.subslotEntryMode || "").toUpperCase();
+  const primary = getPrimarySubslot(s);
+  const mode = String(primary?.subslotEntryMode || "").toUpperCase();
   const regime = String(regimeLabel(s)).toUpperCase();
 
   if (mode) return mode.replace(/_/g, " ");
@@ -731,14 +920,14 @@ function subslotModeLabel(s: SlotRow) {
   return "TACTICAL CAPTURE";
 }
 
-function subslotDecisionLabel(s: SlotRow) {
-  const sub = String(s.subslotState || "").toUpperCase();
-  const signal = String(s.subslotSignalState || "").toUpperCase();
+function subslotDecisionLabel(subslot: SubslotRow) {
+  const sub = String(subslot.subslotState || "").toUpperCase();
+  const signal = String(subslot.subslotSignalState || "").toUpperCase();
 
   if (sub === "BUY_SUBMITTED") return "Entry pending";
   if (sub === "ACTIVE") return "Trade active";
   if (sub === "SELL_SUBMITTED") return "Exit pending";
-  if (sub === "CLOSED" && s.subslotExitReason) return "Last trade closed";
+  if (sub === "CLOSED" && subslot.subslotExitReason) return "Last trade closed";
 
   if (signal === "REVERSAL_CONFIRMING") return "Waiting for confirmation";
   if (signal === "BOUNCE_SEEN") return "Bounce detected";
@@ -748,9 +937,9 @@ function subslotDecisionLabel(s: SlotRow) {
   return "Idle";
 }
 
-function subslotToneClass(s: SlotRow) {
-  const sub = String(s.subslotState || "").toUpperCase();
-  const signal = String(s.subslotSignalState || "").toUpperCase();
+function subslotToneClass(subslot: SubslotRow) {
+  const sub = String(subslot.subslotState || "").toUpperCase();
+  const signal = String(subslot.subslotSignalState || "").toUpperCase();
 
   if (sub === "BUY_SUBMITTED") return "is-deploying";
   if (sub === "ACTIVE") return "is-holding";
@@ -764,10 +953,39 @@ function subslotToneClass(s: SlotRow) {
   return "is-muted";
 }
 
-function isIdleSubslot(s: SlotRow) {
-  const sub = String(s.subslotState || "").toUpperCase();
-  const signal = String(s.subslotSignalState || "").toUpperCase();
+function isIdleSubslot(subslot: SubslotRow) {
+  const sub = String(subslot.subslotState || "").toUpperCase();
+  const signal = String(subslot.subslotSignalState || "").toUpperCase();
   return sub === "CLOSED" && (!signal || signal === "NO_MARKET");
+}
+
+function primarySubslotToneClass(slot: SlotRow) {
+  const primary = getPrimarySubslot(slot);
+  return primary ? subslotToneClass(primary) : "is-muted";
+}
+
+function primarySubslotDecisionLabel(slot: SlotRow) {
+  const primary = getPrimarySubslot(slot);
+  return primary ? subslotDecisionLabel(primary) : "Idle";
+}
+
+function primarySubslotLiveNowLabel(slot: SlotRow) {
+  const primary = getPrimarySubslot(slot);
+  return primary ? subslotLiveNowLabel(primary, slot) : "â€”";
+}
+
+function primarySubslotHeartbeatLabel(slot: SlotRow, nowMs: number) {
+  const primary = getPrimarySubslot(slot);
+  return primary ? subslotHeartbeatLabel(primary, nowMs) : "â€”";
+}
+
+function subslotStateBadgeLabel(subslot: SubslotRow) {
+  const state = String(subslot.subslotState || "").toUpperCase();
+  if (state === "ACTIVE") return "TACTICAL ACTIVE";
+  if (state === "BUY_SUBMITTED") return "TACTICAL ENTRY";
+  if (state === "SELL_SUBMITTED") return "TACTICAL EXIT";
+  if (state === "CLOSED") return "TACTICAL CLOSED";
+  return "TACTICAL IDLE";
 }
 
 function engineDecisionLabel(s: SlotRow) {
@@ -818,17 +1036,17 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
 
   // Parent State Analysis
   if (state === "EXITING") {
-    parts.push("Parent exit is being resolved live.");
+    parts.push("Jrd Primary exit is being resolved live.");
   } else if (state === "DEPLOYING") {
-    parts.push("Parent entry is being confirmed live.");
+    parts.push("Jrd Primary entry is being confirmed live.");
   } else if (state === "LVL4_TRAIL") {
-    parts.push("Parent is in high-protection trailing mode.");
+    parts.push("Jrd Primary is in high-protection trailing mode.");
   } else if (isHoldingFamilyState(state)) {
-    parts.push("Parent position is live and being managed.");
+    parts.push("Jrd Primary is live and being managed.");
   } else if (state === "WAITING_ENTRY") {
-    parts.push("Parent is waiting for a qualified re-entry.");
+    parts.push("Jrd Primary is waiting for a qualified re-entry.");
   } else {
-    parts.push("Parent slot is being observed.");
+    parts.push("Jrd Primary is being observed.");
   }
 
   // Parent Mid Price
@@ -884,28 +1102,28 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   return parts.join(" ");
 }
 
-function liveSubslotAnalysis(s: SlotRow, nowMs: number) {
+function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number) {
   const parts: string[] = [];
 
-  const subState = String(s.subslotState || "").toUpperCase();
-  const signal = String(s.subslotSignalState || "").toUpperCase();
-  const netPct = s.subslotNetPct;
-  const bouncePct = s.subslotBouncePct;
-  const emaGapPct = s.subslotEmaGapPct;
-  const liveNow = s.subslotNowMid ?? s.nowMid;
-  const updated = subslotHeartbeatLabel(s, nowMs);
+  const subState = String(subslot.subslotState || "").toUpperCase();
+  const signal = String(subslot.subslotSignalState || "").toUpperCase();
+  const netPct = subslot.subslotNetPct;
+  const bouncePct = subslot.subslotBouncePct;
+  const emaGapPct = subslot.subslotEmaGapPct;
+  const liveNow = subslot.subslotNowMid ?? parent.nowMid;
+  const updated = subslotHeartbeatLabel(subslot, nowMs);
 
   // Subslot State Analysis
   if (subState === "BUY_SUBMITTED") {
-    parts.push("Subslot entry is pending.");
+    parts.push("Jrd Secondary entry is pending.");
   } else if (subState === "ACTIVE") {
-    parts.push("Subslot trade is live.");
+    parts.push("Jrd Secondary trade is live.");
   } else if (subState === "SELL_SUBMITTED") {
-    parts.push("Subslot exit is pending.");
+    parts.push("Jrd Secondary exit is pending.");
   } else if (subState === "CLOSED") {
-    parts.push("Subslot is closed.");
+    parts.push("Jrd Secondary is closed.");
   } else {
-    parts.push("Subslot is idle.");
+    parts.push("Jrd Secondary is idle.");
   }
 
   // Signal Analysis
@@ -914,11 +1132,11 @@ function liveSubslotAnalysis(s: SlotRow, nowMs: number) {
   } else if (signal === "BOUNCE_SEEN") {
     parts.push("Bounce has been detected.");
   } else if (signal === "TRACKING") {
-    parts.push("Subslot is tracking structure.");
+    parts.push("Jrd Secondary is tracking structure.");
   } else if (signal === "ARMED") {
-    parts.push("Subslot is armed.");
+    parts.push("Jrd Secondary is armed.");
   } else if (signal === "SPREAD_BLOCKED") {
-    parts.push("Subslot is blocked by spread.");
+    parts.push("Jrd Secondary is blocked by spread.");
   } else if (signal === "NO_MARKET") {
     parts.push("No usable live market read.");
   }
@@ -930,9 +1148,9 @@ function liveSubslotAnalysis(s: SlotRow, nowMs: number) {
 
   // Subslot Net Percentage Calculation
   if (Number.isFinite(netPct)) {
-    if (Number(netPct) > 0) parts.push(`Subslot net is green at ${pctNum(netPct)}.`);
-    else if (Number(netPct) < 0) parts.push(`Subslot net is red at ${pctNum(netPct)}.`);
-    else parts.push(`Subslot net is flat at ${pctNum(netPct)}.`);
+    if (Number(netPct) > 0) parts.push(`Jrd Secondary net is green at ${pctNum(netPct)}.`);
+    else if (Number(netPct) < 0) parts.push(`Jrd Secondary net is red at ${pctNum(netPct)}.`);
+    else parts.push(`Jrd Secondary net is flat at ${pctNum(netPct)}.`);
   }
 
   // Bounce and EMA Gap Analysis
@@ -950,6 +1168,11 @@ function liveSubslotAnalysis(s: SlotRow, nowMs: number) {
   }
 
   return parts.join(" ");
+}
+
+function primaryLiveSubslotAnalysis(slot: SlotRow, nowMs: number) {
+  const primary = getPrimarySubslot(slot);
+  return primary ? liveSubslotAnalysis(primary, slot, nowMs) : "No Jrd Secondary records available.";
 }
 
 function detailRowsForSlot(s: SlotRow, nowMs: number) {
@@ -1017,11 +1240,16 @@ function sortMarketRows(rows: MarketRow[], sortKey: SortKey, sortDir: SortDir) {
 }
 
 function derivePriorityScore(s: SlotRow) {
+  const subslots = getSubslots(s);
+  const hasPendingSell = subslots.some((subslot) => String(subslot.subslotState || "").toUpperCase() === "SELL_SUBMITTED");
+  const hasPendingBuy = subslots.some((subslot) => String(subslot.subslotState || "").toUpperCase() === "BUY_SUBMITTED");
+  const hasActive = subslots.some((subslot) => String(subslot.subslotState || "").toUpperCase() === "ACTIVE");
+
   if (String(s.state || "").toUpperCase() === "EXITING") return 100;
   if (String(s.state || "").toUpperCase() === "DEPLOYING") return 95;
-  if (String(s.subslotState || "").toUpperCase() === "SELL_SUBMITTED") return 90;
-  if (String(s.subslotState || "").toUpperCase() === "BUY_SUBMITTED") return 85;
-  if (String(s.subslotState || "").toUpperCase() === "ACTIVE") return 80;
+  if (hasPendingSell) return 90;
+  if (hasPendingBuy) return 85;
+  if (hasActive) return 80;
   if (String(s.state || "").toUpperCase() === "LVL4_TRAIL") return 75;
   if (isHoldingFamilyState(s.state)) return 70;
   if (String(s.trackingState || "").toUpperCase() === "REVERSAL_CONFIRMING") return 60;
@@ -1032,11 +1260,11 @@ function derivePriorityScore(s: SlotRow) {
 }
 
 function priorityRailLabel(s: SlotRow) {
+  if (hasActiveSubslots(s)) return "TACTICAL ACTIVE";
+  if (hasPendingSubslotBuys(s)) return "TACTICAL ENTRY";
+  if (hasPendingSubslotSells(s)) return "TACTICAL EXIT";
   if (String(s.state || "").toUpperCase() === "EXITING") return "EXITING";
   if (String(s.state || "").toUpperCase() === "DEPLOYING") return "ENTERING";
-  if (String(s.subslotState || "").toUpperCase() === "ACTIVE") return "TACTICAL ACTIVE";
-  if (String(s.subslotState || "").toUpperCase() === "BUY_SUBMITTED") return "TACTICAL ENTRY";
-  if (String(s.subslotState || "").toUpperCase() === "SELL_SUBMITTED") return "TACTICAL EXIT";
   if (String(s.state || "").toUpperCase() === "LVL4_TRAIL") return "TRAILING";
   if (isHoldingFamilyState(s.state)) return "HOLDING";
   if (String(s.trackingState || "").toUpperCase() === "REVERSAL_CONFIRMING") return "REVERSAL";
@@ -1054,7 +1282,9 @@ function slotHealthLabel(s: SlotRow) {
   if (state === "DEPLOYING") return "CONFIRMING ENTRY";
   if (state === "LVL4_TRAIL") return "HIGH STRUCTURE";
   if (isHoldingFamilyState(state) && Number(s.netPct) > 0) return "PROTECTED";
-  if (String(s.subslotState || "").toUpperCase() === "ACTIVE") return "TACTICAL LIVE";
+  if (hasPendingSubslotSells(s)) return "TACTICAL EXIT";
+  if (hasPendingSubslotBuys(s)) return "TACTICAL ENTRY";
+  if (hasActiveSubslots(s)) return "TACTICAL LIVE";
   if (tracking === "REVERSAL_CONFIRMING") return "BUILDING";
   if (s.consolidationBreakoutReady === true) return "READY";
   if (tracking === "SPREAD_BLOCKED" || (Number.isFinite(spread) && spread > 1.5)) return "UNDER FRICTION";
@@ -1083,7 +1313,7 @@ function computeWindowHarvestFromSlots(slotRows: SlotRow[]) {
 
   for (const s of slotRows) {
     const parent = Number(s.profitAud);
-    const subslot = Number(s.subslotProfitAud);
+    const subslot = getSubslotRealizedProfit(s);
 
     if (Number.isFinite(parent)) parentRealized += parent;
     if (Number.isFinite(subslot)) subslotRealized += subslot;
@@ -1337,7 +1567,7 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
         <div className="cap-sub">
           <span>Consolidation {props.consolidation}</span>
           <span>•</span>
-          <span>Active subslots {props.activeSubslots}</span>
+          <span>Active Jrd Secondary {props.activeSubslots}</span>
         </div>
       </div>
     </div>
@@ -1503,7 +1733,17 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
   setPaused: React.Dispatch<React.SetStateAction<boolean>>;
   nowMs: number;
 }) {
-  const carouselSlot = props.slots[Math.max(0, Math.min(props.currentIndex, props.slots.length - 1))] ?? null;
+  const carouselBaseSlot = props.slots[Math.max(0, Math.min(props.currentIndex, props.slots.length - 1))] ?? null;
+  const carouselPrimary = carouselBaseSlot ? getPrimarySubslot(carouselBaseSlot) : null;
+  const carouselSlot = carouselBaseSlot && carouselPrimary ? { ...carouselBaseSlot, ...carouselPrimary } : carouselBaseSlot;
+  const carouselSubslots = carouselBaseSlot ? getSubslots(carouselBaseSlot) : [];
+  const carouselActiveCount = carouselBaseSlot ? getActiveSubslots(carouselBaseSlot).length : 0;
+  const carouselPendingEntryCount = carouselSubslots.filter(
+    (subslot) => String(subslot.subslotState || "").toUpperCase() === "BUY_SUBMITTED"
+  ).length;
+  const carouselPendingExitCount = carouselSubslots.filter(
+    (subslot) => String(subslot.subslotState || "").toUpperCase() === "SELL_SUBMITTED"
+  ).length;
 
   return (
     <div className="card machine-surface panel-frame engine-status-rail" aria-label="Live JRD Status">
@@ -1626,15 +1866,37 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
   <div className="engine-carousel-v">{regimeSummary(carouselSlot)}</div>
 </div>
 
-            <div className={`engine-subslot ${subslotToneClass(carouselSlot)}`}>
+            <div className={`engine-subslot ${primarySubslotToneClass(carouselSlot)}`}>
               <div className="engine-subslot-head">
                 <span className="engine-subslot-title">{subslotModeLabel(carouselSlot)}</span>
-                <span className="engine-subslot-state">{subslotDecisionLabel(carouselSlot)}</span>
+                <span className="engine-subslot-state">{primarySubslotDecisionLabel(carouselSlot)}</span>
               </div>
 
-              <div className="engine-subslot-copy">{liveSubslotAnalysis(carouselSlot, props.nowMs)}</div>
+              <div className="engine-subslot-copy">{primaryLiveSubslotAnalysis(carouselSlot, props.nowMs)}</div>
 
-              {!isIdleSubslot(carouselSlot) ? (
+              <div className="engine-subslot-grid">
+                <div className="engine-subslot-item">
+                  <div className="engine-subslot-k">Jrd Secondary</div>
+                  <div className="engine-subslot-v">{carouselSubslots.length}</div>
+                </div>
+
+                <div className="engine-subslot-item">
+                  <div className="engine-subslot-k">Active</div>
+                  <div className="engine-subslot-v">{carouselActiveCount}</div>
+                </div>
+
+                <div className="engine-subslot-item">
+                  <div className="engine-subslot-k">Pending Entry</div>
+                  <div className="engine-subslot-v">{carouselPendingEntryCount}</div>
+                </div>
+
+                <div className="engine-subslot-item">
+                  <div className="engine-subslot-k">Pending Exit</div>
+                  <div className="engine-subslot-v">{carouselPendingExitCount}</div>
+                </div>
+              </div>
+
+              {carouselPrimary && (isSubslotBusy(carouselPrimary) || !isIdleSubslot(carouselPrimary)) ? (
                 <div className="engine-subslot-grid">
                   <div className="engine-subslot-item">
                     <div className="engine-subslot-k">Signal</div>
@@ -1754,7 +2016,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
   <div>Market</div>
   <div>Decision</div>
   <div>Position</div>
-  <div>Subslot</div>
+  <div>Jrd Secondary</div>
   <div>Live Analysis</div>
   <div>Health</div>
   <div className="num">Net</div>
@@ -1768,7 +2030,9 @@ const OverviewTable = React.memo(function OverviewTable(props: {
   <div className={regimeToneClass(s)}>{regimeLabel(s)}</div>
   <div>{engineDecisionLabel(s)}</div>
   <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
-  <div className={subslotToneClass(s)}>{subslotDecisionLabel(s)}</div>
+  <div className={primarySubslotToneClass(s)}>
+    {primarySubslotDecisionLabel(s)} • {hasAnySubslots(s) ? `${getSubslots(s).length} Jrd Secondary / ${getActiveSubslots(s).length} active` : "0 Jrd Secondary"}
+  </div>
   <div className="ledger-analysis">
   {liveParentAnalysis(s, props.nowMs)}
 </div>
@@ -1826,6 +2090,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
           props.slots.map((s) => {
             const expanded = props.expandedLedgerSlotId === s.id;
             const rows = detailRowsForSlot(s, props.nowMs);
+            const subslots = getSubslots(s);
 
             return (
               <div key={s.id} className={`ledger-entry ${expanded ? "is-expanded" : ""}`}>
@@ -1862,21 +2127,92 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                       ))}
                     </div>
 
-                    <div className={`ledger-subpanel-badge ${subslotToneClass(s)}`}>
-                      {liveSubslotAnalysis(s, props.nowMs)}
+                    <div className={`ledger-subpanel-badge ${primarySubslotToneClass(s)}`}>
+                      {primaryLiveSubslotAnalysis(s, props.nowMs)}
                     </div>
 
-                    {/* Render multiple subslots if they exist */}
-                    {s.subslots && s.subslots.length > 0 && (
+                    {subslots.length > 0 && (
                       <div className="subslot-list">
-                        {s.subslots.map((subslot, index) => (
-                          <div key={index} className="subslot-card">
-                            {/* Render subslot-specific details here */}
-                            <div>Subslot {index + 1}</div>
-                            <div>Subslot State: {subslot.subslotState}</div>
-                            <div>Requested AUD: {moneyAud(subslot.subslotRequestedAud)}</div>
-                            <div>Actual AUD: {moneyAud(subslot.subslotActualAud)}</div>
-                            {/* Display additional subslot properties */}
+                        {subslots.map((subslot, index) => (
+                          <div key={subslot.subslotId ?? `${s.id}-subslot-${index}`} className="subslot-card">
+                            <div className="ledger-subpanel-grid">
+                              <div className="ledger-subpanel-item">
+                            <div className="ledger-subpanel-k">Jrd Secondary</div>
+                                <div className="ledger-subpanel-v">
+                                  Jrd Secondary #{subslot.subslotSequence ?? index + 1} • {subslot.subslotId ?? "legacy"}
+                                </div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Label</div>
+                                <div className={`ledger-subpanel-v ${subslotToneClass(subslot)}`}>{subslotStateBadgeLabel(subslot)}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">State</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotState ?? "â€”"}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Mode</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotEntryMode ?? "â€”"}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Signal</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotSignalState ?? "â€”"}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Net</div>
+                                <div className="ledger-subpanel-v">{pctNum(subslot.subslotNetPct)}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Profit AUD</div>
+                                <div className="ledger-subpanel-v">{moneyAud(subslot.subslotProfitAud)}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Entry Mid</div>
+                                <div className="ledger-subpanel-v">{fmt(subslot.subslotEntryMid)}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Live Now</div>
+                                <div className="ledger-subpanel-v">{subslotLiveNowLabel(subslot, s)}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Bounce</div>
+                                <div className="ledger-subpanel-v">{pctNum(subslot.subslotBouncePct)}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">EMA Gap</div>
+                                <div className="ledger-subpanel-v">{pctNum(subslot.subslotEmaGapPct)}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Recovered</div>
+                                <div className="ledger-subpanel-v">
+                                  {subslot.subslotRecoveredConfirmed == null
+                                    ? "â€”"
+                                    : subslot.subslotRecoveredConfirmed
+                                    ? "YES"
+                                    : "NO"}
+                                </div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Exit Reason</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotExitReason ?? "â€”"}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Updated</div>
+                                <div className="ledger-subpanel-v">{subslotHeartbeatLabel(subslot, props.nowMs)}</div>
+                              </div>
+                              <div className="ledger-subpanel-item">
+                                <div className="ledger-subpanel-k">Reconcile</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotLastReconcileNote ?? "â€”"}</div>
+                              </div>
+                            </div>
+
+                            <div className={`ledger-subpanel-badge ${subslotToneClass(subslot)}`}>
+                              {liveSubslotAnalysis(subslot, s, props.nowMs)}
+                            </div>
+
+                            {subslot.subslotLastError ? (
+                              <div className="ledger-subpanel-badge is-exiting">{subslot.subslotLastError}</div>
+                            ) : null}
                           </div>
                         ))}
                       </div>
@@ -1972,7 +2308,7 @@ const AboutPanel = React.memo(function AboutPanel(props: {
 
       {props.aboutOpen ? (
         <div id="engine-about" className="card machine-surface panel-frame engine-about-panel">
-          <div className="engine-about-title">Fixed-Slot Jeroid Ledger</div>
+          <div className="engine-about-title">Jeroid JRD Ledger</div>
 
           <p>
             This page presents the machine in public-facing language. Each Jeroid slot belongs to one fixed market
@@ -1984,16 +2320,16 @@ const AboutPanel = React.memo(function AboutPanel(props: {
             <br />
             <strong>Decision</strong> shows what the engine is doing with that regime.
             <br />
-            <strong>Position</strong> shows the parent slot lifecycle.
+            <strong>Jrd Primary</strong> shows the primary lifecycle.
             <br />
-            <strong>Subslot</strong> shows the tactical capture layer inside the hold window.
+            <strong>Jrd Secondary</strong> shows the secondary tactical capture layer inside the hold window.
           </p>
 
           <div className="engine-about-h">Machine order</div>
           <ul>
             <li>Harvester maintains the fixed slot registry.</li>
             <li>Executor evaluates each slot’s own coin only.</li>
-            <li>Manager controls hold, lock, exit, subslot logic, and regime interpretation.</li>
+            <li>Manager controls hold, lock, exit, Jrd Secondary logic, and regime interpretation.</li>
             <li>Rotation remains a separate capital-handling layer.</li>
             <li>Ledger persists public machine proof for inspection.</li>
           </ul>
@@ -2001,8 +2337,8 @@ const AboutPanel = React.memo(function AboutPanel(props: {
           <div className="engine-about-h">Key truths</div>
           <ul>
             <li>Slot identity is permanent coin identity.</li>
-            <li>Open parent PnL is floating and not harvested.</li>
-            <li>Subslot PnL remains separate until merge on parent reset.</li>
+            <li>Open Jrd Primary PnL is floating and not harvested.</li>
+            <li>Jrd Secondary PnL remains separate until merge on Jrd Primary reset.</li>
             <li>Window harvest reflects recent realized event flow only.</li>
             <li>External transfers are excluded from displayed totals.</li>
             <li>The UI is organized for clarity first and diagnostics second.</li>
@@ -2102,7 +2438,7 @@ const SlotModal = React.memo(function SlotModal(props: {
             </div>
           </CollapsibleBlock>
 
-          <CollapsibleBlock title="Parent Position" defaultOpen>
+          <CollapsibleBlock title="Jrd Primary" defaultOpen>
             <div className="slot-section">Core Metrics</div>
 
             <div className="slot-modal-grid">
@@ -2123,49 +2459,65 @@ const SlotModal = React.memo(function SlotModal(props: {
             </div>
           </CollapsibleBlock>
 
-          <CollapsibleBlock title="Tactical Subslot" defaultOpen>
-
-            <div>
-  <div className="slot-k">Live Analysis</div>
-  <div className="slot-v">{liveSubslotAnalysis(slot, nowMs)}</div>
-</div>
-<div>
-  <div className="slot-k">Live Now</div>
-  <div className="slot-v">{subslotLiveNowLabel(slot)}</div>
-</div>
-
-            <div className="slot-section">Subslot Snapshot</div>
+          <CollapsibleBlock title="Jrd Secondary" defaultOpen>
+            <div className="slot-section">Jrd Primary Secondary Summary</div>
 
             <div className="slot-modal-grid">
-              <div><div className="slot-k">Mode</div><div className={`slot-v slot-subslot ${subslotToneClass(slot)}`}>{subslotModeLabel(slot)}</div></div>
-              <div><div className="slot-k">Decision</div><div className={`slot-v slot-subslot ${subslotToneClass(slot)}`}>{subslotDecisionLabel(slot)}</div></div>
-              <div><div className="slot-k">State</div><div className="slot-v">{slot.subslotState ?? "—"}</div></div>
-              <div><div className="slot-k">Signal</div><div className="slot-v">{slot.subslotSignalState ?? "—"}</div></div>
-              <div><div className="slot-k">Confirm Ticks</div><div className="slot-v">{slot.subslotConfirmTicks != null ? slot.subslotConfirmTicks : "—"}</div></div>
-              <div><div className="slot-k">Bounce</div><div className="slot-v">{pctNum(slot.subslotBouncePct)}</div></div>
-              <div><div className="slot-k">EMA Gap</div><div className="slot-v">{pctNum(slot.subslotEmaGapPct)}</div></div>
-              <div><div className="slot-k">Requested AUD</div><div className="slot-v">{moneyAud(slot.subslotRequestedAud)}</div></div>
-              <div><div className="slot-k">Actual AUD</div><div className="slot-v">{moneyAud(slot.subslotActualAud)}</div></div>
-              <div><div className="slot-k">Requested Qty</div><div className="slot-v">{fmt(slot.subslotRequestedCoinQty)}</div></div>
-              <div><div className="slot-k">Actual Qty</div><div className="slot-v">{fmt(slot.subslotActualCoinQty)}</div></div>
-              <div><div className="slot-k">Submitted Rate</div><div className="slot-v">{fmt(slot.subslotSubmittedRate)}</div></div>
-              <div><div className="slot-k">Actual Rate</div><div className="slot-v">{fmt(slot.subslotActualRate)}</div></div>
-              <div><div className="slot-k">Live Now</div><div className="slot-v">{subslotLiveNowLabel(slot)}</div></div>
-              <div><div className="slot-k">Subslot Gross</div><div className="slot-v">{pctNum(slot.subslotGrossPct)}</div></div>
-              <div><div className="slot-k">Subslot Net</div><div className="slot-v">{pctNum(slot.subslotNetPct)}</div></div>
-              <div><div className="slot-k">Peak Bid</div><div className="slot-v">{fmt(slot.subslotPeakBid)}</div></div>
-              <div><div className="slot-k">Drawdown</div><div className="slot-v">{pctNum(slot.subslotDrawdownPct)}</div></div>
-              <div><div className="slot-k">Exit Reason</div><div className="slot-v">{slot.subslotExitReason ?? "—"}</div></div>
-              <div><div className="slot-k">Profit AUD</div><div className="slot-v">{moneyAud(slot.subslotProfitAud)}</div></div>
-              <div><div className="slot-k">Profit %</div><div className="slot-v">{pctNum(slot.subslotProfitPct)}</div></div>
-              <div><div className="slot-k">Pending Merge</div><div className="slot-v">{moneyAud(slot.subslotPendingMergeAud)}</div></div>
-              <div><div className="slot-k">Last Merged</div><div className="slot-v">{moneyAud(slot.subslotLastMergedAud)}</div></div>
-              <div><div className="slot-k">Lifetime Profit</div><div className="slot-v">{moneyAud(slot.subslotLifetimeProfitAud)}</div></div>
-              <div><div className="slot-k">Lifetime Cycles</div><div className="slot-v">{slot.subslotLifetimeCycles ?? 0}</div></div>
-              <div><div className="slot-k">Updated</div><div className="slot-v">{subslotHeartbeatLabel(slot, nowMs)}</div></div>
-              <div><div className="slot-k">Reconcile Note</div><div className="slot-v">{slot.subslotLastReconcileNote ?? "—"}</div></div>
-              <div><div className="slot-k">Last Error</div><div className="slot-v">{slot.subslotLastError ?? "—"}</div></div>
+              <div><div className="slot-k">Total Jrd Secondary</div><div className="slot-v">{getSubslots(slot).length}</div></div>
+              <div><div className="slot-k">Active</div><div className="slot-v">{getActiveSubslots(slot).length}</div></div>
+              <div><div className="slot-k">Pending Entry</div><div className="slot-v">{hasPendingSubslotBuys(slot) ? "YES" : "NO"}</div></div>
+              <div><div className="slot-k">Pending Exit</div><div className="slot-v">{hasPendingSubslotSells(slot) ? "YES" : "NO"}</div></div>
+              <div><div className="slot-k">Open Jrd Secondary</div><div className="slot-v">{getSubslotOpenCount(slot)}</div></div>
+              <div><div className="slot-k">Closed Jrd Secondary</div><div className="slot-v">{getClosedSubslotCount(slot)}</div></div>
+              <div><div className="slot-k">Realized Jrd Secondary PnL</div><div className="slot-v">{moneyAud(getSubslotRealizedProfit(slot))}</div></div>
+              <div><div className="slot-k">Latest Jrd Secondary</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
+              <div><div className="slot-k">Latest Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
+              <div><div className="slot-k">Latest Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
             </div>
+
+            <div className="slot-section">Latest Jrd Secondary</div>
+            <div><div className="slot-k">Live Analysis</div><div className="slot-v">{primaryLiveSubslotAnalysis(slot, nowMs)}</div></div>
+
+            {getSubslots(slot).length ? (
+              <div className="subslot-list">
+                {getSubslots(slot).map((subslot, index) => (
+                  <div key={subslot.subslotId ?? `${slot.id}-modal-subslot-${index}`} className="subslot-card">
+                    <div className="slot-section">
+                      Jrd Secondary #{subslot.subslotSequence ?? index + 1} • {subslot.subslotId ?? "legacy"} • {subslotStateBadgeLabel(subslot)}
+                    </div>
+
+                    <div className="slot-modal-grid">
+                      <div><div className="slot-k">State</div><div className="slot-v">{subslot.subslotState ?? "—"}</div></div>
+                      <div><div className="slot-k">Mode</div><div className="slot-v">{subslot.subslotEntryMode ?? "—"}</div></div>
+                      <div><div className="slot-k">Signal</div><div className="slot-v">{subslot.subslotSignalState ?? "—"}</div></div>
+                      <div><div className="slot-k">Confirm Ticks</div><div className="slot-v">{subslot.subslotConfirmTicks ?? "—"}</div></div>
+                      <div><div className="slot-k">Entry Mid</div><div className="slot-v">{fmt(subslot.subslotEntryMid)}</div></div>
+                      <div><div className="slot-k">Live Now</div><div className="slot-v">{subslotLiveNowLabel(subslot, slot)}</div></div>
+                      <div><div className="slot-k">Gross</div><div className="slot-v">{pctNum(subslot.subslotGrossPct)}</div></div>
+                      <div><div className="slot-k">Net</div><div className="slot-v">{pctNum(subslot.subslotNetPct)}</div></div>
+                      <div><div className="slot-k">Profit AUD</div><div className="slot-v">{moneyAud(subslot.subslotProfitAud)}</div></div>
+                      <div><div className="slot-k">Profit %</div><div className="slot-v">{pctNum(subslot.subslotProfitPct)}</div></div>
+                      <div><div className="slot-k">Bounce</div><div className="slot-v">{pctNum(subslot.subslotBouncePct)}</div></div>
+                      <div><div className="slot-k">EMA Gap</div><div className="slot-v">{pctNum(subslot.subslotEmaGapPct)}</div></div>
+                      <div><div className="slot-k">Recovered</div><div className="slot-v">{subslot.subslotRecoveredConfirmed == null ? "—" : subslot.subslotRecoveredConfirmed ? "YES" : "NO"}</div></div>
+                      <div><div className="slot-k">Exit Reason</div><div className="slot-v">{subslot.subslotExitReason ?? "—"}</div></div>
+                      <div><div className="slot-k">Opened</div><div className="slot-v">{subslot.subslotOpenedAt ? ageLabel(nowMs - subslot.subslotOpenedAt) : "—"}</div></div>
+                      <div><div className="slot-k">Closed</div><div className="slot-v">{subslot.subslotClosedAt ? ageLabel(nowMs - subslot.subslotClosedAt) : "—"}</div></div>
+                      <div><div className="slot-k">Updated</div><div className="slot-v">{subslotHeartbeatLabel(subslot, nowMs)}</div></div>
+                      <div><div className="slot-k">Reconcile Note</div><div className="slot-v">{subslot.subslotLastReconcileNote ?? "—"}</div></div>
+                    </div>
+
+                    <div><div className="slot-k">Live Analysis</div><div className="slot-v">{liveSubslotAnalysis(subslot, slot, nowMs)}</div></div>
+
+                    {subslot.subslotLastError ? (
+                      <div><div className="slot-k">Last Error</div><div className="slot-v">{subslot.subslotLastError}</div></div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="slot-v">No Jrd Secondary records available.</div>
+            )}
           </CollapsibleBlock>
 
           <CollapsibleBlock title="Tracking / Entry Structure" defaultOpen={false}>
@@ -2277,7 +2629,7 @@ const SlotModal = React.memo(function SlotModal(props: {
             <div className="slot-rules">
               <div>Permanent identity: one slot belongs to one fixed coin market.</div>
               <div>Market regime leads the explanation layer.</div>
-              <div>Parent slot and tactical subslot remain separate accounting layers.</div>
+              <div>Jrd Primary and Jrd Secondary remain separate accounting layers.</div>
               <div>Deploy, hold, lock, exit, and re-entry decisions remain deterministic.</div>
               <div className="slot-rules-note">
                 This slot is part of the fixed-slot Jeroid ledger, not a selector pool.
@@ -2302,6 +2654,9 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
     breakoutReady: number;
     waiting: number;
     activeSubslots: number;
+    pendingSubslotEntries: number;
+    pendingSubslotExits: number;
+    closedSubslots: number;
   };
   topTrackingCoins: string;
   executionMode: string;
@@ -2341,8 +2696,23 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
           </div>
 
           <div className="engine-mini-row">
-            <div className="mini-k">Active Subslots</div>
+            <div className="mini-k">Active Jrd Secondary</div>
             <div className="mini-v">{props.overviewCounts.activeSubslots}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Pending Entry</div>
+            <div className="mini-v">{props.overviewCounts.pendingSubslotEntries}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Pending Exit</div>
+            <div className="mini-v">{props.overviewCounts.pendingSubslotExits}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Closed Jrd Secondary</div>
+            <div className="mini-v">{props.overviewCounts.closedSubslots}</div>
           </div>
 
           <div className="engine-mini-row">
@@ -2422,6 +2792,13 @@ export default function Engine() {
 
     if (q) {
       list = list.filter((s) => {
+        const subslotFields = getSubslots(s).flatMap((subslot) => [
+          subslot.subslotId ?? "",
+          subslot.subslotState ?? "",
+          subslot.subslotSignalState ?? "",
+          subslot.subslotEntryMode ?? "",
+          subslot.subslotExitReason ?? "",
+        ]);
         const fields = [
           s.coin ?? "",
           s.market ?? "",
@@ -2431,6 +2808,7 @@ export default function Engine() {
           s.rotationStage ?? "",
           s.regime ?? "",
           s.consolidationState ?? "",
+          ...subslotFields,
         ];
         return fields.some((x) => String(x).toUpperCase().includes(q));
       });
@@ -2547,6 +2925,9 @@ export default function Engine() {
     breakoutReady: 0,
     waiting: 0,
     activeSubslots: 0,
+    pendingSubslotEntries: 0,
+    pendingSubslotExits: 0,
+    closedSubslots: 0,
   };
 
   for (const s of slotRows) {
@@ -2556,7 +2937,13 @@ export default function Engine() {
     if (regime.includes("CONSOLIDATION")) out.consolidation += 1;
     if (s.consolidationBreakoutReady === true) out.breakoutReady += 1;
     if (String(s.state).toUpperCase() === "WAITING_ENTRY") out.waiting += 1;
-    if (String(s.subslotState || "").toUpperCase() === "ACTIVE") out.activeSubslots += 1;
+    for (const subslot of getSubslots(s)) {
+      const state = String(subslot.subslotState || "").toUpperCase();
+      if (state === "ACTIVE") out.activeSubslots += 1;
+      if (state === "BUY_SUBMITTED") out.pendingSubslotEntries += 1;
+      if (state === "SELL_SUBMITTED") out.pendingSubslotExits += 1;
+      if (state === "CLOSED") out.closedSubslots += 1;
+    }
   }
 
   return out;

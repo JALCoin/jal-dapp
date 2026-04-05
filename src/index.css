@@ -6232,21 +6232,24 @@ a.button[aria-disabled="true"]{
     .6fr;
 }
 
-/* 2. Prevent ugly wrapping everywhere */
+/* 2. Let dense engine data wrap instead of disappearing */
 .engine-ledger .ledger-row > div{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* 3. Allow ONLY analysis to wrap */
-.engine-ledger .ledger-analysis{
+  overflow:visible;
+  text-overflow:unset;
   white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
 
-/* 4. Fix regime breaking */
-.engine-ledger .ledger-row > div:nth-child(5){
+/* 3. Keep number-heavy cells compact and stable */
+.engine-ledger .ledger-row > div:nth-child(1),
+.engine-ledger .ledger-row > div:nth-child(8),
+.engine-ledger .ledger-row > div:nth-child(9){
   white-space:nowrap;
+}
+
+/* 4. Fix regime/subslot breaking without truncation */
+.engine-ledger .ledger-row > div:nth-child(5){
   font-size:.82rem;
   letter-spacing:.04em;
 }
@@ -6254,14 +6257,14 @@ a.button[aria-disabled="true"]{
 /* 5. Calm analysis dominance */
 .engine-ledger .ledger-analysis{
   font-size:.74rem;
-  line-height:1.35;
-  opacity:.82;
+  line-height:1.48;
+  opacity:.88;
 }
 
 /* 6. Row alignment consistency */
 .engine-ledger .ledger-row{
-  align-items:center;
-  min-height:56px;
+  align-items:start;
+  min-height:64px;
 }
 
 /* 7. Action column alignment */
@@ -6276,7 +6279,149 @@ a.button[aria-disabled="true"]{
   letter-spacing:.16em;
 }
 
-/* 9. Container tightening */
+/* 9. Engine readability and interaction upgrades */
+.engine-carousel-k,
+.engine-subslot-k,
+.ledger-subpanel-k,
+.slot-k{
+  color:rgba(231,255,247,.66);
+}
+
+.engine-carousel-k,
+.engine-subslot-k{
+  font-size:.68rem;
+}
+
+.engine-carousel-dot{
+  width:14px;
+  height:14px;
+  border-width:1px;
+  box-shadow:0 0 0 4px rgba(255,255,255,.02);
+}
+
+.engine-carousel-dot:hover,
+.engine-carousel-dot:focus-visible{
+  transform:scale(1.08);
+  border-color:rgba(17,241,167,.72);
+  background:rgba(17,241,167,.28);
+}
+
+.engine-subslot{
+  background:
+    linear-gradient(90deg, rgba(0,240,255,.08), rgba(0,240,255,0) 14%),
+    rgba(0,0,0,.22);
+}
+
+.engine-subslot.is-deploying{
+  background:
+    linear-gradient(90deg, rgba(244,200,106,.12), rgba(244,200,106,0) 14%),
+    rgba(0,0,0,.22);
+}
+
+.engine-subslot.is-exiting{
+  background:
+    linear-gradient(90deg, rgba(255,107,107,.12), rgba(255,107,107,0) 14%),
+    rgba(0,0,0,.22);
+}
+
+.engine-subslot.is-muted{
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,0) 14%),
+    rgba(0,0,0,.22);
+}
+
+.slot-modal-panel,
+.ledger-subpanel,
+.engine-subslot{
+  scrollbar-color:rgba(17,241,167,.4) rgba(255,255,255,.05);
+}
+
+/* 10. Mobile engine rows become labeled cards */
+@media (max-width:760px){
+  .engine-ledger .ledger-row{
+    gap:10px;
+    align-items:stretch;
+  }
+
+  .engine-ledger .ledger-row > div{
+    position:relative;
+    padding-top:18px;
+    min-height:0;
+  }
+
+  .engine-ledger .ledger-row > div::before{
+    position:absolute;
+    top:0;
+    left:0;
+    font-size:.64rem;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:rgba(231,255,247,.56);
+    white-space:nowrap;
+    content:"";
+  }
+
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(1)::before{ content:"Slot"; }
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(2)::before{ content:"Market"; }
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(3)::before{ content:"Decision"; }
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(4)::before{ content:"Position"; }
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(5)::before{ content:"Jrd Secondary"; }
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(6)::before{ content:"Live Analysis"; }
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(7)::before{ content:"Health"; }
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(8)::before{ content:"Net"; }
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(9)::before{ content:"Action"; }
+
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(1)::before{ content:"Slot"; }
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(2)::before{ content:"Coin"; }
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(3)::before{ content:"Market"; }
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(4)::before{ content:"State"; }
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(5)::before{ content:"Regime"; }
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(6)::before{ content:"Health"; }
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(7)::before{ content:"Unit"; }
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(8)::before{ content:"Net"; }
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(9)::before{ content:"Action"; }
+
+  .engine-ledger .ledger-analysis{
+    font-size:.79rem;
+    line-height:1.5;
+  }
+
+  .engine-carousel-dot{
+    width:18px;
+    height:18px;
+  }
+}
+
+/* 11. Engine-specific reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .engine-carousel-card,
+  .engine-priority-card,
+  .engine-subslot,
+  .engine-section-tab,
+  .engine-carousel-dot,
+  .ledger-row,
+  .button,
+  .card{
+    transition:none !important;
+    animation:none !important;
+  }
+
+  .engine-carousel-card:hover,
+  .engine-priority-card:hover,
+  .button:hover,
+  .card:hover,
+  .engine-section-tab:hover{
+    transform:none !important;
+  }
+
+  .engine-bg-logo,
+  .engine-window::before,
+  .machine-surface::after{
+    animation:none !important;
+  }
+}
+
+/* 12. Container tightening */
 .engine-shell .home-wrap{
   max-width:1240px;
 }
