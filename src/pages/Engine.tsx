@@ -610,6 +610,16 @@ function reasonLabel(reason: string | null | undefined) {
   return String(reason).replace(/_/g, " ");
 }
 
+function getRotationBestOutSourceType(slot: SlotRow) {
+  const bestOut = slot.bestOut as { sourceType?: string | null } | undefined;
+  return bestOut?.sourceType ?? "â€”";
+}
+
+function getRotationBestOutReason(slot: SlotRow) {
+  const bestOut = slot.bestOut as { reason?: string | null; blockedReason?: string | null } | undefined;
+  return bestOut?.reason ?? bestOut?.blockedReason ?? slot.rotationReason ?? "â€”";
+}
+
 function isHoldingFamilyState(state: SlotState | string | null | undefined) {
   const s = String(state || "").toUpperCase();
   return (
@@ -2618,6 +2628,18 @@ const SlotModal = React.memo(function SlotModal(props: {
             slot.rotationEligibleIn != null) && (
             <CollapsibleBlock title="Rotation / Capital Handoff" defaultOpen={false}>
               <div className="slot-section">Rotation Snapshot</div>
+              <div className="slot-section">Rotation Recommendation</div>
+              <div className="slot-modal-grid">
+                <div><div className="slot-k">Target Slot</div><div className="slot-v">{slot.rotationTargetSlotId ?? "â€”"}</div></div>
+                <div><div className="slot-k">Source Slot</div><div className="slot-v">{slot.rotationSourceSlotId ?? slot.rotationFundingSourceSlotId ?? "â€”"}</div></div>
+                <div><div className="slot-k">Target Coin</div><div className="slot-v">{slot.rotationTargetCoin ?? "â€”"}</div></div>
+                <div><div className="slot-k">Best OUT Source</div><div className="slot-v">{getRotationBestOutSourceType(slot)}</div></div>
+                <div><div className="slot-k">Out Score</div><div className="slot-v">{fmt(slot.rotationScoreOut)}</div></div>
+                <div><div className="slot-k">In Score</div><div className="slot-v">{fmt(slot.rotationScoreIn)}</div></div>
+                <div><div className="slot-k">Out Blocked</div><div className="slot-v">{slot.rotationOutBlockedReason ?? "â€”"}</div></div>
+                <div><div className="slot-k">In Blocked</div><div className="slot-v">{slot.rotationInBlockedReason ?? "â€”"}</div></div>
+                <div><div className="slot-k">Recommendation</div><div className="slot-v">{getRotationBestOutReason(slot)}</div></div>
+              </div>
 
               <div className="slot-modal-grid">
                 <div><div className="slot-k">Reservation</div><div className="slot-v">{slot.rotationReservationId ?? "—"}</div></div>

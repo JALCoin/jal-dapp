@@ -5468,6 +5468,12 @@ a.button[aria-disabled="true"]{
   align-items:start;
 }
 
+.secondary-metrics{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+  gap:10px;
+}
+
 .ledger-empty{
   padding:18px;
   color:rgba(231,255,247,.66);
