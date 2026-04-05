@@ -5441,6 +5441,33 @@ a.button[aria-disabled="true"]{
   justify-content:flex-end;
 }
 
+.secondary-summary{
+  background:
+    linear-gradient(90deg, rgba(17,241,167,.10), rgba(17,241,167,0) 18%),
+    rgba(0,0,0,.18);
+}
+
+.secondary-list{
+  display:grid;
+  gap:12px;
+}
+
+.secondary-card{
+  display:grid;
+  gap:12px;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    linear-gradient(90deg, rgba(0,240,255,.08), rgba(0,240,255,0) 14%),
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(0,0,0,.18));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
+}
+
+.secondary-grid{
+  align-items:start;
+}
+
 .ledger-empty{
   padding:18px;
   color:rgba(231,255,247,.66);
