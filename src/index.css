@@ -4598,7 +4598,7 @@ a.button[aria-disabled="true"]{
 .engine-capture-grid,
 .engine-ledger-topgrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 
@@ -5472,6 +5472,26 @@ a.button[aria-disabled="true"]{
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
   gap:10px;
+}
+
+.capital-panel{
+  gap: 14px;
+}
+
+.capital-summary{
+  padding: 14px;
+  border-radius: 16px;
+}
+
+.capital-summary-grid,
+.capital-coin-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+  gap:12px;
+}
+
+.capital-metrics{
+  grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));
 }
 
 .ledger-empty{

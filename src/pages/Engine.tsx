@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /* =========================
    Types
@@ -485,6 +485,49 @@ type PublicMetaResponse = {
   market?: { snapshot?: Snapshot | null };
 };
 
+type PublicCapitalCoin = {
+  coin?: string;
+  availableCoin?: number | null;
+  audValue?: number | null;
+  rate?: number | null;
+  walletSourceReady?: boolean | null;
+  walletSourceBlockedReason?: string | null;
+  movableAudEstimate?: number | null;
+  cooldownRemainingMs?: number | null;
+  slotId?: string | null;
+  slotState?: string | null;
+  trackingState?: string | null;
+  rotationEligibleOut?: boolean | null;
+  rotationScoreOut?: number | null;
+  rotationOutBlockedReason?: string | null;
+  rotationTargetSlotId?: string | null;
+  rotationTargetCoin?: string | null;
+  rotationEdgeScore?: number | null;
+  rotationReason?: string | null;
+};
+
+type PublicCapitalResponse = {
+  ok?: boolean;
+  ts?: number;
+  audAvailable?: number | null;
+  audBalance?: number | null;
+  walletAudValue?: number | null;
+  movableAudEstimate?: number | null;
+  walletSourceEnabled?: boolean | null;
+  cacheMs?: number | null;
+  stale?: boolean | null;
+  generatedAt?: number | null;
+  refreshError?: string | null;
+  rotation?: {
+    enabled?: boolean | null;
+    executorEnabled?: boolean | null;
+    dryRun?: boolean | null;
+    liveEntryEnabled?: boolean | null;
+    liveExitEnabled?: boolean | null;
+  } | null;
+  coins?: PublicCapitalCoin[] | null;
+};
+
 type PublicEventsResponse = { ok: boolean; ts: number; rows: SlotEvent[] };
 type PublicSlotsResponse = { ok: boolean; ts: number; rows: SlotRow[] };
 
@@ -492,6 +535,7 @@ type EngineData = {
   rows: MarketRow[];
   snap: Snapshot | null;
   meta: PublicMetaResponse | null;
+  capital: PublicCapitalResponse | null;
   slotRows: SlotRow[];
   events: SlotEvent[];
   err: string | null;
@@ -505,6 +549,8 @@ type EngineData = {
 const PROD_DEFAULT = "https://jal-engine-service-production.up.railway.app";
 const DEV_DEFAULT = "http://localhost:8787";
 const CAROUSEL_INTERVAL_MS = 4500;
+const ENGINE_POLL_INTERVAL_MS = 3000;
+const CAPITAL_POLL_INTERVAL_MS = 15000;
 
 /* =========================
    Helpers
@@ -522,19 +568,19 @@ function pickBase(): string {
 }
 
 function fmt(n: number | null | undefined) {
-  if (n == null || !Number.isFinite(n)) return "—";
+  if (n == null || !Number.isFinite(n)) return "-";
   if (Math.abs(n) >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
   if (Math.abs(n) >= 1) return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
   return n.toLocaleString(undefined, { maximumFractionDigits: 10 });
 }
 
 function pctNum(p: number | null | undefined) {
-  if (p == null || !Number.isFinite(p)) return "—";
+  if (p == null || !Number.isFinite(p)) return "-";
   return `${p.toFixed(3)}%`;
 }
 
 function moneyAud(n: number | null | undefined) {
-  if (n == null || !Number.isFinite(n)) return "—";
+  if (n == null || !Number.isFinite(n)) return "-";
   return n.toLocaleString(undefined, {
     style: "currency",
     currency: "AUD",
@@ -547,7 +593,7 @@ function roundMoney(n: number) {
 }
 
 function msToCountdown(ms: number | null | undefined) {
-  if (ms == null || !Number.isFinite(ms)) return "—";
+  if (ms == null || !Number.isFinite(ms)) return "-";
   const s = Math.max(0, Math.floor(ms / 1000));
   const hh = Math.floor(s / 3600);
   const mm = Math.floor((s % 3600) / 60);
@@ -557,7 +603,7 @@ function msToCountdown(ms: number | null | undefined) {
 }
 
 function ageLabel(msSince: number | null | undefined) {
-  if (msSince == null || !Number.isFinite(msSince)) return "—";
+  if (msSince == null || !Number.isFinite(msSince)) return "-";
   const s = Math.max(0, Math.floor(msSince / 1000));
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
@@ -576,7 +622,7 @@ function fmtEventTime(atMs: number) {
 }
 
 function trackingLabel(s: SlotRow) {
-  return s.trackingState || "—";
+  return s.trackingState || "-";
 }
 
 function stateLabel(s: SlotRow) {
@@ -584,7 +630,7 @@ function stateLabel(s: SlotRow) {
 }
 
 function slotCoin(s: SlotRow) {
-  return s.coin ?? "—";
+  return s.coin ?? "-";
 }
 
 function effectiveEntryLabel(s: SlotRow) {
@@ -592,13 +638,13 @@ function effectiveEntryLabel(s: SlotRow) {
   if (s.state === "WAITING_ENTRY" && s.reentryTargetMid != null && Number.isFinite(s.reentryTargetMid)) {
     return fmt(s.reentryTargetMid);
   }
-  return "—";
+  return "-";
 }
 
 function effectiveNowLabel(s: SlotRow) {
   if (s.nowMid != null && Number.isFinite(s.nowMid)) return fmt(s.nowMid);
   if (s.candidateMidPrev != null && Number.isFinite(s.candidateMidPrev)) return fmt(s.candidateMidPrev);
-  return "—";
+  return "-";
 }
 
 function lockDisplay(s: SlotRow) {
@@ -606,18 +652,68 @@ function lockDisplay(s: SlotRow) {
 }
 
 function reasonLabel(reason: string | null | undefined) {
-  if (!reason) return "—";
+  if (!reason) return "-";
   return String(reason).replace(/_/g, " ");
 }
 
-function getRotationBestOutSourceType(slot: SlotRow) {
-  const bestOut = slot.bestOut as { sourceType?: string | null } | undefined;
-  return bestOut?.sourceType ?? "â€”";
+function walletReadinessLabel(capitalCoin: PublicCapitalCoin | null | undefined) {
+  if (!capitalCoin) return "-";
+  if (capitalCoin.walletSourceReady === true) return "READY";
+  const blocked = String(capitalCoin.walletSourceBlockedReason || "").toLowerCase();
+  if (blocked === "wallet_rotation_cooldown") return "COOLDOWN";
+  if (blocked === "wallet_source_below_min_aud") return "BELOW MIN SIZE";
+  if (blocked === "wallet_coin_not_available") return "NO WALLET COIN";
+  if (blocked) return "BLOCKED";
+  return "STANDBY";
 }
 
-function getRotationBestOutReason(slot: SlotRow) {
-  const bestOut = slot.bestOut as { reason?: string | null; blockedReason?: string | null } | undefined;
-  return bestOut?.reason ?? bestOut?.blockedReason ?? slot.rotationReason ?? "â€”";
+function walletReadinessTone(capitalCoin: PublicCapitalCoin | null | undefined) {
+  const label = walletReadinessLabel(capitalCoin);
+  if (label === "READY") return "state-positive";
+  if (label === "COOLDOWN") return "state-warn";
+  if (label === "-" || label === "STANDBY") return "state-muted";
+  return "state-bad";
+}
+
+function rotationModeLabel(capital: PublicCapitalResponse | null | undefined) {
+  if (!capital?.rotation?.enabled) return "OFF";
+  if (capital.rotation.executorEnabled && capital.rotation.dryRun) return "DRY RUN";
+  if (capital.rotation.executorEnabled && (capital.rotation.liveEntryEnabled || capital.rotation.liveExitEnabled)) {
+    return "LIVE";
+  }
+  if (!capital.rotation.executorEnabled) return "POLICY ONLY";
+  return "READY";
+}
+
+function capitalFreshnessLabel(capital: PublicCapitalResponse | null | undefined, nowMs: number) {
+  if (!capital?.generatedAt) return "-";
+  const age = ageLabel(nowMs - capital.generatedAt);
+  return capital.stale ? `STALE | ${age}` : `FRESH | ${age}`;
+}
+
+function capitalReasonLabel(coin: PublicCapitalCoin | null | undefined) {
+  if (!coin) return "-";
+  if (coin.walletSourceReady && !coin.rotationEligibleOut) {
+    return "Wallet capital is available, but no active rotation recommendation is selected yet.";
+  }
+  return reasonLabel(coin.rotationReason ?? coin.rotationOutBlockedReason ?? coin.walletSourceBlockedReason);
+}
+
+function topWalletCoins(capital: PublicCapitalResponse | null | undefined, limit = 5) {
+  const list = Array.isArray(capital?.coins) ? capital.coins.slice() : [];
+  return list
+    .sort((a, b) => (b.audValue ?? 0) - (a.audValue ?? 0))
+    .slice(0, Math.max(0, limit));
+}
+
+function movableWalletCoins(capital: PublicCapitalResponse | null | undefined) {
+  const list = Array.isArray(capital?.coins) ? capital.coins.slice() : [];
+  return list
+    .filter(
+      (coin) =>
+        (coin.movableAudEstimate ?? 0) > 0 || coin.walletSourceReady === true || coin.rotationEligibleOut === true
+    )
+    .sort((a, b) => (b.movableAudEstimate ?? 0) - (a.movableAudEstimate ?? 0));
 }
 
 function isHoldingFamilyState(state: SlotState | string | null | undefined) {
@@ -655,7 +751,7 @@ function slotHeartbeatLabel(s: SlotRow, nowMs: number) {
   if (s.lastSeenAt && Number.isFinite(s.lastSeenAt)) {
     return ageLabel(nowMs - s.lastSeenAt);
   }
-  return "—";
+  return "-";
 }
 
 function getSubslots(slot: SlotRow): SubslotRow[] {
@@ -845,14 +941,14 @@ function countActiveSecondaries(slot: SlotRow) {
 function subslotLiveNowLabel(subslot: SubslotRow, parent: SlotRow) {
   if (subslot.subslotNowMid != null && Number.isFinite(subslot.subslotNowMid)) return fmt(subslot.subslotNowMid);
   if (parent.nowMid != null && Number.isFinite(parent.nowMid)) return fmt(parent.nowMid);
-  return "—";
+  return "-";
 }
 
 function subslotHeartbeatLabel(subslot: SubslotRow, nowMs: number) {
   if (subslot.subslotLastReconcileAt && Number.isFinite(subslot.subslotLastReconcileAt)) {
     return ageLabel(nowMs - subslot.subslotLastReconcileAt);
   }
-  return "—";
+  return "-";
 }
 
 function computeSlotFinancials(slotRows: SlotRow[]) {
@@ -1038,12 +1134,12 @@ function primarySubslotDecisionLabel(slot: SlotRow) {
 
 function primarySubslotLiveNowLabel(slot: SlotRow) {
   const primary = getPrimarySecondarySnapshot(slot);
-  return primary ? subslotLiveNowLabel(primary, slot) : "â€”";
+  return primary ? subslotLiveNowLabel(primary, slot) : "-";
 }
 
 function primarySubslotHeartbeatLabel(slot: SlotRow, nowMs: number) {
   const primary = getPrimarySecondarySnapshot(slot);
-  return primary ? subslotHeartbeatLabel(primary, nowMs) : "â€”";
+  return primary ? subslotHeartbeatLabel(primary, nowMs) : "-";
 }
 
 function subslotStateBadgeLabel(subslot: SubslotRow) {
@@ -1162,7 +1258,7 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   }
 
   // Updated Time
-  if (updated !== "—") {
+  if (updated !== "-") {
     parts.push(`Updated ${updated} ago.`);
   }
 
@@ -1230,7 +1326,7 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
   }
 
   // Updated Time
-  if (updated !== "—") {
+  if (updated !== "-") {
     parts.push(`Updated ${updated} ago.`);
   }
 
@@ -1246,14 +1342,14 @@ function detailRowsForSlot(s: SlotRow, nowMs: number) {
   return [
     { k: "Slot", v: s.id },
     { k: "Coin", v: slotCoin(s) },
-    { k: "Market", v: s.market ?? "—" },
+    { k: "Market", v: s.market ?? "-" },
     { k: "State", v: stateLabel(s) },
     { k: "Tracking", v: trackingLabel(s) },
     { k: "Decision", v: engineDecisionLabel(s) },
     { k: "Regime", v: regimeLabel(s) },
-    { k: "Regime strength", v: s.regimeStrength != null ? String(s.regimeStrength) : "—" },
-    { k: "Trend score", v: s.regimeTrendScore != null ? String(s.regimeTrendScore) : "—" },
-    { k: "Breakout ready", v: s.consolidationBreakoutReady == null ? "—" : s.consolidationBreakoutReady ? "YES" : "NO" },
+    { k: "Regime strength", v: s.regimeStrength != null ? String(s.regimeStrength) : "-" },
+    { k: "Trend score", v: s.regimeTrendScore != null ? String(s.regimeTrendScore) : "-" },
+    { k: "Breakout ready", v: s.consolidationBreakoutReady == null ? "-" : s.consolidationBreakoutReady ? "YES" : "NO" },
     { k: "Entry", v: effectiveEntryLabel(s) },
     { k: "Now", v: effectiveNowLabel(s) },
     { k: "Spread", v: pctNum(s.nowSpreadPct) },
@@ -1400,6 +1496,7 @@ function useEngineData(BASE: string): EngineData {
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [meta, setMeta] = useState<PublicMetaResponse | null>(null);
+  const [capital, setCapital] = useState<PublicCapitalResponse | null>(null);
   const [slotRows, setSlotRows] = useState<SlotRow[]>([]);
   const [events, setEvents] = useState<SlotEvent[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -1438,6 +1535,10 @@ function useEngineData(BASE: string): EngineData {
     return await fetchJson<PublicMetaResponse>("/api/public/meta", signal);
   }, [fetchJson]);
 
+  const fetchPublicCapital = useCallback(async (signal?: AbortSignal) => {
+    return await fetchJson<PublicCapitalResponse>("/api/public/capital", signal);
+  }, [fetchJson]);
+
   const fetchPublicSlots = useCallback(async (signal?: AbortSignal) => {
     const j = await fetchJson<PublicSlotsResponse>("/api/public/slots", signal);
     const list = Array.isArray(j?.rows) ? j.rows : [];
@@ -1450,7 +1551,7 @@ function useEngineData(BASE: string): EngineData {
     return list.sort((a, b) => (b.at || 0) - (a.at || 0));
   }, [fetchJson]);
 
-  const pollAll = useCallback(async () => {
+  const pollCore = useCallback(async () => {
     const pollId = ++latestPollRef.current;
     const ctrl = new AbortController();
 
@@ -1481,23 +1582,48 @@ function useEngineData(BASE: string): EngineData {
     } finally {
       ctrl.abort();
     }
-      }, [BASE, fetchMarketRows, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
+  }, [BASE, fetchMarketRows, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
+
+  const pollCapital = useCallback(async () => {
+    const ctrl = new AbortController();
+
+    try {
+      const capitalRes = await fetchPublicCapital(ctrl.signal);
+      if (disposedRef.current) return;
+      setCapital(capitalRes);
+    } catch (e: unknown) {
+      if (disposedRef.current) return;
+    } finally {
+      ctrl.abort();
+    }
+  }, [fetchPublicCapital]);
+
+  const refresh = useCallback(async () => {
+    await Promise.all([pollCore(), pollCapital()]);
+  }, [pollCore, pollCapital]);
 
   useEffect(() => {
     disposedRef.current = false;
 
-    void pollAll();
-    const id = window.setInterval(() => {
-      void pollAll();
-    }, 3000);
+    void pollCore();
+    void pollCapital();
+
+    const coreId = window.setInterval(() => {
+      void pollCore();
+    }, ENGINE_POLL_INTERVAL_MS);
+
+    const capitalId = window.setInterval(() => {
+      void pollCapital();
+    }, CAPITAL_POLL_INTERVAL_MS);
 
     return () => {
       disposedRef.current = true;
-      window.clearInterval(id);
+      window.clearInterval(coreId);
+      window.clearInterval(capitalId);
     };
-  }, [pollAll]);
+  }, [pollCore, pollCapital]);
 
-  return { rows, snap, meta, slotRows, events, err, refresh: pollAll };
+  return { rows, snap, meta, capital, slotRows, events, err, refresh };
 }
 
 /* =========================
@@ -1572,7 +1698,7 @@ const EngineHero = React.memo(function EngineHero(props: {
                 <div className="engine-auth-hint">
           Clarity first. Diagnostics second. Every slot is explained as a machine decision.
           <br />
-          Snapshot: {snap?.lastPollIso ?? snap?.lastOkIso ?? "—"}
+          Snapshot: {snap?.lastPollIso ?? snap?.lastOkIso ?? "-"}
         </div>
       </aside>
     </header>
@@ -1583,6 +1709,10 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
   openPnl: number;
   windowHarvest: number;
   visibleRealized: number;
+  audAvailable: number | null | undefined;
+  walletAudValue: number | null | undefined;
+  movableAudEstimate: number | null | undefined;
+  rotationMode: string;
   nextSweepLabel: string;
   currentWindow: number | null | undefined;
   lastSweepAgo: string;
@@ -1601,8 +1731,20 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
         <div className="cap-v">{moneyAud(props.openPnl)}</div>
         <div className="cap-sub">
           <span>Window Harvest {moneyAud(props.windowHarvest)}</span>
-          <span>•</span>
+          <span>|</span>
           <span>Visible Realized {moneyAud(props.visibleRealized)}</span>
+        </div>
+      </div>
+
+      <div className="engine-capture card machine-surface panel-frame">
+        <div className="cap-k">Capital Mobility</div>
+        <div className="cap-v">{moneyAud(props.audAvailable)}</div>
+        <div className="cap-sub">
+          <span>Wallet Value {moneyAud(props.walletAudValue)}</span>
+          <span>|</span>
+          <span>Movable {moneyAud(props.movableAudEstimate)}</span>
+          <span>|</span>
+          <span>{props.rotationMode}</span>
         </div>
       </div>
 
@@ -1610,8 +1752,8 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
         <div className="cap-k">Registry Sweep</div>
         <div className="cap-v">{props.nextSweepLabel}</div>
         <div className="cap-sub">
-          <span>Window {props.currentWindow ?? "—"}</span>
-          <span>•</span>
+          <span>Window {props.currentWindow ?? "-"}</span>
+          <span>|</span>
           <span>Last sweep {props.lastSweepAgo}</span>
         </div>
       </div>
@@ -1623,7 +1765,7 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
         </div>
         <div className="cap-sub">
           <span>Tracking {props.trackingCount}</span>
-          <span>•</span>
+          <span>|</span>
           <span>Holding {props.holdingCount}</span>
         </div>
       </div>
@@ -1633,7 +1775,7 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
         <div className="cap-v">{props.breakoutReady}</div>
         <div className="cap-sub">
           <span>Consolidation {props.consolidation}</span>
-          <span>•</span>
+          <span>|</span>
           <span>Active Jrd Secondary {props.activeSubslots}</span>
         </div>
       </div>
@@ -1677,7 +1819,7 @@ const PriorityRail = React.memo(function PriorityRail(props: {
             </div>
 
             <div className="engine-priority-line">
-              <strong>{slotCoin(s)}</strong> • {regimeLabel(s)}
+              <strong>{slotCoin(s)}</strong> | {regimeLabel(s)}
             </div>
 
             <div className="engine-priority-story">
@@ -1750,7 +1892,7 @@ const ControlsBar = React.memo(function ControlsBar(props: {
             props.setSortDir("asc");
           }}
         >
-          Sort: A→Z
+          Sort: A-Z
         </button>
 
         <button
@@ -1783,7 +1925,7 @@ const ControlsBar = React.memo(function ControlsBar(props: {
           className="engine-filter"
           value={props.query}
           onChange={(e) => props.setQuery(e.target.value)}
-          placeholder="Filter coins / states / regime…"
+          placeholder="Filter coins / states / regime..."
           aria-label="Filter"
         />
       </div>
@@ -1833,7 +1975,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
             }
             aria-label="Previous JRD"
           >
-            ←
+            {"<-"}
           </button>
 
           <div className="engine-carousel-counter">
@@ -1848,7 +1990,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
             }
             aria-label="Next JRD"
           >
-            →
+            {"->"}
           </button>
         </div>
       </div>
@@ -1867,7 +2009,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
             <div className="engine-carousel-card-top">
               <div className="engine-carousel-id">{carouselSlot.id}</div>
               <div className="engine-carousel-coin">
-                {slotCoin(carouselSlot)} <span>{carouselSlot.market ?? "—"}</span>
+                {slotCoin(carouselSlot)} <span>{carouselSlot.market ?? "-"}</span>
               </div>
             </div>
 
@@ -1967,13 +2109,13 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                 <div className="engine-subslot-grid">
                   <div className="engine-subslot-item">
                     <div className="engine-subslot-k">Signal</div>
-                    <div className="engine-subslot-v">{carouselSlot.subslotSignalState ?? "—"}</div>
+                    <div className="engine-subslot-v">{carouselSlot.subslotSignalState ?? "-"}</div>
                   </div>
 
                   <div className="engine-subslot-item">
                     <div className="engine-subslot-k">Confirm</div>
                     <div className="engine-subslot-v">
-                      {carouselSlot.subslotConfirmTicks != null ? carouselSlot.subslotConfirmTicks : "—"}
+                      {carouselSlot.subslotConfirmTicks != null ? carouselSlot.subslotConfirmTicks : "-"}
                     </div>
                   </div>
 
@@ -2080,7 +2222,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
       <div className="ledger-table">
         <div className="ledger-head">
   <div>Slot</div>
-  <div>Market</div>
+  <div>Regime</div>
   <div>Decision</div>
   <div>Position</div>
   <div>Jrd Secondary</div>
@@ -2098,7 +2240,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
   <div>{engineDecisionLabel(s)}</div>
   <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
   <div className={primarySubslotToneClass(s)}>
-    {primarySubslotDecisionLabel(s)} • {hasAnySubslots(s) ? `${getSecondaryRows(s).length} Jrd Secondary / ${countActiveSecondaries(s)} active` : "0 Jrd Secondary"}
+    {primarySubslotDecisionLabel(s)} | {hasAnySubslots(s) ? `${getSecondaryRows(s).length} Jrd Secondary / ${countActiveSecondaries(s)} active` : "0 Jrd Secondary"}
   </div>
   <div className="ledger-analysis">
   {liveParentAnalysis(s, props.nowMs)}
@@ -2136,7 +2278,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
         </div>
 
         <div className="engine-ledger-counts">
-          Fixed: <strong>{props.fixedPresent}</strong> • Missing: <strong>{props.fixedMissing.length}</strong>
+          Fixed: <strong>{props.fixedPresent}</strong> | Missing: <strong>{props.fixedMissing.length}</strong>
         </div>
       </div>
 
@@ -2170,7 +2312,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                 >
                   <div className="ledger-slotid">{s.id}</div>
                   <div>{slotCoin(s)}</div>
-                  <div>{s.market ?? "—"}</div>
+                  <div>{s.market ?? "-"}</div>
                   <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
                   <div className={regimeToneClass(s)}>{regimeLabel(s)}</div>
                   <div>{slotHealthLabel(s)}</div>
@@ -2206,7 +2348,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                               <div className="ledger-subpanel-item">
                             <div className="ledger-subpanel-k">Jrd Secondary</div>
                                 <div className="ledger-subpanel-v">
-                                  Jrd Secondary #{subslot.subslotSequence ?? index + 1} • {subslot.subslotId ?? "legacy"}
+                                  Jrd Secondary #{subslot.subslotSequence ?? index + 1} | {subslot.subslotId ?? "legacy"}
                                 </div>
                               </div>
                               <div className="ledger-subpanel-item">
@@ -2215,15 +2357,15 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                               </div>
                               <div className="ledger-subpanel-item">
                                 <div className="ledger-subpanel-k">State</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotState ?? "â€”"}</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotState ?? "-"}</div>
                               </div>
                               <div className="ledger-subpanel-item">
                                 <div className="ledger-subpanel-k">Mode</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotEntryMode ?? "â€”"}</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotEntryMode ?? "-"}</div>
                               </div>
                               <div className="ledger-subpanel-item">
                                 <div className="ledger-subpanel-k">Signal</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotSignalState ?? "â€”"}</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotSignalState ?? "-"}</div>
                               </div>
                               <div className="ledger-subpanel-item">
                                 <div className="ledger-subpanel-k">Net</div>
@@ -2253,7 +2395,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                                 <div className="ledger-subpanel-k">Recovered</div>
                                 <div className="ledger-subpanel-v">
                                   {subslot.subslotRecoveredConfirmed == null
-                                    ? "â€”"
+                                    ? "-"
                                     : subslot.subslotRecoveredConfirmed
                                     ? "YES"
                                     : "NO"}
@@ -2261,7 +2403,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                               </div>
                               <div className="ledger-subpanel-item">
                                 <div className="ledger-subpanel-k">Exit Reason</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotExitReason ?? "â€”"}</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotExitReason ?? "-"}</div>
                               </div>
                               <div className="ledger-subpanel-item">
                                 <div className="ledger-subpanel-k">Updated</div>
@@ -2269,7 +2411,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                               </div>
                               <div className="ledger-subpanel-item">
                                 <div className="ledger-subpanel-k">Reconcile</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotLastReconcileNote ?? "â€”"}</div>
+                                <div className="ledger-subpanel-v">{subslot.subslotLastReconcileNote ?? "-"}</div>
                               </div>
                             </div>
 
@@ -2370,7 +2512,7 @@ const AboutPanel = React.memo(function AboutPanel(props: {
         aria-controls="engine-about"
       >
         <span>About $JAL~Engine</span>
-        <span className="engine-about-toggle">{props.aboutOpen ? "—" : "+"}</span>
+        <span className="engine-about-toggle">{props.aboutOpen ? "-" : "+"}</span>
       </button>
 
       {props.aboutOpen ? (
@@ -2395,7 +2537,7 @@ const AboutPanel = React.memo(function AboutPanel(props: {
           <div className="engine-about-h">Machine order</div>
           <ul>
             <li>Harvester maintains the fixed slot registry.</li>
-            <li>Executor evaluates each slot’s own coin only.</li>
+            <li>Executor evaluates each slot's own coin only.</li>
             <li>Manager controls hold, lock, exit, Jrd Secondary logic, and regime interpretation.</li>
             <li>Rotation remains a separate capital-handling layer.</li>
             <li>Ledger persists public machine proof for inspection.</li>
@@ -2432,7 +2574,7 @@ const CollapsibleBlock = React.memo(function CollapsibleBlock(props: {
         aria-expanded={open}
       >
         <span>{props.title}</span>
-        <span>{open ? "—" : "+"}</span>
+        <span>{open ? "-" : "+"}</span>
       </button>
 
       {open ? <div className="slot-block-body">{props.children}</div> : null}
@@ -2454,7 +2596,7 @@ const SlotModal = React.memo(function SlotModal(props: {
 
       <div className="slot-modal-panel card machine-surface panel-frame" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="slot-modal-close" aria-label="Close slot details" onClick={onClose}>
-          ×
+          x
         </button>
 
         <div className="slot-modal-scroll">
@@ -2462,8 +2604,8 @@ const SlotModal = React.memo(function SlotModal(props: {
             <div>
               <div className="slot-modal-id">{slot.id}</div>
               <div className="slot-modal-sub">
-                {slotCoin(slot)} • {slot.market ?? "—"} •{" "}
-                <span className={stateClassName(stateLabel(slot))}>{stateLabel(slot)}</span> •{" "}
+                {slotCoin(slot)} | {slot.market ?? "-"} |{" "}
+                <span className={stateClassName(stateLabel(slot))}>{stateLabel(slot)}</span> |{" "}
                 <span className={regimeToneClass(slot)}>{regimeLabel(slot)}</span>
               </div>
             </div>
@@ -2515,12 +2657,12 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Now</div><div className="slot-v">{effectiveNowLabel(slot)}</div></div>
               <div><div className="slot-k">Gross</div><div className="slot-v">{pctNum(slot.grossPct)}</div></div>
               <div><div className="slot-k">Net</div><div className="slot-v">{pctNum(slot.netPct)}</div></div>
-              <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "—"}</div></div>
+              <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "-"}</div></div>
               <div><div className="slot-k">Lock</div><div className="slot-v">{lockDisplay(slot)}</div></div>
               <div><div className="slot-k">Spread</div><div className="slot-v">{pctNum(slot.nowSpreadPct)}</div></div>
               <div><div className="slot-k">Drawdown</div><div className="slot-v">{pctNum(slot.drawdownPct)}</div></div>
               <div><div className="slot-k">Re-entry target</div><div className="slot-v">{fmt(slot.reentryTargetMid)}</div></div>
-              <div><div className="slot-k">Exit reason</div><div className="slot-v">{slot.exitReason ?? "—"}</div></div>
+              <div><div className="slot-k">Exit reason</div><div className="slot-v">{slot.exitReason ?? "-"}</div></div>
               <div><div className="slot-k">Created</div><div className="slot-v">{ageLabel(nowMs - slot.createdAt)}</div></div>
               <div><div className="slot-k">Updated</div><div className="slot-v">{slotHeartbeatLabel(slot, nowMs)}</div></div>
             </div>
@@ -2550,14 +2692,14 @@ const SlotModal = React.memo(function SlotModal(props: {
                 {getSecondaryRows(slot).map((subslot, index) => (
                   <div key={subslot.subslotId ?? `${slot.id}-modal-subslot-${index}`} className="secondary-card subslot-card">
                     <div className="slot-section">
-                      Jrd Secondary #{subslot.subslotSequence ?? index + 1} • {subslot.subslotId ?? "legacy"} • {subslotStateBadgeLabel(subslot)}
+                      Jrd Secondary #{subslot.subslotSequence ?? index + 1} | {subslot.subslotId ?? "legacy"} | {subslotStateBadgeLabel(subslot)}
                     </div>
 
                     <div className="slot-modal-grid secondary-grid">
-                      <div><div className="slot-k">State</div><div className="slot-v">{subslot.subslotState ?? "—"}</div></div>
-                      <div><div className="slot-k">Mode</div><div className="slot-v">{subslot.subslotEntryMode ?? "—"}</div></div>
-                      <div><div className="slot-k">Signal</div><div className="slot-v">{subslot.subslotSignalState ?? "—"}</div></div>
-                      <div><div className="slot-k">Confirm Ticks</div><div className="slot-v">{subslot.subslotConfirmTicks ?? "—"}</div></div>
+                      <div><div className="slot-k">State</div><div className="slot-v">{subslot.subslotState ?? "-"}</div></div>
+                      <div><div className="slot-k">Mode</div><div className="slot-v">{subslot.subslotEntryMode ?? "-"}</div></div>
+                      <div><div className="slot-k">Signal</div><div className="slot-v">{subslot.subslotSignalState ?? "-"}</div></div>
+                      <div><div className="slot-k">Confirm Ticks</div><div className="slot-v">{subslot.subslotConfirmTicks ?? "-"}</div></div>
                       <div><div className="slot-k">Entry Mid</div><div className="slot-v">{fmt(subslot.subslotEntryMid)}</div></div>
                       <div><div className="slot-k">Live Now</div><div className="slot-v">{subslotLiveNowLabel(subslot, slot)}</div></div>
                       <div><div className="slot-k">Gross</div><div className="slot-v">{pctNum(subslot.subslotGrossPct)}</div></div>
@@ -2566,12 +2708,12 @@ const SlotModal = React.memo(function SlotModal(props: {
                       <div><div className="slot-k">Profit %</div><div className="slot-v">{pctNum(subslot.subslotProfitPct)}</div></div>
                       <div><div className="slot-k">Bounce</div><div className="slot-v">{pctNum(subslot.subslotBouncePct)}</div></div>
                       <div><div className="slot-k">EMA Gap</div><div className="slot-v">{pctNum(subslot.subslotEmaGapPct)}</div></div>
-                      <div><div className="slot-k">Recovered</div><div className="slot-v">{subslot.subslotRecoveredConfirmed == null ? "—" : subslot.subslotRecoveredConfirmed ? "YES" : "NO"}</div></div>
-                      <div><div className="slot-k">Exit Reason</div><div className="slot-v">{subslot.subslotExitReason ?? "—"}</div></div>
-                      <div><div className="slot-k">Opened</div><div className="slot-v">{subslot.subslotOpenedAt ? ageLabel(nowMs - subslot.subslotOpenedAt) : "—"}</div></div>
-                      <div><div className="slot-k">Closed</div><div className="slot-v">{subslot.subslotClosedAt ? ageLabel(nowMs - subslot.subslotClosedAt) : "—"}</div></div>
+                      <div><div className="slot-k">Recovered</div><div className="slot-v">{subslot.subslotRecoveredConfirmed == null ? "-" : subslot.subslotRecoveredConfirmed ? "YES" : "NO"}</div></div>
+                      <div><div className="slot-k">Exit Reason</div><div className="slot-v">{subslot.subslotExitReason ?? "-"}</div></div>
+                      <div><div className="slot-k">Opened</div><div className="slot-v">{subslot.subslotOpenedAt ? ageLabel(nowMs - subslot.subslotOpenedAt) : "-"}</div></div>
+                      <div><div className="slot-k">Closed</div><div className="slot-v">{subslot.subslotClosedAt ? ageLabel(nowMs - subslot.subslotClosedAt) : "-"}</div></div>
                       <div><div className="slot-k">Updated</div><div className="slot-v">{subslotHeartbeatLabel(subslot, nowMs)}</div></div>
-                      <div><div className="slot-k">Reconcile Note</div><div className="slot-v">{subslot.subslotLastReconcileNote ?? "—"}</div></div>
+                      <div><div className="slot-k">Reconcile Note</div><div className="slot-v">{subslot.subslotLastReconcileNote ?? "-"}</div></div>
                     </div>
 
                     <div><div className="slot-k">Live Analysis</div><div className="slot-v">{liveSubslotAnalysis(subslot, slot, nowMs)}</div></div>
@@ -2596,8 +2738,8 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Drawdown</div><div className="slot-v">{pctNum(slot.candidateDrawdownPct)}</div></div>
               <div><div className="slot-k">Bounce</div><div className="slot-v">{pctNum(slot.candidateBouncePct)}</div></div>
               <div><div className="slot-k">EMA Gap</div><div className="slot-v">{pctNum(slot.candidateEmaGapPct)}</div></div>
-              <div><div className="slot-k">Reversal Ticks</div><div className="slot-v">{slot.candidateReversalTicks != null ? slot.candidateReversalTicks : "—"}</div></div>
-              <div><div className="slot-k">Score</div><div className="slot-v">{slot.candidateScore != null ? slot.candidateScore.toFixed(3) : "—"}</div></div>
+              <div><div className="slot-k">Reversal Ticks</div><div className="slot-v">{slot.candidateReversalTicks != null ? slot.candidateReversalTicks : "-"}</div></div>
+              <div><div className="slot-k">Score</div><div className="slot-v">{slot.candidateScore != null ? slot.candidateScore.toFixed(3) : "-"}</div></div>
               <div><div className="slot-k">Tracked Peak</div><div className="slot-v">{fmt(slot.candidatePeakMid)}</div></div>
               <div><div className="slot-k">Tracked Low</div><div className="slot-v">{fmt(slot.candidateLowMid)}</div></div>
               <div><div className="slot-k">Candidate Spread</div><div className="slot-v">{pctNum(slot.nowSpreadPct ?? slot.candidateSpreadPrevPct)}</div></div>
@@ -2614,9 +2756,9 @@ const SlotModal = React.memo(function SlotModal(props: {
                   <div><div className="slot-k">Entry Drawdown</div><div className="slot-v">{pctNum(slot.entryDrawdownPct)}</div></div>
                   <div><div className="slot-k">Entry Bounce</div><div className="slot-v">{pctNum(slot.entryBouncePct)}</div></div>
                   <div><div className="slot-k">Entry EMA Gap</div><div className="slot-v">{pctNum(slot.entryEmaGapPct)}</div></div>
-                  <div><div className="slot-k">Confirm Ticks</div><div className="slot-v">{slot.entryConfirmTicks != null ? slot.entryConfirmTicks : "—"}</div></div>
-                  <div><div className="slot-k">Entry Score</div><div className="slot-v">{slot.entryScore != null ? slot.entryScore.toFixed(3) : "—"}</div></div>
-                  <div><div className="slot-k">Fee Model</div><div className="slot-v">{slot.frictionModel ?? "—"}</div></div>
+                  <div><div className="slot-k">Confirm Ticks</div><div className="slot-v">{slot.entryConfirmTicks != null ? slot.entryConfirmTicks : "-"}</div></div>
+                  <div><div className="slot-k">Entry Score</div><div className="slot-v">{slot.entryScore != null ? slot.entryScore.toFixed(3) : "-"}</div></div>
+                  <div><div className="slot-k">Fee Model</div><div className="slot-v">{slot.frictionModel ?? "-"}</div></div>
                 </div>
               </>
             )}
@@ -2628,32 +2770,30 @@ const SlotModal = React.memo(function SlotModal(props: {
             slot.rotationEligibleIn != null) && (
             <CollapsibleBlock title="Rotation / Capital Handoff" defaultOpen={false}>
               <div className="slot-section">Rotation Snapshot</div>
-              <div className="slot-section">Rotation Recommendation</div>
               <div className="slot-modal-grid">
-                <div><div className="slot-k">Target Slot</div><div className="slot-v">{slot.rotationTargetSlotId ?? "â€”"}</div></div>
-                <div><div className="slot-k">Source Slot</div><div className="slot-v">{slot.rotationSourceSlotId ?? slot.rotationFundingSourceSlotId ?? "â€”"}</div></div>
-                <div><div className="slot-k">Target Coin</div><div className="slot-v">{slot.rotationTargetCoin ?? "â€”"}</div></div>
-                <div><div className="slot-k">Best OUT Source</div><div className="slot-v">{getRotationBestOutSourceType(slot)}</div></div>
+                <div><div className="slot-k">Target Slot</div><div className="slot-v">{slot.rotationTargetSlotId ?? "-"}</div></div>
+                <div><div className="slot-k">Source Slot</div><div className="slot-v">{slot.rotationSourceSlotId ?? slot.rotationFundingSourceSlotId ?? "-"}</div></div>
+                <div><div className="slot-k">Target Coin</div><div className="slot-v">{slot.rotationTargetCoin ?? "-"}</div></div>
                 <div><div className="slot-k">Out Score</div><div className="slot-v">{fmt(slot.rotationScoreOut)}</div></div>
                 <div><div className="slot-k">In Score</div><div className="slot-v">{fmt(slot.rotationScoreIn)}</div></div>
-                <div><div className="slot-k">Out Blocked</div><div className="slot-v">{slot.rotationOutBlockedReason ?? "â€”"}</div></div>
-                <div><div className="slot-k">In Blocked</div><div className="slot-v">{slot.rotationInBlockedReason ?? "â€”"}</div></div>
-                <div><div className="slot-k">Recommendation</div><div className="slot-v">{getRotationBestOutReason(slot)}</div></div>
+                <div><div className="slot-k">Out Blocked</div><div className="slot-v">{slot.rotationOutBlockedReason ?? "-"}</div></div>
+                <div><div className="slot-k">In Blocked</div><div className="slot-v">{slot.rotationInBlockedReason ?? "-"}</div></div>
+                <div><div className="slot-k">Recommendation</div><div className="slot-v">{slot.rotationReason ?? slot.rotationOutBlockedReason ?? slot.rotationInBlockedReason ?? "-"}</div></div>
               </div>
 
               <div className="slot-modal-grid">
-                <div><div className="slot-k">Reservation</div><div className="slot-v">{slot.rotationReservationId ?? "—"}</div></div>
-                <div><div className="slot-k">Role</div><div className="slot-v">{slot.rotationRole ?? "—"}</div></div>
-                <div><div className="slot-k">Stage</div><div className="slot-v">{slot.rotationStage ?? "—"}</div></div>
-                <div><div className="slot-k">Linked Slot</div><div className="slot-v">{slot.rotationLinkedSlotId ?? "—"}</div></div>
-                <div><div className="slot-k">Eligible Out</div><div className="slot-v">{slot.rotationEligibleOut == null ? "—" : slot.rotationEligibleOut ? "YES" : "NO"}</div></div>
-                <div><div className="slot-k">Eligible In</div><div className="slot-v">{slot.rotationEligibleIn == null ? "—" : slot.rotationEligibleIn ? "YES" : "NO"}</div></div>
+                <div><div className="slot-k">Reservation</div><div className="slot-v">{slot.rotationReservationId ?? "-"}</div></div>
+                <div><div className="slot-k">Role</div><div className="slot-v">{slot.rotationRole ?? "-"}</div></div>
+                <div><div className="slot-k">Stage</div><div className="slot-v">{slot.rotationStage ?? "-"}</div></div>
+                <div><div className="slot-k">Linked Slot</div><div className="slot-v">{slot.rotationLinkedSlotId ?? "-"}</div></div>
+                <div><div className="slot-k">Eligible Out</div><div className="slot-v">{slot.rotationEligibleOut == null ? "-" : slot.rotationEligibleOut ? "YES" : "NO"}</div></div>
+                <div><div className="slot-k">Eligible In</div><div className="slot-v">{slot.rotationEligibleIn == null ? "-" : slot.rotationEligibleIn ? "YES" : "NO"}</div></div>
                 <div><div className="slot-k">Edge Score</div><div className="slot-v">{fmt(slot.rotationEdgeScore)}</div></div>
                 <div><div className="slot-k">Released AUD</div><div className="slot-v">{moneyAud(slot.rotationReleasedAud)}</div></div>
                 <div><div className="slot-k">Funding Reserved</div><div className="slot-v">{moneyAud(slot.rotationFundingReservedAud)}</div></div>
                 <div><div className="slot-k">Funding Transferred</div><div className="slot-v">{moneyAud(slot.rotationFundingTransferredAud)}</div></div>
-                <div><div className="slot-k">Reason</div><div className="slot-v">{slot.rotationReason ?? "—"}</div></div>
-                <div><div className="slot-k">Last Error</div><div className="slot-v">{slot.rotationLastError ?? "—"}</div></div>
+                <div><div className="slot-k">Reason</div><div className="slot-v">{slot.rotationReason ?? "-"}</div></div>
+                <div><div className="slot-k">Last Error</div><div className="slot-v">{slot.rotationLastError ?? "-"}</div></div>
               </div>
             </CollapsibleBlock>
           )}
@@ -2661,12 +2801,12 @@ const SlotModal = React.memo(function SlotModal(props: {
           {(slot.topupMode || slot.topupLastAppliedAt || slot.topupRequestedTargetAud != null) && (
             <CollapsibleBlock title="Top-up Snapshot" defaultOpen={false}>
               <div className="slot-modal-grid">
-                <div><div className="slot-k">Mode</div><div className="slot-v">{slot.topupMode ?? "—"}</div></div>
+                <div><div className="slot-k">Mode</div><div className="slot-v">{slot.topupMode ?? "-"}</div></div>
                 <div><div className="slot-k">Requested Target</div><div className="slot-v">{moneyAud(slot.topupRequestedTargetAud)}</div></div>
                 <div><div className="slot-k">Last Target</div><div className="slot-v">{moneyAud(slot.topupLastTargetAud)}</div></div>
                 <div><div className="slot-k">Fallback AUD</div><div className="slot-v">{moneyAud(slot.topupFallbackAud)}</div></div>
                 <div><div className="slot-k">Last Delta</div><div className="slot-v">{moneyAud(slot.topupLastDeltaAud)}</div></div>
-                <div><div className="slot-k">Last Applied</div><div className="slot-v">{slot.topupLastAppliedAt ? ageLabel(nowMs - slot.topupLastAppliedAt) : "—"}</div></div>
+                <div><div className="slot-k">Last Applied</div><div className="slot-v">{slot.topupLastAppliedAt ? ageLabel(nowMs - slot.topupLastAppliedAt) : "-"}</div></div>
               </div>
             </CollapsibleBlock>
           )}
@@ -2723,6 +2863,7 @@ const SlotModal = React.memo(function SlotModal(props: {
 
 const SummaryPanel = React.memo(function SummaryPanel(props: {
   meta: PublicMetaResponse | null;
+  capital: PublicCapitalResponse | null;
   fixedAllowlist: string[];
   fixedMissing: string[];
   trackingStates: Record<string, number>;
@@ -2795,24 +2936,146 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
           </div>
 
           <div className="engine-mini-row">
+            <div className="mini-k">Free AUD</div>
+            <div className="mini-v">{moneyAud(props.capital?.audAvailable)}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Wallet Value</div>
+            <div className="mini-v">{moneyAud(props.capital?.walletAudValue)}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Movable AUD</div>
+            <div className="mini-v">{moneyAud(props.capital?.movableAudEstimate)}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Rotation Mode</div>
+            <div className="mini-v">{rotationModeLabel(props.capital)}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Wallet-ready Coins</div>
+            <div className="mini-v">
+              {movableWalletCoins(props.capital).filter((coin) => coin.walletSourceReady === true).length}
+            </div>
+          </div>
+
+          <div className="engine-mini-row">
             <div className="mini-k">Tracking Coins</div>
-            <div className="mini-v">{props.topTrackingCoins || "—"}</div>
+            <div className="mini-v">{props.topTrackingCoins || "-"}</div>
           </div>
 
           <div className="engine-mini-row">
   <div className="mini-k">Snapshot Poll</div>
   <div className="mini-v">
-    {props.meta?.market?.snapshot?.lastPollIso ?? props.meta?.market?.snapshot?.lastOkIso ?? "—"}
+    {props.meta?.market?.snapshot?.lastPollIso ?? props.meta?.market?.snapshot?.lastOkIso ?? "-"}
   </div>
 </div>
 
           <div className="engine-mini-row">
             <div className="mini-k">Last OK</div>
             <div className="mini-v">
-              {props.meta?.market?.snapshot?.lastOkIso ?? "—"}
+              {props.meta?.market?.snapshot?.lastOkIso ?? "-"}
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+});
+
+const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
+  capital: PublicCapitalResponse | null;
+  nowMs: number;
+}) {
+  const topCoins = useMemo(() => topWalletCoins(props.capital, 5), [props.capital]);
+  const movableCoins = useMemo(() => movableWalletCoins(props.capital), [props.capital]);
+  const walletReadyCount = movableCoins.filter((coin) => coin.walletSourceReady === true).length;
+
+  return (
+    <div className="engine-bay">
+      <div className="bay-head">
+        <div className="bay-title">Capital Mobility</div>
+        <div className="bay-note">Wallet value, free AUD, and movement readiness.</div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry capital-panel">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">Capital Snapshot</div>
+            <div className="engine-telemetry-note">
+              Rotation mode {rotationModeLabel(props.capital)} | Wallet-ready {walletReadyCount}
+            </div>
+          </div>
+        </div>
+
+        <div className="secondary-summary capital-summary">
+          <div className="secondary-grid capital-summary-grid">
+            <div><div className="slot-k">State</div><div className="slot-v">{capitalFreshnessLabel(props.capital, props.nowMs)}</div></div>
+            <div><div className="slot-k">Cache TTL</div><div className="slot-v">{props.capital?.cacheMs ? `${Math.round(props.capital.cacheMs / 1000)}s` : "-"}</div></div>
+            <div><div className="slot-k">Generated</div><div className="slot-v">{props.capital?.generatedAt ? ageLabel(props.nowMs - props.capital.generatedAt) : "-"}</div></div>
+            <div><div className="slot-k">Free AUD</div><div className="slot-v">{moneyAud(props.capital?.audAvailable)}</div></div>
+            <div><div className="slot-k">AUD Balance</div><div className="slot-v">{moneyAud(props.capital?.audBalance)}</div></div>
+            <div><div className="slot-k">Wallet Value</div><div className="slot-v">{moneyAud(props.capital?.walletAudValue)}</div></div>
+            <div><div className="slot-k">Movable AUD</div><div className="slot-v">{moneyAud(props.capital?.movableAudEstimate)}</div></div>
+            <div><div className="slot-k">Wallet Sources</div><div className="slot-v">{props.capital?.walletSourceEnabled ? "ENABLED" : "DISABLED"}</div></div>
+            <div><div className="slot-k">Rotation Mode</div><div className="slot-v">{rotationModeLabel(props.capital)}</div></div>
+          </div>
+        </div>
+
+        {props.capital?.refreshError ? (
+          <div className="ledger-empty">Refresh error: {props.capital.refreshError}</div>
+        ) : null}
+
+        <div className="ledger-empty">
+          Wallet readiness shows available capital. Rotation recommendation shows whether the policy currently wants to use it.
+        </div>
+
+        <div className="slot-section">Top Wallet Coins</div>
+        {topCoins.length ? (
+          <div className="secondary-list">
+            {topCoins.map((coin) => (
+              <div key={`top-${coin.coin ?? "coin"}`} className="secondary-card">
+                <div className="secondary-grid capital-coin-grid">
+                  <div><div className="slot-k">Coin</div><div className="slot-v">{coin.coin ?? "-"}</div></div>
+                  <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
+                  <div><div className="slot-k">Available Coin</div><div className="slot-v">{fmt(coin.availableCoin)}</div></div>
+                  <div><div className="slot-k">Rate</div><div className="slot-v">{fmt(coin.rate)}</div></div>
+                  <div><div className="slot-k">Movable AUD</div><div className="slot-v">{moneyAud(coin.movableAudEstimate)}</div></div>
+                  <div><div className="slot-k">Readiness</div><div className={`slot-v ${walletReadinessTone(coin)}`}>{walletReadinessLabel(coin)}</div></div>
+                  <div><div className="slot-k">Blocked</div><div className="slot-v">{reasonLabel(coin.walletSourceBlockedReason)}</div></div>
+                  <div><div className="slot-k">Target Coin</div><div className="slot-v">{coin.rotationTargetCoin ?? "-"}</div></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="ledger-empty">No wallet coin values are currently available from the public capital feed.</div>
+        )}
+
+        <div className="slot-section">Wallet Rotation Surface</div>
+        {movableCoins.length ? (
+          <div className="secondary-list">
+            {movableCoins.map((coin) => (
+              <div key={`move-${coin.coin ?? "coin"}`} className="secondary-card">
+                <div className="secondary-metrics capital-metrics">
+                  <div><div className="slot-k">Coin</div><div className="slot-v">{coin.coin ?? "-"}</div></div>
+                  <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
+                  <div><div className="slot-k">Movable AUD</div><div className="slot-v">{moneyAud(coin.movableAudEstimate)}</div></div>
+                  <div><div className="slot-k">Ready</div><div className={`slot-v ${walletReadinessTone(coin)}`}>{walletReadinessLabel(coin)}</div></div>
+                  <div><div className="slot-k">Target</div><div className="slot-v">{coin.rotationTargetCoin ?? coin.rotationTargetSlotId ?? "-"}</div></div>
+                  <div><div className="slot-k">Edge</div><div className="slot-v">{fmt(coin.rotationEdgeScore ?? coin.rotationScoreOut)}</div></div>
+                  <div><div className="slot-k">Reason</div><div className="slot-v">{capitalReasonLabel(coin)}</div></div>
+                  <div><div className="slot-k">Cooldown</div><div className="slot-v">{(coin.cooldownRemainingMs ?? 0) > 0 ? msToCountdown(coin.cooldownRemainingMs) : "-"}</div></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="ledger-empty">No wallet-backed movement sources are currently ready or estimated as movable.</div>
+        )}
       </div>
     </div>
   );
@@ -2825,7 +3088,7 @@ export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
   const isDesktop = useIsDesktop(980);
 
-  const { rows, snap, meta, slotRows, events, err, refresh } = useEngineData(BASE);
+  const { rows, snap, meta, capital, slotRows, events, err, refresh } = useEngineData(BASE);
 
   const [feed, setFeed] = useState<Feed>("aud");
   const [sortKey, setSortKey] = useState<SortKey>("coin");
@@ -2961,7 +3224,7 @@ export default function Engine() {
   const fixedPresent = meta?.fixedSlots?.present ?? slotRows.length;
   const fixedMissing = meta?.fixedSlots?.missing ?? [];
   const executionMode = meta?.engine?.execution ?? "SIM";
-  const architecture = meta?.engine?.architecture ?? "—";
+  const architecture = meta?.engine?.architecture ?? "-";
   const counts = meta?.counts ?? {};
   const trackingStates = meta?.trackingStates ?? {};
 
@@ -2975,8 +3238,8 @@ export default function Engine() {
 
   const lastAction = useMemo(() => {
     const e = events[0];
-    if (!e) return "—";
-    return `${e.kind}${e.coin ? ` • ${e.coin}` : ""}${e.slotId ? ` • ${e.slotId}` : ""}`;
+    if (!e) return "-";
+    return `${e.kind}${e.coin ? ` | ${e.coin}` : ""}${e.slotId ? ` | ${e.slotId}` : ""}`;
   }, [events]);
 
   const marketCounts = snap?.counts ?? { all: 0, aud: 0, watch: 0 };
@@ -3047,7 +3310,7 @@ export default function Engine() {
                 executionMode={executionMode}
                 fixedPresent={fixedPresent}
                 feedCount={feedCount}
-                lastAction={`${lastAction} • ${snapshotFresh ? "FRESH" : "STALE"}`}
+                lastAction={`${lastAction} | ${snapshotFresh ? "FRESH" : "STALE"}`}
                 view={view}
               />
 
@@ -3055,6 +3318,10 @@ export default function Engine() {
                 openPnl={slotFinancials.openPnl}
                 windowHarvest={slotHarvest.totalRealized}
                 visibleRealized={slotFinancials.visibleRealized}
+                audAvailable={capital?.audAvailable}
+                walletAudValue={capital?.walletAudValue}
+                movableAudEstimate={capital?.movableAudEstimate}
+                rotationMode={rotationModeLabel(capital)}
                 nextSweepLabel={nextSweepLabel}
                 currentWindow={meta?.cadence?.currentWindow}
                 lastSweepAgo={lastSweepAgo}
@@ -3103,6 +3370,7 @@ export default function Engine() {
               <div className="engine-grid engine-grid--asym" aria-label="Engine bays">
                 <SummaryPanel
                   meta={meta}
+                  capital={capital}
                   fixedAllowlist={fixedAllowlist}
                   fixedMissing={fixedMissing}
                   trackingStates={trackingStates}
@@ -3111,6 +3379,8 @@ export default function Engine() {
                   executionMode={executionMode}
                   view={view}
                 />
+
+                <CapitalMobilityPanel capital={capital} nowMs={nowMs} />
 
                 <MarketSurface rows={filteredMarketRows} />
               </div>
@@ -3168,9 +3438,9 @@ export default function Engine() {
                       <div className="cap-k">Registry</div>
                       <div className="cap-v">{meta?.harvester?.running ? "RUNNING" : "STOPPED"}</div>
                       <div className="cap-sub">
-                        <span>Phase {String(meta?.harvester?.phase ?? "—")}</span>
-                        <span>•</span>
-                        <span>Window {meta?.cadence?.currentWindow ?? "—"}</span>
+                        <span>Phase {String(meta?.harvester?.phase ?? "-")}</span>
+                        <span>|</span>
+                        <span>Window {meta?.cadence?.currentWindow ?? "-"}</span>
                       </div>
                     </div>
 
@@ -3179,9 +3449,9 @@ export default function Engine() {
   <div className="cap-v">{getActiveTrackingCount(trackingStates)}</div>
   <div className="cap-sub">
     <span>TRACKING {trackingStates.TRACKING ?? 0}</span>
-    <span>•</span>
+    <span>|</span>
     <span>ARMED {trackingStates.ARMED ?? 0}</span>
-    <span>•</span>
+    <span>|</span>
     <span>BLOCKED {trackingStates.SPREAD_BLOCKED ?? 0}</span>
   </div>
 </div>
@@ -3191,7 +3461,7 @@ export default function Engine() {
                       <div className="cap-v">{fixedAllowlist.length}</div>
                       <div className="cap-sub">
                         <span>{fixedAllowlist.slice(0, 4).join(", ")}</span>
-                        <span>•</span>
+                        <span>|</span>
                         <span>{fixedAllowlist.length > 4 ? `+${fixedAllowlist.length - 4} more` : "full set"}</span>
                       </div>
                     </div>
@@ -3236,3 +3506,4 @@ export default function Engine() {
     </main>
   );
 }
+
