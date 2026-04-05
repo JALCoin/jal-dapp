@@ -59,7 +59,6 @@ type TrackingState =
   | "SPREAD_BLOCKED"
   | "REGISTRY_FAULT"
   | string;
-
 type SlotRow = {
   id: string;
   coin: string | null;
@@ -129,6 +128,9 @@ type SlotRow = {
   liveExitActualCoinQty?: number | null;
   liveExitActualRate?: number | null;
   liveExitFilledAt?: number | null;
+
+  // **New**: To track multiple subslots in a parent slot
+  subslots?: SlotRow[] | null; // Array of subslots for the parent slot
 
   subslotActive?: boolean | null;
   subslotCount?: number | null;
@@ -617,7 +619,17 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
     }
 
     if (Number.isFinite(subslotProfitAud)) {
-      visibleRealized += subslotProfitAud;
+      visibleRealized += subslotProfitAud;  // Adding subslot profit to total
+    }
+
+    // If subslots exist, accumulate their financials
+    if (s.subslots) {
+      for (const subslot of s.subslots) {
+        const subslotProfit = Number(subslot.subslotProfitAud);
+        if (Number.isFinite(subslotProfit)) {
+          visibleRealized += subslotProfit;
+        }
+      }
     }
   }
 
@@ -804,6 +816,7 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   const regime = String(regimeLabel(s)).toUpperCase();
   const updated = slotHeartbeatLabel(s, nowMs);
 
+  // Parent State Analysis
   if (state === "EXITING") {
     parts.push("Parent exit is being resolved live.");
   } else if (state === "DEPLOYING") {
@@ -818,16 +831,19 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
     parts.push("Parent slot is being observed.");
   }
 
+  // Parent Mid Price
   if (Number.isFinite(nowMid)) {
     parts.push(`Now ${fmt(nowMid)}.`);
   }
 
+  // Net Percentage Calculation
   if (Number.isFinite(netPct)) {
     if (Number(netPct) > 0) parts.push(`Net is green at ${pctNum(netPct)}.`);
     else if (Number(netPct) < 0) parts.push(`Net is red at ${pctNum(netPct)}.`);
     else parts.push(`Net is flat at ${pctNum(netPct)}.`);
   }
 
+  // Spread and Drawdown
   if (Number.isFinite(spreadPct)) {
     parts.push(`Spread is ${pctNum(spreadPct)}.`);
   }
@@ -836,6 +852,7 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
     parts.push(`Drawdown is ${pctNum(dd)}.`);
   }
 
+  // Tracking Analysis
   if (tracking === "REVERSAL_CONFIRMING") {
     parts.push("Reversal confirmation is building.");
   } else if (tracking === "DRAWDOWN_SEEN") {
@@ -846,6 +863,7 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
     parts.push("Spread is blocking action.");
   }
 
+  // Regime Analysis
   if (regime.includes("CONSOLIDATION")) {
     parts.push(
       breakout
@@ -858,6 +876,7 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
     parts.push("Trend pressure remains downward.");
   }
 
+  // Updated Time
   if (updated !== "—") {
     parts.push(`Updated ${updated} ago.`);
   }
@@ -876,6 +895,7 @@ function liveSubslotAnalysis(s: SlotRow, nowMs: number) {
   const liveNow = s.subslotNowMid ?? s.nowMid;
   const updated = subslotHeartbeatLabel(s, nowMs);
 
+  // Subslot State Analysis
   if (subState === "BUY_SUBMITTED") {
     parts.push("Subslot entry is pending.");
   } else if (subState === "ACTIVE") {
@@ -888,6 +908,7 @@ function liveSubslotAnalysis(s: SlotRow, nowMs: number) {
     parts.push("Subslot is idle.");
   }
 
+  // Signal Analysis
   if (signal === "REVERSAL_CONFIRMING") {
     parts.push("Signal is confirming.");
   } else if (signal === "BOUNCE_SEEN") {
@@ -902,16 +923,19 @@ function liveSubslotAnalysis(s: SlotRow, nowMs: number) {
     parts.push("No usable live market read.");
   }
 
+  // Subslot Live Price
   if (Number.isFinite(liveNow)) {
     parts.push(`Live now ${fmt(liveNow)}.`);
   }
 
+  // Subslot Net Percentage Calculation
   if (Number.isFinite(netPct)) {
     if (Number(netPct) > 0) parts.push(`Subslot net is green at ${pctNum(netPct)}.`);
     else if (Number(netPct) < 0) parts.push(`Subslot net is red at ${pctNum(netPct)}.`);
     else parts.push(`Subslot net is flat at ${pctNum(netPct)}.`);
   }
 
+  // Bounce and EMA Gap Analysis
   if (Number.isFinite(bouncePct)) {
     parts.push(`Bounce is ${pctNum(bouncePct)}.`);
   }
@@ -920,6 +944,7 @@ function liveSubslotAnalysis(s: SlotRow, nowMs: number) {
     parts.push(`EMA gap is ${pctNum(emaGapPct)}.`);
   }
 
+  // Updated Time
   if (updated !== "—") {
     parts.push(`Updated ${updated} ago.`);
   }
@@ -1825,8 +1850,8 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                 {expanded ? (
                   <div className="ledger-subpanel">
                     <div className={`ledger-subpanel-badge ${regimeToneClass(s)}`}>
-  {liveParentAnalysis(s, props.nowMs)}
-</div>
+                      {liveParentAnalysis(s, props.nowMs)}
+                    </div>
 
                     <div className="ledger-subpanel-grid">
                       {rows.map((row) => (
@@ -1838,8 +1863,24 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                     </div>
 
                     <div className={`ledger-subpanel-badge ${subslotToneClass(s)}`}>
-  {liveSubslotAnalysis(s, props.nowMs)}
-</div>
+                      {liveSubslotAnalysis(s, props.nowMs)}
+                    </div>
+
+                    {/* Render multiple subslots if they exist */}
+                    {s.subslots && s.subslots.length > 0 && (
+                      <div className="subslot-list">
+                        {s.subslots.map((subslot, index) => (
+                          <div key={index} className="subslot-card">
+                            {/* Render subslot-specific details here */}
+                            <div>Subslot {index + 1}</div>
+                            <div>Subslot State: {subslot.subslotState}</div>
+                            <div>Requested AUD: {moneyAud(subslot.subslotRequestedAud)}</div>
+                            <div>Actual AUD: {moneyAud(subslot.subslotActualAud)}</div>
+                            {/* Display additional subslot properties */}
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="ledger-subpanel-actions">
                       <button
