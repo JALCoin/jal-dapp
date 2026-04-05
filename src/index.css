@@ -4760,6 +4760,16 @@ a.button[aria-disabled="true"]{
   gap: 10px;
 }
 
+.engine-carousel-controls .button {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .engine-carousel-counter {
   min-width: 72px;
   text-align: center;
@@ -4767,6 +4777,11 @@ a.button[aria-disabled="true"]{
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(231, 255, 247, 0.62);
+}
+
+.engine-carousel-nav-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .engine-carousel-card {
@@ -5015,7 +5030,7 @@ a.button[aria-disabled="true"]{
 }
 
 .engine-grid--asym {
-  grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1.22fr);
+  grid-template-columns: minmax(340px, 0.92fr) minmax(300px, 0.78fr);
   align-items: stretch;
 }
 
@@ -5024,7 +5039,17 @@ a.button[aria-disabled="true"]{
   gap: 10px;
 }
 
+.engine-bay-stack {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
 .engine-bay--narrow {
+  align-content: start;
+}
+
+.engine-bay--market {
   align-content: start;
 }
 
@@ -5228,6 +5253,10 @@ a.button[aria-disabled="true"]{
   color:rgba(231,255,247,.54);
   background:rgba(255,255,255,.03);
   border-bottom:1px solid rgba(255,255,255,.06);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  backdrop-filter: blur(8px);
 }
 
 .ledger-head > div,
@@ -5284,14 +5313,14 @@ a.button[aria-disabled="true"]{
 .engine-ledger[aria-label="Overview cards"] .ledger-row{
   grid-template-columns:
     1.05fr   /* Slot */
-    .95fr    /* Market */
+    1.02fr   /* Regime */
     .9fr     /* Decision */
     .95fr    /* Position */
-    .95fr    /* Subslot */
-    2.9fr    /* Live analysis */
-    .92fr    /* Health */
+    .7fr     /* Subslot */
+    2.35fr   /* Live analysis */
+    1.08fr   /* Health */
     .78fr    /* Net */
-    .56fr;   /* More */
+    .66fr;   /* Open */
 }
 
 .engine-ledger[aria-label="Overview cards"] .ledger-row{
@@ -5314,11 +5343,23 @@ a.button[aria-disabled="true"]{
   font-size:.79rem;
   color:rgba(231,255,247,.82);
   white-space:normal;
-  overflow:visible;
-  text-overflow:unset;
+  overflow:hidden;
   overflow-wrap:anywhere;
   word-break:break-word;
-  max-width:62ch;
+  max-width:54ch;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  position:relative;
+}
+
+.engine-ledger[aria-label="Overview cards"] .ledger-analysis::after{
+  content:"";
+  position:absolute;
+  inset:auto 0 0 0;
+  height:1.1rem;
+  background:linear-gradient(180deg, rgba(8,11,14,0), rgba(8,11,14,.92));
+  pointer-events:none;
 }
 
 .engine-ledger[aria-label="Overview cards"] .ledger-row > div:last-child{
@@ -5359,6 +5400,11 @@ a.button[aria-disabled="true"]{
 
 .engine-ledger[aria-label="Slots Ledger"] .ledger-head > div:last-child{
   justify-self:end;
+}
+
+.ledger-view{
+  min-width:3.5rem;
+  text-align:right;
 }
 
 /* subpanel */
@@ -5761,13 +5807,31 @@ a.button[aria-disabled="true"]{
   top: 14px;
   right: 14px;
   z-index: 3;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.32);
-  font-size: 1.35rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(231, 255, 247, 0.88);
+  transition:
+    transform var(--t-fast),
+    border-color var(--t-fast),
+    background var(--t-fast);
+}
+
+.slot-modal-close:hover,
+.slot-modal-close:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(17, 241, 167, 0.32);
+  background: rgba(17, 241, 167, 0.08);
+}
+
+.slot-modal-close-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .slot-modal-scroll {
@@ -5785,6 +5849,19 @@ a.button[aria-disabled="true"]{
   gap: 14px;
   flex-wrap: wrap;
   padding-right: 38px;
+}
+
+.slot-modal-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.slot-modal-strip-item {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
 }
 
 .slot-modal-id {
@@ -5896,6 +5973,48 @@ a.button[aria-disabled="true"]{
   background: rgba(0, 0, 0, 0.18);
   color: rgba(231, 255, 247, 0.8);
   line-height: 1.65;
+}
+
+.slot-block {
+  display: grid;
+  gap: 12px;
+}
+
+.slot-block-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  text-align: left;
+}
+
+.slot-block-toggle-label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.slot-block-toggle-icon {
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.24);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.slot-block-body {
+  display: grid;
+  gap: 16px;
 }
 
 .slot-rules-note {
@@ -6415,7 +6534,7 @@ a.button[aria-disabled="true"]{
   }
 
   .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(1)::before{ content:"Slot"; }
-  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(2)::before{ content:"Market"; }
+  .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(2)::before{ content:"Regime"; }
   .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(3)::before{ content:"Decision"; }
   .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(4)::before{ content:"Position"; }
   .engine-ledger[aria-label="Overview cards"] .ledger-row > div:nth-child(5)::before{ content:"Jrd Secondary"; }

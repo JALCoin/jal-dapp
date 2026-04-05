@@ -699,6 +699,11 @@ function capitalReasonLabel(coin: PublicCapitalCoin | null | undefined) {
   return reasonLabel(coin.rotationReason ?? coin.rotationOutBlockedReason ?? coin.walletSourceBlockedReason);
 }
 
+function secondaryOverviewSummary(slot: SlotRow) {
+  const total = getSecondaryRows(slot).length;
+  return `${primarySubslotDecisionLabel(slot)} | ${total}`;
+}
+
 function topWalletCoins(capital: PublicCapitalResponse | null | undefined, limit = 5) {
   const list = Array.isArray(capital?.coins) ? capital.coins.slice() : [];
   return list
@@ -896,10 +901,6 @@ function getActiveSubslots(slot: SlotRow): SubslotRow[] {
 
 function getActiveSecondaryRows(slot: SlotRow) {
   return getActiveSubslots(slot);
-}
-
-function hasAnySubslots(slot: SlotRow) {
-  return getSubslots(slot).length > 0;
 }
 
 function hasActiveSubslots(slot: SlotRow) {
@@ -1975,7 +1976,9 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
             }
             aria-label="Previous JRD"
           >
-            {"<-"}
+            <svg className="engine-carousel-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M10.5 3.5 6 8l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
 
           <div className="engine-carousel-counter">
@@ -1990,7 +1993,9 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
             }
             aria-label="Next JRD"
           >
-            {"->"}
+            <svg className="engine-carousel-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M5.5 3.5 10 8l-4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
       </div>
@@ -2229,7 +2234,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
   <div>Live Analysis</div>
   <div>Health</div>
   <div className="num">Net</div>
-  <div className="num">More</div>
+  <div className="num">Open</div>
 </div>
 
         {props.slots.length ? (
@@ -2240,7 +2245,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
   <div>{engineDecisionLabel(s)}</div>
   <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
   <div className={primarySubslotToneClass(s)}>
-    {primarySubslotDecisionLabel(s)} | {hasAnySubslots(s) ? `${getSecondaryRows(s).length} Jrd Secondary / ${countActiveSecondaries(s)} active` : "0 Jrd Secondary"}
+    {secondaryOverviewSummary(s)}
   </div>
   <div className="ledger-analysis">
   {liveParentAnalysis(s, props.nowMs)}
@@ -2292,7 +2297,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
           <div>Health</div>
           <div className="num">Unit</div>
           <div className="num">Net</div>
-          <div className="num">More</div>
+          <div className="num">Open</div>
         </div>
 
         {props.slots.length ? (
@@ -2573,8 +2578,8 @@ const CollapsibleBlock = React.memo(function CollapsibleBlock(props: {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span>{props.title}</span>
-        <span>{open ? "-" : "+"}</span>
+        <span className="slot-block-toggle-label">{props.title}</span>
+        <span className="slot-block-toggle-icon" aria-hidden="true">{open ? "-" : "+"}</span>
       </button>
 
       {open ? <div className="slot-block-body">{props.children}</div> : null}
@@ -2596,7 +2601,9 @@ const SlotModal = React.memo(function SlotModal(props: {
 
       <div className="slot-modal-panel card machine-surface panel-frame" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="slot-modal-close" aria-label="Close slot details" onClick={onClose}>
-          x
+          <svg className="slot-modal-close-icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M4 4l8 8M12 4 4 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
         </button>
 
         <div className="slot-modal-scroll">
@@ -2616,13 +2623,36 @@ const SlotModal = React.memo(function SlotModal(props: {
             </div>
           </div>
 
+          <div className="slot-modal-strip" aria-label="Slot summary strip">
+            <div className="slot-modal-strip-item">
+              <div className="slot-k">Coin</div>
+              <div className="slot-v">{slotCoin(slot)}</div>
+            </div>
+            <div className="slot-modal-strip-item">
+              <div className="slot-k">Market</div>
+              <div className="slot-v">{slot.market ?? "-"}</div>
+            </div>
+            <div className="slot-modal-strip-item">
+              <div className="slot-k">State</div>
+              <div className={`slot-v ${stateClassName(stateLabel(slot))}`}>{stateLabel(slot)}</div>
+            </div>
+            <div className="slot-modal-strip-item">
+              <div className="slot-k">Regime</div>
+              <div className={`slot-v ${regimeToneClass(slot)}`}>{regimeLabel(slot)}</div>
+            </div>
+            <div className="slot-modal-strip-item">
+              <div className="slot-k">Health</div>
+              <div className="slot-v">{slotHealthLabel(slot)}</div>
+            </div>
+          </div>
+
           <CollapsibleBlock title="Overview" defaultOpen>
             <div className="slot-section">Decision Summary</div>
 
             <div className="slot-modal-grid">
               <div>
-                <div className="slot-k">Market</div>
-                <div className={`slot-v ${regimeToneClass(slot)}`}>{regimeLabel(slot)}</div>
+                <div className="slot-k">Jrd Primary</div>
+                <div className="slot-v">{slot.id}</div>
               </div>
               <div>
                 <div className="slot-k">Decision</div>
@@ -2679,15 +2709,20 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Open Jrd Secondary</div><div className="slot-v">{getSubslotOpenCount(slot)}</div></div>
               <div><div className="slot-k">Closed Jrd Secondary</div><div className="slot-v">{getClosedSubslotCount(slot)}</div></div>
               <div><div className="slot-k">Realized Jrd Secondary PnL</div><div className="slot-v">{moneyAud(getSubslotRealizedProfit(slot))}</div></div>
-              <div><div className="slot-k">Latest Jrd Secondary</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
-              <div><div className="slot-k">Latest Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
-              <div><div className="slot-k">Latest Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
+              {getSecondaryRows(slot).length ? (
+                <>
+                  <div><div className="slot-k">Latest Jrd Secondary</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
+                  <div><div className="slot-k">Latest Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
+                  <div><div className="slot-k">Latest Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
+                </>
+              ) : null}
             </div>
 
-            <div className="slot-section">Latest Jrd Secondary</div>
-            <div><div className="slot-k">Live Analysis</div><div className="slot-v">{primaryLiveSubslotAnalysis(slot, nowMs)}</div></div>
-
             {getSecondaryRows(slot).length ? (
+              <>
+                <div className="slot-section">Latest Jrd Secondary</div>
+                <div><div className="slot-k">Live Analysis</div><div className="slot-v">{primaryLiveSubslotAnalysis(slot, nowMs)}</div></div>
+
               <div className="secondary-list subslot-list">
                 {getSecondaryRows(slot).map((subslot, index) => (
                   <div key={subslot.subslotId ?? `${slot.id}-modal-subslot-${index}`} className="secondary-card subslot-card">
@@ -2724,6 +2759,7 @@ const SlotModal = React.memo(function SlotModal(props: {
                   </div>
                 ))}
               </div>
+              </>
             ) : (
               <div className="slot-v">No Jrd Secondary records available.</div>
             )}
@@ -2891,7 +2927,10 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
 
       <div className="card machine-surface panel-frame engine-telemetry">
         <div className="engine-telemetry-head">
-          <div className="engine-telemetry-title">System State</div>
+          <div>
+            <div className="engine-telemetry-title">System State</div>
+            <div className="engine-telemetry-note">Public treasury view.</div>
+          </div>
         </div>
 
         <div className="engine-mini">
@@ -2998,7 +3037,7 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
     <div className="engine-bay">
       <div className="bay-head">
         <div className="bay-title">Capital Mobility</div>
-        <div className="bay-note">Wallet value, free AUD, and movement readiness.</div>
+        <div className="bay-note">Public treasury view for wallet value, free AUD, and movement readiness.</div>
       </div>
 
       <div className="card machine-surface panel-frame engine-telemetry capital-panel">
@@ -3368,21 +3407,25 @@ export default function Engine() {
   nowMs={nowMs}
 />
               <div className="engine-grid engine-grid--asym" aria-label="Engine bays">
-                <SummaryPanel
-                  meta={meta}
-                  capital={capital}
-                  fixedAllowlist={fixedAllowlist}
-                  fixedMissing={fixedMissing}
-                  trackingStates={trackingStates}
-                  overviewCounts={overviewCounts}
-                  topTrackingCoins={topTrackingCoins}
-                  executionMode={executionMode}
-                  view={view}
-                />
+                <div className="engine-bay-stack">
+                  <SummaryPanel
+                    meta={meta}
+                    capital={capital}
+                    fixedAllowlist={fixedAllowlist}
+                    fixedMissing={fixedMissing}
+                    trackingStates={trackingStates}
+                    overviewCounts={overviewCounts}
+                    topTrackingCoins={topTrackingCoins}
+                    executionMode={executionMode}
+                    view={view}
+                  />
 
-                <CapitalMobilityPanel capital={capital} nowMs={nowMs} />
+                  <CapitalMobilityPanel capital={capital} nowMs={nowMs} />
+                </div>
 
-                <MarketSurface rows={filteredMarketRows} />
+                <div className="engine-bay engine-bay--market">
+                  <MarketSurface rows={filteredMarketRows} />
+                </div>
               </div>
             </div>
 
