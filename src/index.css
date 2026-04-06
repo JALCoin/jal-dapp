@@ -8225,9 +8225,12 @@ button.home-route-band{
   }
 
   .engine-ledger .ledger-row > div{
-    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
     min-width:0;
-    padding-top:26px;
+    gap:8px;
+    padding-top:0;
     white-space:normal;
     overflow-wrap:break-word;
     word-break:normal;
@@ -8235,8 +8238,9 @@ button.home-route-band{
   }
 
   .engine-ledger .ledger-row > div::before{
-    top:0;
-    left:0;
+    position:static;
+    display:block;
+    margin:0;
     line-height:1.1;
     font-size:.61rem;
     letter-spacing:.14em;
@@ -8263,8 +8267,8 @@ button.home-route-band{
     max-width:none;
     font-size:.81rem;
     line-height:1.6;
-    padding-top:28px;
-    margin-top:2px;
+    padding-top:0;
+    margin-top:0;
   }
 
   .engine-ledger .ledger-analysis::after{
@@ -8273,10 +8277,12 @@ button.home-route-band{
 
   .engine-ledger .ledger-row > div:last-child{
     display:flex;
-    align-items:center;
+    flex-direction:column;
+    align-items:flex-end;
     justify-content:flex-end;
     min-height:46px;
-    padding-top:24px;
+    gap:8px;
+    padding-top:12px;
     margin-top:4px;
     border-top:1px solid rgba(255,255,255,.06);
     text-align:right;
@@ -8300,10 +8306,11 @@ button.home-route-band{
 
   .engine-ledger .ledger-row > div{
     grid-column:auto !important;
-    padding-top:24px;
+    gap:7px;
   }
 
   .engine-ledger .ledger-row > div:last-child{
+    align-items:flex-start;
     justify-content:flex-start;
     text-align:left;
   }
