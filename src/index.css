@@ -8196,3 +8196,107 @@ button.home-route-band{
     background:#02060e;
   }
 }
+
+/* =========================================
+   ENGINE MOBILE LEDGER RESCUE
+========================================= */
+
+@media (max-width:760px){
+  .engine-ledger .ledger-table{
+    display:grid;
+    gap:12px;
+  }
+
+  .engine-ledger .ledger-entry{
+    border:0;
+  }
+
+  .engine-ledger .ledger-row{
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+    gap:12px 14px;
+    padding:14px;
+    min-height:0;
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:18px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.028), rgba(0,0,0,.2)),
+      rgba(7,11,15,.94);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+  }
+
+  .engine-ledger .ledger-row > div{
+    min-width:0;
+    padding-top:16px;
+    white-space:normal;
+    overflow-wrap:break-word;
+    word-break:normal;
+    align-self:start;
+  }
+
+  .engine-ledger .ledger-row > div::before{
+    font-size:.61rem;
+    letter-spacing:.14em;
+    color:rgba(231,255,247,.52);
+  }
+
+  .engine-ledger .ledger-slotid{
+    font-size:.84rem;
+    letter-spacing:.1em;
+  }
+
+  .engine-ledger .ledger-row > div:nth-child(1),
+  .engine-ledger .ledger-row > div:nth-child(6),
+  .engine-ledger .ledger-row > div:nth-child(9){
+    grid-column:1 / -1;
+  }
+
+  .engine-ledger[aria-label="Slots Ledger"] .ledger-row > div:nth-child(3){
+    grid-column:1 / -1;
+  }
+
+  .engine-ledger .ledger-analysis{
+    display:block;
+    max-width:none;
+    font-size:.81rem;
+    line-height:1.55;
+  }
+
+  .engine-ledger .ledger-analysis::after{
+    display:none;
+  }
+
+  .engine-ledger .ledger-row > div:last-child{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    min-height:34px;
+    padding-top:14px;
+    border-top:1px solid rgba(255,255,255,.06);
+    text-align:right;
+  }
+
+  .engine-ledger .ledger-view{
+    font-size:.78rem;
+    letter-spacing:.12em;
+  }
+
+  .engine-ledger .num{
+    text-align:left;
+  }
+}
+
+@media (max-width:480px){
+  .engine-ledger .ledger-row{
+    grid-template-columns:1fr !important;
+    gap:10px;
+  }
+
+  .engine-ledger .ledger-row > div{
+    grid-column:auto !important;
+  }
+
+  .engine-ledger .ledger-row > div:last-child{
+    justify-content:flex-start;
+    text-align:left;
+  }
+}
