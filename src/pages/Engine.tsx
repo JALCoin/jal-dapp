@@ -25,6 +25,16 @@ type Snapshot = {
   watch: string[];
   pollMs?: number;
   url?: string;
+  history?: {
+    enabled?: boolean;
+    dir?: string;
+    retentionDays?: number;
+    writes?: number;
+    lastWriteAt?: number | null;
+    lastWriteIso?: string | null;
+    lastFile?: string | null;
+    lastErr?: string | null;
+  };
 };
 
 type Feed = "all" | "aud" | "watch" | "engine";
@@ -505,6 +515,89 @@ type PublicMetaResponse = {
       aliasUsed?: boolean;
       valid?: boolean;
     };
+    quoteGuard?: {
+      enabled?: boolean;
+      required?: boolean;
+      maxDriftPct?: number;
+      timeoutMs?: number;
+    };
+    envAuditSummary?: {
+      total?: number;
+      configured?: number;
+      byStatus?: Record<string, number>;
+    };
+    telemetry?: {
+      eventsSeen?: number;
+      eventsWritten?: number;
+      eventsSuppressed?: number;
+      lastEventAt?: number;
+      lastEventPrefix?: string | null;
+      byKind?: Record<string, number>;
+      byPrefix?: Record<string, number>;
+      lastWorkerAction?: {
+        server?: {
+          at?: number;
+          prefix?: string;
+          msg?: string;
+          written?: boolean;
+          suppressed?: boolean;
+        };
+        harvester?: {
+          at?: number;
+          prefix?: string;
+          msg?: string;
+          written?: boolean;
+          suppressed?: boolean;
+        };
+        executor?: {
+          at?: number;
+          prefix?: string;
+          msg?: string;
+          written?: boolean;
+          suppressed?: boolean;
+        };
+        manager?: {
+          at?: number;
+          prefix?: string;
+          msg?: string;
+          written?: boolean;
+          suppressed?: boolean;
+        };
+      };
+    };
+    eventCompression?: {
+      enabled?: boolean;
+      windowMs?: number;
+      trackedKeys?: number;
+      totalSuppressed?: number;
+      totalWritten?: number;
+      byCategory?: Record<string, number>;
+      active?: Array<{
+        category?: string;
+        reason?: string | null;
+        slotId?: string | null;
+        coin?: string | null;
+        suppressed?: number;
+        lastAt?: number;
+        lastMsg?: string | null;
+      }>;
+    };
+    rotationDashboard?: {
+      summary?: {
+        policyEnabled?: boolean;
+        policyRunning?: boolean;
+        executorEnabled?: boolean;
+        executorRunning?: boolean;
+        executorDryRun?: boolean;
+        recommend?: boolean;
+        blockedReason?: string | null;
+        edgeScore?: number | null;
+        activeReservations?: number;
+        reservationStages?: Record<string, number>;
+        eligibleInCandidates?: number;
+        eligibleOutCandidates?: number;
+      };
+    };
     rotationExecutor?: {
       enabled?: boolean;
       dryRun?: boolean;
@@ -845,6 +938,78 @@ function capitalReasonLabel(coin: PublicCapitalCoin | null | undefined) {
     return "Wallet capital is available, but no active rotation recommendation is selected yet.";
   }
   return "Standby";
+}
+
+function summarizeRecordTop(
+  record: Record<string, number> | null | undefined,
+  limit = 3
+) {
+  const entries = Object.entries(record ?? {})
+    .filter(([, value]) => Number.isFinite(value))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, Math.max(0, limit));
+
+  if (!entries.length) return "-";
+  return entries.map(([key, value]) => `${key} ${value}`).join(" | ");
+}
+
+function runtimeGateLabel(
+  action:
+    | {
+        prefix?: string;
+        msg?: string;
+      }
+    | null
+    | undefined
+) {
+  const prefix = String(action?.prefix || "").toUpperCase();
+  if (prefix.includes("PORTFOLIO_GATE_OPEN")) return "OPEN";
+  if (prefix.includes("PORTFOLIO_GATE_BLOCKED")) return "BLOCKED";
+  if (prefix) return enumLabel(prefix);
+  return "-";
+}
+
+function quoteGuardLabel(
+  quoteGuard:
+    | {
+        enabled?: boolean;
+        required?: boolean;
+        maxDriftPct?: number;
+      }
+    | null
+    | undefined
+) {
+  if (!quoteGuard) return "-";
+  if (!quoteGuard.enabled) return "OFF";
+  const mode = quoteGuard.required ? "REQUIRED" : "BEST EFFORT";
+  const drift = quoteGuard.maxDriftPct != null ? pctNum(quoteGuard.maxDriftPct) : "-";
+  return `ON | ${mode} | drift ${drift}`;
+}
+
+function historyStatusLabel(snap: Snapshot | null | undefined, nowMs: number) {
+  const history = snap?.history;
+  if (!history?.enabled) return "OFF";
+  if (history.lastErr) return `ERR | ${history.lastErr}`;
+  if (history.lastWriteAt) {
+    return `${history.writes ?? 0} writes | ${ageLabel(nowMs - history.lastWriteAt)} ago`;
+  }
+  return `${history.writes ?? 0} writes`;
+}
+
+function suppressionLabel(
+  telemetry:
+    | {
+        eventsSeen?: number;
+        eventsSuppressed?: number;
+      }
+    | null
+    | undefined
+) {
+  const seen = telemetry?.eventsSeen ?? 0;
+  const suppressed = telemetry?.eventsSuppressed ?? 0;
+  if (seen <= 0) return "-";
+  const pct = ((suppressed / seen) * 100).toFixed(1);
+  return `${suppressed}/${seen} (${pct}%)`;
 }
 
 function secondaryOverviewSummary(slot: SlotRow) {
@@ -1739,7 +1904,14 @@ function useEngineData(BASE: string): EngineData {
     const ctrl = new AbortController();
 
     try {
-      const [marketRowsAll, marketRowsAud, snapshot, metaRes, slotsRes, eventsRes] = await Promise.all([
+      const [
+        marketRowsAllRes,
+        marketRowsAudRes,
+        snapshotRes,
+        metaRes,
+        slotsRes,
+        eventsRes,
+      ] = await Promise.allSettled([
         fetchMarketRowsAll(ctrl.signal),
         fetchMarketRowsAud(ctrl.signal),
         fetchSnap(ctrl.signal),
@@ -1751,13 +1923,58 @@ function useEngineData(BASE: string): EngineData {
       if (disposedRef.current) return;
       if (pollId !== latestPollRef.current) return;
 
-      setRowsAll(marketRowsAll);
-      setRowsAud(marketRowsAud);
-      setSnap(snapshot);
-      setMeta(metaRes);
-      setSlotRows(slotsRes);
-      setEvents(eventsRes);
-      setErr(null);
+      const failures: string[] = [];
+      let successCount = 0;
+
+      if (marketRowsAllRes.status === "fulfilled") {
+        setRowsAll(marketRowsAllRes.value);
+        successCount += 1;
+      } else {
+        failures.push(`market/all unavailable`);
+      }
+
+      if (marketRowsAudRes.status === "fulfilled") {
+        setRowsAud(marketRowsAudRes.value);
+        successCount += 1;
+      } else {
+        failures.push(`market/aud unavailable`);
+      }
+
+      if (snapshotRes.status === "fulfilled") {
+        setSnap(snapshotRes.value);
+        successCount += 1;
+      } else {
+        failures.push(`market/snapshot unavailable`);
+      }
+
+      if (metaRes.status === "fulfilled") {
+        setMeta(metaRes.value);
+        successCount += 1;
+      } else {
+        failures.push(`meta unavailable`);
+      }
+
+      if (slotsRes.status === "fulfilled") {
+        setSlotRows(slotsRes.value);
+        successCount += 1;
+      } else {
+        failures.push(`slots unavailable`);
+      }
+
+      if (eventsRes.status === "fulfilled") {
+        setEvents(eventsRes.value);
+        successCount += 1;
+      } else {
+        failures.push(`events unavailable`);
+      }
+
+      if (!failures.length) {
+        setErr(null);
+      } else if (successCount > 0) {
+        setErr(`Partial refresh issue: ${failures.join(" | ")}\nENGINE_BASE: ${BASE}`);
+      } else {
+        setErr(`All engine endpoints failed: ${failures.join(" | ")}\nENGINE_BASE: ${BASE}`);
+      }
     } catch (e: unknown) {
       if (disposedRef.current) return;
       if (pollId !== latestPollRef.current) return;
@@ -3140,7 +3357,15 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   topTrackingCoins: string;
   executionMode: string;
   view: ViewMode;
+  nowMs: number;
 }) {
+  const runtime = props.meta?.runtime;
+  const telemetry = runtime?.telemetry;
+  const compression = runtime?.eventCompression;
+  const rotationSummary = runtime?.rotationDashboard?.summary;
+  const snapshot = props.meta?.market?.snapshot ?? null;
+  const serverGate = telemetry?.lastWorkerAction?.server;
+
   return (
     <div className="engine-bay">
       <div className="bay-head">
@@ -3240,6 +3465,68 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
             <div className="mini-k">Last OK</div>
             <div className="mini-v">
               {formatDateTime(props.meta?.market?.snapshot?.lastOkAt)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">Runtime Health</div>
+            <div className="engine-telemetry-note">Live guardrails, replay logging, and noise control.</div>
+          </div>
+        </div>
+
+        <div className="engine-mini">
+          <div className="engine-mini-row">
+            <div className="mini-k">Portfolio Gate</div>
+            <div className="mini-v">{runtimeGateLabel(serverGate)}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Gate Age</div>
+            <div className="mini-v">{serverGate?.at ? ageLabel(props.nowMs - serverGate.at) : "-"}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Server Signal</div>
+            <div className="mini-v">{serverGate?.msg ?? "-"}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Noise Filter</div>
+            <div className="mini-v">{suppressionLabel(telemetry)}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Top Runtime Noise</div>
+            <div className="mini-v">{summarizeRecordTop(telemetry?.byPrefix, 4)}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Compression Active</div>
+            <div className="mini-v">
+              {compression?.enabled
+                ? `${compression.totalSuppressed ?? 0} suppressed | ${compression.trackedKeys ?? 0} keys`
+                : "OFF"}
+            </div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Replay Log</div>
+            <div className="mini-v">{historyStatusLabel(snapshot, props.nowMs)}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Quote Guard</div>
+            <div className="mini-v">{quoteGuardLabel(runtime?.quoteGuard)}</div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Rotation Candidates</div>
+            <div className="mini-v">
+              out {rotationSummary?.eligibleOutCandidates ?? 0} | in {rotationSummary?.eligibleInCandidates ?? 0}
             </div>
           </div>
         </div>
@@ -3680,17 +3967,18 @@ export default function Engine() {
 />
               <div className="engine-grid engine-grid--asym" aria-label="Engine bays">
                 <div className="engine-bay-stack">
-                  <SummaryPanel
-                    meta={meta}
-                    capital={capital}
-                    fixedAllowlist={fixedAllowlist}
-                    fixedMissing={fixedMissing}
-                    trackingStates={trackingStates}
-                    overviewCounts={overviewCounts}
-                    topTrackingCoins={topTrackingCoins}
-                    executionMode={executionMode}
-                    view={view}
-                  />
+                <SummaryPanel
+                  meta={meta}
+                  capital={capital}
+                  fixedAllowlist={fixedAllowlist}
+                  fixedMissing={fixedMissing}
+                  trackingStates={trackingStates}
+                  overviewCounts={overviewCounts}
+                  topTrackingCoins={topTrackingCoins}
+                  executionMode={executionMode}
+                  view={view}
+                  nowMs={nowMs}
+                />
 
                   <CapitalMobilityPanel capital={capital} nowMs={nowMs} />
                 </div>
