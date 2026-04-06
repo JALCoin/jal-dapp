@@ -8204,7 +8204,7 @@ button.home-route-band{
 @media (max-width:760px){
   .engine-ledger .ledger-table{
     display:grid;
-    gap:12px;
+    gap:14px;
   }
 
   .engine-ledger .ledger-entry{
@@ -8213,8 +8213,8 @@ button.home-route-band{
 
   .engine-ledger .ledger-row{
     grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
-    gap:12px 14px;
-    padding:14px;
+    gap:14px 16px;
+    padding:16px;
     min-height:0;
     border:1px solid rgba(255,255,255,.07);
     border-radius:18px;
@@ -8225,8 +8225,9 @@ button.home-route-band{
   }
 
   .engine-ledger .ledger-row > div{
+    position:relative;
     min-width:0;
-    padding-top:22px;
+    padding-top:26px;
     white-space:normal;
     overflow-wrap:break-word;
     word-break:normal;
@@ -8236,7 +8237,7 @@ button.home-route-band{
   .engine-ledger .ledger-row > div::before{
     top:0;
     left:0;
-    line-height:1;
+    line-height:1.1;
     font-size:.61rem;
     letter-spacing:.14em;
     color:rgba(231,255,247,.52);
@@ -8261,8 +8262,9 @@ button.home-route-band{
     display:block;
     max-width:none;
     font-size:.81rem;
-    line-height:1.55;
-    padding-top:24px;
+    line-height:1.6;
+    padding-top:28px;
+    margin-top:2px;
   }
 
   .engine-ledger .ledger-analysis::after{
@@ -8273,8 +8275,9 @@ button.home-route-band{
     display:flex;
     align-items:center;
     justify-content:flex-end;
-    min-height:42px;
-    padding-top:20px;
+    min-height:46px;
+    padding-top:24px;
+    margin-top:4px;
     border-top:1px solid rgba(255,255,255,.06);
     text-align:right;
   }
@@ -8292,12 +8295,12 @@ button.home-route-band{
 @media (max-width:480px){
   .engine-ledger .ledger-row{
     grid-template-columns:1fr !important;
-    gap:10px;
+    gap:12px;
   }
 
   .engine-ledger .ledger-row > div{
     grid-column:auto !important;
-    padding-top:20px;
+    padding-top:24px;
   }
 
   .engine-ledger .ledger-row > div:last-child{
