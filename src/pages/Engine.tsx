@@ -27,7 +27,7 @@ type Snapshot = {
   url?: string;
 };
 
-type Feed = "all" | "aud" | "watch";
+type Feed = "all" | "aud" | "watch" | "engine";
 type SortKey = "coin" | "spread" | "mid";
 type SortDir = "asc" | "desc";
 type ViewMode = "simple" | "advanced";
@@ -578,7 +578,8 @@ type PublicEventsResponse = { ok: boolean; ts: number; rows: SlotEvent[] };
 type PublicSlotsResponse = { ok: boolean; ts: number; rows: SlotRow[] };
 
 type EngineData = {
-  rows: MarketRow[];
+  rowsAll: MarketRow[];
+  rowsAud: MarketRow[];
   snap: Snapshot | null;
   meta: PublicMetaResponse | null;
   capital: PublicCapitalResponse | null;
@@ -667,12 +668,25 @@ function fmtEventTime(atMs: number) {
   return `${hh}:${mm}:${ss}`;
 }
 
+function titleCaseWords(value: string) {
+  return value
+    .toLowerCase()
+    .split(" ")
+    .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part))
+    .join(" ");
+}
+
+function enumLabel(value: string | null | undefined) {
+  if (!value) return "-";
+  return titleCaseWords(String(value).replace(/_/g, " "));
+}
+
 function trackingLabel(s: SlotRow) {
-  return s.trackingState || "-";
+  return enumLabel(s.trackingState);
 }
 
 function stateLabel(s: SlotRow) {
-  return s.state;
+  return enumLabel(s.state);
 }
 
 function slotCoin(s: SlotRow) {
@@ -699,7 +713,33 @@ function lockDisplay(s: SlotRow) {
 
 function reasonLabel(reason: string | null | undefined) {
   if (!reason) return "-";
-  return String(reason).replace(/_/g, " ");
+  const normalized = String(reason).trim().toLowerCase();
+
+  const mapped: Record<string, string> = {
+    wallet_rotation_cooldown: "Wallet rotation cooldown",
+    wallet_source_below_min_aud: "Wallet source below minimum AUD",
+    wallet_coin_not_available: "Wallet coin not available",
+    waiting_not_executor_eligible: "Waiting slot not executor-eligible",
+    spread_blowout: "Spread above allowed threshold",
+    spread_unresolved: "Spread unavailable",
+    market_unresolved: "Market unavailable",
+    no_market: "No market data",
+    bidask_unresolved: "Bid/ask unavailable",
+    live_bidask_required: "Live bid/ask required",
+    drawdown_not_ready: "Drawdown not ready",
+    bounce_not_ready: "Bounce not ready",
+    trend_not_ready: "Trend not ready",
+    priority_score_below_min: "Priority score below minimum",
+    wallet_basis_unavailable: "Wallet basis unavailable",
+    wallet_basis_avg_cost_unresolved: "Wallet average cost unavailable",
+    wallet_source_not_in_profit: "Wallet source not in profit",
+    too_profitable_to_rotate: "Source is too profitable to rotate",
+    realized_loss_exit_disabled: "Loss exit disabled by policy",
+    max_realized_loss_exceeded: "Maximum realized loss exceeded",
+  };
+
+  if (mapped[normalized]) return mapped[normalized];
+  return enumLabel(reason);
 }
 
 function yesNo(v: boolean | null | undefined) {
@@ -712,7 +752,32 @@ function fmtTimestampAge(ts: number | null | undefined, nowMs: number) {
   return ageLabel(nowMs - ts);
 }
 
-function walletReadinessLabel(capitalCoin: PublicCapitalCoin | null | undefined) {
+function formatDateTime(ts: number | null | undefined) {
+  if (ts == null || !Number.isFinite(ts)) return "-";
+  return new Date(ts).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function formatSnapshotLabel(snap: Snapshot | null, nowMs: number) {
+  if (!snap) return "-";
+
+  const ts = snap.lastPollAt ?? snap.lastOkAt ?? null;
+  if (ts == null || !Number.isFinite(ts)) return snap.lastPollIso ?? snap.lastOkIso ?? "-";
+
+  const age = ageLabel(nowMs - ts);
+  return `${formatDateTime(ts)} (${age} ago)`;
+}
+
+function walletReadinessLabel(
+  capitalCoin: PublicCapitalCoin | null | undefined,
+  basisRequired: boolean
+) {
   if (!capitalCoin) return "-";
   const hasPolicySignal =
     capitalCoin.rotationWalletReady != null ||
@@ -723,7 +788,7 @@ function walletReadinessLabel(capitalCoin: PublicCapitalCoin | null | undefined)
     capitalCoin.rotationTargetSlotId != null ||
     capitalCoin.rotationEligibleOut === true;
   if (capitalCoin.rotationWalletProfitGuardPassed === false) return "PROFIT BLOCKED";
-  if (hasPolicySignal && capitalCoin.rotationWalletBasisKnown === false) return "BASIS BLOCKED";
+  if (basisRequired && hasPolicySignal && capitalCoin.rotationWalletBasisKnown === false) return "BASIS BLOCKED";
   if (capitalCoin.rotationWalletReady === true) return "POLICY READY";
   if (capitalCoin.walletSourceReady === true) return "TREASURY READY";
   const blocked = String(capitalCoin.walletSourceBlockedReason || "").toLowerCase();
@@ -734,8 +799,11 @@ function walletReadinessLabel(capitalCoin: PublicCapitalCoin | null | undefined)
   return "STANDBY";
 }
 
-function walletReadinessTone(capitalCoin: PublicCapitalCoin | null | undefined) {
-  const label = walletReadinessLabel(capitalCoin);
+function walletReadinessTone(
+  capitalCoin: PublicCapitalCoin | null | undefined,
+  basisRequired: boolean
+) {
+  const label = walletReadinessLabel(capitalCoin, basisRequired);
   if (label === "POLICY READY") return "state-positive";
   if (label === "TREASURY READY") return "state-warn";
   if (label === "PROFIT BLOCKED" || label === "BASIS BLOCKED") return "state-bad";
@@ -782,6 +850,23 @@ function capitalReasonLabel(coin: PublicCapitalCoin | null | undefined) {
 function secondaryOverviewSummary(slot: SlotRow) {
   const total = getSecondaryRows(slot).length;
   return `${primarySubslotDecisionLabel(slot)} | ${total}`;
+}
+
+function coinSpreadThresholdPct(slot: SlotRow) {
+  const coin = String(slot.coin || "").toUpperCase();
+
+  const perCoin: Record<string, number> = {
+    BTC: 0.3,
+    ETH: 0.35,
+    XRP: 0.3,
+    SOL: 0.3,
+    ADA: 0.45,
+    DOGE: 0.45,
+    LTC: 0.45,
+    TRX: 0.7,
+  };
+
+  return perCoin[coin] ?? 1.1;
 }
 
 function rotationDoctrineLabel(capital: PublicCapitalResponse | null | undefined) {
@@ -1076,7 +1161,7 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
 }
 
 function stateClassName(value: string | null | undefined) {
-  const normalized = String(value || "").toUpperCase().replace(/_/g, "-");
+  const normalized = String(value || "").toUpperCase().replace(/[_\s]+/g, "-");
   return normalized ? `state-${normalized}` : "";
 }
 
@@ -1115,12 +1200,16 @@ function stateToneClass(slot: SlotRow) {
   return "is-neutral";
 }
 
+function rawRegimeValue(s: SlotRow): string {
+  return String(s.regime ?? s.consolidationState ?? "UNCLASSIFIED").toUpperCase();
+}
+
 function regimeLabel(s: SlotRow): string {
-  return (s.regime ?? s.consolidationState ?? "UNCLASSIFIED") as string;
+  return enumLabel(s.regime ?? s.consolidationState ?? "UNCLASSIFIED");
 }
 
 function regimeToneClass(s: SlotRow): string {
-  const regime = regimeLabel(s).toUpperCase();
+  const regime = rawRegimeValue(s);
 
   if (regime.includes("UPTREND") || regime.includes("BULL")) return "is-holding";
   if (regime.includes("DOWNTREND") || regime.includes("BEAR")) return "is-exiting";
@@ -1129,7 +1218,7 @@ function regimeToneClass(s: SlotRow): string {
 }
 
 function regimeSummary(s: SlotRow): string {
-  const regime = regimeLabel(s).toUpperCase();
+  const regime = rawRegimeValue(s);
   const breakout = s.consolidationBreakoutReady === true;
 
   switch (regime) {
@@ -1159,7 +1248,7 @@ function regimeSummary(s: SlotRow): string {
 function subslotModeLabel(s: SlotRow) {
   const primary = getPrimarySecondarySnapshot(s);
   const mode = String(primary?.subslotEntryMode || "").toUpperCase();
-  const regime = String(regimeLabel(s)).toUpperCase();
+  const regime = rawRegimeValue(s);
 
   if (mode) return mode.replace(/_/g, " ");
   if (regime.includes("CONSOLIDATION")) return "CONSOLIDATION CAPTURE";
@@ -1265,7 +1354,7 @@ function entryPhaseLabel(s: SlotRow) {
 
 function breakoutLabel(s: SlotRow) {
   if (s.consolidationBreakoutReady === true) return "READY";
-  if (String(regimeLabel(s)).toUpperCase().includes("CONSOLIDATION")) return "BUILDING";
+  if (rawRegimeValue(s).includes("CONSOLIDATION")) return "BUILDING";
   return "NO";
 }
 
@@ -1279,7 +1368,7 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   const breakout = s.consolidationBreakoutReady === true;
   const tracking = String(s.trackingState || "").toUpperCase();
   const state = String(s.state || "").toUpperCase();
-  const regime = String(regimeLabel(s)).toUpperCase();
+  const regime = rawRegimeValue(s);
   const updated = slotHeartbeatLabel(s, nowMs);
 
   // Parent State Analysis
@@ -1525,6 +1614,7 @@ function slotHealthLabel(s: SlotRow) {
   const state = String(s.state || "").toUpperCase();
   const tracking = String(s.trackingState || "").toUpperCase();
   const spread = Number(s.nowSpreadPct);
+  const spreadLimit = coinSpreadThresholdPct(s);
 
   if (state === "EXITING") return "RESOLVING EXIT";
   if (state === "DEPLOYING") return "CONFIRMING ENTRY";
@@ -1535,7 +1625,9 @@ function slotHealthLabel(s: SlotRow) {
   if (hasActiveSubslots(s)) return "JRD SECONDARY LIVE";
   if (tracking === "REVERSAL_CONFIRMING") return "BUILDING";
   if (s.consolidationBreakoutReady === true) return "READY";
-  if (tracking === "SPREAD_BLOCKED" || (Number.isFinite(spread) && spread > 1.5)) return "UNDER FRICTION";
+  if (tracking === "SPREAD_BLOCKED" || (Number.isFinite(spread) && spread > spreadLimit)) {
+    return "UNDER FRICTION";
+  }
   if (tracking === "NO_MARKET") return "NO MARKET";
   return "OBSERVING";
 }
@@ -1578,7 +1670,8 @@ function computeWindowHarvestFromSlots(slotRows: SlotRow[]) {
 ========================= */
 
 function useEngineData(BASE: string): EngineData {
-  const [rows, setRows] = useState<MarketRow[]>([]);
+  const [rowsAll, setRowsAll] = useState<MarketRow[]>([]);
+  const [rowsAud, setRowsAud] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [meta, setMeta] = useState<PublicMetaResponse | null>(null);
   const [capital, setCapital] = useState<PublicCapitalResponse | null>(null);
@@ -1606,7 +1699,12 @@ function useEngineData(BASE: string): EngineData {
   return (await r.json()) as T;
 }, [BASE]);
 
-  const fetchMarketRows = useCallback(async (signal?: AbortSignal) => {
+  const fetchMarketRowsAll = useCallback(async (signal?: AbortSignal) => {
+    const j = await fetchJson<{ rows?: MarketRow[] }>("/api/market/all", signal);
+    return Array.isArray(j?.rows) ? j.rows : [];
+  }, [fetchJson]);
+
+  const fetchMarketRowsAud = useCallback(async (signal?: AbortSignal) => {
     const j = await fetchJson<{ rows?: MarketRow[] }>("/api/market/aud", signal);
     return Array.isArray(j?.rows) ? j.rows : [];
   }, [fetchJson]);
@@ -1641,8 +1739,9 @@ function useEngineData(BASE: string): EngineData {
     const ctrl = new AbortController();
 
     try {
-      const [marketRows, snapshot, metaRes, slotsRes, eventsRes] = await Promise.all([
-        fetchMarketRows(ctrl.signal),
+      const [marketRowsAll, marketRowsAud, snapshot, metaRes, slotsRes, eventsRes] = await Promise.all([
+        fetchMarketRowsAll(ctrl.signal),
+        fetchMarketRowsAud(ctrl.signal),
         fetchSnap(ctrl.signal),
         fetchMeta(ctrl.signal),
         fetchPublicSlots(ctrl.signal),
@@ -1652,7 +1751,8 @@ function useEngineData(BASE: string): EngineData {
       if (disposedRef.current) return;
       if (pollId !== latestPollRef.current) return;
 
-      setRows(marketRows);
+      setRowsAll(marketRowsAll);
+      setRowsAud(marketRowsAud);
       setSnap(snapshot);
       setMeta(metaRes);
       setSlotRows(slotsRes);
@@ -1667,7 +1767,7 @@ function useEngineData(BASE: string): EngineData {
     } finally {
       ctrl.abort();
     }
-  }, [BASE, fetchMarketRows, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
+  }, [BASE, fetchMarketRowsAll, fetchMarketRowsAud, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
 
   const pollCapital = useCallback(async () => {
     const ctrl = new AbortController();
@@ -1708,7 +1808,7 @@ function useEngineData(BASE: string): EngineData {
     };
   }, [pollCore, pollCapital]);
 
-  return { rows, snap, meta, capital, slotRows, events, err, refresh };
+  return { rowsAll, rowsAud, snap, meta, capital, slotRows, events, err, refresh };
 }
 
 /* =========================
@@ -1725,8 +1825,9 @@ const EngineHero = React.memo(function EngineHero(props: {
   lastAction: string;
   view: ViewMode;
   runtimeWarnings: string[];
+  nowMs: number;
 }) {
-  const { snap, meta, architecture, executionMode, fixedPresent, feedCount, lastAction, view, runtimeWarnings } = props;
+  const { snap, meta, architecture, executionMode, fixedPresent, feedCount, lastAction, view, runtimeWarnings, nowMs } = props;
 
   return (
     <header className="engine-hero" aria-label="Engine header">
@@ -1795,7 +1896,7 @@ const EngineHero = React.memo(function EngineHero(props: {
                 <div className="engine-auth-hint">
           Clarity first. Diagnostics second. Every slot is explained as a machine decision.
           <br />
-          Snapshot: {snap?.lastPollIso ?? snap?.lastOkIso ?? "-"}
+          Snapshot: {formatSnapshotLabel(snap, nowMs)}
         </div>
       </aside>
     </header>
@@ -1971,6 +2072,14 @@ const ControlsBar = React.memo(function ControlsBar(props: {
           onClick={() => props.setFeed("aud")}
         >
           Feed: AUD
+        </button>
+
+        <button
+          type="button"
+          className={`button ghost ${props.feed === "engine" ? "active" : ""}`}
+          onClick={() => props.setFeed("engine")}
+        >
+          Feed: Engine
         </button>
 
         <button
@@ -3121,16 +3230,16 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
           </div>
 
           <div className="engine-mini-row">
-  <div className="mini-k">Snapshot Poll</div>
-  <div className="mini-v">
-    {props.meta?.market?.snapshot?.lastPollIso ?? props.meta?.market?.snapshot?.lastOkIso ?? "-"}
-  </div>
-</div>
+            <div className="mini-k">Snapshot Poll</div>
+            <div className="mini-v">
+              {formatSnapshotLabel(props.meta?.market?.snapshot ?? null, Date.now())}
+            </div>
+          </div>
 
           <div className="engine-mini-row">
             <div className="mini-k">Last OK</div>
             <div className="mini-v">
-              {props.meta?.market?.snapshot?.lastOkIso ?? "-"}
+              {formatDateTime(props.meta?.market?.snapshot?.lastOkAt)}
             </div>
           </div>
         </div>
@@ -3205,7 +3314,7 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
                   <div><div className="slot-k">Available Coin</div><div className="slot-v">{fmt(coin.availableCoin)}</div></div>
                   <div><div className="slot-k">Rate</div><div className="slot-v">{fmt(coin.rate)}</div></div>
                   <div><div className="slot-k">Movable AUD</div><div className="slot-v">{moneyAud(coin.movableAudEstimate)}</div></div>
-                  <div><div className="slot-k">Readiness</div><div className={`slot-v ${walletReadinessTone(coin)}`}>{walletReadinessLabel(coin)}</div></div>
+                  <div><div className="slot-k">Readiness</div><div className={`slot-v ${walletReadinessTone(coin, Boolean(props.capital?.rotation?.walletRequireBasis))}`}>{walletReadinessLabel(coin, Boolean(props.capital?.rotation?.walletRequireBasis))}</div></div>
                   <div><div className="slot-k">Basis Known</div><div className="slot-v">{yesNo(coin.rotationWalletBasisKnown)}</div></div>
                   <div><div className="slot-k">Profit Guard</div><div className="slot-v">{yesNo(coin.rotationWalletProfitGuardPassed)}</div></div>
                   <div><div className="slot-k">Target Executor Eligible</div><div className="slot-v">{yesNo(coin.rotationTargetExecutorEligible)}</div></div>
@@ -3236,7 +3345,7 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
                   <div><div className="slot-k">Wallet Movable AUD</div><div className="slot-v">{moneyAud(coin.rotationWalletMovableAud ?? coin.movableAudEstimate)}</div></div>
                   <div><div className="slot-k">Treasury Ready</div><div className="slot-v">{yesNo(coin.walletSourceReady)}</div></div>
                   <div><div className="slot-k">Policy Ready</div><div className="slot-v">{yesNo(coin.rotationWalletReady)}</div></div>
-                  <div><div className="slot-k">Ready</div><div className={`slot-v ${walletReadinessTone(coin)}`}>{walletReadinessLabel(coin)}</div></div>
+                  <div><div className="slot-k">Ready</div><div className={`slot-v ${walletReadinessTone(coin, Boolean(props.capital?.rotation?.walletRequireBasis))}`}>{walletReadinessLabel(coin, Boolean(props.capital?.rotation?.walletRequireBasis))}</div></div>
                   <div><div className="slot-k">Basis Known</div><div className="slot-v">{yesNo(coin.rotationWalletBasisKnown)}</div></div>
                   <div><div className="slot-k">Profit Guard</div><div className="slot-v">{yesNo(coin.rotationWalletProfitGuardPassed)}</div></div>
                   <div><div className="slot-k">Target Executor Eligible</div><div className="slot-v">{yesNo(coin.rotationTargetExecutorEligible)}</div></div>
@@ -3270,7 +3379,7 @@ export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
   const isDesktop = useIsDesktop(980);
 
-  const { rows, snap, meta, capital, slotRows, events, err, refresh } = useEngineData(BASE);
+  const { rowsAll, rowsAud, snap, meta, capital, slotRows, events, err, refresh } = useEngineData(BASE);
 
   const [feed, setFeed] = useState<Feed>("aud");
   const [sortKey, setSortKey] = useState<SortKey>("coin");
@@ -3285,6 +3394,11 @@ export default function Engine() {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
+  const fixedAllowlist = meta?.fixedSlots?.allowlist ?? [];
+  const engineCoinSet = useMemo(
+    () => new Set(fixedAllowlist.map((c) => String(c).toUpperCase())),
+    [fixedAllowlist]
+  );
 
   useEffect(() => {
     const t = window.setInterval(() => setNowMs(Date.now()), 500);
@@ -3294,10 +3408,14 @@ export default function Engine() {
   const filteredMarketRows = useMemo(() => {
     const q = query.trim().toUpperCase();
     const watchSet = new Set((snap?.watch ?? []).map((c) => String(c).toUpperCase()));
-    let list = rows.slice();
+    let list = feed === "all" ? rowsAll.slice() : rowsAud.slice();
 
     if (feed === "watch") {
       list = list.filter((r) => watchSet.has(String(r.coin).toUpperCase()));
+    }
+
+    if (feed === "engine") {
+      list = rowsAud.filter((r) => engineCoinSet.has(String(r.coin).toUpperCase()));
     }
 
     if (q) {
@@ -3308,7 +3426,7 @@ export default function Engine() {
     }
 
     return sortMarketRows(list, sortKey, sortDir);
-  }, [feed, query, rows, snap?.watch, sortDir, sortKey]);
+  }, [engineCoinSet, feed, query, rowsAll, rowsAud, snap?.watch, sortDir, sortKey]);
 
   const filteredSlots = useMemo(() => {
     const q = query.trim().toUpperCase();
@@ -3401,7 +3519,6 @@ export default function Engine() {
     return events.filter((e) => e.slotId === selectedSlotId);
   }, [events, selectedSlotId]);
 
-  const fixedAllowlist = meta?.fixedSlots?.allowlist ?? [];
   const fixedExpected = meta?.fixedSlots?.expected ?? fixedAllowlist.length;
   const fixedPresent = meta?.fixedSlots?.present ?? slotRows.length;
   const fixedMissing = meta?.fixedSlots?.missing ?? [];
@@ -3426,7 +3543,16 @@ export default function Engine() {
   }, [events]);
 
   const marketCounts = snap?.counts ?? { all: 0, aud: 0, watch: 0 };
-  const feedCount = feed === "all" ? marketCounts.all : feed === "aud" ? marketCounts.aud : marketCounts.watch;
+  const engineFeedCount = rowsAud.filter((r) => engineCoinSet.has(String(r.coin).toUpperCase())).length;
+
+  const feedCount =
+    feed === "all"
+      ? marketCounts.all
+      : feed === "aud"
+      ? marketCounts.aud
+      : feed === "watch"
+      ? marketCounts.watch
+      : engineFeedCount;
 
     const snapshotAgeMs =
     snap?.lastPollAt != null
@@ -3456,7 +3582,7 @@ export default function Engine() {
   };
 
   for (const s of slotRows) {
-    const regime = String(regimeLabel(s)).toUpperCase();
+    const regime = rawRegimeValue(s);
     if (regime.includes("UPTREND") || regime.includes("BULL")) out.bull += 1;
     if (regime.includes("DOWNTREND") || regime.includes("BEAR")) out.bear += 1;
     if (regime.includes("CONSOLIDATION")) out.consolidation += 1;
@@ -3496,6 +3622,7 @@ export default function Engine() {
                 lastAction={`${lastAction} | ${snapshotFresh ? "FRESH" : "STALE"}`}
                 view={view}
                 runtimeWarnings={runtimeWarnings}
+                nowMs={nowMs}
               />
 
               <CaptureGrid
