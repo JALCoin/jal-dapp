@@ -14,12 +14,15 @@ import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Engine from "./pages/Engine";
 import ShopPage from "./pages/Shop";
+import AuthPage from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import JalSolPage from "./pages/JalSol";
 import JalSolSuccess from "./pages/JalSolSuccess";
 import JalSolObserve from "./pages/JalSolObserve";
 import JalSolEnter from "./pages/JalSolEnter";
 import JalSolBuild from "./pages/JalSolBuild";
 import Footer from "./components/Footer";
+import RequireAuth from "./components/RequireAuth";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Disclaimer from "./pages/Disclaimer";
@@ -308,12 +311,40 @@ function AppShell() {
         <Route path="track" element={<TrackPage />} />
 
         <Route path="jal-sol" element={<JalSolPage />} />
-        <Route path="jal-sol/observe" element={<JalSolObserve />} />
-        <Route path="jal-sol/enter" element={<JalSolEnter />} />
-        <Route path="jal-sol/build" element={<JalSolBuild />} />
+        <Route
+          path="jal-sol/observe"
+          element={
+            <RequireAuth>
+              <JalSolObserve />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="jal-sol/enter"
+          element={
+            <RequireAuth>
+              <JalSolEnter />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="jal-sol/build"
+          element={
+            <RequireAuth>
+              <JalSolBuild />
+            </RequireAuth>
+          }
+        />
         <Route path="jal-sol/success" element={<JalSolSuccess />} />
 
-        <Route path="token" element={<FeaturePage title="Token Generation" />} />
+        <Route
+          path="token"
+          element={
+            <RequireAuth>
+              <FeaturePage title="Token Generation" />
+            </RequireAuth>
+          }
+        />
         <Route path="raydium" element={<FeaturePage title="Raydium / Liquidity" />} />
 
         <Route path="engine" element={<Engine />} />
@@ -339,6 +370,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing mode="entry" />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/app/*" element={<AppShell />} />
 
         <Route path="/terms" element={<Terms />} />

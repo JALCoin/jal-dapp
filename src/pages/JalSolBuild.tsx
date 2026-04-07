@@ -4,6 +4,7 @@ import {
   readGate3ProfileHandover,
   type Gate3ProfileHandover,
 } from "../utils/gate3Profile";
+import { useAuth } from "../context/AuthProvider";
 
 type RouteTo =
   | "/app/home"
@@ -201,6 +202,7 @@ function getNavUnlocked(state: Gate3BuilderState, id: Gate3NavId) {
 export default function JalSolBuild() {
   const navigate = useNavigate();
   const timerRef = useRef<number | null>(null);
+  const { isEngineer, profile } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [handover, setHandover] = useState<Gate3ProfileHandover | null>(null);
@@ -261,6 +263,16 @@ export default function JalSolBuild() {
     });
   }, [handover]);
 
+  useEffect(() => {
+    if (!profile) return;
+
+    patchBuilderState((prev) => ({
+      ...prev,
+      builderName: prev.builderName || profile.display_name || "",
+      email: prev.email || profile.email || "",
+    }));
+  }, [profile]);
+
   function beginRoute(to: RouteTo) {
     if (loading) return;
 
@@ -282,7 +294,7 @@ export default function JalSolBuild() {
   }
 
   function initialiseGate3() {
-    if (!handover?.completion?.buildReady) {
+    if (!isEngineer && !handover?.completion?.buildReady) {
       setInitError("Gate 03 requires verified Gate 02 completion first.");
       return;
     }
@@ -335,11 +347,11 @@ export default function JalSolBuild() {
     setShowInitOverlay(false);
   }
 
-  const builderReadyFromGate2 = Boolean(handover?.completion?.buildReady);
+  const builderReadyFromGate2 = isEngineer || Boolean(handover?.completion?.buildReady);
   const participantName =
-    builderState.builderName || handover?.identity.displayName || "Participant";
+    builderState.builderName || handover?.identity.displayName || profile?.display_name || "Participant";
   const participantEmail =
-    builderState.email || handover?.identity.email || "Missing";
+    builderState.email || handover?.identity.email || profile?.email || "Missing";
   const participantWallet = handover?.wallet.address || "";
   const participantProjectName =
     builderState.projectName || handover?.identity.projectName || "Missing";
@@ -556,7 +568,11 @@ export default function JalSolBuild() {
                   >
                     <div className="jal-bullet-k">Gate 02 Handover</div>
                     <div className="jal-bullet-v">
-                      {builderReadyFromGate2 ? "Verified" : "Missing"}
+                      {builderReadyFromGate2
+                        ? isEngineer && !handover?.completion?.buildReady
+                          ? "Engineer Access"
+                          : "Verified"
+                        : "Missing"}
                     </div>
                   </article>
 
@@ -964,7 +980,11 @@ export default function JalSolBuild() {
                   >
                     <div className="jal-bullet-k">Gate 02 Build Ready</div>
                     <div className="jal-bullet-v">
-                      {builderReadyFromGate2 ? "Verified" : "Locked"}
+                      {builderReadyFromGate2
+                        ? isEngineer && !handover?.completion?.buildReady
+                          ? "Engineer Access"
+                          : "Verified"
+                        : "Locked"}
                     </div>
                   </article>
 

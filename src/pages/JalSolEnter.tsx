@@ -11,6 +11,7 @@ import {
 } from "@solana/web3.js";
 import TokenFitGameV10 from "../components/TokenFitGamev10";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useAuth } from "../context/AuthProvider";
 
 type RouteTo =
   | "/app/home"
@@ -234,21 +235,8 @@ type Gate3ProfileHandover = {
 };
 
 const MINT_AUTHORITY = "3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2";
-const CREATOR_DISPLAY_NAME = "JAL";
-const CREATOR_EMAIL = "358jal@gmail.com";
 const MIN_TRANSFER_SOL = 0.001;
 const GATE2_PAYMENT_LINK = "https://buy.stripe.com/14AbJ06ladovgl19EE0x20b";
-
-function normalizeIdentityValue(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function isCreatorIdentity(displayName: string, email: string) {
-  return (
-    normalizeIdentityValue(displayName) === normalizeIdentityValue(CREATOR_DISPLAY_NAME) &&
-    normalizeIdentityValue(email) === normalizeIdentityValue(CREATOR_EMAIL)
-  );
-}
 
 const VALID_GATE2_STAGES: Gate2Stage[] = [
   "home",
@@ -913,23 +901,25 @@ function getPaymentComplete(progress: Gate2ProgressState) {
   );
 }
 
-function getCreatorBypass(progress: Gate2ProgressState) {
-  return isCreatorIdentity(progress.profile.displayName, progress.profile.email);
+function getEngineerBypass(engineerAccess: boolean) {
+  return engineerAccess;
 }
 
-function getPaymentOrCreatorAccess(progress: Gate2ProgressState) {
-  return getPaymentComplete(progress) || getCreatorBypass(progress);
+function getPaymentOrEngineerAccess(progress: Gate2ProgressState, engineerAccess: boolean) {
+  return getPaymentComplete(progress) || getEngineerBypass(engineerAccess);
 }
 
 function getHasWalletAuthority(progress: Gate2ProgressState) {
   return progress.wallet.connected && progress.wallet.messageSigned;
 }
 
-function getDevelopmentFlowComplete(progress: Gate2ProgressState) {
+function getDevelopmentFlowComplete(progress: Gate2ProgressState, engineerAccess: boolean) {
+  if (engineerAccess) return true;
+
   return Boolean(
     progress.profile.created &&
       progress.profile.acceptedTerms &&
-      getPaymentOrCreatorAccess(progress) &&
+      getPaymentOrEngineerAccess(progress, engineerAccess) &&
       progress.modulesCompleted.includes("module-6-verification") &&
       progress.test.passed &&
       progress.trial.passed &&
@@ -940,19 +930,27 @@ function getDevelopmentFlowComplete(progress: Gate2ProgressState) {
   );
 }
 
-function getTrueParticipantState(progress: Gate2ProgressState) {
-  const creatorBypass = getCreatorBypass(progress);
+function getTrueParticipantState(progress: Gate2ProgressState, engineerAccess: boolean) {
+  const engineerBypass = getEngineerBypass(engineerAccess);
+
+  if (engineerBypass) return true;
 
   return Boolean(
-    getDevelopmentFlowComplete(progress) &&
-      (creatorBypass || progress.package.paymentSource === "verified") &&
+    getDevelopmentFlowComplete(progress, engineerAccess) &&
+      (engineerBypass || progress.package.paymentSource === "verified") &&
       progress.wallet.connectionSource === "verified" &&
       progress.wallet.signingSource === "verified" &&
       progress.transaction.confirmationSource === "verified"
   );
 }
 
-function canAccessStage(progress: Gate2ProgressState, stage: Gate2Stage): boolean {
+function canAccessStage(
+  progress: Gate2ProgressState,
+  stage: Gate2Stage,
+  engineerAccess: boolean
+): boolean {
+  if (engineerAccess) return true;
+
   switch (stage) {
     case "home":
     case "profile":
@@ -960,7 +958,7 @@ function canAccessStage(progress: Gate2ProgressState, stage: Gate2Stage): boolea
     case "payment":
       return progress.profile.created && progress.profile.acceptedTerms;
     case "module-1-wallet":
-      return getPaymentOrCreatorAccess(progress);
+      return getPaymentOrEngineerAccess(progress, engineerAccess);
     case "module-2-custody":
       return progress.modulesCompleted.includes("module-1-wallet");
     case "module-3-finality":
@@ -984,20 +982,25 @@ function canAccessStage(progress: Gate2ProgressState, stage: Gate2Stage): boolea
     case "verify":
       return progress.transaction.submitted;
     case "passed":
-      return getDevelopmentFlowComplete(progress);
+      return getDevelopmentFlowComplete(progress, engineerAccess);
     default:
       return false;
   }
 }
 
-function isStepCompleted(progress: Gate2ProgressState, stepId: Gate2Stage): boolean {
+function isStepCompleted(
+  progress: Gate2ProgressState,
+  stepId: Gate2Stage,
+  engineerAccess: boolean
+): boolean {
+  if (engineerAccess) return true;
   if (progress.modulesCompleted.includes(stepId)) return true;
 
   switch (stepId) {
   case "profile":
       return progress.profile.created;
     case "payment":
-      return getPaymentOrCreatorAccess(progress);
+      return getPaymentOrEngineerAccess(progress, engineerAccess);
     case "test":
       return progress.test.passed;
     case "trial-brief":
@@ -1094,8 +1097,10 @@ export default function JalSolEnter() {
   const navigate = useNavigate();
   const timerRef = useRef<number | null>(null);
   const { publicKey, connected, sendTransaction, signMessage } = useWallet();
+  const { isEngineer, profile: authProfile } = useAuth();
+  const engineerAccess = isEngineer;
 
-    const connection = useMemo(
+  const connection = useMemo(
     () => new Connection(SOLANA_RPC_URL, "confirmed"),
     []
   );
@@ -1116,16 +1121,17 @@ export default function JalSolEnter() {
   function patchProgress(recipe: (prev: Gate2ProgressState) => Gate2ProgressState) {
     setProgress((prev) => {
       const cooked = recipe(prev);
-      const complete = getDevelopmentFlowComplete(cooked);
+      const complete = getDevelopmentFlowComplete(cooked, engineerAccess);
+      const participantState = getTrueParticipantState(cooked, engineerAccess);
 
       const withCompletion: Gate2ProgressState = {
         ...cooked,
         completion: {
           ...cooked.completion,
           enterPassed: complete,
-          participantState: getTrueParticipantState(cooked),
+          participantState,
           developmentFlowComplete: complete,
-          buildReady: getTrueParticipantState(cooked),
+          buildReady: participantState,
           completedAt: complete
             ? cooked.completion.completedAt ?? Date.now()
             : null,
@@ -1147,6 +1153,16 @@ export default function JalSolEnter() {
   setProgress(saved);
   setProfileDraft(saved.profile.created ? saved.profile : DEFAULT_GATE2_PROGRESS.profile);
 }, []);
+
+  useEffect(() => {
+    if (!authProfile) return;
+
+    setProfileDraft((prev) => ({
+      ...prev,
+      displayName: prev.displayName || authProfile.display_name || "",
+      email: prev.email || authProfile.email || "",
+    }));
+  }, [authProfile]);
 
   useEffect(() => {
     return () => {
@@ -1238,7 +1254,7 @@ window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [connected, publicKey, progress.trial.passed]);
 
-  const canEnterGate2 = adminBypass || observePassed;
+  const canEnterGate2 = engineerAccess || adminBypass || observePassed;
   const currentStage = progress.currentStage;
   const activeModule = currentStage.startsWith("module-")
     ? MODULE_CONTENT.find((module) => module.stage === currentStage) ?? null
@@ -1261,17 +1277,14 @@ window.history.replaceState({}, document.title, window.location.pathname);
     [progress.test.answers]
   );
 
-  const creatorBypass = getCreatorBypass(progress);
+  const engineerBypass = getEngineerBypass(engineerAccess);
   const hasWalletAuthority = getHasWalletAuthority(progress);
-  const developmentFlowComplete = getDevelopmentFlowComplete(progress);
-  const participantState = getTrueParticipantState(progress);
-
-  const isCreatorProfile = creatorBypass;
-
-  const isCreatorDraft = isCreatorIdentity(
-    profileDraft.displayName,
-    profileDraft.email
-  );
+  const developmentFlowComplete = getDevelopmentFlowComplete(progress, engineerAccess);
+  const participantState = getTrueParticipantState(progress, engineerAccess);
+  const enterPassed = engineerAccess || progress.completion.enterPassed;
+  const storedParticipantState = engineerAccess || progress.completion.participantState;
+  const buildReady = engineerAccess || progress.completion.buildReady;
+  const isEngineerProfile = engineerBypass;
 
   const accessLabel = !canEnterGate2
     ? "Locked — Observe Required"
@@ -1304,7 +1317,7 @@ window.history.replaceState({}, document.title, window.location.pathname);
 
 if (
   !reviewUnlocked &&
-  !canAccessStage(prev, stage) &&
+  !canAccessStage(prev, stage, engineerAccess) &&
   stage !== "home" &&
   stage !== "profile"
 ) {
@@ -1321,7 +1334,7 @@ if (
   useEffect(() => {
   if (
     progress.currentStage === "payment" &&
-    getPaymentOrCreatorAccess(progress)
+    getPaymentOrEngineerAccess(progress, engineerAccess)
   ) {
     window.setTimeout(() => {
       goToStage("module-1-wallet");
@@ -1331,6 +1344,7 @@ if (
   progress.currentStage,
   progress.package.paymentStatus,
   progress.package.paymentSource,
+  engineerAccess,
 ]);
 
     function goBackStage(stage: Gate2Stage) {
@@ -1352,7 +1366,7 @@ if (
       return;
     }
 
-        const creatorIdentity = isCreatorIdentity(cleanDisplayName, cleanEmail);
+    const engineerProfile = engineerAccess;
 
     patchProgress((prev) => ({
       ...prev,
@@ -1369,19 +1383,19 @@ if (
   acceptedTerms: true,
   createdAt: prev.profile.createdAt ?? Date.now(),
 },
-        package: creatorIdentity
+        package: engineerProfile
         ? {
             ...prev.package,
             checkoutStarted: false,
-            stripeSessionId: "CREATOR_BYPASS",
-            stripeReceiptNumber: "CREATOR_BYPASS",
+            stripeSessionId: "ENGINEER_ACCESS",
+            stripeReceiptNumber: "ENGINEER_ACCESS",
             stripeCustomerEmail: cleanEmail,
             paymentStatus: "paid",
             paymentSource: "verified",
             paidAt: prev.package.paidAt ?? Date.now(),
           }
         : prev.package,
-      currentStage: creatorIdentity ? "module-1-wallet" : "payment",
+      currentStage: engineerProfile ? "module-1-wallet" : "payment",
     }));
 
     setProfileDraft((prev) => ({
@@ -1816,21 +1830,21 @@ if (
     { k: "Stripe Customer Email", v: progress.package.stripeCustomerEmail || "Missing" },
     {
   k: "Stripe Payment State",
-  v: creatorBypass
-    ? "CREATOR BYPASS (verified)"
+  v: engineerBypass
+    ? "ENGINEER ACCESS (verified)"
     : progress.package.paymentStatus === "paid"
     ? `PAID (${progress.package.paymentSource})`
     : progress.package.paymentStatus.toUpperCase(),
 },
     {
   k: "Stripe Checkout Session ID",
-  v: creatorBypass
-    ? "CREATOR_BYPASS"
+  v: engineerBypass
+    ? "ENGINEER_ACCESS"
     : progress.package.stripeSessionId || "Missing",
 },
     {
-  k: "Creator Rights",
-  v: creatorBypass ? "Granted" : "Standard User",
+  k: "Engineer Status",
+  v: engineerBypass ? "Unrestricted" : "Member Flow",
 },
     {
   k: "Wallet Public Key",
@@ -1860,10 +1874,10 @@ if (
       v: progress.profile.landingButtonLogo ? "Present" : "Missing",
     },
     { k: "Header Logo", v: progress.profile.headerLogo ? "Present" : "Missing" },
-    { k: "Gate 1 Complete", v: observePassed || adminBypass ? "Yes" : "No" },
+    { k: "Gate 1 Complete", v: observePassed || adminBypass || engineerAccess ? "Yes" : "No" },
     { k: "Gate 2 Complete", v: developmentFlowComplete ? "Yes" : "No" },
     { k: "Gate 3 Complete", v: "Not yet" },
-    { k: "Build Readiness", v: progress.completion.buildReady ? "Unlocked" : "Locked" },
+    { k: "Build Readiness", v: buildReady ? "Unlocked" : "Locked" },
   ];
 
   return (
@@ -1961,7 +1975,7 @@ if (
 
   <div className="jal-sequence-dot-row jal-sequence-dot-row-center" aria-label="Gate 02 step indicators">
     {ENTRY_RAIL.map((step, index) => {
-      const completed = isStepCompleted(progress, step.id);
+      const completed = isStepCompleted(progress, step.id, engineerAccess);
       const active = step.id === currentStage;
 
       return (
@@ -1974,8 +1988,8 @@ if (
           onClick={() => goToStage(step.id)}
           disabled={
   loading ||
-  (!progress.completion.enterPassed &&
-    !canAccessStage(progress, step.id) &&
+  (!enterPassed &&
+    !canAccessStage(progress, step.id, engineerAccess) &&
     step.id !== "profile")
 }
           aria-label={`${index + 1}. ${step.title}`}
@@ -2143,12 +2157,12 @@ if (
   />
 </label>
 
-            <div className={`jal-note ${isCreatorDraft ? "jal-note-creator" : ""}`}>
-              {isCreatorDraft ? (
+            <div className={`jal-note ${isEngineerProfile ? "jal-note-creator" : ""}`}>
+              {isEngineerProfile ? (
                 <>
-                  Creator identity detected. This profile matches <strong>JAL</strong> /
-                  <strong> 358jal@gmail.com</strong> and will bypass Stripe payment with
-                  creator rights.
+                  Engineer access detected. This signed-in account bypasses Stripe
+                  payment and can move through Gate 02 without member-flow
+                  interruption.
                 </>
               ) : (
                 <>
@@ -2275,12 +2289,11 @@ if (
         </p>
 
         <p className="jal-note">
-          {isCreatorProfile ? (
+          {isEngineerProfile ? (
             <>
-              Creator profile active. <strong>{CREATOR_DISPLAY_NAME}</strong>
-              {" / "}
-              <strong>{CREATOR_EMAIL}</strong> bypasses Stripe payment and can proceed
-              directly through Gate 02 with creator rights.
+              Engineer access active. This authenticated Engineer account bypasses
+              Stripe payment and can proceed directly through Gate 02 with full
+              system access.
             </>
           ) : (
             <>
@@ -2291,14 +2304,14 @@ if (
         </p>
 
         <div className="jal-bay-actions">
-          {isCreatorProfile ? (
+          {isEngineerProfile ? (
             <button
               type="button"
               className="button gold"
               onClick={() => goToStage("module-1-wallet")}
               disabled={loading}
             >
-              Continue As Creator
+              Continue As Engineer
             </button>
           ) : (
             <button
@@ -2320,7 +2333,7 @@ if (
     <section className="jal-bay">
       <div className="jal-bay-head">
         <div className="jal-bay-title">Verification</div>
-        <div className="jal-bay-note">Return + confirm</div>
+      <div className="jal-bay-note">Return + confirm</div>
       </div>
 
       <p className="jal-note">
@@ -2329,7 +2342,7 @@ if (
       </p>
 
       <div className="jal-bay-actions">
-  {getPaymentOrCreatorAccess(progress) ? (
+  {getPaymentOrEngineerAccess(progress, engineerAccess) ? (
     <button
       type="button"
       className="button gold"
@@ -3012,10 +3025,10 @@ if (
 
       <span
         className={`jal-sequence-indicator-dot ${
-          isStepCompleted(progress, currentStage) ? "is-complete" : "is-active"
+          isStepCompleted(progress, currentStage, engineerAccess) ? "is-complete" : "is-active"
         }`}
         aria-label={
-          isStepCompleted(progress, currentStage)
+          isStepCompleted(progress, currentStage, engineerAccess)
             ? "Current stage complete"
             : "Current stage in progress"
         }
@@ -3037,7 +3050,7 @@ if (
   disabled={
     loading ||
     !nextStageId ||
-    (!activeModule && !canAccessStage(progress, nextStageId))
+    (!activeModule && !canAccessStage(progress, nextStageId, engineerAccess))
   }
   aria-label="Next stage"
 >
@@ -3065,9 +3078,9 @@ if (
               <p className="jal-note">
   {participantState
     ? `Gate 02 is complete with ${
-        creatorBypass ? "creator bypass payment truth" : "verified payment truth"
+        engineerBypass ? "engineer access truth" : "verified payment truth"
       }, verified wallet authority, and verified transaction confirmation.${
-        isCreatorProfile ? " Creator rights are active." : ""
+        isEngineerProfile ? " Engineer access is active." : ""
       }`
     : "Gate 02 sequence completion is recorded, but participant state is not yet granted until every required proof source remains verified and present."}
 </p>
@@ -3076,21 +3089,21 @@ if (
   <article className="jal-bullet">
     <div className="jal-bullet-k">Enter Passed</div>
     <div className="jal-bullet-v">
-      {progress.completion.enterPassed ? "Yes" : "No"}
+      {enterPassed ? "Yes" : "No"}
     </div>
   </article>
 
   <article className="jal-bullet">
     <div className="jal-bullet-k">Participant State</div>
     <div className="jal-bullet-v">
-      {progress.completion.participantState ? "Yes" : "Not yet"}
+      {storedParticipantState ? "Yes" : "Not yet"}
     </div>
   </article>
 
   <article className="jal-bullet">
     <div className="jal-bullet-k">Build Readiness</div>
     <div className="jal-bullet-v">
-      {progress.completion.buildReady ? "Unlocked" : "Locked"}
+      {buildReady ? "Unlocked" : "Locked"}
     </div>
   </article>
 
@@ -3144,7 +3157,7 @@ if (
     <article className="jal-bullet">
       <div className="jal-bullet-k">Gate 03 Unlock</div>
       <div className="jal-bullet-v">
-        {progress.completion.buildReady ? "Ready" : "Locked"}
+        {buildReady ? "Ready" : "Locked"}
       </div>
     </article>
 
@@ -3193,7 +3206,7 @@ if (
     writeGate3ProfileHandover(progress);
     beginRoute("/app/jal-sol/build");
   }}
-  disabled={loading || !progress.completion.buildReady}
+  disabled={loading || !buildReady}
 >
   Proceed To Build
 </button>
