@@ -36,6 +36,9 @@ type AuthContextValue = {
   profile: AuthProfile | null;
   loading: boolean;
   isEngineer: boolean;
+  isEngineerAccount: boolean;
+  isTestingAsMember: boolean;
+  setTestingAsMember: (next: boolean) => Promise<void>;
   refreshProfile: () => Promise<AuthProfile | null>;
   signOut: () => Promise<void>;
 };
@@ -138,6 +141,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [clearAuthState, loadProfile, user]);
 
+  const setTestingAsMember = useCallback(
+    async (next: boolean) => {
+      if (!profile?.id || profile.account_type !== "engineer") {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({
+          member_mode_override: next,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id)
+        .select(PROFILE_COLUMNS)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setProfile(data as AuthProfile);
+    },
+    [profile]
+  );
+
   useEffect(() => {
     let active = true;
 
@@ -233,8 +261,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(() => {
-    const isEngineer =
-      profile?.account_type === "engineer" && !profile.member_mode_override;
+    const isEngineerAccount = profile?.account_type === "engineer";
+    const isTestingAsMember = Boolean(profile?.member_mode_override);
+    const isEngineer = isEngineerAccount && !isTestingAsMember;
 
     return {
       session,
@@ -242,10 +271,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       loading,
       isEngineer,
+      isEngineerAccount,
+      isTestingAsMember,
+      setTestingAsMember,
       refreshProfile,
       signOut,
     };
-  }, [loading, profile, refreshProfile, session, signOut, user]);
+  }, [
+    loading,
+    profile,
+    refreshProfile,
+    session,
+    setTestingAsMember,
+    signOut,
+    user,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

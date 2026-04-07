@@ -23,6 +23,7 @@ import JalSolEnter from "./pages/JalSolEnter";
 import JalSolBuild from "./pages/JalSolBuild";
 import Footer from "./components/Footer";
 import RequireAuth from "./components/RequireAuth";
+import { useAuth } from "./context/AuthProvider";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Disclaimer from "./pages/Disclaimer";
@@ -118,7 +119,83 @@ function SidebarSection({
   );
 }
 
-function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) {
+function EngineerModePanel({
+  isEngineerAccount,
+  isEngineer,
+  isTestingAsMember,
+  switchingMode,
+  modeError,
+  onToggleMode,
+}: {
+  isEngineerAccount: boolean;
+  isEngineer: boolean;
+  isTestingAsMember: boolean;
+  switchingMode: boolean;
+  modeError: string | null;
+  onToggleMode: () => void;
+}) {
+  if (!isEngineerAccount) return null;
+
+  return (
+    <section className="sidebar-engineer-panel" aria-label="Engineer testing controls">
+      <div className="sidebar-engineer-head">
+        <div className="sidebar-engineer-kicker">Engineer Control</div>
+        <span
+          className={`sidebar-engineer-mode ${isTestingAsMember ? "is-member" : "is-engineer"}`}
+        >
+          {isEngineer ? "Engineer Mode" : "Test as Member"}
+        </span>
+      </div>
+
+      <p className="sidebar-engineer-copy">
+        Keep your Engineer account, then switch into member test mode to restore paywalls and gate
+        restrictions while you trial each step.
+      </p>
+
+      <button
+        type="button"
+        className={`button ${isTestingAsMember ? "neon" : "gold"} sidebar-engineer-toggle`}
+        onClick={onToggleMode}
+        disabled={switchingMode}
+      >
+        {switchingMode
+          ? "Switching..."
+          : isTestingAsMember
+            ? "Return To Engineer"
+            : "Switch To Member Test"}
+      </button>
+
+      <div className="sidebar-engineer-status">
+        <span className="chip">
+          Effective Access: {isEngineer ? "Engineer" : "Member"}
+        </span>
+        <span className="chip">Paywalls: {isTestingAsMember ? "On" : "Bypassed"}</span>
+      </div>
+
+      {modeError ? <p className="sidebar-engineer-error">{modeError}</p> : null}
+    </section>
+  );
+}
+
+function SidebarView({
+  open,
+  onClose,
+  isEngineerAccount,
+  isEngineer,
+  isTestingAsMember,
+  switchingMode,
+  modeError,
+  onToggleMode,
+}: {
+  open: boolean;
+  onClose: () => void;
+  isEngineerAccount: boolean;
+  isEngineer: boolean;
+  isTestingAsMember: boolean;
+  switchingMode: boolean;
+  modeError: string | null;
+  onToggleMode: () => void;
+}) {
   if (!open) return null;
 
   return (
@@ -162,6 +239,15 @@ function SidebarView({ open, onClose }: { open: boolean; onClose: () => void }) 
         </div>
 
         <nav aria-label="Primary routes" style={{ display: "grid", gap: 14 }}>
+          <EngineerModePanel
+            isEngineerAccount={isEngineerAccount}
+            isEngineer={isEngineer}
+            isTestingAsMember={isTestingAsMember}
+            switchingMode={switchingMode}
+            modeError={modeError}
+            onToggleMode={onToggleMode}
+          />
+
           <SidebarSection
             title="Core"
             onClose={onClose}
@@ -259,9 +345,12 @@ function AboutPage() {
 
 /* ------------------------ App Shell (only for /app/*) ------------------------ */
 function AppShell() {
+  const { isEngineer, isEngineerAccount, isTestingAsMember, setTestingAsMember } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [switchingMode, setSwitchingMode] = useState(false);
+  const [modeError, setModeError] = useState<string | null>(null);
 
   const navOverlayOpen = useMemo(() => location.pathname === "/app/nav", [location.pathname]);
 
@@ -291,6 +380,22 @@ function AppShell() {
     return () => document.body.removeAttribute("data-nav-open");
   }, [menuOpen, navOverlayOpen]);
 
+  async function handleToggleMode() {
+    if (!isEngineerAccount || switchingMode) return;
+
+    setSwitchingMode(true);
+    setModeError(null);
+
+    try {
+      await setTestingAsMember(!isTestingAsMember);
+    } catch (error) {
+      console.error("Failed to switch engineer testing mode", error);
+      setModeError("Mode switch failed. Try again.");
+    } finally {
+      setSwitchingMode(false);
+    }
+  }
+
   return (
     <>
       <HeaderView
@@ -299,7 +404,16 @@ function AppShell() {
         isOpen={menuOpen}
       />
 
-      <SidebarView open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <SidebarView
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        isEngineerAccount={isEngineerAccount}
+        isEngineer={isEngineer}
+        isTestingAsMember={isTestingAsMember}
+        switchingMode={switchingMode}
+        modeError={modeError}
+        onToggleMode={handleToggleMode}
+      />
 
       <Routes>
         <Route path="nav" element={<Landing mode="nav" />} />
