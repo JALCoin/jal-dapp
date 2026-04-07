@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { getScopedStorageKey } from "../utils/scopedStorage";
 
 export type TokenFitGameV10Props = {
   mode?: "trial" | "endless";
   minScore?: number;
+  storageScope?: string;
   onRunComplete: (payload: { score: number; mode: "trial" | "endless" }) => void;
   onLeave?: () => void;
 };
@@ -51,20 +53,23 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function getStorageKey(mode: "trial" | "endless") {
-  return mode === "trial" ? STORAGE_KEY_TRIAL : STORAGE_KEY_ENDLESS;
+function getStorageKey(mode: "trial" | "endless", storageScope?: string) {
+  return getScopedStorageKey(
+    mode === "trial" ? STORAGE_KEY_TRIAL : STORAGE_KEY_ENDLESS,
+    storageScope
+  );
 }
 
-function loadHighScore(mode: "trial" | "endless") {
+function loadHighScore(mode: "trial" | "endless", storageScope?: string) {
   if (typeof window === "undefined") return 0;
-  const raw = window.localStorage.getItem(getStorageKey(mode));
+  const raw = window.localStorage.getItem(getStorageKey(mode, storageScope));
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function saveHighScore(mode: "trial" | "endless", score: number) {
+function saveHighScore(mode: "trial" | "endless", score: number, storageScope?: string) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(getStorageKey(mode), String(score));
+  window.localStorage.setItem(getStorageKey(mode, storageScope), String(score));
 }
 
 function getViewportSize() {
@@ -83,6 +88,7 @@ function getViewportSize() {
 export default function TokenFitGameV10({
   mode = "trial",
   minScore = 20,
+  storageScope,
   onRunComplete,
   onLeave,
 }: TokenFitGameV10Props) {
@@ -92,7 +98,7 @@ export default function TokenFitGameV10({
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(() => loadHighScore(mode));
+  const [highScore, setHighScore] = useState(() => loadHighScore(mode, storageScope));
 
   const [viewMode, setViewMode] = useState<ViewMode>("landscape");
   const [sceneScale, setSceneScale] = useState(1);
@@ -129,8 +135,8 @@ export default function TokenFitGameV10({
   } | null>(null);
 
   useEffect(() => {
-    setHighScore(loadHighScore(mode));
-  }, [mode]);
+    setHighScore(loadHighScore(mode, storageScope));
+  }, [mode, storageScope]);
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -208,7 +214,7 @@ export default function TokenFitGameV10({
 
       if (nextHighScore !== highScore) {
         setHighScore(nextHighScore);
-        saveHighScore(mode, nextHighScore);
+        saveHighScore(mode, nextHighScore, storageScope);
       }
 
       setGameState(nextState);
@@ -220,7 +226,7 @@ export default function TokenFitGameV10({
         onRunComplete({ score: finalScore, mode });
       }
     },
-    [highScore, mode, onRunComplete, syncVisualState]
+    [highScore, mode, onRunComplete, storageScope, syncVisualState]
   );
 
   const flap = useCallback(() => {

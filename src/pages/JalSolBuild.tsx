@@ -5,6 +5,7 @@ import {
   type Gate3ProfileHandover,
 } from "../utils/gate3Profile";
 import { useAuth } from "../context/AuthProvider";
+import { getScopedStorageKey } from "../utils/scopedStorage";
 
 type RouteTo =
   | "/app/home"
@@ -133,9 +134,11 @@ const GATE3_NAV: Gate3NavCard[] = [
   },
 ];
 
-function readGate3State(): Gate3BuilderState {
+function readGate3State(storageScope?: string | null): Gate3BuilderState {
   try {
-    const raw = localStorage.getItem(GATE3_STATE_KEY);
+    const raw = localStorage.getItem(
+      getScopedStorageKey(GATE3_STATE_KEY, storageScope)
+    );
     if (!raw) return DEFAULT_GATE3_STATE;
 
     const parsed = JSON.parse(raw) as Partial<Gate3BuilderState>;
@@ -175,8 +178,11 @@ function readGate3State(): Gate3BuilderState {
   }
 }
 
-function writeGate3State(state: Gate3BuilderState) {
-  localStorage.setItem(GATE3_STATE_KEY, JSON.stringify(state));
+function writeGate3State(state: Gate3BuilderState, storageScope?: string | null) {
+  localStorage.setItem(
+    getScopedStorageKey(GATE3_STATE_KEY, storageScope),
+    JSON.stringify(state)
+  );
 }
 
 function sanitizeTokenSymbol(value: string) {
@@ -203,6 +209,7 @@ export default function JalSolBuild() {
   const navigate = useNavigate();
   const timerRef = useRef<number | null>(null);
   const { isEngineer, profile } = useAuth();
+  const storageScope = profile?.id;
 
   const [loading, setLoading] = useState(false);
   const [handover, setHandover] = useState<Gate3ProfileHandover | null>(null);
@@ -212,12 +219,12 @@ export default function JalSolBuild() {
   const [initError, setInitError] = useState("");
 
   useEffect(() => {
-    const saved = readGate3State();
-    const handoverRaw = readGate3ProfileHandover();
+    const saved = readGate3State(storageScope);
+    const handoverRaw = readGate3ProfileHandover(storageScope);
 
     setBuilderState(saved);
     setHandover(handoverRaw);
-  }, []);
+  }, [storageScope]);
 
   useEffect(() => {
     return () => {
@@ -231,7 +238,7 @@ export default function JalSolBuild() {
   ) {
     setBuilderState((prev) => {
       const next = recipe(prev);
-      writeGate3State(next);
+      writeGate3State(next, storageScope);
       return next;
     });
   }

@@ -1,3 +1,5 @@
+import { getScopedStorageKey } from "./scopedStorage";
+
 export const GATE3_PROFILE_HANDOVER_KEY = "gate3_profile_handover_v1";
 
 export type Gate3ProfileHandover = {
@@ -48,12 +50,24 @@ export type Gate3ProfileHandover = {
   };
 };
 
-export function readGate3ProfileHandover(): Gate3ProfileHandover | null {
+export function readGate3ProfileHandover(storageScope?: string | null): Gate3ProfileHandover | null {
   try {
-    const raw = localStorage.getItem(GATE3_PROFILE_HANDOVER_KEY);
+    const raw = localStorage.getItem(
+      getScopedStorageKey(GATE3_PROFILE_HANDOVER_KEY, storageScope)
+    );
     if (!raw) return null;
     return JSON.parse(raw) as Gate3ProfileHandover;
   } catch {
     return null;
   }
+}
+
+export function writeGate3ProfileHandover(
+  payload: Gate3ProfileHandover,
+  storageScope?: string | null
+) {
+  localStorage.setItem(
+    getScopedStorageKey(GATE3_PROFILE_HANDOVER_KEY, storageScope),
+    JSON.stringify(payload)
+  );
 }

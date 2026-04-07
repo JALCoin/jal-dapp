@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TokenFitGame from "../components/TokenFitGame";
+import { useAuth } from "../context/AuthProvider";
+import { getScopedStorageKey } from "../utils/scopedStorage";
 
 type RouteTo =
   | "/app/home"
@@ -218,18 +220,22 @@ function sanitizeTrialUsername(value: string) {
   return value.replace(/\s+/g, " ").trim().slice(0, 24);
 }
 
-function readStoredTrialUsername() {
+function readStoredTrialUsername(storageScope?: string | null) {
   if (typeof window === "undefined") return "";
   return sanitizeTrialUsername(
-    window.localStorage.getItem(OBSERVE_TRIAL_USERNAME_KEY) ?? ""
+    window.localStorage.getItem(
+      getScopedStorageKey(OBSERVE_TRIAL_USERNAME_KEY, storageScope)
+    ) ?? ""
   );
 }
 
-function readProgress(): ObserveProgressState | null {
+function readProgress(storageScope?: string | null): ObserveProgressState | null {
   if (typeof window === "undefined") return null;
 
   try {
-    const raw = window.localStorage.getItem(OBSERVE_PROGRESS_KEY);
+    const raw = window.localStorage.getItem(
+      getScopedStorageKey(OBSERVE_PROGRESS_KEY, storageScope)
+    );
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as Partial<ObserveProgressState>;
@@ -292,11 +298,13 @@ function readProgress(): ObserveProgressState | null {
   }
 }
 
-function readCompletedAccess(): ObserveAccessState | null {
+function readCompletedAccess(storageScope?: string | null): ObserveAccessState | null {
   if (typeof window === "undefined") return null;
 
   try {
-    const raw = window.localStorage.getItem(OBSERVE_STORAGE_KEY);
+    const raw = window.localStorage.getItem(
+      getScopedStorageKey(OBSERVE_STORAGE_KEY, storageScope)
+    );
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ObserveAccessState;
     return parsed?.passed ? parsed : null;
@@ -307,12 +315,16 @@ function readCompletedAccess(): ObserveAccessState | null {
 
 export default function JalSolObserve() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const timerRef = useRef<number | null>(null);
   const stepDelayRef = useRef<number | null>(null);
+  const storageScope = profile?.id;
 
-  const [restoredProgress] = useState<ObserveProgressState | null>(() => readProgress());
+  const [restoredProgress] = useState<ObserveProgressState | null>(() =>
+    readProgress(storageScope)
+  );
   const [completedAccess] = useState<ObserveAccessState | null>(() =>
-    readCompletedAccess()
+    readCompletedAccess(storageScope)
   );
 
   const [loading, setLoading] = useState(false);
@@ -345,7 +357,7 @@ export default function JalSolObserve() {
   const [trialUsername, setTrialUsername] = useState(
     completedAccess?.trialUsername ??
       restoredProgress?.trialUsername ??
-      readStoredTrialUsername()
+      readStoredTrialUsername(storageScope)
   );
 
   const currentStep = OBSERVE_STEPS[stepIndex];
@@ -364,10 +376,10 @@ export default function JalSolObserve() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(
-      OBSERVE_TRIAL_USERNAME_KEY,
+      getScopedStorageKey(OBSERVE_TRIAL_USERNAME_KEY, storageScope),
       sanitizeTrialUsername(trialUsername)
     );
-  }, [trialUsername]);
+  }, [storageScope, trialUsername]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -385,7 +397,10 @@ export default function JalSolObserve() {
       trialUsername: sanitizeTrialUsername(trialUsername),
     };
 
-    window.localStorage.setItem(OBSERVE_PROGRESS_KEY, JSON.stringify(progress));
+    window.localStorage.setItem(
+      getScopedStorageKey(OBSERVE_PROGRESS_KEY, storageScope),
+      JSON.stringify(progress)
+    );
   }, [
     completedAccess?.passed,
     stepIndex,
@@ -396,6 +411,7 @@ export default function JalSolObserve() {
     tokenFitPassed,
     tokenFitScore,
     tokenFitHighScore,
+    storageScope,
     trialUsername,
   ]);
 
@@ -539,10 +555,13 @@ export default function JalSolObserve() {
         ),
       };
 
-      localStorage.setItem(OBSERVE_STORAGE_KEY, JSON.stringify(payload));
+      localStorage.setItem(
+        getScopedStorageKey(OBSERVE_STORAGE_KEY, storageScope),
+        JSON.stringify(payload)
+      );
 
       if (passed) {
-        localStorage.removeItem(OBSERVE_PROGRESS_KEY);
+        localStorage.removeItem(getScopedStorageKey(OBSERVE_PROGRESS_KEY, storageScope));
         beginRoute("/app/jal-sol/enter");
       }
 
@@ -1049,6 +1068,7 @@ export default function JalSolObserve() {
                 <TokenFitGame
                   minScore={MIN_TOKEN_FIT_SCORE}
                   username={sanitizeTrialUsername(trialUsername)}
+                  storageScope={storageScope}
                   endlessMode
                   onPass={(score, highScore) => {
                     setTokenFitPassed(highScore >= MIN_TOKEN_FIT_SCORE);

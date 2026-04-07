@@ -12,6 +12,7 @@ import {
 import TokenFitGameV10 from "../components/TokenFitGamev10";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useAuth } from "../context/AuthProvider";
+import { getScopedStorageKey } from "../utils/scopedStorage";
 
 type RouteTo =
   | "/app/home"
@@ -650,9 +651,11 @@ function isValidPaymentStatus(value: unknown): value is PaymentStatus {
   return value === "missing" || value === "pending" || value === "paid" || value === "failed";
 }
 
-function readObservePassed(): boolean {
+function readObservePassed(storageScope?: string | null): boolean {
   try {
-    const raw = localStorage.getItem(OBSERVE_STORAGE_KEY);
+    const raw = localStorage.getItem(
+      getScopedStorageKey(OBSERVE_STORAGE_KEY, storageScope)
+    );
     if (!raw) return false;
     const parsed = JSON.parse(raw);
     return Boolean(
@@ -663,13 +666,18 @@ function readObservePassed(): boolean {
   }
 }
 
-function readGate2AdminBypass(): boolean {
-  return localStorage.getItem(GATE2_ADMIN_BYPASS_KEY) === "true";
+function readGate2AdminBypass(storageScope?: string | null): boolean {
+  return (
+    localStorage.getItem(getScopedStorageKey(GATE2_ADMIN_BYPASS_KEY, storageScope)) ===
+    "true"
+  );
 }
 
-function readGate2Progress(): Gate2ProgressState {
+function readGate2Progress(storageScope?: string | null): Gate2ProgressState {
   try {
-    const raw = localStorage.getItem(GATE2_PROGRESS_KEY);
+    const raw = localStorage.getItem(
+      getScopedStorageKey(GATE2_PROGRESS_KEY, storageScope)
+    );
     if (!raw) return DEFAULT_GATE2_PROGRESS;
 
     const parsed = JSON.parse(raw) as Partial<Gate2ProgressState>;
@@ -873,8 +881,11 @@ function readGate2Progress(): Gate2ProgressState {
   }
 }
 
-function writeGate2Progress(progress: Gate2ProgressState) {
-  localStorage.setItem(GATE2_PROGRESS_KEY, JSON.stringify(progress));
+function writeGate2Progress(progress: Gate2ProgressState, storageScope?: string | null) {
+  localStorage.setItem(
+    getScopedStorageKey(GATE2_PROGRESS_KEY, storageScope),
+    JSON.stringify(progress)
+  );
 }
 
 function createMockSessionId() {
@@ -1088,9 +1099,15 @@ function createGate3ProfileHandover(progress: Gate2ProgressState): Gate3ProfileH
   };
 }
 
-function writeGate3ProfileHandover(progress: Gate2ProgressState) {
+function writeGate3ProfileHandover(
+  progress: Gate2ProgressState,
+  storageScope?: string | null
+) {
   const payload = createGate3ProfileHandover(progress);
-  localStorage.setItem(GATE3_PROFILE_HANDOVER_KEY, JSON.stringify(payload));
+  localStorage.setItem(
+    getScopedStorageKey(GATE3_PROFILE_HANDOVER_KEY, storageScope),
+    JSON.stringify(payload)
+  );
 }
 
 export default function JalSolEnter() {
@@ -1099,6 +1116,7 @@ export default function JalSolEnter() {
   const { publicKey, connected, sendTransaction, signMessage } = useWallet();
   const { isEngineer, profile: authProfile } = useAuth();
   const engineerAccess = isEngineer;
+  const storageScope = authProfile?.id;
 
   const connection = useMemo(
     () => new Connection(SOLANA_RPC_URL, "confirmed"),
@@ -1138,21 +1156,21 @@ export default function JalSolEnter() {
         },
       };
 
-      writeGate2Progress(withCompletion);
+      writeGate2Progress(withCompletion, storageScope);
       return withCompletion;
     });
   }
 
   useEffect(() => {
-  const observe = readObservePassed();
-  const bypass = readGate2AdminBypass();
-  const saved = readGate2Progress();
+  const observe = readObservePassed(storageScope);
+  const bypass = readGate2AdminBypass(storageScope);
+  const saved = readGate2Progress(storageScope);
 
   setObservePassed(observe);
   setAdminBypass(bypass);
   setProgress(saved);
   setProfileDraft(saved.profile.created ? saved.profile : DEFAULT_GATE2_PROGRESS.profile);
-}, []);
+}, [storageScope]);
 
   useEffect(() => {
     if (!authProfile) return;
@@ -2649,6 +2667,7 @@ if (
                 <TokenFitGameV10
                   mode="trial"
                   minScore={20}
+                  storageScope={storageScope}
                   onRunComplete={handleTrialRunComplete}
                   onLeave={() => goBackStage("trial-brief")}
                 />
@@ -3203,7 +3222,7 @@ if (
   type="button"
   className="button gold"
   onClick={() => {
-    writeGate3ProfileHandover(progress);
+    writeGate3ProfileHandover(progress, storageScope);
     beginRoute("/app/jal-sol/build");
   }}
   disabled={loading || !buildReady}

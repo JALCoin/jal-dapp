@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
+import { getScopedStorageKey } from "../utils/scopedStorage";
 
 export type TokenFitGameProps = {
   minScore: number;
   username: string;
+  storageScope?: string;
   endlessMode?: boolean;
   onPass: (score: number, highScore: number) => void;
   onGameOver?: (score: number, highScore: number) => void;
@@ -57,16 +59,19 @@ function sanitizeUsername(value: string) {
   return value.replace(/\s+/g, " ").trim().slice(0, 24);
 }
 
-function loadHighScore() {
+function loadHighScore(storageScope?: string) {
   if (typeof window === "undefined") return 0;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const raw = window.localStorage.getItem(getScopedStorageKey(STORAGE_KEY, storageScope));
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function saveHighScore(score: number) {
+function saveHighScore(score: number, storageScope?: string) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, String(score));
+  window.localStorage.setItem(
+    getScopedStorageKey(STORAGE_KEY, storageScope),
+    String(score)
+  );
 }
 
 function getViewportSize() {
@@ -239,6 +244,7 @@ function drawScene(
 export default function TokenFitGame({
   minScore,
   username,
+  storageScope,
   endlessMode = false,
   onPass,
   onGameOver,
@@ -253,7 +259,7 @@ export default function TokenFitGame({
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(() => loadHighScore());
+  const [highScore, setHighScore] = useState(() => loadHighScore(storageScope));
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("landscape");
   const [sceneScale, setSceneScale] = useState(1);
@@ -273,6 +279,10 @@ export default function TokenFitGame({
   const passNotifiedRef = useRef(false);
 
   const scoreRef = useRef(0);
+
+  useEffect(() => {
+    setHighScore(loadHighScore(storageScope));
+  }, [storageScope]);
   const gameStateRef = useRef<TokenFitState>("idle");
   const tokenYRef = useRef(PORTRAIT_WORLD_HEIGHT / 2 - TOKEN_SIZE / 2);
   const velocityRef = useRef(0);
@@ -441,7 +451,7 @@ export default function TokenFitGame({
 
       if (nextHighScore !== highScore) {
         setHighScore(nextHighScore);
-        saveHighScore(nextHighScore);
+        saveHighScore(nextHighScore, storageScope);
       }
 
       if (safeUsername && finalScore > 0) {
@@ -473,7 +483,7 @@ export default function TokenFitGame({
 
       return { nextHighScore };
     },
-    [fetchLeaderboard, highScore, safeUsername]
+    [fetchLeaderboard, highScore, safeUsername, storageScope]
   );
 
   const endGame = useCallback(
