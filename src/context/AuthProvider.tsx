@@ -102,8 +102,15 @@ async function ensureProfile(user: User) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const clearAuthState = useCallback(() => {
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+  }, []);
 
   const loadProfile = useCallback(async (user: User | null) => {
     if (!user) {
@@ -117,19 +124,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (!session?.user) {
-      setProfile(null);
+    if (!user) {
+      clearAuthState();
       return null;
     }
 
     setLoading(true);
 
     try {
-      return await loadProfile(session.user);
+      return await loadProfile(user);
     } finally {
       setLoading(false);
     }
-  }, [loadProfile, session]);
+  }, [clearAuthState, loadProfile, user]);
 
   useEffect(() => {
     let active = true;
@@ -137,10 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const syncSession = async (nextSession: Session | null) => {
       if (!active) return;
 
-      setSession(nextSession);
-
       if (!nextSession?.user) {
-        setProfile(null);
+        clearAuthState();
         setLoading(false);
         return;
       }
@@ -148,15 +153,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
 
       try {
-        const nextProfile = await ensureProfile(nextSession.user);
+        const {
+          data: { user: liveUser },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          throw userError;
+        }
+
+        if (!liveUser) {
+          await supabase.auth.signOut({ scope: "local" });
+
+          if (!active) return;
+          clearAuthState();
+          return;
+        }
+
+        const nextProfile = await ensureProfile(liveUser);
 
         if (!active) return;
+        setSession(nextSession);
+        setUser(liveUser);
         setProfile(nextProfile);
       } catch (error) {
         console.error("Failed to load Supabase profile", error);
 
         if (!active) return;
-        setProfile(null);
+
+        try {
+          await supabase.auth.signOut({ scope: "local" });
+        } catch (signOutError) {
+          console.error("Failed to clear invalid Supabase session", signOutError);
+        }
+
+        clearAuthState();
       } finally {
         if (active) {
           setLoading(false);
@@ -177,8 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Failed to get Supabase session", error);
 
         if (!active) return;
-        setSession(null);
-        setProfile(null);
+        clearAuthState();
         setLoading(false);
       });
 
@@ -192,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [clearAuthState]);
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
@@ -208,14 +238,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return {
       session,
-      user: session?.user ?? null,
+      user,
       profile,
       loading,
       isEngineer,
       refreshProfile,
       signOut,
     };
-  }, [loading, profile, refreshProfile, session, signOut]);
+  }, [loading, profile, refreshProfile, session, signOut, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

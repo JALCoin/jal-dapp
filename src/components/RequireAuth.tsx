@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthProvider";
 
 export default function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const { loading, session } = useAuth();
+  const { loading, profile, session, user } = useAuth();
 
   if (loading) {
     return (
@@ -21,7 +21,7 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!session) {
+  if (!session || !user || !profile) {
     const next = `${location.pathname}${location.search}${location.hash}`;
     return <Navigate to={`/auth?next=${encodeURIComponent(next)}`} replace />;
   }
