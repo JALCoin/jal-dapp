@@ -2237,61 +2237,6 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
   );
 });
 
-const PriorityRail = React.memo(function PriorityRail(props: {
-  slots: SlotRow[];
-  onOpenSlot: (id: string) => void;
-  nowMs: number;
-}) {
-  const top = props.slots.slice(0, 3);
-
-  if (!top.length) return null;
-
-  return (
-    <div className="card machine-surface panel-frame engine-status-rail" aria-label="Machine priority rail">
-      <div className="engine-telemetry-head">
-        <div>
-          <div className="engine-telemetry-title">Machine Priority</div>
-          <div className="engine-telemetry-note">
-            The most important fixed-slot conditions right now.
-          </div>
-        </div>
-      </div>
-
-      <div className="engine-priority-grid">
-        {top.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={`engine-priority-card ${stateToneClass(s)}`}
-            onClick={() => props.onOpenSlot(s.id)}
-          >
-            <div className="engine-priority-top">
-              <span className="engine-priority-id">{s.id}</span>
-              <span className={`engine-priority-chip ${regimeToneClass(s)}`}>
-                {priorityRailLabel(s)}
-              </span>
-            </div>
-
-            <div className="engine-priority-line">
-              <strong>{slotCoin(s)}</strong> | {regimeLabel(s)}
-            </div>
-
-            <div className="engine-priority-story">
-  {liveParentAnalysis(s, props.nowMs)}
-</div>
-
-            <div className="engine-priority-stats">
-              <span>Net {pctNum(s.netPct)}</span>
-              <span>Spread {pctNum(s.nowSpreadPct)}</span>
-              <span>{slotHealthLabel(s)}</span>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-});
-
 const ControlsBar = React.memo(function ControlsBar(props: {
   view: ViewMode;
   setView: React.Dispatch<React.SetStateAction<ViewMode>>;
@@ -3722,7 +3667,6 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
 
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
-  const isDesktop = useIsDesktop(980);
 
   const { rowsAll, rowsAud, snap, meta, capital, slotRows, events, err, refresh } = useEngineData(BASE);
 
