@@ -3911,16 +3911,6 @@ export default function Engine() {
                   <pre>{err}</pre>
                 </div>
               ) : null}
-
-              <CarouselPanel
-  slots={prioritizedSlots}
-  currentIndex={carouselIndex}
-  setCurrentIndex={setCarouselIndex}
-  onOpenSlot={setSelectedSlotId}
-  paused={carouselPaused}
-  setPaused={setCarouselPaused}
-  nowMs={nowMs}
-/>
             </div>
 
             <div className="engine-divider" aria-hidden="true">
@@ -4063,6 +4053,24 @@ export default function Engine() {
               {section === "about" ? (
                 <AboutPanel aboutOpen={aboutOpen} setAboutOpen={setAboutOpen} />
               ) : null}
+            </div>
+
+            <div className="engine-divider" aria-hidden="true">
+              <div className="engine-divider-line" />
+              <div className="engine-divider-label">Live JRD Status</div>
+              <div className="engine-divider-line" />
+            </div>
+
+            <div className="engine-zone" data-zone="status">
+              <CarouselPanel
+                slots={prioritizedSlots}
+                currentIndex={carouselIndex}
+                setCurrentIndex={setCarouselIndex}
+                onOpenSlot={setSelectedSlotId}
+                paused={carouselPaused}
+                setPaused={setCarouselPaused}
+                nowMs={nowMs}
+              />
             </div>
           </div>
         </section>
