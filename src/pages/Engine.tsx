@@ -1742,30 +1742,6 @@ function detailRowsForSlot(s: SlotRow, nowMs: number) {
   ];
 }
 
-function useIsDesktop(bpPx = 980) {
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia(`(min-width: ${bpPx}px)`).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia(`(min-width: ${bpPx}px)`);
-    const onChange = () => setIsDesktop(mq.matches);
-
-    onChange();
-    if (typeof mq.addEventListener === "function") mq.addEventListener("change", onChange);
-    else mq.addListener(onChange);
-
-    return () => {
-      if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", onChange);
-      else mq.removeListener(onChange);
-    };
-  }, [bpPx]);
-
-  return isDesktop;
-}
-
 function sortMarketRows(rows: MarketRow[], sortKey: SortKey, sortDir: SortDir) {
   const dir = sortDir === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
@@ -1798,20 +1774,6 @@ function derivePriorityScore(s: SlotRow) {
   if (String(s.trackingState || "").toUpperCase() === "TRACKING") return 40;
   if (String(s.trackingState || "").toUpperCase() === "DRAWDOWN_SEEN") return 35;
   return 10;
-}
-
-function priorityRailLabel(s: SlotRow) {
-  if (hasActiveSubslots(s)) return "JRD SECONDARY ACTIVE";
-  if (hasPendingSubslotBuys(s)) return "JRD SECONDARY ENTRY";
-  if (hasPendingSubslotSells(s)) return "JRD SECONDARY EXIT";
-  if (String(s.state || "").toUpperCase() === "EXITING") return "EXITING";
-  if (String(s.state || "").toUpperCase() === "DEPLOYING") return "ENTERING";
-  if (String(s.state || "").toUpperCase() === "LVL4_TRAIL") return "TRAILING";
-  if (isHoldingFamilyState(s.state)) return "HOLDING";
-  if (String(s.trackingState || "").toUpperCase() === "REVERSAL_CONFIRMING") return "REVERSAL";
-  if (s.consolidationBreakoutReady === true) return "BREAKOUT READY";
-  if (String(s.trackingState || "").toUpperCase() === "TRACKING") return "TRACKING";
-  return "WATCHING";
 }
 
 function slotHealthLabel(s: SlotRow) {
