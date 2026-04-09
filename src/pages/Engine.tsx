@@ -41,7 +41,7 @@ type Feed = "all" | "aud" | "watch" | "engine";
 type SortKey = "coin" | "spread" | "mid";
 type SortDir = "asc" | "desc";
 type ViewMode = "simple" | "advanced";
-type Section = "overview" | "ledger" | "events" | "about";
+type Section = "focus" | "slots" | "capital" | "market" | "events" | "about";
 
 type SlotState =
   | "WAITING_ENTRY"
@@ -2693,9 +2693,9 @@ const OverviewTable = React.memo(function OverviewTable(props: {
     <div className="card machine-surface panel-frame engine-ledger" aria-label="Overview cards">
       <div className="engine-ledger-top">
         <div>
-          <div className="engine-ledger-title">Decision Overview</div>
+          <div className="engine-ledger-title">Focus Board</div>
           <div className="engine-ledger-note">
-            Every slot explained by market behavior, machine decision, and tactical capture status.
+            The clearest read of what deserves attention now, before you drop into full proof and diagnostics.
           </div>
         </div>
       </div>
@@ -2754,7 +2754,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
         <div>
           <div className="engine-ledger-title">Permanent Slots Ledger</div>
           <div className="engine-ledger-note">
-            Click a row to expand the public proof layer. Open full details for diagnostics.
+            Full fixed-slot registry with expandable machine proof, tactical detail, and diagnostics.
           </div>
         </div>
 
@@ -3040,6 +3040,24 @@ const AboutPanel = React.memo(function AboutPanel(props: {
             <li>Window harvest reflects recent realized event flow only.</li>
             <li>External transfers are excluded from displayed totals.</li>
             <li>The UI is organized for clarity first and diagnostics second.</li>
+          </ul>
+
+          <div className="engine-about-h">Market Condition Key</div>
+          <ul>
+            <li><strong>Uptrend</strong>: Price structure is rising and momentum conditions support continuation.</li>
+            <li><strong>Downtrend</strong>: Price structure is falling and rebounds are treated more cautiously.</li>
+            <li><strong>Consolidation Bull</strong>: Price is compressing in a range with a bullish lean or recovery bias.</li>
+            <li><strong>Consolidation Bear</strong>: Price is compressing in a range with a bearish lean or weakness bias.</li>
+            <li><strong>Chop</strong>: Price action is noisy, inconsistent, and often too messy for tactical entries.</li>
+          </ul>
+
+          <div className="engine-about-h">Trade Type Key</div>
+          <ul>
+            <li><strong>Jrd Primary</strong>: The main fixed-slot position for that coin, entered and managed by the core engine rules.</li>
+            <li><strong>Jrd Secondary</strong>: A smaller tactical trade opened inside a live Jrd Primary hold window to harvest rebounds.</li>
+            <li><strong>Rotation</strong>: A separate capital-transfer layer that can move wallet value between coins when enabled.</li>
+            <li><strong>Paper / Sim</strong>: Orders are evaluated and tracked without live exchange execution.</li>
+            <li><strong>Live</strong>: Orders are sent to the exchange and reconciled against real fills and balances.</li>
           </ul>
         </div>
       ) : null}
@@ -3436,15 +3454,15 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   return (
     <div className="engine-bay">
       <div className="bay-head">
-        <div className="bay-title">Engine Summary</div>
-        <div className="bay-note">Machine state + structure overview.</div>
+        <div className="bay-title">System Summary</div>
+        <div className="bay-note">Core machine state without the treasury detail layer.</div>
       </div>
 
       <div className="card machine-surface panel-frame engine-telemetry">
         <div className="engine-telemetry-head">
           <div>
-            <div className="engine-telemetry-title">System State</div>
-            <div className="engine-telemetry-note">Public treasury view.</div>
+            <div className="engine-telemetry-title">Machine State</div>
+            <div className="engine-telemetry-note">What the fixed-slot engine is doing right now.</div>
           </div>
         </div>
 
@@ -3487,33 +3505,6 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
           <div className="engine-mini-row">
             <div className="mini-k">Closed Jrd Secondary</div>
             <div className="mini-v">{props.overviewCounts.closedSubslots}</div>
-          </div>
-
-          <div className="engine-mini-row">
-            <div className="mini-k">Free AUD</div>
-            <div className="mini-v">{moneyAud(props.capital?.audAvailable)}</div>
-          </div>
-
-          <div className="engine-mini-row">
-            <div className="mini-k">Wallet Value</div>
-            <div className="mini-v">{moneyAud(props.capital?.walletAudValue)}</div>
-          </div>
-
-          <div className="engine-mini-row">
-            <div className="mini-k">Movable AUD</div>
-            <div className="mini-v">{moneyAud(props.capital?.movableAudEstimate)}</div>
-          </div>
-
-          <div className="engine-mini-row">
-            <div className="mini-k">Rotation Mode</div>
-            <div className="mini-v">{rotationModeLabel(props.capital)}</div>
-          </div>
-
-          <div className="engine-mini-row">
-            <div className="mini-k">Treasury-ready Coins</div>
-            <div className="mini-v">
-              {movableWalletCoins(props.capital).filter((coin) => coin.walletSourceReady === true).length}
-            </div>
           </div>
 
           <div className="engine-mini-row">
@@ -3614,8 +3605,8 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
   return (
     <div className="engine-bay">
       <div className="bay-head">
-        <div className="bay-title">Capital Mobility</div>
-        <div className="bay-note">Public treasury view for wallet value, free AUD, and movement readiness.</div>
+        <div className="bay-title">Capital & Rotation</div>
+        <div className="bay-note">Treasury balance, wallet readiness, and movement policy in one place.</div>
       </div>
 
       <div className="card machine-surface panel-frame engine-telemetry capital-panel">
@@ -3740,7 +3731,7 @@ export default function Engine() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("simple");
-  const [section, setSection] = useState<Section>("overview");
+  const [section, setSection] = useState<Section>("focus");
   const [eventsOpen, setEventsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -3954,8 +3945,6 @@ export default function Engine() {
   return out;
 }, [slotRows]);
 
-  const showEventsUnderLedger = isDesktop && section === "ledger";
-
   return (
     <main className="home-shell engine-shell" data-view={view} aria-label="$JAL~Engine">
       <div className="home-wrap">
@@ -3999,12 +3988,6 @@ export default function Engine() {
                 activeSubslots={overviewCounts.activeSubslots}
               />
 
-              <PriorityRail
-  slots={prioritizedSlots}
-  onOpenSlot={setSelectedSlotId}
-  nowMs={nowMs}
-/>
-
               <ControlsBar
                 view={view}
                 setView={setView}
@@ -4032,33 +4015,11 @@ export default function Engine() {
   setPaused={setCarouselPaused}
   nowMs={nowMs}
 />
-              <div className="engine-grid engine-grid--asym" aria-label="Engine bays">
-                <div className="engine-bay-stack">
-                <SummaryPanel
-                  meta={meta}
-                  capital={capital}
-                  fixedAllowlist={fixedAllowlist}
-                  fixedMissing={fixedMissing}
-                  trackingStates={trackingStates}
-                  overviewCounts={overviewCounts}
-                  topTrackingCoins={topTrackingCoins}
-                  executionMode={executionMode}
-                  view={view}
-                  nowMs={nowMs}
-                />
-
-                  <CapitalMobilityPanel capital={capital} nowMs={nowMs} />
-                </div>
-
-                <div className="engine-bay engine-bay--market">
-                  <MarketSurface rows={filteredMarketRows} />
-                </div>
-              </div>
             </div>
 
             <div className="engine-divider" aria-hidden="true">
               <div className="engine-divider-line" />
-              <div className="engine-divider-label">Jeroid Ledger</div>
+              <div className="engine-divider-label">Operator Console</div>
               <div className="engine-divider-line" />
             </div>
 
@@ -4066,18 +4027,34 @@ export default function Engine() {
               <div className="engine-section-tabs" aria-label="Engine sections">
                 <button
                   type="button"
-                  className={`engine-section-tab ${section === "overview" ? "active" : ""}`}
-                  onClick={() => setSection("overview")}
+                  className={`engine-section-tab ${section === "focus" ? "active" : ""}`}
+                  onClick={() => setSection("focus")}
                 >
-                  Overview
+                  Focus
                 </button>
 
                 <button
                   type="button"
-                  className={`engine-section-tab ${section === "ledger" ? "active" : ""}`}
-                  onClick={() => setSection("ledger")}
+                  className={`engine-section-tab ${section === "slots" ? "active" : ""}`}
+                  onClick={() => setSection("slots")}
                 >
-                  Ledger
+                  Slots
+                </button>
+
+                <button
+                  type="button"
+                  className={`engine-section-tab ${section === "capital" ? "active" : ""}`}
+                  onClick={() => setSection("capital")}
+                >
+                  Capital
+                </button>
+
+                <button
+                  type="button"
+                  className={`engine-section-tab ${section === "market" ? "active" : ""}`}
+                  onClick={() => setSection("market")}
+                >
+                  Market
                 </button>
 
                 <button
@@ -4097,11 +4074,11 @@ export default function Engine() {
                 </button>
               </div>
 
-              {section === "overview" ? (
+              {section === "focus" ? (
                 <OverviewTable slots={filteredSlots} onOpenSlot={setSelectedSlotId} nowMs={nowMs} />
               ) : null}
 
-              {section === "ledger" ? (
+              {section === "slots" ? (
                 <>
                   <div className="engine-ledger-topgrid" aria-label="Jeroid status cards">
                     <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
@@ -4146,11 +4123,31 @@ export default function Engine() {
                     fixedPresent={fixedPresent}
                     fixedMissing={fixedMissing}
                   />
-
-                  {showEventsUnderLedger ? (
-                    <EventsPanel events={events} eventsOpen={eventsOpen} setEventsOpen={setEventsOpen} />
-                  ) : null}
                 </>
+              ) : null}
+
+              {section === "capital" ? (
+                <div className="engine-section-grid engine-section-grid--capital" aria-label="Capital and system">
+                  <SummaryPanel
+                    meta={meta}
+                    capital={capital}
+                    fixedAllowlist={fixedAllowlist}
+                    fixedMissing={fixedMissing}
+                    trackingStates={trackingStates}
+                    overviewCounts={overviewCounts}
+                    topTrackingCoins={topTrackingCoins}
+                    executionMode={executionMode}
+                    view={view}
+                    nowMs={nowMs}
+                  />
+                  <CapitalMobilityPanel capital={capital} nowMs={nowMs} />
+                </div>
+              ) : null}
+
+              {section === "market" ? (
+                <div className="engine-section-grid" aria-label="Market section">
+                  <MarketSurface rows={filteredMarketRows} />
+                </div>
               ) : null}
 
               {section === "events" ? (
