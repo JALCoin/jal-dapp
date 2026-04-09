@@ -177,9 +177,77 @@ function EngineerModePanel({
   );
 }
 
+function AccountAccessPanel({
+  session,
+  identity,
+  roleLabel,
+  signingOut,
+  authError,
+  onOpenAuth,
+  onSignOut,
+}: {
+  session: boolean;
+  identity: string;
+  roleLabel: string;
+  signingOut: boolean;
+  authError: string | null;
+  onOpenAuth: () => void;
+  onSignOut: () => void;
+}) {
+  return (
+    <section className="sidebar-account-panel" aria-label="Account access">
+      <div className="sidebar-engineer-head">
+        <div className="sidebar-engineer-kicker">Account Access</div>
+        <span className={`sidebar-engineer-mode ${session ? "is-engineer" : "is-member"}`}>
+          {session ? "Signed In" : "Signed Out"}
+        </span>
+      </div>
+
+      <p className="sidebar-account-copy">
+        {session
+          ? `Signed in as ${identity}.`
+          : "No password needed. Use your email or chosen handle to request a magic sign-in link."}
+      </p>
+
+      {session ? (
+        <div className="sidebar-engineer-status">
+          <span className="chip">Identity: {identity}</span>
+          <span className="chip">Role: {roleLabel}</span>
+        </div>
+      ) : null}
+
+      <div className="sidebar-account-actions">
+        <button type="button" className="button ghost" onClick={onOpenAuth}>
+          {session ? "Open Access Terminal" : "Sign In / Sign Up"}
+        </button>
+
+        {session ? (
+          <button
+            type="button"
+            className="button gold"
+            onClick={onSignOut}
+            disabled={signingOut}
+          >
+            {signingOut ? "Signing Out..." : "Sign Out"}
+          </button>
+        ) : null}
+      </div>
+
+      {authError ? <p className="sidebar-account-error">{authError}</p> : null}
+    </section>
+  );
+}
+
 function SidebarView({
   open,
   onClose,
+  session,
+  accountIdentity,
+  roleLabel,
+  signingOut,
+  authError,
+  onOpenAuth,
+  onSignOut,
   isEngineerAccount,
   isEngineer,
   isTestingAsMember,
@@ -189,6 +257,13 @@ function SidebarView({
 }: {
   open: boolean;
   onClose: () => void;
+  session: boolean;
+  accountIdentity: string;
+  roleLabel: string;
+  signingOut: boolean;
+  authError: string | null;
+  onOpenAuth: () => void;
+  onSignOut: () => void;
   isEngineerAccount: boolean;
   isEngineer: boolean;
   isTestingAsMember: boolean;
@@ -239,6 +314,16 @@ function SidebarView({
         </div>
 
         <nav aria-label="Primary routes" style={{ display: "grid", gap: 14 }}>
+          <AccountAccessPanel
+            session={session}
+            identity={accountIdentity}
+            roleLabel={roleLabel}
+            signingOut={signingOut}
+            authError={authError}
+            onOpenAuth={onOpenAuth}
+            onSignOut={onSignOut}
+          />
+
           <EngineerModePanel
             isEngineerAccount={isEngineerAccount}
             isEngineer={isEngineer}
@@ -345,14 +430,34 @@ function AboutPage() {
 
 /* ------------------------ App Shell (only for /app/*) ------------------------ */
 function AppShell() {
-  const { isEngineer, isEngineerAccount, isTestingAsMember, setTestingAsMember } = useAuth();
+  const {
+    session,
+    user,
+    profile,
+    isEngineer,
+    isEngineerAccount,
+    isTestingAsMember,
+    setTestingAsMember,
+    signOut,
+  } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [switchingMode, setSwitchingMode] = useState(false);
   const [modeError, setModeError] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const navOverlayOpen = useMemo(() => location.pathname === "/app/nav", [location.pathname]);
+  const accountIdentity = useMemo(() => {
+    if (profile?.display_name?.trim()) return profile.display_name.trim();
+    if (user?.email?.trim()) return user.email.trim();
+    return "Guest";
+  }, [profile?.display_name, user?.email]);
+  const roleLabel = useMemo(() => {
+    if (!profile) return "Pending";
+    return isEngineer ? "Engineer" : "Member";
+  }, [isEngineer, profile]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -396,6 +501,29 @@ function AppShell() {
     }
   }
 
+  async function handleSignOut() {
+    if (signingOut) return;
+
+    setSigningOut(true);
+    setAuthError(null);
+
+    try {
+      await signOut();
+      setMenuOpen(false);
+      navigate("/auth", { replace: true });
+    } catch (error) {
+      console.error("Failed to sign out", error);
+      setAuthError("Sign out failed. Try again.");
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
+  function handleOpenAuth() {
+    setMenuOpen(false);
+    navigate("/auth");
+  }
+
   return (
     <>
       <HeaderView
@@ -407,6 +535,13 @@ function AppShell() {
       <SidebarView
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
+        session={Boolean(session)}
+        accountIdentity={accountIdentity}
+        roleLabel={roleLabel}
+        signingOut={signingOut}
+        authError={authError}
+        onOpenAuth={handleOpenAuth}
+        onSignOut={() => void handleSignOut()}
         isEngineerAccount={isEngineerAccount}
         isEngineer={isEngineer}
         isTestingAsMember={isTestingAsMember}

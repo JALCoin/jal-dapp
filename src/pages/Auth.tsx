@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthProvider";
+import { isLikelyEmailAddress, resolveMagicLinkEmail } from "../lib/authIdentity";
 
 function buildRedirectUrl(nextPath: string) {
   const callbackUrl = new URL("/auth/callback", window.location.origin);
@@ -12,7 +13,7 @@ function buildRedirectUrl(nextPath: string) {
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { loading, session, profile, isEngineer, signOut } = useAuth();
+  const { loading, session, profile, isEngineer } = useAuth();
 
   const nextPath = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -20,7 +21,7 @@ export default function Auth() {
   }, [location.search]);
 
   const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
+  const [identity, setIdentity] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -32,11 +33,11 @@ export default function Auth() {
   }, [loading, navigate, nextPath, session]);
 
   async function sendMagicLink(shouldCreateUser: boolean) {
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanIdentity = identity.trim();
     const cleanDisplayName = displayName.trim();
 
-    if (!cleanEmail) {
-      setError("Email is required.");
+    if (!cleanIdentity) {
+      setError("Email or handle is required.");
       return;
     }
 
@@ -50,8 +51,17 @@ export default function Auth() {
     setNotice("");
 
     try {
+      const resolvedEmail = shouldCreateUser
+        ? cleanIdentity.toLowerCase()
+        : await resolveMagicLinkEmail(cleanIdentity);
+
+      if (shouldCreateUser && !isLikelyEmailAddress(resolvedEmail)) {
+        setError("Use a real email when creating an account.");
+        return;
+      }
+
       const { error: authError } = await supabase.auth.signInWithOtp({
-        email: cleanEmail,
+        email: resolvedEmail,
         options: {
           shouldCreateUser,
           emailRedirectTo: buildRedirectUrl(nextPath),
@@ -117,19 +127,36 @@ export default function Auth() {
               </label>
 
               <label className="jal-field">
-                <span className="jal-field-label">Email</span>
+                <span className="jal-field-label">Email Or Handle</span>
                 <input
                   className="jal-input"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@domain.com"
-                  autoComplete="email"
+                  type="text"
+                  value={identity}
+                  onChange={(event) => setIdentity(event.target.value)}
+                  placeholder="you@domain.com or your chosen handle"
+                  autoComplete="username"
                 />
+                <span className="jal-auth-input-note">
+                  Use your email to create an account. For sign-in, you can use either your email
+                  or your chosen handle.
+                </span>
               </label>
 
               {notice ? <p className="jal-note">{notice}</p> : null}
               {error ? <p className="jal-error-text">{error}</p> : null}
+
+              <aside className="jal-auth-delivery-note" aria-label="Email delivery guidance">
+                <div className="jal-auth-delivery-title">
+                  Haven&apos;t received your access email in your inbox?
+                </div>
+                <p className="jal-auth-delivery-copy">
+                  JAL/SOL&apos;s emailing system is new and still building reputation. If you
+                  don&apos;t see your access link in your inbox, it will most likely be in Junk. If
+                  it still hasn&apos;t arrived, use <strong>Send Sign-In Link</strong> again. If
+                  you&apos;re having any issues, contact us and we&apos;ll fix them as fast as
+                  possible.
+                </p>
+              </aside>
 
               <div className="jal-bay-actions">
                 <button
@@ -162,7 +189,7 @@ export default function Auth() {
                 After sign-in, this terminal will route you to <strong>{nextPath}</strong>.
               </p>
 
-              <div className="jal-bullets">
+              <div className="jal-bullets jal-bullets-auth">
                 <article className="jal-bullet">
                   <div className="jal-bullet-k">Signed In</div>
                   <div className="jal-bullet-v">{session ? "Yes" : "No"}</div>
@@ -176,32 +203,17 @@ export default function Auth() {
                 </article>
 
                 <article className="jal-bullet">
+                  <div className="jal-bullet-k">Sign-In Method</div>
+                  <div className="jal-bullet-v">Magic link only. No password required.</div>
+                </article>
+
+                <article className="jal-bullet">
                   <div className="jal-bullet-k">Progression</div>
                   <div className="jal-bullet-v">
                     {profile?.progression_title ?? "initiate"}
                   </div>
                 </article>
               </div>
-
-              {session ? (
-                <div className="jal-bay-actions">
-                  <button
-                    type="button"
-                    className="button ghost"
-                    onClick={() => navigate(nextPath)}
-                  >
-                    Continue
-                  </button>
-
-                  <button
-                    type="button"
-                    className="button ghost"
-                    onClick={() => void signOut()}
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              ) : null}
             </section>
           </div>
         </section>
