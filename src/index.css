@@ -646,6 +646,39 @@ a.button[aria-disabled="true"]{
   gap:10px;
 }
 
+.sidebar-account-panel{
+  display:grid;
+  gap:12px;
+  padding:14px;
+  border:1px solid rgba(120,220,255,.16);
+  border-radius:18px;
+  background:
+    radial-gradient(540px 160px at 50% 0%, rgba(0,240,255,.08), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    0 12px 24px rgba(0,0,0,.22);
+}
+
+.sidebar-account-copy{
+  margin:0;
+  font-size:.92rem;
+  line-height:1.65;
+  color:rgba(231,255,247,.82);
+}
+
+.sidebar-account-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+
+.sidebar-account-error{
+  margin:0;
+  color:#ffb2b2;
+  font-size:.82rem;
+}
+
 .sidebar-engineer-error{
   margin:0;
   color:#ffb2b2;
@@ -1174,6 +1207,42 @@ a.button[aria-disabled="true"]{
   margin:0 0 var(--jal-space-md);
   line-height:1.72;
   opacity:.84;
+}
+
+.jal-auth-input-note{
+  font-size:.78rem;
+  line-height:1.6;
+  color:rgba(231,255,247,.58);
+}
+
+.jal-auth-delivery-note{
+  display:grid;
+  gap:10px;
+  margin-bottom:var(--jal-space-md);
+  padding:14px 16px;
+  border-radius:16px;
+  border:1px solid rgba(244,200,106,.18);
+  background:
+    radial-gradient(520px 140px at 50% 0%, rgba(244,200,106,.08), transparent 66%),
+    linear-gradient(180deg, rgba(244,200,106,.06), rgba(244,200,106,.03));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
+}
+
+.jal-auth-delivery-title{
+  font-size:.84rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:#ffe2a2;
+}
+
+.jal-auth-delivery-copy{
+  margin:0;
+  line-height:1.72;
+  color:rgba(255,248,229,.88);
+}
+
+.jal-bullets-auth{
+  grid-template-columns:repeat(4, minmax(0, 1fr));
 }
 
 .jal-lock-text{
