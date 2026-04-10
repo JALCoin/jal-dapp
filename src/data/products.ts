@@ -36,16 +36,8 @@ export type Product = {
 const EMAIL = "358jal@gmail.com";
 
 const STRIPE_LINKS = {
-  support25: "https://donate.stripe.com/28EcN438Y98f0m3dUU0x202",
-  support50: "https://donate.stripe.com/28EaEWaBqdov4Cj7ww0x203",
-  support75: "https://donate.stripe.com/4gM5kCeRG2JR2ub7ww0x204",
-  support100: "https://donate.stripe.com/28EdR89xm2JR4CjbMM0x205",
-  support150: "https://donate.stripe.com/6oU00i7pe4RZ1q70440x206",
-
   hoodieXXL: "https://buy.stripe.com/cNi00ifVKbgn6Kr6ss0x207",
   miniPillow: "",
-
-  internalDialogueEntry: "https://buy.stripe.com/4gM28q24Ubgn3yfg320x208",
 };
 
 function mailto(subject: string, bodyLines?: string[]) {
@@ -106,141 +98,13 @@ function buildLinks(options: {
 
 export const PRODUCTS: Product[] = [
   {
-    id: "system-support-25",
-    title: "System Support — $25",
-    kind: "digital",
-    status: "active",
-    priceNote: "$25.00 AUD",
-    summary:
-      "Optional support for the JALSOL system. This is a voluntary contribution and does not provide access, ownership, or material benefits. This contribution is not a tax-deductible donation. JALSOL is not a DGR-endorsed organisation. Please ensure you are contributing with full understanding. This is an early-stage system under active development.This information is general in nature and does not constitute legal or financial advice.",
-    tags: ["Digital", "Support", "New"],
-    image: "/shop/system-support.jpg",
-    isSupport: true,
-    links: buildLinks({
-      stripeHref: STRIPE_LINKS.support25,
-      stripeLabel: "Donate",
-    }),
-  },
-
-  {
-    id: "system-support-50",
-    title: "System Support — $50",
-    kind: "digital",
-    status: "active",
-    priceNote: "$50.00 AUD",
-    summary:
-      "Mid-tier support level. Strengthens position and contribution into the system structure.",
-    tags: ["Digital", "Support"],
-    image: "/shop/system-support.jpg",
-    isSupport: true,
-    links: buildLinks({
-      stripeHref: STRIPE_LINKS.support50,
-      stripeLabel: "Donate",
-    }),
-  },
-
-  {
-    id: "system-support-75",
-    title: "System Support — $75",
-    kind: "digital",
-    status: "active",
-    priceNote: "$75.00 AUD",
-    summary:
-      "Elevated support layer. Positioned for those moving with stronger intent.",
-    tags: ["Digital", "Support"],
-    image: "/shop/system-support.jpg",
-    isSupport: true,
-    links: buildLinks({
-      stripeHref: STRIPE_LINKS.support75,
-      stripeLabel: "Donate",
-    }),
-  },
-
-  {
-    id: "system-support-100",
-    title: "System Support — $100",
-    kind: "digital",
-    status: "active",
-    priceNote: "$100.00 AUD",
-    summary:
-      "High-tier support level. Signals commitment to progression within the JALSOL system.",
-    tags: ["Digital", "Support", "Premium"],
-    image: "/shop/system-support.jpg",
-    isSupport: true,
-    links: buildLinks({
-      stripeHref: STRIPE_LINKS.support100,
-      stripeLabel: "Donate",
-    }),
-  },
-
-  {
-    id: "system-support-150",
-    title: "System Support — $150",
-    kind: "digital",
-    status: "active",
-    priceNote: "$150.00 AUD",
-    summary:
-      "Top support tier. Reserved for those aligning deeper with system direction and future access.",
-    tags: ["Digital", "Support", "Premium"],
-    image: "/shop/system-support.jpg",
-    isSupport: true,
-    links: buildLinks({
-      stripeHref: STRIPE_LINKS.support150,
-      stripeLabel: "Donate",
-    }),
-  },
-
-  {
-    id: "jal-internal-dialogue-method-entry-layer",
-    title: "JAL’s Internal Dialogue Method — Entry Layer",
-    kind: "digital",
-    status: STRIPE_LINKS.internalDialogueEntry ? "active" : "coming_soon",
-    priceNote: "$29.00 AUD",
-    summary:
-  "Most people don’t struggle with thinking — they struggle with completing thought. This method stabilises internal dialogue, removes hesitation, and structures your ability to speak clearly and act without disruption. Entry layer into the JALSOL system.",
-    tags: ["Digital", "New", "Premium"],
-    image: "/shop/digital-product-1.jpg",
-    links: buildLinks({
-      stripeHref: STRIPE_LINKS.internalDialogueEntry || undefined,
-      stripeLabel: "Buy Now",
-      enquiryHref: mailto(
-        "Enquiry — JAL’s Internal Dialogue Method — Entry Layer",
-        [
-          "Name:",
-          "Question:",
-          "",
-          "Product: JAL’s Internal Dialogue Method — Entry Layer",
-        ]
-      ),
-      enquiryLabel: STRIPE_LINKS.internalDialogueEntry
-        ? "Enquire"
-        : "Join Waitlist",
-    }),
-  },
-{
-  id: "test-product",
-  title: "Test Product ($1)",
-  kind: "digital",
-  status: "active",
-  priceNote: "$1.00 AUD",
-  summary: "Internal test product for purchase verification flow.",
-  tags: ["Digital", "New"],
-  image: "/shop/digital-product-1.jpg",
-  links: [
-    {
-      label: "Buy Now",
-      href: "https://buy.stripe.com/00w14mdNC84b1q73gg0x209",
-    },
-  ],
-},
-  {
     id: "hoodie-embroidered-xxl",
     title: "JALSOL Embroidered Hoodie (XXL)",
     kind: "physical",
     status: STRIPE_LINKS.hoodieXXL ? "active" : "coming_soon",
     priceNote: "$130.00 AUD",
     summary:
-      "Flagship embroidered wearable release. Structured, limited, and aligned with the JALSOL storefront aesthetic.",
+      "Flagship embroidered wearable release with a structured, limited run and a heavier premium finish.",
     tags: ["Physical", "Handmade", "Premium", "Preorder", "Limited"],
     image: "/shop/hoodie-xxl.jpg",
     links: STRIPE_LINKS.hoodieXXL
@@ -253,13 +117,10 @@ export const PRODUCTS: Product[] = [
       : [
           {
             label: "Pre-order via Email",
-            href: preorderMailto(
-              "Pre-order — JALSOL Embroidered Hoodie (XXL) — $130.00 AUD"
-            ),
+            href: preorderMailto("Pre-order - JALSOL Embroidered Hoodie (XXL) - $130.00 AUD"),
           },
         ],
   },
-
   {
     id: "mini-pillow-plush",
     title: "JALSOL Embroidered Mini Pillow Plush",
@@ -267,40 +128,36 @@ export const PRODUCTS: Product[] = [
     status: STRIPE_LINKS.miniPillow ? "active" : "coming_soon",
     priceNote: "$17.50 AUD",
     summary:
-      "Collectible mini plush with clean embroidery and a simple entry price point. Designed for repeatable production and consistent finish.",
+      "Collectible mini plush with clean embroidery, simple entry pricing, and a repeatable physical production format.",
     tags: ["Physical", "Handmade", "Preorder", "New"],
     image: "/shop/mini-pillow-plush.jpg",
     links: buildLinks({
       stripeHref: STRIPE_LINKS.miniPillow || undefined,
       stripeLabel: "Buy Now",
       enquiryHref: preorderMailto(
-        "Pre-order — JALSOL Embroidered Mini Pillow Plush — $17.50 AUD"
+        "Pre-order - JALSOL Embroidered Mini Pillow Plush - $17.50 AUD"
       ),
       enquiryLabel: STRIPE_LINKS.miniPillow ? "Enquire" : "Pre-order via Email",
     }),
   },
-
   {
     id: "solid-gold-cuff",
-    title: "JALSOL Gold Cuff — Private Allocation",
+    title: "JALSOL Gold Cuff - Private Order",
     kind: "physical",
     status: "coming_soon",
-    priceNote: "Private allocation",
+    priceNote: "Private order",
     summary:
-      "Made-to-order solid gold cuff with sculpted open-form geometry. Allocation is handled privately in crypto for aligned participants within the JALSOL system.",
+      "Made-to-order solid gold cuff with sculpted open-form geometry for one-to-one commission requests.",
     tags: ["Physical", "Handmade", "One-of-One", "Premium", "Limited"],
     image: "/shop/solid-gold-cuff.jpg",
     links: buildLinks({
-      enquiryHref: quoteMailto(
-        "Enquiry — JALSOL Gold Cuff (Private Allocation)",
-        [
-          "Preferred payment: SOL / USDC / other",
-          "Estimated budget range:",
-          "Wrist circumference (mm):",
-          "Finish: polished / matte / brushed",
-          "Engraving: yes / no (details):",
-        ]
-      ),
+      enquiryHref: quoteMailto("Enquiry - JALSOL Gold Cuff (Private Order)", [
+        "Preferred payment: AUD / SOL / USDC / other",
+        "Estimated budget range:",
+        "Wrist circumference (mm):",
+        "Finish: polished / matte / brushed",
+        "Engraving: yes / no (details):",
+      ]),
       enquiryLabel: "Request Access",
     }),
   },

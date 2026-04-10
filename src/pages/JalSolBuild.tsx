@@ -75,25 +75,25 @@ const GATE3_NAV: Gate3NavCard[] = [
   {
     id: "initialise",
     title: "Initialise",
-    note: "Assign the empty builder slot and activate your Gate 03 shell.",
+    note: "Assign the workspace and store the starting builder settings.",
     requirement: "Available now",
   },
   {
     id: "profile",
     title: "Profile",
-    note: "View the builder identity inherited from Gate 02 and Gate 03 choices.",
+    note: "View the builder identity inherited from onboarding and the current workspace choices.",
     requirement: "Unlocks after initialisation",
   },
   {
     id: "dashboard",
-    title: "Builder Dashboard",
-    note: "Track launch readiness, build milestones, and authorship progress.",
+    title: "Project Dashboard",
+    note: "Track setup readiness, build milestones, and workspace progress.",
     requirement: "Unlocks after initialisation",
   },
   {
     id: "token-forge",
-    title: "Token Forge",
-    note: "Move into mint creation, ATA flow, supply, and metadata structure.",
+    title: "Builder Tools",
+    note: "Review token metadata, wallet prerequisites, supply planning, and technical setup.",
     requirement: "Unlocks after initialisation",
   },
   {
@@ -122,14 +122,14 @@ const GATE3_NAV: Gate3NavCard[] = [
   },
   {
     id: "market-path",
-    title: "Market Path",
-    note: "Choose strategic direction for what this authored system becomes.",
+    title: "Launch Path",
+    note: "Choose how this project will be documented, presented, and prepared for release.",
     requirement: "Unlocks after initialisation",
   },
   {
     id: "vault",
-    title: "Vault / Publish",
-    note: "Assemble readiness for final output, release, and expansion.",
+    title: "Release Checklist",
+    note: "Assemble readiness notes, checks, and final release steps.",
     requirement: "Unlocks later",
   },
 ];
@@ -302,7 +302,7 @@ export default function JalSolBuild() {
 
   function initialiseGate3() {
     if (!isEngineer && !handover?.completion?.buildReady) {
-      setInitError("Gate 03 requires verified Gate 02 completion first.");
+      setInitError("The builder workspace requires verified onboarding completion first.");
       return;
     }
 
@@ -356,7 +356,7 @@ export default function JalSolBuild() {
 
   const builderReadyFromGate2 = isEngineer || Boolean(handover?.completion?.buildReady);
   const participantName =
-    builderState.builderName || handover?.identity.displayName || profile?.display_name || "Participant";
+    builderState.builderName || handover?.identity.displayName || profile?.display_name || "Member";
   const participantEmail =
     builderState.email || handover?.identity.email || profile?.email || "Missing";
   const participantWallet = handover?.wallet.address || "";
@@ -384,19 +384,19 @@ export default function JalSolBuild() {
       className={`home-shell jal-shell jal-ground-page ${
         loading ? "is-fading" : ""
       }`}
-      aria-label="JAL/SOL Build Gate"
+      aria-label="JAL/SOL Builder Workspace"
     >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
           {builderState.stage === "landing" && (
             <section
               className="jal-hero jal-world-hero"
-              aria-label="Gate 03 landing"
+              aria-label="Builder module landing"
             >
               <div className="jal-hero-top">
-                <div className="jal-kicker">JAL/SOL • GATE 03</div>
+                <div className="jal-kicker">JAL/SOL | BUILDER MODULE</div>
 
-                <div className="jal-status" aria-label="Gate 03 state">
+                <div className="jal-status" aria-label="Builder module state">
                   <span className="jal-status-dot" />
                   <span className="jal-status-text">
                     {builderReadyFromGate2
@@ -407,7 +407,7 @@ export default function JalSolBuild() {
               </div>
 
               <div className="jal-hero-center">
-                <p className="jal-world-pretitle">Builder chamber</p>
+                <p className="jal-world-pretitle">Builder workspace</p>
 
                 <h1 className="home-title">
                   Enter the empty slot.
@@ -416,15 +416,13 @@ export default function JalSolBuild() {
                 </h1>
 
                 <p className="home-lead">
-                  Gate 03 is no longer about proving that you can participate.
-                  It is where participation turns into ownership, identity, and
-                  authored direction.
+                  This workspace is no longer about proving onboarding is complete. It is where
+                  guided setup turns into project identity, configuration, and technical planning.
                 </p>
 
                 <p className="jal-sublead">
-                  The slot begins as JAL/SOL. After initialisation, this slot
-                  takes the chosen builder symbol and becomes the beginning of a
-                  custom system shell.
+                  The workspace begins as JAL/SOL. After setup, it stores your chosen project
+                  identity and becomes the starting point for builder tools.
                 </p>
 
                 <div className="jal-bay jal-bay-wide" aria-label="Builder slot">
@@ -463,17 +461,17 @@ export default function JalSolBuild() {
                   <p className="jal-note jal-center-text">
                     {builderReadyFromGate2
                       ? builderState.initialised
-                        ? "Builder slot assigned. Enter Gate 03 nav."
+                        ? "Builder workspace assigned. Open the builder workspace."
                         : "This slot is waiting for builder initialisation."
-                      : "Gate 03 remains locked until Gate 02 participant proof is complete."}
+                      : "The builder workspace remains locked until onboarding checks are complete."}
                   </p>
                 </div>
               </div>
 
               <div className="jal-arrival-note" aria-label="Build principles">
-                <span>EMPTY SLOT → ASSIGNED SYMBOL</span>
-                <span>PARTICIPATION → AUTHORSHIP</span>
-                <span>OWNERSHIP BEFORE EXECUTION</span>
+                <span>WORKSPACE → PROJECT DETAILS</span>
+                <span>ONBOARDING → BUILDER TOOLS</span>
+                <span>PLANNING BEFORE LAUNCH</span>
               </div>
 
               <div className="jal-links">
@@ -498,8 +496,8 @@ export default function JalSolBuild() {
                 >
                   {builderReadyFromGate2
                     ? builderState.initialised
-                      ? "Open Gate 03 Nav"
-                      : "Initialise Gate 03"
+                      ? "Open Builder Workspace"
+                      : "Start Builder Setup"
                     : "Return To Enter"}
                 </button>
 
@@ -509,7 +507,7 @@ export default function JalSolBuild() {
                   onClick={() => beginRoute("/app/engine")}
                   disabled={loading}
                 >
-                  View Engine Layer
+                  View Personal Engine
                 </button>
 
                 <button
@@ -518,7 +516,7 @@ export default function JalSolBuild() {
                   onClick={() => beginRoute("/app/jal-sol")}
                   disabled={loading}
                 >
-                  Return To World Hub
+                  Return To Onboarding Hub
                 </button>
               </div>
             </section>
@@ -528,12 +526,12 @@ export default function JalSolBuild() {
             <>
               <section
                 className="jal-stage-bar"
-                aria-label="Gate 03 current state"
+                aria-label="Builder workspace current state"
               >
                 <div className="jal-stage-bar-left">
-                  <span>JAL/SOL • Gate 03</span>
+                  <span>JAL/SOL | Builder Module</span>
                   <strong>
-                    {builderState.initialised ? "Builder Hub" : "Initialise"}
+                    {builderState.initialised ? "Builder Workspace" : "Setup"}
                   </strong>
                 </div>
 
@@ -541,7 +539,7 @@ export default function JalSolBuild() {
                   <span className="jal-status-dot" />
                   <span>
                     {builderState.initialised
-                      ? "Builder State Active"
+                      ? "Builder Workspace Active"
                       : "Locked"}
                   </span>
                 </div>
@@ -549,10 +547,10 @@ export default function JalSolBuild() {
 
               <section
                 className="jal-bay jal-bay-wide"
-                aria-label="Gate 03 hub summary"
+                aria-label="Builder workspace summary"
               >
                 <div className="jal-bay-head">
-                  <div className="jal-bay-title">Gate 03 Nav</div>
+                  <div className="jal-bay-title">Builder Workspace</div>
                   <div className="jal-bay-note">
                     {unlockedCount} / {totalNavCount} visible builder systems
                   </div>
@@ -573,7 +571,7 @@ export default function JalSolBuild() {
                       builderReadyFromGate2
                     )}`}
                   >
-                    <div className="jal-bullet-k">Gate 02 Handover</div>
+                    <div className="jal-bullet-k">Onboarding Handover</div>
                     <div className="jal-bullet-v">
                       {builderReadyFromGate2
                         ? isEngineer && !handover?.completion?.buildReady
@@ -601,7 +599,7 @@ export default function JalSolBuild() {
                 </div>
               </section>
 
-              <section className="jal-grid" aria-label="Gate 03 nav cards">
+              <section className="jal-grid" aria-label="Builder workspace cards">
                 {GATE3_NAV.map((item) => {
                   const unlocked = getNavUnlocked(builderState, item.id);
 
@@ -648,7 +646,7 @@ export default function JalSolBuild() {
                             onClick={() => beginRoute("/app/token")}
                             disabled={!unlocked || loading}
                           >
-                            Open Token Forge
+                            Open Builder Tools
                           </button>
                         ) : (
                           <button
@@ -665,7 +663,7 @@ export default function JalSolBuild() {
                 })}
               </section>
 
-              <section className="jal-grid" aria-label="Gate 03 live detail">
+              <section className="jal-grid" aria-label="Builder workspace detail">
                 <section className="jal-bay">
                   <div className="jal-bay-head">
                     <div className="jal-bay-title">Profile</div>
@@ -697,7 +695,7 @@ export default function JalSolBuild() {
 
                 <section className="jal-bay">
                   <div className="jal-bay-head">
-                    <div className="jal-bay-title">Builder Dashboard</div>
+                    <div className="jal-bay-title">Project Dashboard</div>
                     <div className="jal-bay-note">Immediate output</div>
                   </div>
 
@@ -729,7 +727,7 @@ export default function JalSolBuild() {
                       <div className="jal-bullet-k">Publish Readiness</div>
                       <div className="jal-bullet-v">
                         {builderState.initialised
-                          ? "Builder shell active"
+                          ? "Builder workspace active"
                           : "Not ready"}
                       </div>
                     </article>
@@ -739,7 +737,7 @@ export default function JalSolBuild() {
 
               <section
                 className="jal-bay jal-bay-wide"
-                aria-label="Gate 03 actions"
+                aria-label="Builder workspace actions"
               >
                 <div className="jal-bay-head">
                   <div className="jal-bay-title">Builder Actions</div>
@@ -753,7 +751,7 @@ export default function JalSolBuild() {
                     onClick={() => beginRoute("/app/token")}
                     disabled={!builderState.initialised || loading}
                   >
-                    Open Token Forge
+                    Open Builder Tools
                   </button>
 
                   <button
@@ -767,7 +765,7 @@ export default function JalSolBuild() {
                     }
                     disabled={loading}
                   >
-                    Return To Gate 03 Landing
+                    Return To Builder Landing
                   </button>
 
                   <button
@@ -790,7 +788,7 @@ export default function JalSolBuild() {
           className="jal-overlay"
           role="dialog"
           aria-modal="true"
-          aria-label="Gate 03 initialise"
+          aria-label="Builder setup"
         >
           <div
             className="jal-overlay-backdrop"
@@ -802,14 +800,13 @@ export default function JalSolBuild() {
 
           <section className="jal-overlay-panel jal-bay jal-bay-wide">
             <div className="jal-bay-head">
-              <div className="jal-bay-title">Gate 03 Initialisation</div>
-              <div className="jal-bay-note">Assign the empty slot</div>
+              <div className="jal-bay-title">Builder Setup</div>
+              <div className="jal-bay-note">Assign the workspace</div>
             </div>
 
             <p className="jal-note jal-center-text">
-              This is the first builder action. The slot begins as JAL/SOL and
-              becomes yours only after project identity, path, and
-              responsibility are assigned.
+              This is the first builder action. The workspace begins as JAL/SOL and stores your
+              project identity only after the setup details and responsibility check are complete.
             </p>
 
             <div className="jal-grid">
@@ -966,16 +963,15 @@ export default function JalSolBuild() {
                     }
                   />
                   <span>
-                    I understand Gate 03 shifts me from participant into
-                    builder, and this slot now carries authored direction and
-                    responsibility.
+                    I understand this builder workspace stores my project settings and I remain
+                    responsible for any later deployment or release decisions.
                   </span>
                 </label>
               </section>
 
               <section className="jal-bay">
                 <div className="jal-bay-head">
-                  <div className="jal-bay-title">Incoming Gate 02 Proof</div>
+                  <div className="jal-bay-title">Incoming Onboarding Proof</div>
                   <div className="jal-bay-note">Inherited foundation</div>
                 </div>
 
@@ -985,7 +981,7 @@ export default function JalSolBuild() {
                       builderReadyFromGate2
                     )}`}
                   >
-                    <div className="jal-bullet-k">Gate 02 Build Ready</div>
+                    <div className="jal-bullet-k">Onboarding Build Ready</div>
                     <div className="jal-bullet-v">
                       {builderReadyFromGate2
                         ? isEngineer && !handover?.completion?.buildReady
@@ -1050,7 +1046,7 @@ export default function JalSolBuild() {
                 onClick={initialiseGate3}
                 disabled={loading}
               >
-                Assign Builder Slot
+                Save Builder Setup
               </button>
             </div>
           </section>

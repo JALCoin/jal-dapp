@@ -105,12 +105,12 @@ const OBSERVE_STEPS: ObserveStep[] = [
   {
     id: "stillness",
     label: "Stillness",
-    note: "No urgency enters Gate 02.",
+    note: "No urgency enters onboarding.",
   },
   {
     id: "test",
     label: "Test",
-    note: "Confirm understanding before entry.",
+    note: "Confirm understanding before onboarding.",
   },
   {
     id: "token-fit",
@@ -128,7 +128,7 @@ const LEARN_CARDS: LearnCard[] = [
       "It controls the keys that authorise movement on a network.",
       "Whoever controls the keys controls the assets.",
     ],
-    contribution: "This matters because control must be understood before entry.",
+    contribution: "This matters because control must be understood before onboarding.",
   },
   {
     id: "custody",
@@ -148,7 +148,7 @@ const LEARN_CARDS: LearnCard[] = [
       "A decentralised exchange is more direct and less forgiving.",
       "The difference is not hype. It is control, responsibility, and interaction style.",
     ],
-    contribution: "This matters because entry conditions change across systems.",
+    contribution: "This matters because onboarding conditions change across systems.",
   },
   {
     id: "solana",
@@ -165,7 +165,7 @@ const LEARN_CARDS: LearnCard[] = [
 const TEST_QUESTIONS: TestQuestion[] = [
   {
     id: "q1",
-    prompt: "What is the purpose of Gate 01 — Observe?",
+    prompt: "What is the purpose of the Observe module?",
     options: [
       "To encourage quick market entry",
       "To stabilise understanding before action",
@@ -198,7 +198,7 @@ const TEST_QUESTIONS: TestQuestion[] = [
   },
   {
     id: "q4",
-    prompt: "Why is stillness required before Gate 02?",
+    prompt: "Why is stillness required before onboarding?",
     options: [
       "Because delays make trading more exciting",
       "Because urgency improves accuracy",
@@ -580,25 +580,25 @@ export default function JalSolObserve() {
 
   const frameContribution =
     currentStep.id === "orientation"
-      ? "Contribution to Gate 02: removes pressure before action."
+      ? "This step prepares onboarding by removing pressure before action."
       : currentStep.id === "filter"
-      ? "Contribution to Gate 02: rejects unstable entry models."
+      ? "This step prepares onboarding by rejecting unstable entry models."
       : currentStep.id === "truth"
-      ? "Contribution to Gate 02: replaces hype with correct framing."
+      ? "This step prepares onboarding by replacing hype with correct framing."
       : currentStep.id === "structure"
-      ? "Contribution to Gate 02: confirms primitive contact before action."
+      ? "This step prepares onboarding by opening the core concepts first."
       : currentStep.id === "transaction"
-      ? "Contribution to Gate 02: confirms that signing changes state."
+      ? "This step prepares onboarding by showing that signing changes state."
       : currentStep.id === "stillness"
-      ? "Contribution to Gate 02: confirms calm before irreversible movement."
+      ? "This step prepares onboarding by confirming calm before irreversible movement."
       : currentStep.id === "test"
-      ? "Contribution to Gate 02: confirms understanding before entry."
-      : "Contribution to Gate 02: confirms control under movement.";
+      ? "This step prepares onboarding by confirming understanding before continuation."
+      : "This step prepares onboarding by confirming control under movement.";
 
   return (
     <main
       className={`home-shell jal-shell jal-ground-page ${loading ? "is-fading" : ""}`}
-      aria-label="JAL/SOL Observe Gate"
+      aria-label="JAL/SOL observe module"
     >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
@@ -606,10 +606,10 @@ export default function JalSolObserve() {
             className={`jal-hero jal-world-hero ${
               useCompactHeader ? "jal-observe-hero--compact" : ""
             }`}
-            aria-label="Observe gate hero"
+            aria-label="Observe module hero"
           >
             <div className="jal-hero-top">
-              <div className="jal-kicker">JAL/SOL • GATE 01</div>
+              <div className="jal-kicker">JAL/SOL | OBSERVE</div>
 
               <div className="jal-status" aria-label="Observe state">
                 <span className="jal-status-dot" />
@@ -629,7 +629,7 @@ export default function JalSolObserve() {
               {!useCompactHeader ? (
                 <>
                   <p className="home-lead">
-                    This gate is not for action. It is for stabilisation. The user is
+                    This module is not for action. It is for stabilisation. The user is
                     slowed down, misinformation is removed, and the environment becomes
                     understandable before any irreversible step is introduced.
                   </p>
@@ -641,8 +641,8 @@ export default function JalSolObserve() {
                 </>
               ) : (
                 <p className="jal-sublead">
-                  {currentStep.label} active. Gate 01 is still conditioning the user
-                  before Entry.
+                  {currentStep.label} active. Observe is still preparing the user before
+                  onboarding continues.
                 </p>
               )}
             </div>
@@ -663,8 +663,8 @@ export default function JalSolObserve() {
             </div>
 
             <p className="jal-note">
-              This gate is completed in order. One frame is active at a time. Progression
-              is paced so the user slows down before entering the next state.
+              This module is completed in order. One frame is active at a time. Progression
+              is paced so the user slows down before moving into onboarding.
             </p>
 
             <div className="jal-observe-sequence-grid">
@@ -707,11 +707,11 @@ export default function JalSolObserve() {
 
                 <p className="jal-note">
                   Most people enter markets through urgency, imitation, or fragmented
-                  information. This gate does the opposite. It slows the user down and
+                  information. This module does the opposite. It slows the user down and
                   restores order before action is even considered.
                 </p>
 
-                <p className="jal-lock-text">This is preparation, not participation.</p>
+                <p className="jal-lock-text">This is preparation, not execution.</p>
 
                 <div className="jal-bullets">
                   <article className="jal-bullet">
@@ -723,7 +723,7 @@ export default function JalSolObserve() {
 
                   <article className="jal-bullet">
                     <div className="jal-bullet-k">State</div>
-                    <div className="jal-bullet-v">Observer</div>
+                    <div className="jal-bullet-v">Prepared</div>
                   </article>
 
                   <article className="jal-bullet">
@@ -792,7 +792,7 @@ export default function JalSolObserve() {
                   <article className="jal-bullet">
                     <div className="jal-bullet-k">Market</div>
                     <div className="jal-bullet-v">
-                      Not guaranteed opportunity. A system of participants with uneven
+                      Not guaranteed opportunity. A system of users with uneven
                       understanding.
                     </div>
                   </article>
@@ -887,7 +887,7 @@ export default function JalSolObserve() {
                   <div>
                     <strong>Sign instruction</strong>
                     <span className="jal-step-sub">
-                      The wallet proves authority through the user’s keys.
+                      The wallet proves approval through the user's keys.
                     </span>
                   </div>
 
@@ -917,12 +917,12 @@ export default function JalSolObserve() {
               <>
                 <div className="jal-bay-head">
                   <div className="jal-bay-title">Stillness check</div>
-                  <div className="jal-bay-note">No urgency enters Gate 02</div>
+                  <div className="jal-bay-note">No urgency enters onboarding</div>
                 </div>
 
                 <p className="jal-note">
                   If the user feels rushed, they are not ready for irreversible movement.
-                  Entry should begin from calm understanding, not pressure.
+                  Onboarding should begin from calm understanding, not pressure.
                 </p>
 
                 <p className="jal-lock-text">
@@ -949,13 +949,13 @@ export default function JalSolObserve() {
                   <div className="jal-bay-note">
                     {testSubmitted
                       ? `${testScore} / ${TEST_QUESTIONS.length}`
-                      : "Required before Gate 02"}
+                      : "Required before onboarding"}
                   </div>
                 </div>
 
                 <p className="jal-note">
                   This final step checks whether the user understood the system they are
-                  about to enter. Gate 02 should not open from scrolling alone.
+                  about to use. Onboarding should not open from scrolling alone.
                 </p>
 
                 <div className="jal-steps">
@@ -1008,7 +1008,7 @@ export default function JalSolObserve() {
                 {testSubmitted && (
                   <p className="jal-lock-text" style={{ marginTop: "1rem" }}>
                     {testPassed
-                      ? `Pass confirmed. You scored ${testScore}/${TEST_QUESTIONS.length}. Continue to Token Fit to complete Gate 01.`
+                      ? `Pass confirmed. You scored ${testScore}/${TEST_QUESTIONS.length}. Continue to Token Fit to complete Observe.`
                       : `Test not passed. You scored ${testScore}/${TEST_QUESTIONS.length}. Review the Observe sequence and try again.`}
                   </p>
                 )}
@@ -1029,19 +1029,19 @@ export default function JalSolObserve() {
                 </div>
 
                 <p className="jal-note">
-  Enter a Gate 01 username to unlock the trial. Reach a best score of{" "}
-  <strong>{MIN_TOKEN_FIT_SCORE}</strong> to complete Gate 01.
+  Enter an Observe username to unlock the trial. Reach a best score of{" "}
+  <strong>{MIN_TOKEN_FIT_SCORE}</strong> to complete Observe.
   Endless mode activates after reaching the required score.
 </p>
 
                 <section className="jal-bay jal-observe-trial-identity" style={{ marginBottom: "1rem" }}>
                   <div className="jal-bay-head">
-                    <div className="jal-bay-title">Gate 01 trial username</div>
+                    <div className="jal-bay-title">Observe trial username</div>
                     <div className="jal-bay-note">Local to this browser</div>
                   </div>
 
                   <p className="jal-note">
-  This username unlocks Gate 01 Trials and is used for the leaderboard display.
+  This username unlocks the Observe trial and is used for the leaderboard display.
 </p>
 
                   <div className="jal-observe-trial-input-wrap">
@@ -1052,7 +1052,7 @@ export default function JalSolObserve() {
     onChange={(event) =>
       setTrialUsername(sanitizeTrialUsername(event.target.value))
     }
-    placeholder="Enter Gate 01 username"
+    placeholder="Enter Observe username"
     maxLength={24}
     disabled={loading}
   />
@@ -1084,10 +1084,10 @@ export default function JalSolObserve() {
 
                 <p className="jal-lock-text" style={{ marginTop: "1rem" }}>
   {tokenFitPassed
-    ? `Gate 01 complete. Last run: ${tokenFitScore}. High Score: ${tokenFitHighScore}.`
+    ? `Observe complete. Last run: ${tokenFitScore}. High Score: ${tokenFitHighScore}.`
     : hasTrialUsername
-    ? `Trial unlocked. Gate 02 remains locked until your high score reaches ${MIN_TOKEN_FIT_SCORE}. Current best: ${tokenFitHighScore}.`
-    : "Set your Gate 01 username to unlock the trial."}
+    ? `Trial unlocked. Onboarding remains locked until your high score reaches ${MIN_TOKEN_FIT_SCORE}. Current best: ${tokenFitHighScore}.`
+    : "Set your Observe username to unlock the trial."}
 </p>
               </>
             )}
@@ -1104,7 +1104,7 @@ export default function JalSolObserve() {
                 className="jal-observe-nav-button"
                 onClick={handleGateHome}
                 disabled={loading || stepIndex === 0}
-                aria-label="Return to Gate 01 homepage"
+                aria-label="Return to Observe home"
               >
                 {"<<"}
               </button>

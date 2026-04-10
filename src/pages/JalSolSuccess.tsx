@@ -16,20 +16,19 @@ export default function JalSolSuccess() {
 
               <div className="jal-status">
                 <span className="jal-status-dot" aria-hidden="true" />
-                <span className="jal-status-text">Entry Confirmed</span>
+                <span className="jal-status-text">Checkout Confirmed</span>
               </div>
             </div>
 
-            <h1 className="home-title jal-title">You Entered Level 1</h1>
+            <h1 className="home-title jal-title">Onboarding Started</h1>
 
             <p className="home-lead jal-lead">
-              Entry confirmed. You have moved past interest and into structured
-              participation.
+              Checkout confirmed. You have moved from browsing into the guided onboarding flow.
             </p>
 
             <p className="jal-sublead">
-              This is not the end of the payment flow. This is the beginning of
-              the initiation path.
+              This is not the end of the payment flow. This is the beginning of the onboarding
+              path.
             </p>
           </div>
 
@@ -44,7 +43,7 @@ export default function JalSolSuccess() {
             </div>
           </div>
 
-          <div className="jal-grid" aria-label="Level 1 success layout">
+          <div className="jal-grid" aria-label="Onboarding success layout">
             <section className="jal-bay" aria-label="Receipt guidance">
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Confirmed</div>
@@ -61,13 +60,13 @@ export default function JalSolSuccess() {
                 <li>
                   Stay inside sequence.
                   <span className="jal-step-sub">
-                    Level 1 is about correct first movement, not speed.
+                    The onboarding path is about correct first movement, not speed.
                   </span>
                 </li>
                 <li>
                   Prepare your wallet path.
                   <span className="jal-step-sub">
-                    Phantom and exchange setup come before routing.
+                    Install a wallet app and review the network steps before continuing.
                   </span>
                 </li>
               </ol>
@@ -80,8 +79,8 @@ export default function JalSolSuccess() {
               </div>
 
               <p className="jal-note">
-                Level 1 is now active in principle. Your next action is guided
-                wallet and exchange preparation.
+                Your onboarding record is now active. The next step is guided wallet setup and
+                verification preparation.
               </p>
 
               <div className="jal-bay-actions">
@@ -100,22 +99,22 @@ export default function JalSolSuccess() {
               </div>
             </section>
 
-            <section className="jal-bay jal-bay-wide" aria-label="Entry statement">
+            <section className="jal-bay jal-bay-wide" aria-label="Onboarding statement">
               <div className="jal-bay-head">
                 <div className="jal-bay-title">Initiation</div>
-                <div className="jal-bay-note">Level 1 active</div>
+                <div className="jal-bay-note">Onboarding active</div>
               </div>
 
               <div className="jal-bullets">
                 <div className="jal-bullet">
                   <div className="jal-bullet-k">State</div>
-                  <div className="jal-bullet-v">Level 1 entered</div>
+                  <div className="jal-bullet-v">Checkout confirmed</div>
                 </div>
 
                 <div className="jal-bullet">
                   <div className="jal-bullet-k">Meaning</div>
                   <div className="jal-bullet-v">
-                    You are no longer browsing. You are participating.
+                    You are no longer browsing. Your onboarding profile is now active.
                   </div>
                 </div>
 

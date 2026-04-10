@@ -1480,7 +1480,7 @@ export default function TokenFitGame({
   const leaderboardView = (
     <section className="jal-trial-leaderboard">
       <div className="jal-trial-leaderboard-head">
-        <div className="jal-trial-leaderboard-title">Gate 01 Global Leaderboard</div>
+        <div className="jal-trial-leaderboard-title">Observe Module Leaderboard</div>
         <div className="jal-trial-leaderboard-note">
           Global Top {LEADERBOARD_LIMIT}
         </div>
@@ -1503,7 +1503,7 @@ export default function TokenFitGame({
 
               <div className="jal-trial-leaderboard-player">
                 <div className="jal-trial-leaderboard-name">{entry.username}</div>
-                <div className="jal-trial-leaderboard-sub">Gate 01 Trial</div>
+                <div className="jal-trial-leaderboard-sub">Observe Trial</div>
               </div>
 
               <div className="jal-trial-leaderboard-score">
@@ -1528,7 +1528,7 @@ export default function TokenFitGame({
 
           <p className="jal-trial-note">
             Keep the token stable under movement. Reach a best score of{" "}
-            <strong>{minScore}</strong> to complete Gate 01. Endless mode
+            <strong>{minScore}</strong> to complete Observe. Endless mode
             activates after reaching the required score.
           </p>
 
@@ -1546,7 +1546,7 @@ export default function TokenFitGame({
             <article className="jal-trial-card">
               <div className="jal-trial-k">Player</div>
               <div className="jal-trial-v">
-                {canStart ? safeUsername : "Set Gate 01 username above"}
+                {canStart ? safeUsername : "Set Observe username above"}
               </div>
             </article>
 
@@ -1591,7 +1591,7 @@ export default function TokenFitGame({
 
           {!canStart && (
             <p className="jal-lock-text" style={{ marginTop: "1rem" }}>
-              Enter a Gate 01 username with at least 3 characters to start.
+              Enter an Observe username with at least 3 characters to start.
             </p>
           )}
         </div>

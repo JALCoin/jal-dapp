@@ -573,12 +573,12 @@ export default function TokenFitGameV10({
   };
 
   const gameView = (
-    <div className="jal-tokenfit-shell" aria-label="JAL/SOL Gate 02 Token Fit">
+    <div className="jal-tokenfit-shell" aria-label="JAL/SOL onboarding readiness trial">
       {!isFullscreen && (
         <div className="jal-tokenfit-inline-head">
           <div className="jal-bay-head">
             <div className="jal-bay-title">
-              {isTrialMode ? "Gate 02 Token Fit Trial" : "Gate 02 Token Fit Endless"}
+              {isTrialMode ? "Onboarding Readiness Trial" : "Onboarding Readiness Endless"}
             </div>
             <div className="jal-bay-note">{statusText}</div>
           </div>
@@ -681,7 +681,7 @@ export default function TokenFitGameV10({
                   whiteSpace: "nowrap",
                 }}
               >
-                JAL/SOL Gate 02
+                JAL/SOL Onboarding
               </div>
 
               {!isSmallViewport && (
@@ -1173,10 +1173,10 @@ export default function TokenFitGameV10({
 
   if (showCompactEntry) {
     return (
-      <div className="jal-trial-entry" aria-label="JAL/SOL Gate 02 Token Fit">
+      <div className="jal-trial-entry" aria-label="JAL/SOL onboarding readiness trial">
         <div className="jal-bay-head">
           <div className="jal-bay-title">
-            {isTrialMode ? "Gate 02 Token Fit Trial" : "Gate 02 Token Fit Endless"}
+            {isTrialMode ? "Onboarding Readiness Trial" : "Onboarding Readiness Endless"}
           </div>
           <div className="jal-bay-note">{isTrialMode ? "Trial Available" : "Endless Available"}</div>
         </div>

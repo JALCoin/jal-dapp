@@ -338,7 +338,7 @@ function SidebarView({
             onClose={onClose}
             items={[
               { to: "/app/home", label: "Home" },
-              { to: "/app/engine", label: "$JAL~Engine" },
+              { to: "/app/engine", label: "JAL Engine" },
             ]}
           />
 
@@ -346,19 +346,18 @@ function SidebarView({
             title="JAL/SOL"
             onClose={onClose}
             items={[
-              { to: "/app/jal-sol", label: "World Hub" },
-              { to: "/app/jal-sol/observe", label: "Gate 1 — Observe" },
-              { to: "/app/jal-sol/enter", label: "Gate 2 — Enter" },
-              { to: "/app/jal-sol/build", label: "Gate 3 — Build" },
+              { to: "/app/jal-sol", label: "Onboarding Hub" },
+              { to: "/app/jal-sol/observe", label: "Observe Module" },
+              { to: "/app/jal-sol/enter", label: "Onboarding Module" },
+              { to: "/app/jal-sol/build", label: "Builder Module" },
             ]}
           />
 
           <SidebarSection
-            title="Utility"
+            title="Tools"
             onClose={onClose}
             items={[
-              { to: "/app/token", label: "Token Generation" },
-              { to: "/app/raydium", label: "Raydium / Liquidity" },
+              { to: "/app/token", label: "Builder Tools" },
             ]}
           />
 
@@ -376,7 +375,7 @@ function SidebarView({
             title="System"
             onClose={onClose}
             items={[
-              { to: "/app/about", label: "About JAL" },
+              { to: "/app/about", label: "About JALSOL" },
               { to: "/app/settings", label: "Settings" },
             ]}
           />
@@ -402,24 +401,34 @@ function FeaturePage({ title }: { title: string }) {
 
 function AboutPage() {
   return (
-    <main className="home-shell" aria-label="About JAL">
+    <main className="home-shell" aria-label="About JALSOL">
       <div className="home-wrap">
         <section className="card machine-surface panel-frame">
-          <h1 className="home-title">About JAL</h1>
+          <h1 className="home-title">About JALSOL</h1>
           <p className="home-lead">
-            jalsol.com is founded by <strong>Jeremy Aaron Lugg</strong> — Sol-Trader • Mechanical
-            Metal Engineer • Digital Creator.
+            <strong>jalsol.com is operated by Jeremy Aaron Lugg.</strong> The current public site
+            focuses on onboarding guidance, builder tooling, physical merch, and a read-only view
+            of Jeremy&apos;s own engine.
           </p>
           <p className="home-lead">
-            <strong>$JAL</strong> is accessible via the <strong>JAL/SOL</strong> pool on Raydium and
-            verifiable on Solscan.
+            Any exchange-connected engine activity shown on the site relates to Jeremy Aaron
+            Lugg&apos;s own account and not to customer trading accounts. The site is not presented
+            as a public exchange, brokerage, or managed trading service.
           </p>
           <div className="home-links">
-            <a className="chip" href="https://raydium.io/" target="_blank" rel="noreferrer">
-              Raydium (JAL/SOL)
+            <a className="chip" href="/terms">
+              Terms
             </a>
-            <a className="chip" href="https://solscan.io/" target="_blank" rel="noreferrer">
-              Solscan ($JAL)
+            <a className="chip" href="/disclaimer">
+              Disclaimer
+            </a>
+            <a
+              className="chip"
+              href="https://abr.business.gov.au/ABN/View?id=35780648234"
+              target="_blank"
+              rel="noreferrer"
+            >
+              ABN Lookup
             </a>
           </div>
         </section>
@@ -590,18 +599,18 @@ function AppShell() {
           path="token"
           element={
             <RequireAuth>
-              <FeaturePage title="Token Generation" />
+              <FeaturePage title="Builder Tools" />
             </RequireAuth>
           }
         />
-        <Route path="raydium" element={<FeaturePage title="Raydium / Liquidity" />} />
+        <Route path="raydium" element={<FeaturePage title="External Market References" />} />
 
         <Route path="engine" element={<Engine />} />
-        <Route path="engine/settings" element={<FeaturePage title="$JAL~Engine — Settings" />} />
-        <Route path="engine/logs" element={<FeaturePage title="$JAL~Engine — Log Analysis" />} />
+        <Route path="engine/settings" element={<FeaturePage title="JAL Engine Settings" />} />
+        <Route path="engine/logs" element={<FeaturePage title="JAL Engine Log Analysis" />} />
 
-        <Route path="inventory" element={<FeaturePage title="Inventory / Packaged System" />} />
-        <Route path="inventory/purchase" element={<FeaturePage title="Inventory — Purchase" />} />
+        <Route path="inventory" element={<FeaturePage title="Inventory Workspace" />} />
+        <Route path="inventory/purchase" element={<FeaturePage title="Inventory Purchase" />} />
 
         <Route path="settings" element={<FeaturePage title="Settings" />} />
 

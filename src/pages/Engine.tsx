@@ -2052,8 +2052,11 @@ const EngineHero = React.memo(function EngineHero(props: {
       <div className="engine-hero-left" aria-hidden="true" />
 
       <div className="engine-hero-center">
-        <h1 className="engine-title">$JAL~Engine</h1>
-        <div className="engine-sub">Fixed-slot market machine with public runtime proof.</div>
+        <h1 className="engine-title">JAL Engine</h1>
+        <div className="engine-sub">
+          Jeremy Aaron Lugg&apos;s fixed-slot market machine with public read-only runtime proof.
+          Personal telemetry only, not a customer trading service or copy-trading prompt.
+        </div>
 
         {view === "advanced" ? (
           <div className="card machine-surface panel-frame engine-telemetry engine-telemetry--compact">
@@ -2324,12 +2327,12 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
   ).length;
 
   return (
-    <div className="card machine-surface panel-frame engine-status-rail" aria-label="Live JRD Status">
+    <div className="card machine-surface panel-frame engine-status-rail" aria-label="Live engine status">
       <div className="engine-telemetry-head">
         <div>
-          <div className="engine-telemetry-title">Live JRD Status</div>
+          <div className="engine-telemetry-title">Live Engine Status</div>
           <div className="engine-telemetry-note">
-            A public-facing explanation of what each fixed slot is doing right now.
+            A public-facing explanation of Jeremy&apos;s own fixed-slot engine state.
           </div>
         </div>
 
@@ -2551,13 +2554,13 @@ const MarketSurface = React.memo(function MarketSurface(props: {
     <div className="engine-bay">
       <div className="bay-head">
         <div className="bay-title">Market Surface</div>
-        <div className="bay-note">Read-only CoinSpot feed.</div>
+        <div className="bay-note">Read-only CoinSpot market feed for Jeremy&apos;s personal engine.</div>
       </div>
 
-      <div className="card machine-surface panel-frame engine-telemetry" aria-label="Tradable Surface">
+      <div className="card machine-surface panel-frame engine-telemetry" aria-label="Market feed">
         <div className="engine-telemetry-head">
-          <div className="engine-telemetry-title">Tradable Surface</div>
-          <div className="engine-telemetry-note">Coin / Mid / Spread</div>
+          <div className="engine-telemetry-title">Market Feed</div>
+          <div className="engine-telemetry-note">Coin / Mid / Spread for read-only viewing</div>
         </div>
 
         <div className="market-console" aria-label="Market table">
@@ -2601,9 +2604,6 @@ const OverviewTable = React.memo(function OverviewTable(props: {
       <div className="engine-ledger-top">
         <div>
           <div className="engine-ledger-title">Focus Board</div>
-          <div className="engine-ledger-note">
-            The clearest read of what deserves attention now, before you drop into full proof and diagnostics.
-          </div>
         </div>
       </div>
 
@@ -2768,7 +2768,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                                 <div className="ledger-subpanel-v">{pctNum(subslot.subslotNetPct)}</div>
                               </div>
                               <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Profit AUD</div>
+                                <div className="ledger-subpanel-k">Net Result (AUD)</div>
                                 <div className="ledger-subpanel-v">{moneyAud(subslot.subslotProfitAud)}</div>
                               </div>
                               <div className="ledger-subpanel-item">
@@ -2899,7 +2899,7 @@ const AboutPanel = React.memo(function AboutPanel(props: {
   setAboutOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   return (
-    <div className="engine-about" aria-label="About $JAL~Engine">
+    <div className="engine-about" aria-label="About JAL Engine">
       <button
         type="button"
         className="button ghost engine-about-btn"
@@ -2907,7 +2907,7 @@ const AboutPanel = React.memo(function AboutPanel(props: {
         aria-expanded={props.aboutOpen}
         aria-controls="engine-about"
       >
-        <span>About $JAL~Engine</span>
+        <span>About JAL Engine</span>
         <span className="engine-about-toggle">{props.aboutOpen ? "-" : "+"}</span>
       </button>
 
@@ -2916,8 +2916,15 @@ const AboutPanel = React.memo(function AboutPanel(props: {
           <div className="engine-about-title">Jeroid JRD Ledger</div>
 
           <p>
-            This page presents the machine in public-facing language. Each Jeroid slot belongs to one fixed market
-            identity and independently waits, deploys, holds, exits, and re-enters under the same rules.
+            This page presents Jeremy Aaron Lugg&apos;s own engine in public-facing language. It is a
+            read-only telemetry surface, not a public trading service. Each Jeroid slot belongs to
+            one fixed market identity and independently waits, deploys, holds, exits, and re-enters
+            under the same rules.
+          </p>
+          <p>
+            Where exchange-connected activity appears here, it relates to Jeremy Aaron Lugg&apos;s own
+            account and not to customer accounts. This page is not personal advice, a signal
+            service, or an invitation for visitors to mirror trades.
           </p>
 
           <p>
@@ -2943,7 +2950,7 @@ const AboutPanel = React.memo(function AboutPanel(props: {
           <ul>
             <li>Slot identity is permanent coin identity.</li>
             <li>Open Jrd Primary PnL is floating and not harvested.</li>
-            <li>Jrd Secondary PnL remains separate until merge on Jrd Primary reset.</li>
+            <li>Jrd Secondary net results remain separate until merge on Jrd Primary reset.</li>
             <li>Window harvest reflects recent realized event flow only.</li>
             <li>External transfers are excluded from displayed totals.</li>
             <li>The UI is organized for clarity first and diagnostics second.</li>
@@ -3117,7 +3124,7 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Pending Exit</div><div className="slot-v">{hasPendingSubslotSells(slot) ? "YES" : "NO"}</div></div>
               <div><div className="slot-k">Open Jrd Secondary</div><div className="slot-v">{getSubslotOpenCount(slot)}</div></div>
               <div><div className="slot-k">Closed Jrd Secondary</div><div className="slot-v">{getClosedSubslotCount(slot)}</div></div>
-              <div><div className="slot-k">Realized Jrd Secondary PnL</div><div className="slot-v">{moneyAud(getSubslotRealizedProfit(slot))}</div></div>
+              <div><div className="slot-k">Recorded Jrd Secondary Net Result</div><div className="slot-v">{moneyAud(getSubslotRealizedProfit(slot))}</div></div>
               {getSecondaryRows(slot).length ? (
                 <>
                   <div><div className="slot-k">Latest Jrd Secondary</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
@@ -3153,8 +3160,8 @@ const SlotModal = React.memo(function SlotModal(props: {
                       <div><div className="slot-k">Live Now</div><div className="slot-v">{subslotLiveNowLabel(subslot, slot)}</div></div>
                       <div><div className="slot-k">Gross</div><div className="slot-v">{pctNum(subslot.subslotGrossPct)}</div></div>
                       <div><div className="slot-k">Net</div><div className="slot-v">{pctNum(subslot.subslotNetPct)}</div></div>
-                      <div><div className="slot-k">Profit AUD</div><div className="slot-v">{moneyAud(subslot.subslotProfitAud)}</div></div>
-                      <div><div className="slot-k">Profit %</div><div className="slot-v">{pctNum(subslot.subslotProfitPct)}</div></div>
+                      <div><div className="slot-k">Net Result (AUD)</div><div className="slot-v">{moneyAud(subslot.subslotProfitAud)}</div></div>
+                      <div><div className="slot-k">Net Result (%)</div><div className="slot-v">{pctNum(subslot.subslotProfitPct)}</div></div>
                       <div><div className="slot-k">Bounce</div><div className="slot-v">{pctNum(subslot.subslotBouncePct)}</div></div>
                       <div><div className="slot-k">EMA Gap</div><div className="slot-v">{pctNum(subslot.subslotEmaGapPct)}</div></div>
                       <div><div className="slot-k">Recovered</div><div className="slot-v">{subslot.subslotRecoveredConfirmed == null ? "-" : subslot.subslotRecoveredConfirmed ? "YES" : "NO"}</div></div>
@@ -3284,12 +3291,12 @@ const SlotModal = React.memo(function SlotModal(props: {
             slot.exitAud != null ||
             slot.profitAud != null ||
             slot.profitPct != null) && (
-            <CollapsibleBlock title="Realized Proof" defaultOpen={false}>
+            <CollapsibleBlock title="Recorded Outcomes" defaultOpen={false}>
               <div className="slot-modal-grid">
                 <div><div className="slot-k">Entry AUD</div><div className="slot-v">{moneyAud(slot.entryAud)}</div></div>
                 <div><div className="slot-k">Exit AUD</div><div className="slot-v">{moneyAud(slot.exitAud)}</div></div>
-                <div><div className="slot-k">Profit AUD</div><div className="slot-v">{moneyAud(slot.profitAud)}</div></div>
-                <div><div className="slot-k">Profit %</div><div className="slot-v">{pctNum(slot.profitPct)}</div></div>
+                <div><div className="slot-k">Net Result (AUD)</div><div className="slot-v">{moneyAud(slot.profitAud)}</div></div>
+                <div><div className="slot-k">Net Result (%)</div><div className="slot-v">{pctNum(slot.profitPct)}</div></div>
               </div>
             </CollapsibleBlock>
           )}
@@ -3519,7 +3526,7 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
       <div className="card machine-surface panel-frame engine-telemetry capital-panel">
         <div className="engine-telemetry-head">
           <div>
-            <div className="engine-telemetry-title">Capital Snapshot</div>
+            <div className="engine-telemetry-title">Personal Capital Snapshot</div>
             <div className="engine-telemetry-note">
               Rotation mode {rotationModeLabel(props.capital)} | Treasury-ready {treasuryReadyCount} | Policy-ready {policyReadyCount}
             </div>
@@ -3852,7 +3859,7 @@ export default function Engine() {
 }, [slotRows]);
 
   return (
-    <main className="home-shell engine-shell" data-view={view} aria-label="$JAL~Engine">
+    <main className="home-shell engine-shell" data-view={view} aria-label="JAL Engine">
       <div className="home-wrap">
         <section className="card engine-window engine-window--hero machine-surface panel-frame" aria-label="Engine">
           <div className="engine-bg" aria-hidden="true">
@@ -3915,7 +3922,7 @@ export default function Engine() {
 
             <div className="engine-divider" aria-hidden="true">
               <div className="engine-divider-line" />
-              <div className="engine-divider-label">Operator Console</div>
+              <div className="engine-divider-label">Engine Ledger</div>
               <div className="engine-divider-line" />
             </div>
 
@@ -4057,7 +4064,7 @@ export default function Engine() {
 
             <div className="engine-divider" aria-hidden="true">
               <div className="engine-divider-line" />
-              <div className="engine-divider-label">Live JRD Status</div>
+              <div className="engine-divider-label">Live Engine Status</div>
               <div className="engine-divider-line" />
             </div>
 

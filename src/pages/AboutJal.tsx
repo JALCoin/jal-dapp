@@ -4,7 +4,12 @@ export default function AboutJal() {
       <div className="card">
         <h1>About JAL</h1>
         <p>
-          $JAL is the token layer for jalsol.com. This page will explain the token, the pool, and the intent.
+          This page is reserved for future builder documentation about JAL-related project
+          assets and technical references.
+        </p>
+        <p>
+          It should not be read as a token sale, swap venue, investment offer, or public trading
+          service.
         </p>
       </div>
     </div>

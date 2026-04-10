@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ABN_LOOKUP_URL, LEGAL_ABN, LEGAL_OPERATOR_NAME } from "../lib/legal";
 
 export default function Footer() {
   return (
@@ -11,8 +12,10 @@ export default function Footer() {
         </nav>
 
         <div className="jal-footer-identity">
-          <span>Operated by Jeremy Aaron Lugg</span>
-          <span>ABN 35 780 648 234</span>
+          <span>Legal operator: {LEGAL_OPERATOR_NAME}</span>
+          <a href={ABN_LOOKUP_URL} target="_blank" rel="noreferrer">
+            ABN {LEGAL_ABN} | ABN Lookup
+          </a>
         </div>
       </div>
     </footer>

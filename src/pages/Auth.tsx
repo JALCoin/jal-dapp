@@ -93,15 +93,15 @@ export default function Auth() {
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">JAL/SOL Access Terminal</h1>
           <p className="home-lead">
-            Sign in before entering gated progression. Members move through the gate ladder.
-            Engineers enter with unrestricted system access.
+            Sign in before entering the onboarding flow. Members move through the learning and
+            builder modules. Internal engineer accounts can access development tools.
           </p>
 
           <div className="home-links" style={{ justifyContent: "center" }}>
-            <span className="chip">Initiate</span>
-            <span className="chip">Observer</span>
-            <span className="chip">Participant</span>
-            <span className="chip">Builder</span>
+            <span className="chip">Access</span>
+            <span className="chip">Observe</span>
+            <span className="chip">Member</span>
+            <span className="chip">Build</span>
             <span className="chip">Engineer</span>
           </div>
         </section>
@@ -121,7 +121,7 @@ export default function Auth() {
                   type="text"
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
-                  placeholder="Initiate handle"
+                  placeholder="Your display name"
                   autoComplete="nickname"
                 />
               </label>
@@ -210,7 +210,7 @@ export default function Auth() {
                 <article className="jal-bullet">
                   <div className="jal-bullet-k">Progression</div>
                   <div className="jal-bullet-v">
-                    {profile?.progression_title ?? "initiate"}
+                    {profile?.progression_title ?? "starting"}
                   </div>
                 </article>
               </div>

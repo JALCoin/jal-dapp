@@ -8,20 +8,25 @@ function fmtTime(d: Date) {
   return `${hh}:${mm}:${ss}`;
 }
 
-type EntryGate = {
+type HomePillar = {
   id: string;
   title: string;
   subtitle: string;
   desc: string;
-  mapsTo: string;
+  note: string;
   tone?: "green" | "gold" | "cyan";
   route: string;
 };
 
-type ProgressStep = {
-  level: string;
+type BoundaryItem = {
   title: string;
   desc: string;
+};
+
+type LegalGroup = {
+  title: string;
+  desc: string;
+  points: string[];
 };
 
 type RouteBand = {
@@ -34,11 +39,8 @@ type RouteBand = {
   previewDesc: string;
   previewImage?: string;
   tags: string[];
-  route?: string;
-  dropdown?: {
-    label: string;
-    items: { title: string; note: string }[];
-  };
+  note: string;
+  route: string;
 };
 
 export default function Home() {
@@ -48,7 +50,6 @@ export default function Home() {
   const [now, setNow] = useState(() => fmtTime(new Date()));
   const [loading, setLoading] = useState(false);
   const [activeRoute, setActiveRoute] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(fmtTime(new Date())), 1000);
@@ -76,70 +77,100 @@ export default function Home() {
     }, 1200);
   }
 
-  const solAddress = "3R2X8VDPwLDTMXdBLemXTmduRnKyFg6Go8hJHBayPUY2";
-
-  function copyAddress() {
-    navigator.clipboard.writeText(solAddress);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  }
-
   const networkLabel = "MAINNET";
 
-  const entryGates = useMemo<EntryGate[]>(
+  const homePillars = useMemo<HomePillar[]>(
     () => [
       {
-        id: "observe",
-        title: "Observe",
-        subtitle: "Learn before acting",
-        desc: "Start with disclosure, awareness, exchanges, wallets, custody, and foundational system logic before confusing motion with progress.",
-        mapsTo: "Maps to Disclosure + Awareness",
-        tone: "cyan",
-        route: "/app/jal-sol",
-      },
-      {
-        id: "enter",
-        title: "Enter",
-        subtitle: "Take the first controlled step",
-        desc: "Move from passive understanding into guided participation and the first irreversible action inside the system.",
-        mapsTo: "Maps to Controlled Entry",
+        id: "learn",
+        title: "Learn",
+        subtitle: "JAL/SOL onboarding and self-custody guidance",
+        desc: "The public education layer explains wallets, signing, token basics, and how to move carefully before taking any irreversible action.",
+        note: "Public onboarding only",
         tone: "gold",
         route: "/app/jal-sol",
       },
       {
-        id: "build",
-        title: "Build",
-        subtitle: "Create your own system",
-        desc: "Progress beyond entry into ownership, token creation, utility, identity, execution, and eventual outward deployment.",
-        mapsTo: "Maps to Creation → Execution",
+        id: "observe",
+        title: "Observe",
+        subtitle: "Read-only engine telemetry",
+        desc: "The engine page exposes Jeremy Aaron Lugg's own automated trading dashboard as a public viewing surface without handing trading control to site visitors.",
+        note: "Read-only for visitors",
         tone: "green",
-        route: "/app/jal-sol",
+        route: "/app/engine",
+      },
+      {
+        id: "collect",
+        title: "Collect",
+        subtitle: "Physical merch and branded objects",
+        desc: "The storefront is now limited to physical releases so the commercial layer reads as ordinary merch rather than digital access or managed financial packaging.",
+        note: "Physical merch only",
+        tone: "cyan",
+        route: "/app/shop",
       },
     ],
     []
   );
 
-  const progressSteps = useMemo<ProgressStep[]>(
+  const boundaryItems = useMemo<BoundaryItem[]>(
     () => [
       {
-        level: "L0",
-        title: "Disclosure",
-        desc: "Identity, authorship, intent, and system direction are revealed before movement begins.",
+        title: "Not a decentralised exchange",
+        desc: "jalsol.com does not run an on-chain swap venue, order book, or peer-to-peer execution layer for the public in its current live form.",
       },
       {
-        level: "L1",
-        title: "Controlled Entry",
-        desc: "The first irreversible movement changes the user from observer into participant.",
+        title: "No customer custody",
+        desc: "The site does not hold client wallets, private keys, or pooled balances as part of the current public offer.",
       },
       {
-        level: "L2",
-        title: "Creation",
-        desc: "The system expands from use into owned assets, token creation, and utility formation.",
+        title: "No managed trading for users",
+        desc: "The engine shown on-site is Jeremy's own operator-controlled system, not a customer trading service or copy-trading product.",
       },
       {
-        level: "L3+",
-        title: "Execution & Expansion",
-        desc: "Machine structure, public visibility, and future domain deployment extend the system outward.",
+        title: "No digital access products in the shop",
+        desc: "The public storefront is limited to physical merch so the business activity is clearer and less likely to be read as financial access packaging.",
+      },
+    ],
+    []
+  );
+
+  const legalGroups = useMemo<LegalGroup[]>(
+    () => [
+      {
+        title: "What JALSOL is",
+        desc: "The current public version is structured as a software, education, and merch site with a read-only engine dashboard.",
+        points: [
+          "A public onboarding and self-custody learning surface",
+          "A public read-only dashboard for Jeremy Aaron Lugg's own engine",
+          "A physical merch storefront",
+        ],
+      },
+      {
+        title: "What JALSOL is not",
+        desc: "The site is intentionally not positioned as an exchange or managed investment product.",
+        points: [
+          "No public DEX or exchange is operated through the live site",
+          "No user funds are pooled for a common strategy",
+          "No trade execution is offered on behalf of site visitors",
+        ],
+      },
+      {
+        title: "Why this is lower-risk",
+        desc: "These boundaries make the public offer closer to ordinary software, content, and merch than to a regulated trading venue.",
+        points: [
+          "Visitors can observe the engine without receiving trading control",
+          "Commercial activity is tied to physical products instead of access promises",
+          "Self-custody actions remain user-directed rather than site-custodied",
+        ],
+      },
+      {
+        title: "What would change the analysis",
+        desc: "These features would need fresh Australian legal review before launch.",
+        points: [
+          "Trading for customers or copy-trading from the engine",
+          "Customer custody, shared wallets, or pooled capital",
+          "Brokerage, exchange, or token-investment style marketing claims",
+        ],
       },
     ],
     []
@@ -149,84 +180,42 @@ export default function Home() {
     () => [
       {
         id: "jalsol",
-        kicker: "OBSERVE • ENTER • BUILD",
-        title: "JAL/SOL World Hub",
-        desc: "The onboarding world of the wider system. This is where curiosity is converted into direction, and direction becomes controlled movement.",
+        kicker: "PUBLIC ONBOARDING",
+        title: "JAL/SOL",
+        desc: "Use the JAL/SOL layer to explain the project, wallet flow, self-custody steps, and token-building context without selling a trading product.",
         tone: "gold",
-        previewTitle: "World Hub → Awareness → Controlled Entry",
-        previewDesc:
-          "This is the visible entry layer: framing, disclosure, awareness, and the first controlled step into the system.",
+        previewTitle: "Onboarding surface",
+        previewDesc: "Education first, self-custody next, with the irreversible steps kept in the user's own hands.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Awareness", "Entry", "Progression", "Build Path"],
+        tags: ["Education", "Wallet basics", "Self-custody", "Token building"],
+        note: "Best public label: onboarding and builder surface",
         route: "/app/jal-sol",
       },
       {
         id: "engine",
-        kicker: "DETERMINISTIC EXECUTION",
-        title: "$JAL~Engine",
-        desc: "Visible state, slot lifecycle, event logs, telemetry, and machine truth. This is not theory. This is system behaviour made public.",
+        kicker: "PERSONAL ENGINE",
+        title: "JAL Engine",
+        desc: "The engine is best framed as Jeremy's own automated trading software with a public read-only dashboard, not as a user-facing exchange or managed platform.",
         tone: "green",
-        previewTitle: "Execution Layer",
-        previewDesc:
-          "Slots, machine state, public behaviour, and proof of structure sit here. This is where system logic becomes observable.",
+        previewTitle: "Read-only telemetry",
+        previewDesc: "Machine state, lifecycle data, and public logs without handing visitors trading permissions.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Jeroids", "Lifecycle", "Event Log", "Public State"],
+        tags: ["Read-only", "Telemetry", "Operator dashboard", "Personal software"],
+        note: "Best public label: personal automated engine with public telemetry",
         route: "/app/engine",
       },
       {
-        id: "inventory",
-        kicker: "PACKAGED SYSTEM OUTPUTS",
-        title: "Inventory",
-        desc: "A future storage layer for acquired releases, downloads, unlocked modules, and controlled system assets.",
-        tone: "cyan",
-        previewTitle: "Owned Access Surface",
-        previewDesc:
-          "A stored layer for what has been obtained, released, or unlocked inside the wider JALSOL environment.",
-        previewImage: "/JALSOL1.gif",
-        tags: ["Downloads", "Access", "Releases", "Modules"],
-        route: "/app/inventory",
-      },
-      {
-        id: "settings",
-        kicker: "CONFIGURATION LAYER",
-        title: "Settings",
-        desc: "Environment controls, future system preferences, and deeper configuration for personalised operation.",
-        tone: "cyan",
-        previewTitle: "System Control Surface",
-        previewDesc:
-          "Preferences, environment controls, and future operational adjustments live here.",
-        previewImage: "/JALSOL1.gif",
-        tags: ["Preferences", "Control", "Environment", "Config"],
-        route: "/app/settings",
-      },
-      {
         id: "shop",
-        kicker: "FEATURED ACCESS",
+        kicker: "PHYSICAL STORE",
         title: "Shop",
-        desc: "A lightweight featured layer for selected releases, access products, and support items tied to the wider system.",
-        tone: "gold",
-        previewTitle: "Featured Releases",
-        previewDesc:
-          "Selected access paths, support releases, and future packaged outputs tied to the wider JALSOL build.",
+        desc: "The storefront now works as a clean merch surface for apparel, collectibles, and physical branded items tied to the JALSOL identity.",
+        tone: "cyan",
+        previewTitle: "Physical releases",
+        previewDesc: "A simpler commerce layer built around physical products instead of digital access packages.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Access", "Support", "Featured", "Drops"],
-        dropdown: {
-          label: "Featured items",
-          items: [
-            {
-              title: "Level 1 Access",
-              note: "The first guided movement into the system.",
-            },
-            {
-              title: "Support Releases",
-              note: "Selected items that help fund expansion of JALSOL.",
-            },
-            {
-              title: "Future System Packs",
-              note: "Packaged modules, downloads, and guided releases.",
-            },
-          ],
-        },
+        tags: ["Physical merch", "Collectibles", "Apparel", "Brand objects"],
+        note: "Best public label: physical merch storefront",
+        route: "/app/shop",
       },
     ],
     []
@@ -244,9 +233,9 @@ export default function Home() {
         >
           <div className="terminal-left">
             <span className="terminal-pill ok">ONLINE</span>
-            <span className="terminal-sep">•</span>
+            <span className="terminal-sep">-</span>
             <span className="terminal-pill">{networkLabel}</span>
-            <span className="terminal-sep">•</span>
+            <span className="terminal-sep">-</span>
             <span className="terminal-dim">TIME</span>
             <span className="terminal-time">{now}</span>
           </div>
@@ -258,7 +247,7 @@ export default function Home() {
 
         <section
           className="card machine-surface panel-frame home-console-hero jal-command-surface"
-          aria-label="JALSOL command home"
+          aria-label="JALSOL overview"
         >
           <div className="home-console-hero-bg" aria-hidden="true">
             <img className="home-console-hero-logo" src="/JALSOL1.gif" alt="" />
@@ -266,33 +255,32 @@ export default function Home() {
 
           <div className="home-console-hero-foreground home-console-hero-foreground--identity">
             <div className="home-console-copy">
-              <div className="home-kicker">JAL SYSTEM • COMMAND SURFACE</div>
+              <div className="home-kicker">JALSOL - PUBLIC SOFTWARE SURFACE</div>
 
               <h1 className="home-title">
-                This domain discloses the source and visible architecture of JALSOL.
+                Personal trading engine, public onboarding, and physical merch.
               </h1>
 
               <p className="home-lead">
-                <strong>Built and operated by Jeremy Aaron Lugg.</strong> This is not a generic
-                brand page. It is the identity, direction, and visible system layer of a digital
-                environment designed to appreciate through structure.
+                <strong>Built and operated by Jeremy Aaron Lugg.</strong> The current public site is
+                best described as a crypto onboarding and builder surface, a read-only dashboard for
+                Jeremy's own automated engine, and a physical merch storefront.
               </p>
 
               <p className="home-console-sublead">
-                What is shown here is intentional: authorship, movement, and system vision. What
-                remains protected sits beneath the visible layer. JAL/SOL begins controlled entry.
-                The Engine proves structured behaviour. The remaining surfaces expand access,
-                storage, and future deployment.
+                The live site does not present itself as a decentralised exchange, brokerage, or
+                managed trading platform. The safer public framing is software, education,
+                self-custody guidance, and physical commerce around a personal operator-run engine.
               </p>
 
               <div className="jal-links">
                 <button
                   type="button"
                   className="button gold"
-                  onClick={() => beginRoute("/app/jal-sol", "jalsol-entry")}
+                  onClick={() => beginRoute("/app/jal-sol", "jalsol")}
                   disabled={loading}
                 >
-                  Enter JAL/SOL
+                  Open JAL/SOL
                 </button>
 
                 <button
@@ -303,28 +291,37 @@ export default function Home() {
                 >
                   View Engine
                 </button>
+
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => beginRoute("/app/shop", "shop")}
+                  disabled={loading}
+                >
+                  Browse Merch
+                </button>
               </div>
             </div>
 
-            <aside className="home-console-side" aria-label="System identity and intent">
+            <aside className="home-console-side" aria-label="Project definition">
               <div className="home-console-side-card home-identity-card">
-                <div className="home-console-side-kicker">SOURCE</div>
-                <div className="home-console-side-title">Jeremy Aaron Lugg</div>
-                <div className="home-console-side-copy">Mechanical Engineer • Digital Creator</div>
-                <p className="home-identity-desc">
-                  The visible operator and originating source of JALSOL — a layered digital system
-                  built to move from awareness into ownership, then into structure, execution, and
-                  expansion.
-                </p>
+                <div className="home-console-side-kicker">CURRENT STRUCTURE</div>
+                <div className="home-console-side-title">What the live site includes</div>
+                <ul className="home-identity-points">
+                  <li>Public onboarding and self-custody guidance</li>
+                  <li>Read-only visibility into Jeremy's engine</li>
+                  <li>Physical merch only in the storefront</li>
+                </ul>
               </div>
 
               <div className="home-console-side-card home-vision-card">
-                <div className="home-console-side-kicker">INTENT</div>
-                <div className="home-console-side-copy">
-                  To build a domain that appreciates through order, reveals its direction in
-                  layers, and becomes a source structure for future custom systems built from the
-                  same foundation.
-                </div>
+                <div className="home-console-side-kicker">IF SOMEONE ASKS</div>
+                <div className="home-console-side-title">How to describe JALSOL</div>
+                <p className="home-identity-desc">
+                  JALSOL is a crypto education, self-custody onboarding, and physical merch site
+                  with a public read-only dashboard for Jeremy Aaron Lugg's own automated trading
+                  engine.
+                </p>
               </div>
             </aside>
           </div>
@@ -332,33 +329,33 @@ export default function Home() {
 
         <section
           className="card machine-surface panel-frame home-roadmap-window"
-          aria-label="Visible entry structure"
+          aria-label="Current public pillars"
         >
           <div className="home-roadmap-head">
             <div>
-              <div className="home-kicker">VISIBLE ENTRY STRUCTURE</div>
-              <h2 className="home-modules-title">Three gates, one progression path</h2>
+              <div className="home-kicker">CURRENT PUBLIC PILLARS</div>
+              <h2 className="home-modules-title">Three clearer ways to understand the site</h2>
               <p className="home-modules-lead">
-                Home does not ask the user to choose a level. It reveals the structure first, then
-                routes that person into JAL/SOL where the three gates define direction of movement.
+                The homepage now separates JALSOL into its real public layers so the project reads
+                as software, onboarding, and merch rather than a public trading venue.
               </p>
             </div>
           </div>
 
-          <div className="home-roadmap-grid" role="list" aria-label="Entry gates">
-            {entryGates.map((gate) => (
+          <div className="home-roadmap-grid home-roadmap-grid--three" role="list" aria-label="Public pillars">
+            {homePillars.map((pillar) => (
               <button
-                key={gate.id}
+                key={pillar.id}
                 type="button"
-                className={`home-roadmap-card tone-${gate.tone ?? "cyan"}`}
-                onClick={() => beginRoute(gate.route, gate.id)}
+                className={`home-roadmap-card tone-${pillar.tone ?? "cyan"}`}
+                onClick={() => beginRoute(pillar.route, pillar.id)}
                 role="listitem"
-                aria-label={`Open ${gate.title}`}
+                aria-label={`Open ${pillar.title}`}
               >
-                <div className="home-roadmap-level">{gate.title.toUpperCase()}</div>
-                <div className="home-roadmap-title">{gate.subtitle}</div>
-                <p className="home-roadmap-desc">{gate.desc}</p>
-                <div className="home-roadmap-open">{gate.mapsTo}</div>
+                <div className="home-roadmap-level">{pillar.title.toUpperCase()}</div>
+                <div className="home-roadmap-title">{pillar.subtitle}</div>
+                <p className="home-roadmap-desc">{pillar.desc}</p>
+                <div className="home-roadmap-open">{pillar.note}</div>
               </button>
             ))}
           </div>
@@ -366,172 +363,98 @@ export default function Home() {
 
         <section
           className="card machine-surface panel-frame home-roadmap-window"
-          aria-label="Visible progression architecture"
+          aria-label="Operating boundaries"
         >
           <div className="home-roadmap-head">
             <div>
-              <div className="home-kicker">VISIBLE PROGRESSION</div>
-              <h2 className="home-modules-title">State progression in public view</h2>
+              <div className="home-kicker">OPERATING BOUNDARIES</div>
+              <h2 className="home-modules-title">What keeps the current public version in a safer lane</h2>
               <p className="home-modules-lead">
-                These are not primary choices on Home. They are the visible progression positions
-                the wider system moves through once direction has been selected.
+                These are the boundaries that matter most if you want the site to stay closer to a
+                personal software project and a normal merch business than to a regulated exchange.
               </p>
             </div>
           </div>
 
-          <div className="home-roadmap-grid" role="list" aria-label="Progression steps">
-            {progressSteps.map((step) => (
-              <article key={step.level} className="home-roadmap-card" role="listitem">
-                <div className="home-roadmap-level">{step.level}</div>
-                <div className="home-roadmap-title">{step.title}</div>
-                <p className="home-roadmap-desc">{step.desc}</p>
-                <div className="home-roadmap-open">VISIBLE →</div>
+          <div className="home-roadmap-grid" role="list" aria-label="Operating boundaries list">
+            {boundaryItems.map((item) => (
+              <article key={item.title} className="home-roadmap-card" role="listitem">
+                <div className="home-roadmap-level">BOUNDARY</div>
+                <div className="home-roadmap-title">{item.title}</div>
+                <p className="home-roadmap-desc">{item.desc}</p>
               </article>
             ))}
           </div>
         </section>
 
         <section
-          className="card machine-surface panel-frame home-support-window"
-          aria-label="Support the source"
+          className="card machine-surface panel-frame home-roadmap-window home-legal-window"
+          aria-label="Legal boundary summary"
         >
-          <div className="home-support-head">
-            <div>
-              <div className="home-kicker">SUPPORT THE SOURCE</div>
-              <h2 className="home-modules-title">Fuel the system as it expands</h2>
-              <p className="home-modules-lead">
-                JALSOL is a live, authored system. What is visible here is actively being built and
-                extended. Support feeds directly into its progression — from interface refinement to
-                infrastructure, releases, and future system deployment.
-              </p>
+          <details className="home-legal-details">
+            <summary className="home-legal-summary">
+              <div className="home-legal-summary-copy">
+                <div className="home-legal-summary-kicker">LEGAL BOUNDARY SUMMARY</div>
+                <h2 className="home-modules-title">Open the plain-language explanation for why the current structure is lower-risk</h2>
+                <p className="home-modules-lead">
+                  This dropdown explains the present setup in practical terms. It is not legal
+                  advice, not a licence, and not a guarantee for future features.
+                </p>
+              </div>
+
+              <div className="home-legal-summary-note">Open disclosure</div>
+            </summary>
+
+            <div className="home-legal-grid">
+              {legalGroups.map((group) => (
+                <article key={group.title} className="home-legal-card">
+                  <div className="home-legal-title">{group.title}</div>
+                  <p className="home-roadmap-desc">{group.desc}</p>
+                  <ul className="home-legal-list">
+                    {group.points.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
             </div>
-          </div>
 
-          <div className="home-support-grid">
-            <article className="home-support-card">
-              <div className="home-support-card-kicker">STRUCTURED SUPPORT</div>
-              <h3 className="home-support-card-title">Contribute through the system</h3>
-              <p className="home-support-card-copy">
-                Use the Shop to access support releases, guided entry layers, and future system
-                modules. This path feeds directly into the structured expansion of JALSOL.
-              </p>
-
-              <div className="home-support-actions">
-                <button
-                  type="button"
-                  className="button gold"
-                  onClick={() => beginRoute("/app/shop", "shop")}
-                  disabled={loading}
-                >
-                  Open Support Layer
-                </button>
-              </div>
-            </article>
-
-            <article className="home-support-card">
-              <div className="home-support-card-kicker">DIRECT INPUT</div>
-              <h3 className="home-support-card-title">Support the source on-chain</h3>
-              <p className="home-support-card-copy">
-                Direct SOL contributions act as raw input into development, infrastructure, and
-                expansion across future JALSOL domains built from this source.
-              </p>
-
-              <div className="home-support-wallet">
-                <span className="home-support-wallet-label">SOL ADDRESS</span>
-                <button
-                  type="button"
-                  className={`home-support-wallet-code ${copied ? "is-copied" : ""}`}
-                  onClick={copyAddress}
-                >
-                  {copied ? "Copied ✓" : solAddress}
-                </button>
-              </div>
-            </article>
-          </div>
+            <p className="home-legal-note">
+              If JALSOL ever adds trading for customers, pooled capital, custody, copy-trading, or
+              exchange-style execution, the homepage copy and the legal position both need to be
+              reworked before launch.
+            </p>
+          </details>
         </section>
 
         <div className="home-flow-divider" aria-hidden="true" />
 
         <section
           className="card machine-surface panel-frame home-route-window"
-          aria-label="Visible system surfaces"
+          aria-label="Primary public surfaces"
         >
           <div className="home-modules-head">
             <div>
-              <div className="home-kicker">VISIBLE SURFACES</div>
-              <h2 className="home-modules-title">Access the visible layers</h2>
+              <div className="home-kicker">PRIMARY PUBLIC SURFACES</div>
+              <h2 className="home-modules-title">Where each part of the project should live</h2>
               <p className="home-modules-lead">
-                These are not disconnected pages. They are active surfaces of the same authored
-                system: entry, execution, storage, configuration, and selected releases.
+                These are the three surfaces worth leading with on the public site: onboarding,
+                read-only engine visibility, and physical merch.
               </p>
             </div>
           </div>
 
-          <div className="home-route-stack" role="list" aria-label="System route list">
+          <div className="home-route-stack" role="list" aria-label="Primary route list">
             {routeBands.map((band) => {
               const bandTone = band.tone ? `tone-${band.tone}` : "";
               const activeClass = activeRoute === band.id ? "active" : "";
-
-              if (band.dropdown) {
-                return (
-                  <details
-                    key={band.id}
-                    className={`home-route-band home-route-band--dropdown ${bandTone} ${activeClass}`}
-                    role="listitem"
-                  >
-                    <summary className="home-route-summary">
-                      <div className="home-route-main">
-                        <div className="home-route-kicker">{band.kicker}</div>
-                        <div className="home-route-title">{band.title}</div>
-                        <p className="home-route-desc">{band.desc}</p>
-                        <div className="home-route-tags">
-                          {band.tags.map((tag) => (
-                            <span key={tag} className="home-route-tag">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div
-                        className="home-route-preview has-image"
-                        aria-hidden="true"
-                        style={
-                          band.previewImage
-                            ? {
-                                ["--preview-image" as string]: `url("${band.previewImage}")`,
-                              }
-                            : undefined
-                        }
-                      >
-                        <div className="home-route-preview-overlay">
-                          <div className="home-route-preview-kicker">Preview</div>
-                          <div className="home-route-preview-title">{band.previewTitle}</div>
-                          <p className="home-route-preview-desc">{band.previewDesc}</p>
-                        </div>
-                      </div>
-
-                      <div className="home-route-open">{band.dropdown.label} ↓</div>
-                    </summary>
-
-                    <div className="home-route-dropdown">
-                      {band.dropdown.items.map((item) => (
-                        <div key={item.title} className="home-route-dropdown-item">
-                          <div className="home-route-dropdown-title">{item.title}</div>
-                          <div className="home-route-dropdown-note">{item.note}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                );
-              }
 
               return (
                 <button
                   key={band.id}
                   type="button"
                   className={`home-route-band ${bandTone} ${activeClass}`}
-                  onClick={() => band.route && beginRoute(band.route, band.id)}
+                  onClick={() => beginRoute(band.route, band.id)}
                   role="listitem"
                   aria-label={`Open ${band.title}`}
                 >
@@ -546,6 +469,7 @@ export default function Home() {
                         </span>
                       ))}
                     </div>
+                    <div className="home-route-note">{band.note}</div>
                   </div>
 
                   <div
@@ -566,7 +490,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="home-route-open">OPEN →</div>
+                  <div className="home-route-open">Open</div>
                 </button>
               );
             })}

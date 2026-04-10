@@ -6,21 +6,18 @@ import ReviewList from "../components/ReviewList";
 import ReviewFormModal from "../components/ReviewFormModal";
 import { getReviewsByProductId, type ProductReview } from "../lib/reviews";
 
-type Filter = "all" | "physical" | "digital";
 type SortMode = "featured" | "title-asc" | "title-desc";
 
 function getStatusLabel(status: Product["status"]) {
   if (status === "active") return "Live";
   if (status === "coming_soon") return "Soon";
-  return "—";
+  return "-";
 }
 
 function getPrimaryLink(p: Product) {
   if (!p.links?.length) return null;
 
   const priority = [
-    "donate",
-    "support",
     "claim",
     "buy now",
     "checkout",
@@ -29,10 +26,10 @@ function getPrimaryLink(p: Product) {
     "stripe",
     "shop now",
     "order now",
+    "request access",
     "enquire",
     "inquire",
     "view",
-    "request access",
   ];
 
   const scored = [...p.links].sort((a, b) => {
@@ -74,7 +71,7 @@ function useProductReviewSummary(productId: string, enabled = true) {
   }
 
   useEffect(() => {
-    loadReviews();
+    void loadReviews();
   }, [productId, enabled]);
 
   const averageRating =
@@ -149,7 +146,7 @@ function ProductModal({
           aria-label="Close"
           title="Close"
         >
-          ×
+          x
         </button>
 
         <div className="product-modal-grid shop-modal-grid">
@@ -163,9 +160,7 @@ function ProductModal({
 
           <div className="product-modal-details shop-modal-details">
             <div className="shop-modal-kicker-row">
-              <span className="shop-modal-kicker">
-                {p.kind === "physical" ? "Physical" : "Digital"}
-              </span>
+              <span className="shop-modal-kicker">Physical</span>
               <span className={`product-badge status-${p.status}`}>{badge}</span>
             </div>
 
@@ -285,7 +280,7 @@ function ProductCard({
   } = useProductReviewSummary(p.id, showRating && !p.isSupport);
 
   useEffect(() => {
-    // refreshToken intentionally triggers rerender + hook refresh dependency path
+    void refreshToken;
   }, [refreshToken]);
 
   return (
@@ -330,9 +325,7 @@ function ProductCard({
 
       <div className="product-top shop-card-body">
         <div className="shop-card-meta">
-          <span className="shop-card-kind">
-            {p.kind === "physical" ? "Physical" : "Digital"}
-          </span>
+          <span className="shop-card-kind">Physical</span>
         </div>
 
         <div className="product-title-row shop-card-title-row">
@@ -389,42 +382,21 @@ function ProductCard({
 }
 
 export default function Shop() {
-  const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortMode>("featured");
   const [active, setActive] = useState<Product | null>(null);
-  const [donateOpen, setDonateOpen] = useState(true);
   const [reviewRefreshToken, setReviewRefreshToken] = useState(0);
 
-  const supportProducts = useMemo(() => {
-  const all = getActiveProducts();
-
-  const getPrice = (p: Product) =>
-    Number((p.priceNote ?? "").replace(/[^0-9.]/g, "")) || 0;
-
-  return all
-    .filter((p) => p.isSupport === true)
-    .sort((a, b) => getPrice(a) - getPrice(b))
-    .slice(0, 1);
-}, []);
-
   const storeProducts = useMemo(() => {
-    const all = getActiveProducts().filter((p) => p.isSupport !== true);
-
-    let filtered = [...all];
-
-    if (filter !== "all") {
-      filtered = filtered.filter((p) => p.kind === filter);
-    }
+    const all = getActiveProducts().filter((p) => p.kind === "physical" && p.isSupport !== true);
+    const filtered = [...all];
 
     switch (sort) {
       case "title-asc":
         filtered.sort((a, b) => a.title.localeCompare(b.title));
         break;
-
       case "title-desc":
         filtered.sort((a, b) => b.title.localeCompare(a.title));
         break;
-
       case "featured":
       default:
         filtered.sort((a, b) => {
@@ -440,7 +412,7 @@ export default function Shop() {
     }
 
     return filtered;
-  }, [filter, sort]);
+  }, [sort]);
 
   return (
     <main className="home-shell shop-shell" aria-label="Shop">
@@ -449,10 +421,10 @@ export default function Shop() {
           <div className="shop-header">
             <div className="shop-header-main">
               <p className="shop-eyebrow">JALSOL Storefront</p>
-              <h1 className="home-title shop-title">Shop</h1>
+              <h1 className="home-title shop-title">Physical Merch</h1>
 
               <p className="home-lead shop-lead">
-                Stripe-powered checkout for direct system entry and product acquisition.
+                Physical releases only. No digital access products are sold through the storefront.
               </p>
             </div>
 
@@ -463,80 +435,21 @@ export default function Shop() {
             </div>
           </div>
 
-          <section className="shop-section" aria-label="System entry">
-            <div className="shop-section-head shop-section-head-collapsible">
-              <div>
-                <p className="shop-section-kicker">System Entry</p>
-                <h2 className="shop-section-title">Donate</h2>
-                <p className="shop-section-copy">
-                  Direct contribution into the JALSOL system through fixed donation tiers.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className="shop-section-toggle"
-                aria-expanded={donateOpen}
-                aria-controls="shop-donate-panel"
-                onClick={() => setDonateOpen((v) => !v)}
-              >
-                {donateOpen ? "Hide" : "Show"}
-              </button>
-            </div>
-
-            {donateOpen ? (
-              <div
-                id="shop-donate-panel"
-                className="shop-grid shop-grid-support"
-                aria-label="Donation tiers"
-              >
-                {supportProducts.map((p) => (
-                  <ProductCard
-                    key={p.id}
-                    p={p}
-                    onOpen={setActive}
-                    showRating={false}
-                    refreshToken={reviewRefreshToken}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </section>
-
           <section className="shop-section" aria-label="Store products">
             <div className="shop-section-head">
               <div>
-                <p className="shop-section-kicker">Store Products</p>
+                <p className="shop-section-kicker">Available Merch</p>
                 <h2 className="shop-section-title">Buy</h2>
                 <p className="shop-section-copy">
-                  Physical releases, collectibles, and private allocation pieces.
+                  Wearables, collectibles, and made-to-order physical commissions tied to the
+                  public JALSOL brand.
                 </p>
               </div>
             </div>
 
             <div className="shop-toolbar" aria-label="Shop controls">
               <div className="shop-filter-group">
-                <button
-                  type="button"
-                  className={`chip chip-btn shop-filter-btn ${filter === "all" ? "is-active" : ""}`}
-                  onClick={() => setFilter("all")}
-                >
-                  All Products
-                </button>
-                <button
-                  type="button"
-                  className={`chip chip-btn shop-filter-btn ${filter === "physical" ? "is-active" : ""}`}
-                  onClick={() => setFilter("physical")}
-                >
-                  Physical
-                </button>
-                <button
-                  type="button"
-                  className={`chip chip-btn shop-filter-btn ${filter === "digital" ? "is-active" : ""}`}
-                  onClick={() => setFilter("digital")}
-                >
-                  Digital
-                </button>
+                <span className="chip chip-btn shop-filter-btn is-active">Physical merch only</span>
               </div>
 
               <div className="shop-toolbar-right">
@@ -552,23 +465,27 @@ export default function Shop() {
                     onChange={(e) => setSort(e.target.value as SortMode)}
                   >
                     <option value="featured">Featured</option>
-                    <option value="title-asc">Title A–Z</option>
-                    <option value="title-desc">Title Z–A</option>
+                    <option value="title-asc">Title A-Z</option>
+                    <option value="title-desc">Title Z-A</option>
                   </select>
                 </label>
               </div>
             </div>
 
-            <div className="shop-grid" aria-label="Products grid">
-              {storeProducts.map((p) => (
-                <ProductCard
-                  key={`${p.id}-${reviewRefreshToken}`}
-                  p={p}
-                  onOpen={setActive}
-                  refreshToken={reviewRefreshToken}
-                />
-              ))}
-            </div>
+            {storeProducts.length ? (
+              <div className="shop-grid" aria-label="Products grid">
+                {storeProducts.map((p) => (
+                  <ProductCard
+                    key={`${p.id}-${reviewRefreshToken}`}
+                    p={p}
+                    onOpen={setActive}
+                    refreshToken={reviewRefreshToken}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="ledger-empty">Physical merch is being prepared.</div>
+            )}
           </section>
         </section>
       </div>

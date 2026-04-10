@@ -23,50 +23,50 @@ type GateCard = {
 const GATES: GateCard[] = [
   {
     id: "observe",
-    eyebrow: "Gate 01",
+    eyebrow: "Module 01",
     title: "Observe",
     summary:
-      "Observe is the awareness gate. It slows the user down and explains the system before irreversible movement begins.",
+      "Observe is the awareness module. It slows the user down and explains wallets, custody, and basic crypto pathways before any irreversible step begins.",
     expect: [
       "What cryptocurrency actually is",
       "CEX vs DEX",
       "Wallets, custody, and responsibility",
-      "The awareness layer before commitment",
+      "The awareness layer before action",
     ],
     route: "/app/jal-sol/observe",
-    buttonLabel: "Open Observe",
+    buttonLabel: "Open Observe Module",
     style: "observe",
   },
   {
     id: "enter",
-    eyebrow: "Gate 02",
-    title: "Enter",
+    eyebrow: "Module 02",
+    title: "Onboarding",
     summary:
-      "Enter is the first participation gate. It turns understanding into controlled movement and prepares the user for their first real action.",
+      "Onboarding is the paid module. It turns understanding into guided setup and prepares the user for a first self-custody workflow with verification steps.",
     expect: [
-      "Payment truth and identity packaging",
-      "Wallet authority and message signing",
-      "Guided irreversible movement",
-      "Verification before progress is granted",
+      "Payment verification and identity matching",
+      "Wallet connection and message signing",
+      "Guided wallet and transaction review",
+      "Verification before the module is marked complete",
     ],
     route: "/app/jal-sol/enter",
-    buttonLabel: "Open Enter",
+    buttonLabel: "Open Onboarding Module",
     style: "enter",
   },
   {
     id: "build",
-    eyebrow: "Gate 03",
+    eyebrow: "Module 03",
     title: "Build",
     summary:
-      "Build is the ownership gate. It moves the user from participant to builder through creation, structure, and utility.",
+      "Build is the builder workspace. It moves the user from onboarding into project setup, structure, and technical tooling.",
     expect: [
-      "Token creation and identity",
-      "Utility and ownership thinking",
+      "Project setup and identity",
+      "Technical tooling and metadata planning",
       "System structure over random creation",
-      "Progression toward execution layers",
+      "Launch planning and documentation",
     ],
     route: "/app/jal-sol/build",
-    buttonLabel: "Open Build",
+    buttonLabel: "Open Builder Workspace",
     style: "build",
   },
 ];
@@ -99,23 +99,26 @@ export default function JalSolPage() {
   return (
     <main
       className={`home-shell jal-shell jal-ground-page ${loading ? "is-fading" : ""}`}
-      aria-label="JAL/SOL World Hub"
+      aria-label="JAL/SOL Onboarding Hub"
     >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
-          <section className="jal-hero jal-world-hero jal-world-hub-minimal" aria-label="World Hub hero">
+          <section
+            className="jal-hero jal-world-hero jal-world-hub-minimal"
+            aria-label="Onboarding hub hero"
+          >
             <div className="jal-hero-center jal-world-hub-center">
               <h1 className="home-title jal-world-hub-title">JAL/SOL</h1>
-              <p className="jal-world-hub-subtitle" aria-label="World hub">
-                WORLD HUB
+              <p className="jal-world-hub-subtitle" aria-label="Onboarding hub">
+                ONBOARDING HUB
               </p>
             </div>
           </section>
 
-          <section className="jal-bay jal-bay-wide" aria-label="Entry gates">
+          <section className="jal-bay jal-bay-wide" aria-label="Onboarding modules">
             <div className="jal-bay-head">
-              <div className="jal-bay-title">Entry Gates</div>
-              <div className="jal-bay-note">Choose the correct point of movement</div>
+              <div className="jal-bay-title">Onboarding Modules</div>
+              <div className="jal-bay-note">Choose the current stage of the workspace</div>
             </div>
 
             <div className="jal-gate-grid">
@@ -152,9 +155,9 @@ export default function JalSolPage() {
             </div>
           </section>
 
-          <section className="jal-bay jal-bay-wide" aria-label="Gate summary">
+          <section className="jal-bay jal-bay-wide" aria-label="Module summary">
             <div className="jal-bay-head">
-              <div className="jal-bay-title">Gate Summary</div>
+              <div className="jal-bay-title">Module Summary</div>
               <div className="jal-bay-note">Purpose and expectation</div>
             </div>
 
@@ -163,7 +166,7 @@ export default function JalSolPage() {
                 <section key={`${gate.id}-summary`} className="jal-bay">
                   <div className="jal-bay-head">
                     <div className="jal-bay-title">
-                      {gate.eyebrow} — {gate.title}
+                      {gate.eyebrow} - {gate.title}
                     </div>
                     <div className="jal-bay-note">What to expect</div>
                   </div>

@@ -262,12 +262,12 @@ const ENTRY_RAIL: { id: Gate2Stage; title: string; note: string }[] = [
   {
     id: "profile",
     title: "Profile",
-    note: "Create the Gate 02 package identity before live progression.",
+    note: "Create your onboarding profile before the module continues.",
   },
   {
     id: "payment",
     title: "Payment",
-    note: "Gate 02 package truth must exist before deeper access opens.",
+    note: "Confirm the paid onboarding step before the wallet module begins.",
   },
   {
     id: "module-1-wallet",
@@ -287,7 +287,7 @@ const ENTRY_RAIL: { id: Gate2Stage; title: string; note: string }[] = [
   {
     id: "module-4-connection",
     title: "Learn — Connection",
-    note: "Understand what connection and signing authority actually mean.",
+    note: "Understand what connection and signing approval actually mean.",
   },
   {
     id: "module-5-action-path",
@@ -307,12 +307,12 @@ const ENTRY_RAIL: { id: Gate2Stage; title: string; note: string }[] = [
   {
     id: "trial-brief",
     title: "Trial Brief",
-    note: "Read the Gate 2 Token Fit requirements before the trial begins.",
+    note: "Read the readiness trial requirements before the trial begins.",
   },
   {
     id: "trial",
     title: "Trial",
-    note: "Pass the Gate 02 threshold twice before wallet authority opens.",
+    note: "Pass the readiness threshold twice before the wallet step opens.",
   },
   {
     id: "wallet",
@@ -322,22 +322,22 @@ const ENTRY_RAIL: { id: Gate2Stage; title: string; note: string }[] = [
   {
     id: "transaction",
     title: "Transaction",
-    note: "Perform the first controlled SOL transfer after proven authority.",
+    note: "Perform the first guided SOL transfer after wallet verification.",
   },
   {
     id: "verify",
     title: "Verify",
-    note: "Proof must be visible before state change can be granted.",
+    note: "Proof must be visible before completion can be recorded.",
   },
   {
     id: "passed",
-    title: "Participant",
-    note: "Gate 02 sequence complete. Build path is now evaluated from proof.",
+    title: "Complete",
+    note: "Onboarding sequence complete. Builder access is evaluated from verified checks.",
   },
 ];
 
 const GATE2_SEQUENCE: Gate2Stage[] = ENTRY_RAIL.map((step) => step.id);
-const JALSOL_SEQUENCE_TITLE = "JALSOL Sequence Progress";
+const JALSOL_SEQUENCE_TITLE = "Onboarding Progress";
 
 function getPreviousStageId(stage: Gate2Stage): Gate2Stage | null {
   const index = GATE2_SEQUENCE.indexOf(stage);
@@ -358,17 +358,17 @@ const MODULE_CONTENT: ModuleContent[] = [
     note: "Control point",
     meaning: [
       "A wallet is not decoration and it is not only a login.",
-      "Inside Gate 02, the wallet is the point of control that gives authority to sign real actions.",
+      "Inside onboarding, the wallet is the point of control that enables approval of real actions.",
       "Once a wallet is connected and used, movement stops being theoretical.",
     ],
     requirement: [
       "Understand that wallet connection is not cosmetic.",
-      "Understand that the wallet is where signing authority begins.",
-      "Understand that later Gate 02 phases depend on this control point being handled correctly.",
+      "Understand that the wallet is where signing approval begins.",
+      "Understand that later onboarding phases depend on this control point being handled correctly.",
     ],
     risk: [
       "If the user treats wallet connection like a harmless login, they may approve an action without understanding what they are authorising.",
-      "Gate 02 exists to stop that kind of careless movement before it happens.",
+      "This onboarding path exists to stop that kind of careless movement before it happens.",
     ],
     nextStage: "module-2-custody",
   },
@@ -384,7 +384,7 @@ const MODULE_CONTENT: ModuleContent[] = [
     requirement: [
       "Understand that control and responsibility travel together.",
       "Understand that more direct control means less room for careless behaviour.",
-      "Understand that Gate 02 is preparing the user to act with ownership, not dependency.",
+      "Understand that onboarding is preparing the user to act with ownership, not dependency.",
     ],
     risk: [
       "If the user wants the benefits of control without the responsibility of control, errors become more likely.",
@@ -404,7 +404,7 @@ const MODULE_CONTENT: ModuleContent[] = [
     requirement: [
       "Understand that the system is not asking for random clicks.",
       "Understand that later signing phases must be reviewed before approval.",
-      "Understand that consequence is part of why Gate 02 is structured slowly.",
+      "Understand that consequence is part of why onboarding is structured slowly.",
     ],
     risk: [
       "If the user assumes every action can be undone, they will treat signing too casually.",
@@ -415,7 +415,7 @@ const MODULE_CONTENT: ModuleContent[] = [
   {
     stage: "module-4-connection",
     title: "Module 4 — Connection and Signing",
-    note: "Authority binding",
+    note: "Connection review",
     meaning: [
       "Connection binds the wallet to a live system context.",
       "Signing is the act that proves the user is authorising the instruction.",
@@ -423,7 +423,7 @@ const MODULE_CONTENT: ModuleContent[] = [
     ],
     requirement: [
       "Understand the difference between being connected and approving an action.",
-      "Understand that signing is not only technical — it is behavioural authority.",
+      "Understand that signing is not only technical — it is behavioural approval.",
       "Understand that the user must review details before granting approval.",
     ],
     risk: [
@@ -437,14 +437,14 @@ const MODULE_CONTENT: ModuleContent[] = [
     title: "Module 5 — First Real Action Path",
     note: "Execution preview",
     meaning: [
-      "Gate 02 does not jump from theory into unexplained execution.",
+      "This onboarding path does not jump from theory into unexplained execution.",
       "The real action phase will require wallet connection, message signing, transaction review, and a fixed minimal SOL transfer.",
       "This path exists so the user knows what is coming before consequence is live.",
     ],
     requirement: [
       "Understand the order: profile, payment, learn, test, trial, wallet, transaction, verification.",
       "Understand that the real action will be deliberate, not spontaneous.",
-      "Understand that the transfer phase is the participant threshold.",
+      "Understand that the transfer phase is the onboarding threshold.",
     ],
     risk: [
       "If the real path feels vague, the user begins guessing.",
@@ -458,17 +458,17 @@ const MODULE_CONTENT: ModuleContent[] = [
     note: "Proof layer",
     meaning: [
       "Verification is what separates a claimed action from a proven one.",
-      "Gate 02 does not succeed because the user says they acted. It succeeds because proof is visible.",
+      "This onboarding path does not succeed because the user says they acted. It succeeds because proof is visible.",
       "Wallet address, signed message, transaction signature, confirmation state, and explorer proof complete the sequence.",
     ],
     requirement: [
       "Understand that proof must be shown after the real transaction phase.",
       "Understand that verification is part of the pass condition, not a nice extra.",
-      "Understand that participant state is only granted after proof exists.",
+      "Understand that onboarding is only marked complete after proof exists.",
     ],
     risk: [
       "Without verification, completion becomes guesswork.",
-      "If proof is not required, Gate 02 loses legitimacy and seriousness.",
+      "If proof is not required, onboarding loses legitimacy and seriousness.",
     ],
     nextStage: "test",
   },
@@ -477,20 +477,20 @@ const MODULE_CONTENT: ModuleContent[] = [
 const TEST_QUESTIONS: TestQuestion[] = [
   {
     id: "wallet-control",
-    prompt: "What is the wallet in Gate 02 primarily being treated as?",
+    prompt: "What is the wallet in onboarding primarily being treated as?",
     options: [
       "A decorative profile feature",
-      "A control point that carries signing authority",
+      "A control point that carries signing approval",
       "A rewards account for points",
       "A temporary nickname login",
     ],
     correctIndex: 1,
     explanation:
-      "Gate 02 treats the wallet as the control point where real authority begins.",
+      "Onboarding treats the wallet as the control point where real approval begins.",
   },
   {
     id: "custody-responsibility",
-    prompt: "What does custody mean inside Gate 02?",
+    prompt: "What does custody mean inside onboarding?",
     options: [
       "The system carries all responsibility for user actions",
       "Responsibility disappears once a wallet is connected",
@@ -503,7 +503,7 @@ const TEST_QUESTIONS: TestQuestion[] = [
   },
   {
     id: "transaction-finality",
-    prompt: "Why does Gate 02 teach transaction finality before execution?",
+    prompt: "Why does onboarding teach transaction finality before execution?",
     options: [
       "Because every transaction can always be reversed later",
       "Because signing and confirmation may create irreversible consequence",
@@ -512,7 +512,7 @@ const TEST_QUESTIONS: TestQuestion[] = [
     ],
     correctIndex: 1,
     explanation:
-      "Gate 02 slows the user down so they understand that signed and confirmed actions may be irreversible.",
+      "Onboarding slows the user down so they understand that signed and confirmed actions may be irreversible.",
   },
   {
     id: "connection-vs-signing",
@@ -520,17 +520,17 @@ const TEST_QUESTIONS: TestQuestion[] = [
     options: [
       "They are the same action with different names",
       "Connection is harmless but signing never matters",
-      "Connection binds the wallet to context; signing authorises the instruction",
+      "Connection binds the wallet to context; signing approves the instruction",
       "Signing happens automatically and does not require review",
     ],
     correctIndex: 2,
     explanation:
-      "Connection and signing are different. Signing is the act that grants real authority.",
+      "Connection and signing are different. Signing is the act that grants real approval.",
   },
   {
     id: "gate-order",
     prompt:
-      "What is the correct Gate 02 order before participant state can be granted?",
+      "What is the correct onboarding order before completion can be recorded?",
     options: [
       "Wallet, transaction, trial, verification",
       "Profile, payment, learn, test, trial, wallet, transaction, verification",
@@ -539,7 +539,7 @@ const TEST_QUESTIONS: TestQuestion[] = [
     ],
     correctIndex: 1,
     explanation:
-      "Gate 02 enforces sequence. Understanding and readiness come before pressure, execution, and proof.",
+      "Onboarding enforces sequence. Understanding and readiness come before pressure, execution, and proof.",
   },
 ];
 
@@ -898,9 +898,9 @@ function createMockReceiptNumber() {
 
 function buildSigningMessage(displayName: string) {
   return [
-    "JAL/SOL Gate 02 — Enter",
+    "JAL/SOL Onboarding Module",
     `Display Name: ${displayName || "Unnamed"}`,
-    `Authority Wallet: ${MINT_AUTHORITY}`,
+    `Destination Wallet: ${MINT_AUTHORITY}`,
     "Purpose: prove control before first transfer",
   ].join("\n");
 }
@@ -1307,9 +1307,9 @@ window.history.replaceState({}, document.title, window.location.pathname);
   const accessLabel = !canEnterGate2
     ? "Locked — Observe Required"
     : currentStage === "home"
-    ? "Entry Sequence Ready"
+    ? "Onboarding Sequence Ready"
     : participantState
-    ? "Participant State Achieved"
+    ? "Onboarding Complete"
     : developmentFlowComplete
     ? "Development Flow Complete"
     : "Sequence Active";
@@ -1711,7 +1711,7 @@ if (
     !sendTransaction ||
     !progress.transaction.destination
   ) {
-    setVerifyMessage("Wallet authority is missing. Connect, sync, and sign first.");
+    setVerifyMessage("Wallet verification is missing. Connect, sync, and sign first.");
     return;
   }
 
@@ -1884,52 +1884,52 @@ if (
         ? `CONFIRMED (${progress.transaction.confirmationSource})`
         : "Missing",
     },
-    { k: "Mint Authority Wallet", v: shortenAddress(MINT_AUTHORITY, 6, 6) },
+    { k: "Destination Wallet", v: shortenAddress(MINT_AUTHORITY, 6, 6) },
     { k: "Chosen Token Symbol", v: progress.profile.tokenSymbol || "Missing" },
-    { k: "DEX Domain", v: progress.profile.dexDomain || "Missing" },
+    { k: "Preferred Market Domain", v: progress.profile.dexDomain || "Missing" },
     {
       k: "Landing Button Logo",
       v: progress.profile.landingButtonLogo ? "Present" : "Missing",
     },
     { k: "Header Logo", v: progress.profile.headerLogo ? "Present" : "Missing" },
-    { k: "Gate 1 Complete", v: observePassed || adminBypass || engineerAccess ? "Yes" : "No" },
-    { k: "Gate 2 Complete", v: developmentFlowComplete ? "Yes" : "No" },
-    { k: "Gate 3 Complete", v: "Not yet" },
+    { k: "Observe Complete", v: observePassed || adminBypass || engineerAccess ? "Yes" : "No" },
+    { k: "Onboarding Complete", v: developmentFlowComplete ? "Yes" : "No" },
+    { k: "Builder Workspace Complete", v: "Not yet" },
     { k: "Build Readiness", v: buildReady ? "Unlocked" : "Locked" },
   ];
 
   return (
     <main
       className={`home-shell jal-shell jal-ground-page ${loading ? "is-fading" : ""}`}
-      aria-label="JAL/SOL Gate 02 Enter"
+      aria-label="JAL/SOL onboarding module"
     >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window">
           {shouldShowFullHero && (
   <section
     className={`jal-hero jal-world-hero ${showCompactHeader ? "jal-enter-hero--compact" : ""}`}
-    aria-label="Enter gate hero"
+    aria-label="Onboarding hero"
   >
               <div className="jal-hero-top">
-                <div className="jal-kicker">JAL/SOL • GATE 02</div>
+                <div className="jal-kicker">JAL/SOL | ONBOARDING</div>
 
-                <div className="jal-status" aria-label="Gate 02 state">
+                <div className="jal-status" aria-label="Onboarding state">
                   <span className="jal-status-dot" />
                   <span className="jal-status-text">{accessLabel}</span>
                 </div>
               </div>
 
               <div className="jal-hero-center jal-enter-hero-center">
-  <h1 className="home-title jal-enter-gate-title">GATE 02</h1>
+  <h1 className="home-title jal-enter-gate-title">ONBOARDING</h1>
 
-  <p className="jal-world-pretitle">Participation gate</p>
+  <p className="jal-world-pretitle">Paid onboarding</p>
 
   <h2 className="jal-enter-statement">
-    This is the point where observation ends.
+    This is the point where guided onboarding begins.
     <br />
-    You either act with intent,
+    You either continue with intent,
     <br />
-    or remain outside the system.
+    or stay in the preparation layer.
   </h2>
 
   <div className="jal-links jal-links-center">
@@ -1950,24 +1950,24 @@ if (
 }}
   disabled={loading}
 >
-  Enter
+  Start Onboarding
 </button>
   </div>
 </div>
 
               <div className="jal-arrival-note" aria-label="Enter principles">
-  <span>CONTROLLED ENTRY</span>
-  <span>PROFILE → PAYMENT → AUTHORITY → EXECUTION → VERIFICATION</span>
-  <span>PARTICIPATION BEGINS WITH PROVEN MOVEMENT</span>
+  <span>GUIDED ONBOARDING</span>
+  <span>PROFILE → PAYMENT → WALLET → TRANSACTION → VERIFICATION</span>
+  <span>ONBOARDING USES VERIFIED CHECKS</span>
 </div>
             </section>
           )}
 
           {canEnterGate2 && currentStage !== "home" && !showProfileOverlay && (
   <>
-    <section className="jal-stage-bar" aria-label="Current Gate 02 stage">
+    <section className="jal-stage-bar" aria-label="Current onboarding stage">
       <div className="jal-stage-bar-left">
-        <span>JAL/SOL • Gate 02</span>
+        <span>JAL/SOL | Onboarding</span>
         <strong>{currentStageLabel}</strong>
       </div>
 
@@ -1977,21 +1977,21 @@ if (
       </div>
     </section>
 
-    <section className="jal-bay jal-bay-wide jal-sequence-progress-shell" aria-label="Gate 02 sequence">
+    <section className="jal-bay jal-bay-wide jal-sequence-progress-shell" aria-label="Onboarding sequence">
   <div className="jal-bay-head jal-bay-head-center">
     <div className="jal-bay-title jal-center-text jal-sequence-progress-title">
       {JALSOL_SEQUENCE_TITLE}
     </div>
     <div className="jal-bay-note jal-center-text">
-      Gate 02 • {currentStageIndex >= 0 ? `${currentStageIndex + 1} / ${GATE2_SEQUENCE.length}` : ""}
+      Onboarding • {currentStageIndex >= 0 ? `${currentStageIndex + 1} / ${GATE2_SEQUENCE.length}` : ""}
     </div>
   </div>
 
   <p className="jal-note jal-center-text jal-sequence-progress-copy">
-    Movement through JALSOL is earned in order. Each gate and each stage confirms direction before the next opens.
+    Onboarding progresses in order. Each step confirms readiness before the next one opens.
   </p>
 
-  <div className="jal-sequence-dot-row jal-sequence-dot-row-center" aria-label="Gate 02 step indicators">
+  <div className="jal-sequence-dot-row jal-sequence-dot-row-center" aria-label="Onboarding step indicators">
     {ENTRY_RAIL.map((step, index) => {
       const completed = isStepCompleted(progress, step.id, engineerAccess);
       const active = step.id === currentStage;
@@ -2022,15 +2022,15 @@ if (
 )}
 
           {!canEnterGate2 && (
-            <section className="jal-bay jal-bay-wide" aria-label="Gate blocked">
+            <section className="jal-bay jal-bay-wide" aria-label="Onboarding blocked">
               <div className="jal-bay-head">
-                <div className="jal-bay-title">Gate 02 Locked</div>
+                <div className="jal-bay-title">Onboarding Locked</div>
                 <div className="jal-bay-note">Observe required first</div>
               </div>
 
               <p className="jal-note">
-                Gate 02 requires completion of Observe before controlled entry can begin.
-                The system does not allow real participation to open before awareness has
+                Observe must be completed before paid onboarding can begin.
+                The system does not allow real on-chain onboarding to open before awareness has
                 been established.
               </p>
 
@@ -2043,14 +2043,14 @@ if (
                 <article className="jal-bullet">
                   <div className="jal-bullet-k">Reason</div>
                   <div className="jal-bullet-v">
-                    Entry without understanding creates avoidable error and weakens system trust.
+                    Starting onboarding without understanding creates avoidable error.
                   </div>
                 </article>
 
                 <article className="jal-bullet">
                   <div className="jal-bullet-k">Path</div>
                   <div className="jal-bullet-v">
-                    Complete Observe, return here, then enter Gate 02.
+                    Complete Observe, return here, then begin onboarding.
                   </div>
                 </article>
               </div>
@@ -2071,7 +2071,7 @@ if (
                   onClick={() => beginRoute("/app/jal-sol")}
                   disabled={loading}
                 >
-                  Return To World Hub
+                  Return To Onboarding Hub
                 </button>
               </div>
             </section>
@@ -2084,7 +2084,7 @@ if (
       className="jal-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="Gate 02 profile creation"
+      aria-label="Onboarding profile creation"
     >
       <div
         className="jal-overlay-backdrop"
@@ -2096,12 +2096,12 @@ if (
 
       <section className="jal-overlay-panel jal-bay jal-bay-wide">
         <div className="jal-bay-head">
-          <div className="jal-bay-title">Gate 02 Profile Creation</div>
-          <div className="jal-bay-note">Participant shell required</div>
+          <div className="jal-bay-title">Onboarding Profile Setup</div>
+          <div className="jal-bay-note">Member profile required</div>
         </div>
 
         <p className="jal-note jal-center-text">
-          Complete your participant shell to begin Gate 02 progression.
+          Complete your member profile to begin onboarding.
         </p>
 
         <div className="jal-grid">
@@ -2123,7 +2123,7 @@ if (
                     displayName: e.target.value,
                   }))
                 }
-                placeholder="Your visible Gate 02 identity"
+                placeholder="Your onboarding display name"
               />
             </label>
 
@@ -2179,12 +2179,12 @@ if (
               {isEngineerProfile ? (
                 <>
                   Engineer access detected. This signed-in account bypasses Stripe
-                  payment and can move through Gate 02 without member-flow
-                  interruption.
+                  payment and can move through onboarding without the standard checkout
+                  flow.
                 </>
               ) : (
                 <>
-                  Standard participant profile. Use your own display name and the same
+                  Standard member profile. Use your own display name and the same
                   email used during Stripe purchase so payment can be matched correctly.
                 </>
               )}
@@ -2202,20 +2202,20 @@ if (
                 }
               />
               <span>
-                I accept the Gate 02 terms and understand that this participant shell
-                is tied to progression, payment, wallet authority, and verification.
+                I accept the onboarding terms and understand that this member profile is tied to
+                payment, wallet verification, and completion checks.
               </span>
             </label>
           </section>
 
           <section className="jal-bay jal-emerging-panel">
             <div className="jal-bay-head">
-              <div className="jal-bay-title">Emerging Identity</div>
-              <div className="jal-bay-note">Forms through progression</div>
+              <div className="jal-bay-title">Profile Summary</div>
+              <div className="jal-bay-note">Prepared for onboarding</div>
             </div>
 
             <p className="jal-note">
-              These parts of the package become real only after the required actions have
+              These profile details become active only after the required actions have
               been taken and confirmed.
             </p>
           </section>
@@ -2251,7 +2251,7 @@ if (
   }}
   disabled={loading}
 >
-  Save Participant Shell
+  Save Member Profile
 </button>
         </div>
       </section>
@@ -2260,27 +2260,27 @@ if (
   )}
 
           {canEnterGate2 && currentStage === "payment" && (
-  <section className="jal-bay jal-bay-wide" aria-label="Gate 02 payment">
+  <section className="jal-bay jal-bay-wide" aria-label="Onboarding payment">
     <div className="jal-bay-head">
-      <div className="jal-bay-title">Gate 02 Entry Condition</div>
-      <div className="jal-bay-note">Commitment required</div>
+      <div className="jal-bay-title">Onboarding Payment Step</div>
+      <div className="jal-bay-note">Paid onboarding</div>
     </div>
 
     <p className="jal-note">
-      Entry into Gate 02 is not granted by navigation. It is granted by
-      commitment. This step confirms intent before authority is given.
+      This onboarding flow uses a paid step before the wallet module begins. This keeps
+      identity matching and verification inside one flow.
     </p>
 
     <div className="jal-grid">
       <section className="jal-bay">
         <div className="jal-bay-head">
-          <div className="jal-bay-title">Intent</div>
-          <div className="jal-bay-note">Declaration</div>
+          <div className="jal-bay-title">Module Outcome</div>
+          <div className="jal-bay-note">What payment covers</div>
         </div>
 
         <p className="jal-note">
-          You are not purchasing access. You are committing to proceed through a
-          controlled system of value creation.
+          You are purchasing a paid onboarding module covering identity matching,
+          wallet setup, signing, and guided self-custody steps.
         </p>
 
         <div className="jal-emerging-stack">
@@ -2288,10 +2288,10 @@ if (
     <div>
       <div className="jal-emerging-label">Outcome</div>
       <div className="jal-emerging-note">
-        Access to Gate 02 environment and progression path.
+        Access to the onboarding modules and completion path.
       </div>
     </div>
-    <span className="jal-emerging-chip">UNLOCK</span>
+    <span className="jal-emerging-chip">MODULE</span>
   </div>
 </div>
       </section>
@@ -2303,20 +2303,20 @@ if (
         </div>
 
         <p className="jal-note">
-        Gate 02 entry is currently set at <strong>$5 AUD</strong> to open controlled participation at a lower threshold.
+        This onboarding step is currently set at <strong>$5 AUD</strong> before wallet setup and verification.
         </p>
 
         <p className="jal-note">
           {isEngineerProfile ? (
             <>
-              Engineer access active. This authenticated Engineer account bypasses
-              Stripe payment and can proceed directly through Gate 02 with full
-              system access.
+              Engineer access active. This authenticated internal account bypasses
+              Stripe payment and can proceed directly through onboarding development
+              tools.
             </>
           ) : (
             <>
               Use your own display name and the same email used during Stripe purchase
-              so payment can be matched correctly to your participant shell.
+              so payment can be matched correctly to your member profile.
             </>
           )}
         </p>
@@ -2341,7 +2341,7 @@ if (
   }}
   disabled={loading}
 >
-  Proceed To Gate 02 — $5
+  Continue To Checkout - $5
 </button>
           )}
         </div>
@@ -2367,11 +2367,11 @@ if (
       onClick={() => goToStage("module-1-wallet")}
       disabled={loading}
     >
-      Payment Confirmed — Continue
+      Payment Verified - Continue
     </button>
   ) : (
     <button type="button" className="button gold" disabled>
-      Awaiting Payment Confirmation...
+      Awaiting Payment Verification...
     </button>
   )}
 </div>
@@ -2454,7 +2454,7 @@ if (
               </div>
 
               <p className="jal-note">
-                This test confirms that the user understands what Gate 02 is preparing them
+                This test confirms that the user understands what the onboarding module is preparing them
                 to do. It is not optional. Comprehension must be proven before procedural
                 readiness can open.
               </p>
@@ -2632,12 +2632,12 @@ if (
           {canEnterGate2 && currentStage === "trial" && (
             <section className="jal-bay jal-bay-wide" aria-label="Hard trial">
               <div className="jal-bay-head">
-                <div className="jal-bay-title">Gate 02 Token Fit Trial</div>
+                <div className="jal-bay-title">Onboarding Readiness Trial</div>
                 <div className="jal-bay-note">Live trial active</div>
               </div>
 
               <p className="jal-note">
-                This is the real Gate 02 pressure test. The user must complete two successful
+                This is the onboarding readiness test. The user must complete two successful
                 trial runs at 20 or higher. Any failed trial run resets the streak to zero.
               </p>
 
@@ -2757,16 +2757,16 @@ if (
           )}
 
           {canEnterGate2 && currentStage === "wallet" && (
-            <section className="jal-bay jal-bay-wide" aria-label="Wallet authority">
+            <section className="jal-bay jal-bay-wide" aria-label="Wallet verification">
               <div className="jal-bay-head">
-                <div className="jal-bay-title">Wallet Authority</div>
+                <div className="jal-bay-title">Wallet Verification</div>
                 <div className="jal-bay-note">Connection + message signing required</div>
               </div>
 
               <p className="jal-note">
-  Wallet connection alone is not enough. Gate 02 requires a real wallet
+  Wallet connection alone is not enough. This module requires a real wallet
   connection and a real signed message before the transaction phase opens.
-  This stage proves authority before any on-chain movement is attempted.
+  This stage proves wallet verification before any on-chain movement is attempted.
 </p>
 
               <div className="jal-bullets">
@@ -2802,7 +2802,7 @@ if (
                 <article className="jal-bullet">
                   <div className="jal-bullet-k">Next Stage</div>
                   <div className="jal-bullet-v">
-                    {hasWalletAuthority ? "Transaction unlocked" : "Sign required"}
+                    {hasWalletAuthority ? "Transaction step ready" : "Sign required"}
                   </div>
                 </article>
               </div>
@@ -2811,7 +2811,7 @@ if (
                 <section className="jal-bay jal-bay-wide">
                   <div className="jal-bay-head">
                     <div className="jal-bay-title">Signed Message Preview</div>
-                    <div className="jal-bay-note">Authority intent</div>
+                    <div className="jal-bay-note">Verification intent</div>
                   </div>
 
                   <pre className="jal-note" style={{ whiteSpace: "pre-wrap" }}>
@@ -2953,9 +2953,9 @@ if (
               </div>
 
               <p className="jal-note">
-  Gate 02 does not complete on claim. It completes on visible proof.
-  Payment truth, wallet authority, transaction proof, and confirmation truth
-  are separated here so participant state is granted only from verified movement.
+  The onboarding module does not complete on claim alone. Payment verification, wallet verification,
+  transaction proof, and confirmation are separated here so the module is marked
+  complete only when the required checks are present.
 </p>
 
               <p className="jal-note">
@@ -3020,14 +3020,14 @@ if (
           )}
           
           {canEnterGate2 && currentStage !== "home" && currentStage !== "passed" && (
-  <section className="jal-bay jal-bay-wide" aria-label="Gate 02 controls">
+  <section className="jal-bay jal-bay-wide" aria-label="Onboarding controls">
     <div className="jal-bay-actions jal-bay-actions-center jal-sequence-controls">
       <button
         type="button"
         className="button ghost"
         onClick={() => goBackStage("home")}
         disabled={loading}
-        aria-label="Return to Gate 02 home"
+        aria-label="Return to onboarding home"
       >
         {"<<"}
       </button>
@@ -3084,36 +3084,36 @@ if (
               <div className="jal-bay-head">
                 <div className="jal-bay-title">
                   {participantState
-                    ? "Participant State Achieved"
+                    ? "Onboarding Complete"
                     : "Development Flow Complete"}
                 </div>
                 <div className="jal-bay-note">
                   {participantState
-                    ? "True verified proof achieved"
+                    ? "Required checks passed"
                     : "Verification remains incomplete"}
                 </div>
               </div>
 
               <p className="jal-note">
   {participantState
-    ? `Gate 02 is complete with ${
-        engineerBypass ? "engineer access truth" : "verified payment truth"
-      }, verified wallet authority, and verified transaction confirmation.${
-        isEngineerProfile ? " Engineer access is active." : ""
+    ? `The onboarding module is complete with ${
+        engineerBypass ? "internal engineer bypass" : "verified payment"
+      }, verified wallet connection, and verified transaction confirmation.${
+        isEngineerProfile ? " Internal engineer access is active." : ""
       }`
-    : "Gate 02 sequence completion is recorded, but participant state is not yet granted until every required proof source remains verified and present."}
+    : "Progress is recorded, but the onboarding module is not yet marked complete until every required proof source remains verified and present."}
 </p>
 
               <div className="jal-bullets">
   <article className="jal-bullet">
-    <div className="jal-bullet-k">Enter Passed</div>
+    <div className="jal-bullet-k">Sequence Passed</div>
     <div className="jal-bullet-v">
       {enterPassed ? "Yes" : "No"}
     </div>
   </article>
 
   <article className="jal-bullet">
-    <div className="jal-bullet-k">Participant State</div>
+    <div className="jal-bullet-k">Onboarding Complete</div>
     <div className="jal-bullet-v">
       {storedParticipantState ? "Yes" : "Not yet"}
     </div>
@@ -3138,8 +3138,8 @@ if (
 
 <section className="jal-bay jal-bay-wide">
   <div className="jal-bay-head">
-    <div className="jal-bay-title">Gate 03 Handover Profile</div>
-    <div className="jal-bay-note">Participant account state</div>
+    <div className="jal-bay-title">Builder Handover Profile</div>
+    <div className="jal-bay-note">Member account state</div>
   </div>
 
   <div className="jal-bullets">
@@ -3160,7 +3160,7 @@ if (
     </article>
 
     <article className={`jal-bullet ${getStatusTone(progress.wallet.messageSigned)}`}>
-      <div className="jal-bullet-k">Authority Signature</div>
+      <div className="jal-bullet-k">Message Signature</div>
       <div className="jal-bullet-v">
         {progress.wallet.messageSigned ? "Ready" : "Missing"}
       </div>
@@ -3174,7 +3174,7 @@ if (
 </article>
 
     <article className="jal-bullet">
-      <div className="jal-bullet-k">Gate 03 Unlock</div>
+      <div className="jal-bullet-k">Builder Ready</div>
       <div className="jal-bullet-v">
         {buildReady ? "Ready" : "Locked"}
       </div>
@@ -3183,26 +3183,26 @@ if (
     <article className="jal-bullet">
       <div className="jal-bullet-k">What Comes Next</div>
       <div className="jal-bullet-v">
-        Token mint • ATA • supply • metadata • vault identity
+        Project workspace • metadata planning • wallet setup • documentation • release checklist
       </div>
     </article>
   </div>
 
   <p className="jal-note">
-    Gate 02 is complete. Previous Gate 02 stages remain reviewable, and this
-    participant profile is handed forward into Build.
+    Onboarding is complete. Previous stages remain reviewable, and this
+    member profile is handed forward into Build.
   </p>
 </section>
 
 <section className="jal-bay jal-bay-wide">
   <div className="jal-bay-head">
     <div className="jal-bay-title">Review Access</div>
-    <div className="jal-bay-note">Gate 02 remains visible</div>
+    <div className="jal-bay-note">Onboarding remains visible</div>
   </div>
 
   <p className="jal-note">
-    Completion does not close Gate 02. Previous stages remain available through
-    the sequence rail, and you can review wallet authority and proof at any time.
+    Completion does not close onboarding. Previous stages remain available through the sequence
+    rail, and you can review wallet verification and proof at any time.
   </p>
 
   <div className="jal-bay-actions jal-bay-actions-center">
@@ -3227,7 +3227,7 @@ if (
   }}
   disabled={loading || !buildReady}
 >
-  Proceed To Build
+  Proceed To Builder Workspace
 </button>
 
                 <button
@@ -3236,7 +3236,7 @@ if (
                   onClick={() => beginRoute("/app/jal-sol")}
                   disabled={loading}
                 >
-                  Return To World Hub
+                  Return To Onboarding Hub
                 </button>
               </div>
             </section>
@@ -3250,7 +3250,7 @@ if (
       className="jal-overlay jal-payment-ceremony-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="Gate 02 commitment"
+      aria-label="Onboarding checkout confirmation"
     >
       <div
         className="jal-overlay-backdrop"
@@ -3264,22 +3264,22 @@ if (
         <div className="jal-payment-ceremony-glow" />
 
         <div className="jal-bay-head">
-          <div className="jal-bay-title">Gate 02 — Commitment</div>
-          <div className="jal-bay-note">Observer becomes participant</div>
+          <div className="jal-bay-title">Onboarding Checkout Confirmation</div>
+          <div className="jal-bay-note">Paid onboarding step</div>
         </div>
 
         <div className="jal-payment-ceremony-center">
-          <p className="jal-payment-ceremony-kicker">This is not a purchase.</p>
+          <p className="jal-payment-ceremony-kicker">Paid onboarding module</p>
 
           <h2 className="jal-payment-ceremony-title">
-            This is the threshold
+            Confirm the checkout step
             <br />
-            where observation ends.
+            before continuing.
           </h2>
 
           <p className="jal-payment-ceremony-copy">
-            You are about to enter a controlled participation layer.
-            Gate 02 requires real movement, real authority, and real proof.
+            You are about to start the paid onboarding module. This flow uses wallet
+            setup, signing, and verified on-chain activity as part of the learning flow.
           </p>
         </div>
 
@@ -3290,23 +3290,23 @@ if (
           </article>
 
           <article className="jal-payment-ceremony-card">
-            <div className="jal-payment-ceremony-card-k">You will prove</div>
-            <div className="jal-payment-ceremony-card-v">Real authority</div>
+            <div className="jal-payment-ceremony-card-k">You will match</div>
+            <div className="jal-payment-ceremony-card-v">Checkout to your profile</div>
           </article>
 
           <article className="jal-payment-ceremony-card">
-            <div className="jal-payment-ceremony-card-k">You will execute</div>
-            <div className="jal-payment-ceremony-card-v">A real transaction</div>
+            <div className="jal-payment-ceremony-card-k">You will complete</div>
+            <div className="jal-payment-ceremony-card-v">Guided self-custody steps</div>
           </article>
 
           <article className="jal-payment-ceremony-card">
-            <div className="jal-payment-ceremony-card-k">You will unlock</div>
-            <div className="jal-payment-ceremony-card-v">Participant state</div>
+            <div className="jal-payment-ceremony-card-k">You will enable</div>
+            <div className="jal-payment-ceremony-card-v">Next module access</div>
           </article>
         </div>
 
         <div className="jal-payment-ceremony-statement">
-          No simulation. No shortcuts. No false proof.
+          No simulation. No shortcuts. Required checks only.
         </div>
 
         <label className="jal-check jal-payment-ceremony-check">
@@ -3316,7 +3316,7 @@ if (
             onChange={(e) => setPaymentCommitChecked(e.target.checked)}
           />
           <span>
-            I understand Gate 02 requires real on-chain action and verified movement.
+            I understand this onboarding module includes a real wallet action and verification steps.
           </span>
         </label>
 
@@ -3342,7 +3342,7 @@ if (
     window.location.href = GATE2_PAYMENT_LINK;
   }}
 >
-  Enter Gate 02 — $5
+  Continue To Checkout - $5
 </button>
         </div>
       </section>
