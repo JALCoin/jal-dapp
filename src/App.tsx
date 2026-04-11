@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -16,11 +16,6 @@ import Engine from "./pages/Engine";
 import ShopPage from "./pages/Shop";
 import AuthPage from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
-import JalSolPage from "./pages/JalSol";
-import JalSolSuccess from "./pages/JalSolSuccess";
-import JalSolObserve from "./pages/JalSolObserve";
-import JalSolEnter from "./pages/JalSolEnter";
-import JalSolBuild from "./pages/JalSolBuild";
 import Footer from "./components/Footer";
 import RequireAuth from "./components/RequireAuth";
 import { useAuth } from "./context/AuthProvider";
@@ -28,6 +23,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Disclaimer from "./pages/Disclaimer";
 import TrackPage from "./pages/TrackPage";
+import { LEGAL_CONTACT_MAILTO, LEGAL_OPERATOR_NAME } from "./lib/legal";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
@@ -58,7 +54,7 @@ function HeaderView({
         </div>
 
         <button type="button" onClick={onLogo} aria-label="Open navigation" className="logo-btn">
-          <img className="logo header-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
+          <img className="logo header-logo" src="/JALSOL1.gif" alt={LEGAL_OPERATOR_NAME} />
         </button>
 
         <button
@@ -336,30 +332,16 @@ function SidebarView({
           <SidebarSection
             title="Core"
             onClose={onClose}
-            items={[
-              { to: "/app/home", label: "Home" },
-              { to: "/app/engine", label: "JAL Engine" },
-            ]}
+            items={[{ to: "/app/home", label: "Home" }]}
           />
 
-          <SidebarSection
-            title="JAL/SOL"
-            onClose={onClose}
-            items={[
-              { to: "/app/jal-sol", label: "Onboarding Hub" },
-              { to: "/app/jal-sol/observe", label: "Observe Module" },
-              { to: "/app/jal-sol/enter", label: "Onboarding Module" },
-              { to: "/app/jal-sol/build", label: "Builder Module" },
-            ]}
-          />
-
-          <SidebarSection
-            title="Tools"
-            onClose={onClose}
-            items={[
-              { to: "/app/token", label: "Builder Tools" },
-            ]}
-          />
+          {isEngineerAccount ? (
+            <SidebarSection
+              title="Operator"
+              onClose={onClose}
+              items={[{ to: "/app/engine", label: "JAL Engine (Private)" }]}
+            />
+          ) : null}
 
           <SidebarSection
             title="Store"
@@ -367,7 +349,6 @@ function SidebarView({
             items={[
               { to: "/app/shop", label: "Shop" },
               { to: "/app/track", label: "Track Order" },
-              { to: "/app/inventory", label: "Inventory" },
             ]}
           />
 
@@ -375,8 +356,9 @@ function SidebarView({
             title="System"
             onClose={onClose}
             items={[
-              { to: "/app/about", label: "About JALSOL" },
-              { to: "/app/settings", label: "Settings" },
+              { to: "/app/compliance", label: "Compliance Notice" },
+              { to: "/app/about", label: "About Jeremy Aaron Lugg" },
+              { to: "/app/legal", label: "Legal Pages" },
             ]}
           />
         </nav>
@@ -385,42 +367,131 @@ function SidebarView({
   );
 }
 
-/* ------------------------ Simple pages (inline) ------------------------ */
-function FeaturePage({ title }: { title: string }) {
+function AboutPage() {
   return (
-    <main className="home-shell" aria-label={title}>
+    <main className="home-shell" aria-label="About Jeremy Aaron Lugg">
       <div className="home-wrap">
         <section className="card machine-surface panel-frame">
-          <h1 className="home-title">{title}</h1>
-          <p className="home-lead">This page is live-routed. Wire the feature UI here.</p>
+          <h1 className="home-title">About Jeremy Aaron Lugg</h1>
+          <p className="home-lead">
+            <strong>Jeremy Aaron Lugg operates this public site under ABN 35 780 648 234.</strong>{" "}
+            I have always been drawn to building, process, design, and the way structure turns
+            ideas into something real.
+          </p>
+          <p className="home-lead">
+            My background is hands-on. I spent years learning through construction, workshop
+            environments, machining, and practical trade work. Those experiences shaped the way I
+            think: start with the foundations, understand the system, respect the tools, and build
+            carefully.
+          </p>
+          <p className="home-lead">
+            Over time, that same mindset pulled me deeper into computers, digital tools, online
+            products, and eventually blockchain systems. What began as curiosity about how markets,
+            software, and infrastructure work evolved into a long-term effort to build something of
+            my own.
+          </p>
+          <div className="home-links">
+            <a className="chip" href="/app/compliance">
+              Compliance Notice
+            </a>
+            <a className="chip" href="/app/shop">
+              Shop
+            </a>
+            <a className="chip" href={LEGAL_CONTACT_MAILTO}>
+              Contact
+            </a>
+          </div>
+        </section>
+
+        <section className="card machine-surface panel-frame">
+          <h2 className="home-title" style={{ fontSize: "clamp(1.3rem, 2.2vw, 2rem)" }}>
+            My Story
+          </h2>
+          <p className="home-lead">
+            I did not come into this through a conventional tech path. I came into it through work,
+            observation, and persistence. I learned from builders, tradesmen, workshop teams, and
+            people willing to give me a chance to develop real skills. I also learned through hard
+            changes in family life, responsibility, and the need to create stability for the people
+            closest to me.
+          </p>
+          <p className="home-lead">
+            That combination of hands-on trade experience and deep curiosity about systems pushed me
+            toward entrepreneurship. I became interested in how products are built, how value moves,
+            how technology can be shaped into something useful, and how digital and physical work
+            can exist together under one business.
+          </p>
+          <p className="home-lead">
+            The JAL identity comes from my initials, and the JALSOL project grew out of years of
+            research into software, online sales, cryptocurrency infrastructure, and blockchain
+            tools. For me, it represents experimentation, discipline, and the ongoing effort to
+            turn skill, process, and lived experience into something practical.
+          </p>
+        </section>
+
+        <section className="card machine-surface panel-frame">
+          <h2 className="home-title" style={{ fontSize: "clamp(1.3rem, 2.2vw, 2rem)" }}>
+            What Shaped This Site
+          </h2>
+          <ul className="home-identity-points">
+            <li>Construction and trade work taught me to respect structure, detail, and process.</li>
+            <li>Mechanical fitting and machining taught me precision, systems thinking, and repeatability.</li>
+            <li>Entrepreneurship taught me that products, money, and public offers must be simple, compliant, and accountable.</li>
+            <li>Research into blockchain and developer tooling showed me how technical systems can be turned into products and tools.</li>
+          </ul>
+        </section>
+
+        <section className="card machine-surface panel-frame">
+          <h2 className="home-title" style={{ fontSize: "clamp(1.3rem, 2.2vw, 2rem)" }}>
+            What This Site Is Today
+          </h2>
+          <p className="home-lead">
+            Today, this public site is the business-facing surface for Jeremy Aaron Lugg. It
+            currently focuses on operator identity, legal clarity, and physical merch while public
+            interactive features remain paused for review.
+          </p>
+          <p className="home-lead">
+            Internal development, including private operator tooling such as JAL Engine, remains a
+            separate matter from the current public offer. The public site is not presented as a
+            live trading platform, public exchange, or managed financial service.
+          </p>
+          <p className="home-lead">
+            The goal from here is straightforward: build carefully, stay compliant, and create
+            something real that reflects both the practical skills I have developed and the long
+            path that led me here.
+          </p>
         </section>
       </div>
     </main>
   );
 }
 
-function AboutPage() {
+function LegalHubPage() {
   return (
-    <main className="home-shell" aria-label="About JALSOL">
+    <main className="home-shell" aria-label="Legal pages">
       <div className="home-wrap">
         <section className="card machine-surface panel-frame">
-          <h1 className="home-title">About JALSOL</h1>
+          <h1 className="home-title">Legal Pages</h1>
           <p className="home-lead">
-            <strong>jalsol.com is operated by Jeremy Aaron Lugg.</strong> The current public site
-            focuses on onboarding guidance, builder tooling, physical merch, and a read-only view
-            of Jeremy&apos;s own engine.
+            This page is the document hub for the site. Use it for the formal pages that set out
+            the current public boundary, operator details, customer rights, privacy handling, and
+            compliance posture.
           </p>
           <p className="home-lead">
-            Any exchange-connected engine activity shown on the site relates to Jeremy Aaron
-            Lugg&apos;s own account and not to customer trading accounts. The site is not presented
-            as a public exchange, brokerage, or managed trading service.
+            If About is the plain-language story, Legal is the place for the documents and source
+            links that support that story.
           </p>
           <div className="home-links">
             <a className="chip" href="/terms">
               Terms
             </a>
+            <a className="chip" href="/privacy">
+              Privacy
+            </a>
             <a className="chip" href="/disclaimer">
               Disclaimer
+            </a>
+            <a className="chip" href="/app/compliance">
+              Compliance Notice
             </a>
             <a
               className="chip"
@@ -432,8 +503,96 @@ function AboutPage() {
             </a>
           </div>
         </section>
+
+        <section className="card machine-surface panel-frame">
+          <h2 className="home-title" style={{ fontSize: "clamp(1.3rem, 2.2vw, 2rem)" }}>
+            What Legal Should Cover
+          </h2>
+          <ul className="home-identity-points">
+            <li>Terms of use and consumer-law boundaries</li>
+            <li>Privacy practices and contact points</li>
+            <li>Disclaimer language around current site activity</li>
+            <li>ABN identity and current compliance status</li>
+          </ul>
+        </section>
       </div>
     </main>
+  );
+}
+
+function ComplianceNoticePage() {
+  return (
+    <main className="home-shell" aria-label="Compliance notice">
+      <div className="home-wrap">
+        <section className="card machine-surface panel-frame">
+          <h1 className="home-title">Temporary Compliance Pause</h1>
+          <p className="home-lead">
+            Interactive site features are temporarily unavailable while registrations and legal
+            settings are reviewed.
+          </p>
+          <p className="home-lead">
+            Physical merch, operator identity, and legal information remain available. Orders and
+            site activity continue to be supplied by Jeremy Aaron Lugg under ABN 35 780 648 234.
+          </p>
+          <p className="home-lead">
+            Internal operator tools may remain available to authenticated engineer accounts and are
+            not part of the current public site offer.
+          </p>
+          <div className="home-links">
+            <a className="chip" href="/terms">
+              Terms
+            </a>
+            <a className="chip" href="/privacy">
+              Privacy
+            </a>
+            <a className="chip" href="/disclaimer">
+              Disclaimer
+            </a>
+            <a className="chip" href="/app/shop">
+              Shop
+            </a>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function RequireEngineerAccount({ children }: { children: ReactNode }) {
+  const { isEngineerAccount } = useAuth();
+
+  if (!isEngineerAccount) {
+    return <Navigate to="/app/compliance" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function SitewideNoticeBar() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 1200,
+        padding: "12px 18px",
+        borderBottom: "1px solid rgba(255,255,255,0.12)",
+        background:
+          "linear-gradient(90deg, rgba(110,26,26,0.96), rgba(83,33,17,0.96), rgba(42,34,17,0.96))",
+        color: "#f6ead9",
+        fontSize: "0.92rem",
+        letterSpacing: "0.02em",
+      }}
+    >
+      Interactive features are temporarily paused while registrations and legal settings are
+      reviewed. Visit{" "}
+      <a href="/app/compliance" style={{ color: "#fff4d6" }}>
+        the compliance notice
+      </a>{" "}
+      for the current public site status.
+    </div>
   );
 }
 
@@ -564,55 +723,38 @@ function AppShell() {
 
         <Route path="home" element={<Home />} />
         <Route path="about" element={<AboutPage />} />
+        <Route path="legal" element={<LegalHubPage />} />
+        <Route path="compliance" element={<ComplianceNoticePage />} />
 
         <Route path="shop" element={<ShopPage />} />
         <Route path="track" element={<TrackPage />} />
 
-        <Route path="jal-sol" element={<JalSolPage />} />
+        <Route path="jal-sol" element={<Navigate to="/app/compliance" replace />} />
+        <Route path="jal-sol/observe" element={<Navigate to="/app/compliance" replace />} />
+        <Route path="jal-sol/enter" element={<Navigate to="/app/compliance" replace />} />
+        <Route path="jal-sol/build" element={<Navigate to="/app/compliance" replace />} />
+        <Route path="jal-sol/success" element={<Navigate to="/app/compliance" replace />} />
+
+        <Route path="token" element={<Navigate to="/app/compliance" replace />} />
+        <Route path="raydium" element={<Navigate to="/app/compliance" replace />} />
+
         <Route
-          path="jal-sol/observe"
+          path="engine"
           element={
             <RequireAuth>
-              <JalSolObserve />
+              <RequireEngineerAccount>
+                <Engine />
+              </RequireEngineerAccount>
             </RequireAuth>
           }
         />
-        <Route
-          path="jal-sol/enter"
-          element={
-            <RequireAuth>
-              <JalSolEnter />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="jal-sol/build"
-          element={
-            <RequireAuth>
-              <JalSolBuild />
-            </RequireAuth>
-          }
-        />
-        <Route path="jal-sol/success" element={<JalSolSuccess />} />
+        <Route path="engine/settings" element={<Navigate to="/app/compliance" replace />} />
+        <Route path="engine/logs" element={<Navigate to="/app/compliance" replace />} />
 
-        <Route
-          path="token"
-          element={
-            <RequireAuth>
-              <FeaturePage title="Builder Tools" />
-            </RequireAuth>
-          }
-        />
-        <Route path="raydium" element={<FeaturePage title="External Market References" />} />
+        <Route path="inventory" element={<Navigate to="/app/compliance" replace />} />
+        <Route path="inventory/purchase" element={<Navigate to="/app/compliance" replace />} />
 
-        <Route path="engine" element={<Engine />} />
-        <Route path="engine/settings" element={<FeaturePage title="JAL Engine Settings" />} />
-        <Route path="engine/logs" element={<FeaturePage title="JAL Engine Log Analysis" />} />
-
-        <Route path="inventory" element={<FeaturePage title="Inventory Workspace" />} />
-        <Route path="inventory/purchase" element={<FeaturePage title="Inventory Purchase" />} />
-
-        <Route path="settings" element={<FeaturePage title="Settings" />} />
+        <Route path="settings" element={<Navigate to="/app/compliance" replace />} />
 
         <Route path="*" element={<Navigate to="/app/nav" replace />} />
       </Routes>
@@ -626,6 +768,7 @@ function AppShell() {
 export default function App() {
   return (
     <BrowserRouter>
+      <SitewideNoticeBar />
       <Routes>
         <Route path="/" element={<Landing mode="entry" />} />
         <Route path="/auth" element={<AuthPage />} />
