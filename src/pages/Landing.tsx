@@ -7,9 +7,10 @@ type LandingProps = { mode: LandingMode };
 
 type NavTo =
   | "/app/home"
-  | "/app/jal-sol"
+  | "/app/compliance"
   | "/app/engine"
   | "/app/about"
+  | "/app/legal"
   | "/app/shop";
 
 function NavOverlay({
@@ -60,7 +61,7 @@ function NavOverlay({
           <button
             type="button"
             className="nav-pill"
-            onClick={() => onSelect("/app/jal-sol")}
+            onClick={() => onSelect("/app/compliance")}
             disabled={disabled}
           >
             JAL/SOL
@@ -72,7 +73,7 @@ function NavOverlay({
             onClick={() => onSelect("/app/engine")}
             disabled={disabled}
           >
-            $JAL~Engine
+            JAL~ENGINE
           </button>
 
           <button
@@ -81,15 +82,19 @@ function NavOverlay({
             onClick={() => onSelect("/app/about")}
             disabled={disabled}
           >
-            ABOUT JAL
+            ABOUT
           </button>
 
           <button
             type="button"
             className="nav-pill"
-            onClick={() => onSelect("/app/shop")}
+            onClick={() => onSelect("/app/legal")}
             disabled={disabled}
           >
+            LEGAL
+          </button>
+
+          <button type="button" className="nav-pill" onClick={() => onSelect("/app/shop")} disabled={disabled}>
             SHOP
           </button>
         </div>
@@ -144,15 +149,15 @@ export default function Landing({ mode }: LandingProps) {
     return (
       <main
         className={`landing-blank ${loading ? "is-fading" : ""}`}
-        aria-label="JAL/SOL"
+        aria-label="Jeremy Aaron Lugg"
       >
         {!loading && (
           <button
             className="center-logo-btn"
             onClick={enter}
-            aria-label="Enter jalsol.com"
+            aria-label="Enter Jeremy Aaron Lugg site"
           >
-            <img className="center-logo" src="/JALSOL1.gif" alt="JAL/SOL" />
+            <img className="center-logo" src="/JALSOL1.gif" alt="Jeremy Aaron Lugg" />
             <div className="center-logo-hint">ENTER</div>
           </button>
         )}
@@ -174,7 +179,7 @@ export default function Landing({ mode }: LandingProps) {
   return (
     <main
       className={`landing-blank ${loading ? "is-fading" : ""}`}
-      aria-label="JAL/SOL"
+      aria-label="Jeremy Aaron Lugg"
     >
       {!loading && (
         <NavOverlay
