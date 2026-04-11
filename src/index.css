@@ -4693,6 +4693,10 @@ a.button[aria-disabled="true"]{
     linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.012));
 }
 
+.engine-window--hero{
+  isolation:isolate;
+}
+
 .engine-bg{
   position:absolute;
   inset:0;
@@ -5555,6 +5559,27 @@ a.button[aria-disabled="true"]{
   line-height: 1.5;
 }
 
+.engine-upgrade-chiplist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.engine-upgrade-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0.24rem 0.58rem;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 241, 167, 0.18);
+  background: rgba(17, 241, 167, 0.06);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(231, 255, 247, 0.82);
+}
+
 .primary-rail-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5610,6 +5635,10 @@ a.button[aria-disabled="true"]{
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.market-head--compact {
+  gap: 8px;
+}
+
 .market-body {
   display: grid;
 }
@@ -5617,6 +5646,10 @@ a.button[aria-disabled="true"]{
 .market-row {
   padding: 11px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.market-row--compact {
+  gap: 8px;
 }
 
 .market-row:last-child {
@@ -6241,6 +6274,12 @@ a.button[aria-disabled="true"]{
 
 .engine-about-btn {
   justify-self: start;
+}
+
+.engine-about-toggle {
+  min-width: 1ch;
+  text-align: center;
+  font-weight: 700;
 }
 
 .engine-about-panel {

@@ -158,6 +158,11 @@ type SlotRow = {
   lockPct: number | null;
   levelTrailPeakNetPct?: number | null;
   levelTrailFloorPct?: number | null;
+  levelTrailArmPct?: number | null;
+  levelTrailRetainPct?: number | null;
+  levelTrailVolatilityPct?: number | null;
+  levelTrailVolatilitySpreadPct?: number | null;
+  levelTrailVolatilityRangePct?: number | null;
 
   cycles: number;
   lifetimeNetPct?: number | null;
@@ -454,6 +459,16 @@ type ManagerLevelTrailConfig = {
   retainPct?: number;
 };
 
+type ManagerVolatilityTrailConfig = {
+  enabled?: boolean;
+  spreadMult?: number;
+  rangeMult?: number;
+  armMult?: number;
+  maxArmPct?: number;
+  retainDecay?: number;
+  minRetainPct?: number;
+};
+
 type ManagerStatus = WorkerStatus & {
   holding?: {
     lvl1Pct?: number;
@@ -469,7 +484,9 @@ type ManagerStatus = WorkerStatus & {
       lvl1?: ManagerLevelTrailConfig;
       lvl2?: ManagerLevelTrailConfig;
       lvl3?: ManagerLevelTrailConfig;
+      volatility?: ManagerVolatilityTrailConfig;
     };
+    coinOverrides?: Record<string, string[]>;
   };
   subslot?: {
     costAwareEntry?: {
@@ -646,6 +663,18 @@ type PublicMetaResponse = {
         eligibleInCandidates?: number;
         eligibleOutCandidates?: number;
       };
+      policyEnabled?: boolean;
+      policyRunning?: boolean;
+      executorEnabled?: boolean;
+      executorRunning?: boolean;
+      executorDryRun?: boolean;
+      recommend?: boolean;
+      blockedReason?: string | null;
+      edgeScore?: number | null;
+      activeReservations?: number;
+      reservationStages?: Record<string, number>;
+      eligibleInCandidates?: number;
+      eligibleOutCandidates?: number;
     };
     rotationExecutor?: {
       enabled?: boolean;
@@ -931,6 +960,91 @@ function managerLevelTrailLabel(trail: ManagerLevelTrailConfig | undefined) {
       ? `${(trail.retainPct * 100).toFixed(0)}%`
       : "-";
   return `ON | arm ${armPct} | keep ${retainPct}`;
+}
+
+function managerCoinOverrideCoins(coinOverrides: Record<string, string[]> | null | undefined) {
+  return Object.keys(coinOverrides ?? {})
+    .filter((coin) => !!coin)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function managerVolatilityModeLabel(
+  volatility: ManagerVolatilityTrailConfig | undefined,
+  coinOverrides: Record<string, string[]> | null | undefined
+) {
+  const overrideCoins = managerCoinOverrideCoins(coinOverrides);
+  if (overrideCoins.length) return `PER-COIN | ${overrideCoins.length} coins`;
+  if (!volatility?.enabled) return "OFF";
+
+  const spreadMult =
+    volatility.spreadMult != null && Number.isFinite(volatility.spreadMult)
+      ? `${volatility.spreadMult.toFixed(2)}x`
+      : "-";
+  const rangeMult =
+    volatility.rangeMult != null && Number.isFinite(volatility.rangeMult)
+      ? `${volatility.rangeMult.toFixed(2)}x`
+      : "-";
+  return `GLOBAL | spread ${spreadMult} | range ${rangeMult}`;
+}
+
+function managerVolatilityDetailLabel(
+  volatility: ManagerVolatilityTrailConfig | undefined,
+  coinOverrides: Record<string, string[]> | null | undefined
+) {
+  const overrideCoins = managerCoinOverrideCoins(coinOverrides);
+  if (overrideCoins.length) {
+    return "The LVL1-LVL3 lines above are the fallback trail baseline. Live trail math is now resolved per coin for the override set below.";
+  }
+  if (!volatility?.enabled) {
+    return "Fixed locks remain the minimum floor. These trails only raise the exit floor inside LVL1-LVL3 bands.";
+  }
+
+  const armCap =
+    volatility.maxArmPct != null && Number.isFinite(volatility.maxArmPct)
+      ? pctNum(volatility.maxArmPct)
+      : "-";
+  const keepFloor =
+    volatility.minRetainPct != null && Number.isFinite(volatility.minRetainPct)
+      ? `${(volatility.minRetainPct * 100).toFixed(0)}%`
+      : "-";
+  return `Adaptive volatility is global. Arm cap ${armCap} | keep floor ${keepFloor}.`;
+}
+
+function primaryTrailArmLabel(slot: SlotRow) {
+  if (slot.levelTrailArmPct != null && Number.isFinite(slot.levelTrailArmPct)) {
+    return pctNum(slot.levelTrailArmPct);
+  }
+  if (slot.level >= 1 && slot.level <= 3) return "Not resolved";
+  return "-";
+}
+
+function primaryTrailRetainLabel(slot: SlotRow) {
+  if (slot.levelTrailRetainPct != null && Number.isFinite(slot.levelTrailRetainPct)) {
+    return `${(slot.levelTrailRetainPct * 100).toFixed(0)}%`;
+  }
+  if (slot.level >= 1 && slot.level <= 3) return "Not resolved";
+  return "-";
+}
+
+function primaryTrailVolatilityLabel(slot: SlotRow) {
+  if (slot.levelTrailVolatilityPct != null && Number.isFinite(slot.levelTrailVolatilityPct)) {
+    return pctNum(slot.levelTrailVolatilityPct);
+  }
+  if (slot.level >= 1 && slot.level <= 3) return "None";
+  return "-";
+}
+
+function primaryTrailVolatilityInputsLabel(slot: SlotRow) {
+  const spreadPct = slot.levelTrailVolatilitySpreadPct;
+  const rangePct = slot.levelTrailVolatilityRangePct;
+  const hasSpread = spreadPct != null && Number.isFinite(spreadPct);
+  const hasRange = rangePct != null && Number.isFinite(rangePct);
+
+  if (hasSpread || hasRange) {
+    return `spread ${hasSpread ? pctNum(spreadPct) : "-"} | range ${hasRange ? pctNum(rangePct) : "-"}`;
+  }
+  if (slot.level >= 1 && slot.level <= 3) return "No adaptive input";
+  return "-";
 }
 
 function reasonLabel(reason: string | null | undefined) {
@@ -3239,6 +3353,26 @@ const SlotModal = React.memo(function SlotModal(props: {
               </div>
             </div>
 
+            <div className="slot-section">Adaptive Trail Inputs</div>
+            <div className="slot-modal-grid">
+              <div>
+                <div className="slot-k">Resolved Arm</div>
+                <div className="slot-v">{primaryTrailArmLabel(slot)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Resolved Keep</div>
+                <div className="slot-v">{primaryTrailRetainLabel(slot)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Adaptive Volatility</div>
+                <div className="slot-v">{primaryTrailVolatilityLabel(slot)}</div>
+              </div>
+              <div>
+                <div className="slot-k">Volatility Inputs</div>
+                <div className="slot-v">{primaryTrailVolatilityInputsLabel(slot)}</div>
+              </div>
+            </div>
+
             <div className="slot-modal-grid">
               <div><div className="slot-k">Unit</div><div className="slot-v">{moneyAud(slot.unitAud)}</div></div>
               <div><div className="slot-k">Cycles</div><div className="slot-v">{slot.cycles ?? 0}</div></div>
@@ -3505,11 +3639,12 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   const manager = props.meta?.manager;
   const telemetry = runtime?.telemetry;
   const compression = runtime?.eventCompression;
-  const rotationSummary = runtime?.rotationDashboard?.summary;
+  const rotationSummary = runtime?.rotationDashboard?.summary ?? runtime?.rotationDashboard;
   const snapshot = props.meta?.market?.snapshot ?? null;
   const serverGate = telemetry?.lastWorkerAction?.server;
   const holding = manager?.holding;
   const levelTrails = holding?.levelTrails;
+  const coinOverrideCoins = managerCoinOverrideCoins(holding?.coinOverrides);
   const primaryPerf = manager?.primaryPerf;
   const costAwareEntry = manager?.subslot?.costAwareEntry;
 
@@ -3594,7 +3729,7 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
         <div className="engine-telemetry-head">
           <div>
             <div className="engine-telemetry-title">Recent Upgrades</div>
-            <div className="engine-telemetry-note">Primary hold rails, primary memory, and secondary cost gating now surfaced directly in the dapp.</div>
+            <div className="engine-telemetry-note">Primary hold rails, adaptive trail inputs, primary memory, and secondary cost gating now surfaced directly in the dapp.</div>
           </div>
         </div>
 
@@ -3637,8 +3772,18 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
                 <span className="engine-upgrade-line-value">{managerLevelTrailLabel(levelTrails?.lvl3)}</span>
               </div>
             </div>
+            <div className="engine-upgrade-v">
+              {managerVolatilityModeLabel(levelTrails?.volatility, holding?.coinOverrides)}
+            </div>
+            {coinOverrideCoins.length ? (
+              <div className="engine-upgrade-chiplist" aria-label="Coin trail overrides">
+                {coinOverrideCoins.map((coin) => (
+                  <span key={coin} className="engine-upgrade-chip">{coin}</span>
+                ))}
+              </div>
+            ) : null}
             <div className="engine-upgrade-sub">
-              Fixed locks remain the minimum floor. These trails only raise the exit floor inside LVL1-LVL3 bands.
+              {managerVolatilityDetailLabel(levelTrails?.volatility, holding?.coinOverrides)}
             </div>
           </div>
 
