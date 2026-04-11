@@ -1215,6 +1215,45 @@ a.button[aria-disabled="true"]{
   color:rgba(231,255,247,.58);
 }
 
+.jal-auth-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:24px;
+  align-items:start;
+}
+
+.jal-auth-card{
+  min-height:100%;
+}
+
+.jal-auth-card--signup{
+  border-color:rgba(244,200,106,.16);
+  background:
+    radial-gradient(580px 160px at 50% 0%, rgba(244,200,106,.07), transparent 64%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+}
+
+.jal-auth-card--signin{
+  border-color:rgba(17,241,167,.12);
+  background:
+    radial-gradient(580px 160px at 50% 0%, rgba(17,241,167,.06), transparent 64%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+}
+
+.jal-auth-card-copy{
+  margin:10px 0 0;
+  line-height:1.68;
+  color:rgba(231,255,247,.76);
+}
+
+.jal-auth-status{
+  min-height:100%;
+}
+
+.jal-auth-status-copy{
+  margin-bottom:12px;
+}
+
 .jal-auth-delivery-note{
   display:grid;
   gap:10px;
@@ -1242,7 +1281,7 @@ a.button[aria-disabled="true"]{
 }
 
 .jal-bullets-auth{
-  grid-template-columns:repeat(4, minmax(0, 1fr));
+  grid-template-columns:repeat(2, minmax(0, 1fr));
 }
 
 .jal-lock-text{
@@ -5443,6 +5482,43 @@ a.button[aria-disabled="true"]{
   line-height: 1.45;
 }
 
+.engine-upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.engine-upgrade-item {
+  padding: 12px 13px;
+  min-height: 112px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(680px 160px at 50% 0%, rgba(17, 241, 167, 0.06), transparent 62%),
+    rgba(0, 0, 0, 0.18);
+}
+
+.engine-upgrade-k {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(231, 255, 247, 0.54);
+}
+
+.engine-upgrade-v {
+  margin-top: 6px;
+  font-size: 0.96rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.engine-upgrade-sub {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: rgba(231, 255, 247, 0.68);
+  line-height: 1.5;
+}
+
 .market-console {
   height: 100%;
   border-radius: 18px;
@@ -6515,6 +6591,10 @@ a.button[aria-disabled="true"]{
   .engine-capture-grid,
   .engine-ledger-topgrid,
   .engine-telemetry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .engine-upgrade-grid {
     grid-template-columns: 1fr;
   }
 
@@ -8083,6 +8163,10 @@ button.home-route-band{
   .jal-overlay-panel .jal-grid{
     grid-template-columns:1fr;
   }
+
+  .jal-auth-grid{
+    grid-template-columns:1fr;
+  }
 }
 
 @media (max-width:640px){
@@ -8111,6 +8195,10 @@ button.home-route-band{
 
   .jal-bay-actions .button{
     width:100%;
+  }
+
+  .jal-bullets-auth{
+    grid-template-columns:1fr;
   }
 }
 /* =========================================

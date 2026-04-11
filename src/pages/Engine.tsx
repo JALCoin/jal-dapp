@@ -156,6 +156,8 @@ type SlotRow = {
 
   level: 0 | 1 | 2 | 3 | 4;
   lockPct: number | null;
+  levelTrailPeakNetPct?: number | null;
+  levelTrailFloorPct?: number | null;
 
   cycles: number;
   lifetimeNetPct?: number | null;
@@ -446,6 +448,47 @@ type WorkerStatus = {
   [key: string]: unknown;
 };
 
+type ManagerLevelTrailConfig = {
+  enabled?: boolean;
+  armPct?: number;
+  retainPct?: number;
+};
+
+type ManagerStatus = WorkerStatus & {
+  holding?: {
+    lvl1Pct?: number;
+    lvl2Pct?: number;
+    lvl3Pct?: number;
+    lvl4Pct?: number;
+    lvl4TrailPct?: number;
+    lock1Pct?: number;
+    lock2Pct?: number;
+    lock3Pct?: number;
+    peakResetAfterExit?: boolean;
+    levelTrails?: {
+      lvl1?: ManagerLevelTrailConfig;
+      lvl2?: ManagerLevelTrailConfig;
+      lvl3?: ManagerLevelTrailConfig;
+    };
+  };
+  subslot?: {
+    costAwareEntry?: {
+      enabled?: boolean;
+      spreadMult?: number;
+      slippageBufferPct?: number;
+      minNetAfterCostPct?: number;
+    };
+  };
+  primaryPerf?: {
+    enabled?: boolean;
+    windowTrades?: number;
+    disableAfterLossStreak?: number;
+    cooldownMs?: number;
+    negativeEvHalfSize?: boolean;
+    strongNegativeEvDisableThresholdPct?: number;
+  };
+};
+
 type PublicMetaResponse = {
   ok: boolean;
   ts: number;
@@ -508,7 +551,7 @@ type PublicMetaResponse = {
   trackingStates?: Record<string, number>;
   harvester?: WorkerStatus;
   executor?: WorkerStatus;
-  manager?: WorkerStatus;
+  manager?: ManagerStatus;
   rotation?: WorkerStatus;
   rotationExecutor?: WorkerStatus;
   topup?: WorkerStatus;
@@ -808,6 +851,46 @@ function effectiveNowLabel(s: SlotRow) {
 
 function lockDisplay(s: SlotRow) {
   return pctNum(s.lockPct);
+}
+
+function primaryExitFloorPct(slot: SlotRow) {
+  const lockPct = slot.lockPct;
+  const trailFloorPct = slot.levelTrailFloorPct;
+  if (lockPct != null && Number.isFinite(lockPct) && trailFloorPct != null && Number.isFinite(trailFloorPct)) {
+    return Math.max(lockPct, trailFloorPct);
+  }
+  if (trailFloorPct != null && Number.isFinite(trailFloorPct)) return trailFloorPct;
+  if (lockPct != null && Number.isFinite(lockPct)) return lockPct;
+  return null;
+}
+
+function primaryTrailLabel(slot: SlotRow) {
+  if (slot.level === 4) return "LVL4 peak trail";
+  if (!(slot.level >= 1 && slot.level <= 3)) return "-";
+
+  const lockPct = slot.lockPct;
+  const trailFloorPct = slot.levelTrailFloorPct;
+  if (
+    lockPct != null &&
+    Number.isFinite(lockPct) &&
+    trailFloorPct != null &&
+    Number.isFinite(trailFloorPct) &&
+    trailFloorPct > lockPct
+  ) {
+    return `ACTIVE @ ${pctNum(trailFloorPct)}`;
+  }
+
+  return "Lock only";
+}
+
+function managerLevelTrailLabel(trail: ManagerLevelTrailConfig | undefined) {
+  if (!trail?.enabled) return "OFF";
+  const armPct = trail.armPct != null && Number.isFinite(trail.armPct) ? `${trail.armPct.toFixed(3)}%` : "-";
+  const retainPct =
+    trail.retainPct != null && Number.isFinite(trail.retainPct)
+      ? `${(trail.retainPct * 100).toFixed(0)}%`
+      : "-";
+  return `ON | arm ${armPct} | keep ${retainPct}`;
 }
 
 function reasonLabel(reason: string | null | undefined) {
@@ -3105,6 +3188,10 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Net</div><div className="slot-v">{pctNum(slot.netPct)}</div></div>
               <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "-"}</div></div>
               <div><div className="slot-k">Lock</div><div className="slot-v">{lockDisplay(slot)}</div></div>
+              <div><div className="slot-k">Exit Floor</div><div className="slot-v">{pctNum(primaryExitFloorPct(slot))}</div></div>
+              <div><div className="slot-k">Primary Rail</div><div className="slot-v">{primaryTrailLabel(slot)}</div></div>
+              <div><div className="slot-k">Trail Floor</div><div className="slot-v">{pctNum(slot.levelTrailFloorPct)}</div></div>
+              <div><div className="slot-k">Trail Peak Net</div><div className="slot-v">{pctNum(slot.levelTrailPeakNetPct)}</div></div>
               <div><div className="slot-k">Spread</div><div className="slot-v">{pctNum(slot.nowSpreadPct)}</div></div>
               <div><div className="slot-k">Drawdown</div><div className="slot-v">{pctNum(slot.drawdownPct)}</div></div>
               <div><div className="slot-k">Re-entry target</div><div className="slot-v">{fmt(slot.reentryTargetMid)}</div></div>
@@ -3359,11 +3446,16 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   nowMs: number;
 }) {
   const runtime = props.meta?.runtime;
+  const manager = props.meta?.manager;
   const telemetry = runtime?.telemetry;
   const compression = runtime?.eventCompression;
   const rotationSummary = runtime?.rotationDashboard?.summary;
   const snapshot = props.meta?.market?.snapshot ?? null;
   const serverGate = telemetry?.lastWorkerAction?.server;
+  const holding = manager?.holding;
+  const levelTrails = holding?.levelTrails;
+  const primaryPerf = manager?.primaryPerf;
+  const costAwareEntry = manager?.subslot?.costAwareEntry;
 
   return (
     <div className="engine-bay">
@@ -3437,6 +3529,57 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
             <div className="mini-k">Last OK</div>
             <div className="mini-v">
               {formatDateTime(props.meta?.market?.snapshot?.lastOkAt)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">Recent Upgrades</div>
+            <div className="engine-telemetry-note">Primary hold rails, primary memory, and secondary cost gating now surfaced directly in the dapp.</div>
+          </div>
+        </div>
+
+        <div className="engine-upgrade-grid">
+          <div className="engine-upgrade-item">
+            <div className="engine-upgrade-k">Primary Ladder</div>
+            <div className="engine-upgrade-v">
+              L1 {pctNum(holding?.lvl1Pct)} / {pctNum(holding?.lock1Pct)} | L2 {pctNum(holding?.lvl2Pct)} / {pctNum(holding?.lock2Pct)} | L3 {pctNum(holding?.lvl3Pct)} / {pctNum(holding?.lock3Pct)}
+            </div>
+            <div className="engine-upgrade-sub">
+              LVL4 {pctNum(holding?.lvl4Pct)} | LVL4 trail {pctNum(holding?.lvl4TrailPct)}
+            </div>
+          </div>
+
+          <div className="engine-upgrade-item">
+            <div className="engine-upgrade-k">Primary Level Trails</div>
+            <div className="engine-upgrade-v">
+              L1 {managerLevelTrailLabel(levelTrails?.lvl1)} | L2 {managerLevelTrailLabel(levelTrails?.lvl2)} | L3 {managerLevelTrailLabel(levelTrails?.lvl3)}
+            </div>
+            <div className="engine-upgrade-sub">
+              Fixed locks remain the minimum floor. These trails only raise the exit floor inside LVL1-LVL3 bands.
+            </div>
+          </div>
+
+          <div className="engine-upgrade-item">
+            <div className="engine-upgrade-k">Primary Performance Memory</div>
+            <div className="engine-upgrade-v">
+              {primaryPerf?.enabled ? "ON" : "OFF"} | {primaryPerf?.windowTrades ?? "-"} trades | streak {primaryPerf?.disableAfterLossStreak ?? "-"}
+            </div>
+            <div className="engine-upgrade-sub">
+              Cooldown {primaryPerf?.cooldownMs != null ? msToCountdown(primaryPerf.cooldownMs) : "-"} | Half-size on negative EV {primaryPerf?.negativeEvHalfSize ? "YES" : "NO"}
+            </div>
+          </div>
+
+          <div className="engine-upgrade-item">
+            <div className="engine-upgrade-k">Secondary Cost Gate</div>
+            <div className="engine-upgrade-v">
+              {costAwareEntry?.enabled ? "ON" : "OFF"} | net {pctNum(costAwareEntry?.minNetAfterCostPct)} | slip {pctNum(costAwareEntry?.slippageBufferPct)}
+            </div>
+            <div className="engine-upgrade-sub">
+              Spread multiplier {costAwareEntry?.spreadMult != null && Number.isFinite(costAwareEntry.spreadMult) ? `${costAwareEntry.spreadMult.toFixed(2)}x` : "-"}
             </div>
           </div>
         </div>
