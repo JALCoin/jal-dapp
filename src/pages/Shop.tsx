@@ -48,6 +48,15 @@ function getSecondaryLinks(p: Product) {
   return p.links.filter((l) => l.href !== primary?.href).slice(0, 2);
 }
 
+function displayShopLinkLabel(label: string) {
+  const normalized = label.trim().toLowerCase();
+
+  if (normalized === "claim") return "BUY NOW";
+  if (normalized === "request access") return "Pre-order via Email";
+
+  return label;
+}
+
 function useProductReviewSummary(productId: string, enabled = true) {
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [loading, setLoading] = useState(false);
@@ -194,7 +203,7 @@ function ProductModal({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {primaryLink.label}
+                  {displayShopLinkLabel(primaryLink.label)}
                 </a>
               ) : null}
 
@@ -208,7 +217,7 @@ function ProductModal({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      {l.label}
+                      {displayShopLinkLabel(l.label)}
                     </a>
                   ))}
                 </div>
@@ -363,7 +372,7 @@ function ProductCard({
             target="_blank"
             rel="noreferrer"
           >
-            {primaryLink.label}
+            {displayShopLinkLabel(primaryLink.label)}
           </a>
         ) : null}
 
@@ -371,7 +380,7 @@ function ProductCard({
           <div className="shop-card-secondary">
             {secondaryLinks.map((l) => (
               <a key={l.href} className="chip" href={l.href} target="_blank" rel="noreferrer">
-                {l.label}
+                {displayShopLinkLabel(l.label)}
               </a>
             ))}
           </div>
@@ -420,18 +429,21 @@ export default function Shop() {
         <section className="card machine-surface panel-frame shop-panel">
           <div className="shop-header">
             <div className="shop-header-main">
-              <p className="shop-eyebrow">JALSOL Storefront</p>
+              <p className="shop-eyebrow">Jeremy Aaron Lugg Store</p>
               <h1 className="home-title shop-title">Physical Merch</h1>
 
               <p className="home-lead shop-lead">
                 Physical releases only. No digital access products are sold through the storefront.
               </p>
+
+              <p className="shop-section-copy">
+                Orders are dispatched as a small sole-trader retail operation. Consumer guarantees,
+                shipping details and current legal notices remain available through the legal pages.
+              </p>
             </div>
 
             <div className="shop-header-links">
-              <a className="chip" href="https://jalsol.com" target="_blank" rel="noreferrer">
-                jalsol.com
-              </a>
+              <span className="chip">Jeremy Aaron Lugg</span>
             </div>
           </div>
 
@@ -441,8 +453,8 @@ export default function Shop() {
                 <p className="shop-section-kicker">Available Merch</p>
                 <h2 className="shop-section-title">Buy</h2>
                 <p className="shop-section-copy">
-                  Wearables, collectibles, and made-to-order physical commissions tied to the
-                  public JALSOL brand.
+                  Wearables and made-to-order physical commissions tied to the public Jeremy Aaron
+                  Lugg site.
                 </p>
               </div>
             </div>
