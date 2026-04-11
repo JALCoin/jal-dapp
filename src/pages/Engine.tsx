@@ -952,6 +952,52 @@ function primaryTrailPeakLabel(slot: SlotRow) {
   return "No peak yet";
 }
 
+function primaryTrailMovementLabel(slot: SlotRow) {
+  const state = String(slot.state || "").toUpperCase();
+  if (!(state === "LVL1_LOCK" || state === "LVL2_LOCK" || state === "LVL3_LOCK" || state === "LVL4_TRAIL")) {
+    return null;
+  }
+
+  const floorPct = primaryExitFloorPct(slot);
+  const lockPct = slot.lockPct;
+  const trailFloorPct = slot.levelTrailFloorPct;
+  const peakPct = slot.levelTrailPeakNetPct;
+  const netPct = slot.netPct;
+  const parts: string[] = [];
+
+  if (floorPct != null && Number.isFinite(floorPct)) {
+    parts.push(`floor ${pctNum(floorPct)}`);
+  }
+
+  if (
+    lockPct != null &&
+    Number.isFinite(lockPct) &&
+    trailFloorPct != null &&
+    Number.isFinite(trailFloorPct) &&
+    trailFloorPct > lockPct
+  ) {
+    parts.push(`lift ${pctNum(trailFloorPct - lockPct)}`);
+  } else if (lockPct != null && Number.isFinite(lockPct) && state !== "LVL4_TRAIL") {
+    parts.push(`static lock ${pctNum(lockPct)}`);
+  }
+
+  if (
+    netPct != null &&
+    Number.isFinite(netPct) &&
+    floorPct != null &&
+    Number.isFinite(floorPct)
+  ) {
+    const gapPct = Number(netPct) - floorPct;
+    parts.push(gapPct >= 0 ? `${pctNum(gapPct)} above floor` : `${pctNum(Math.abs(gapPct))} below floor`);
+  }
+
+  if (peakPct != null && Number.isFinite(peakPct)) {
+    parts.push(`peak ${pctNum(peakPct)}`);
+  }
+
+  return parts.length ? `Primary rail ${parts.join(" | ")}.` : null;
+}
+
 function managerLevelTrailLabel(trail: ManagerLevelTrailConfig | undefined) {
   if (!trail?.enabled) return "OFF";
   const armPct = trail.armPct != null && Number.isFinite(trail.armPct) ? `${trail.armPct.toFixed(3)}%` : "-";
@@ -1803,6 +1849,7 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   const state = String(s.state || "").toUpperCase();
   const regime = rawRegimeValue(s);
   const updated = slotHeartbeatLabel(s, nowMs);
+  const trailMovement = primaryTrailMovementLabel(s);
 
   // Parent State Analysis
   if (state === "EXITING") {
@@ -1811,6 +1858,8 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
     parts.push("Jrd Primary entry is being confirmed live.");
   } else if (state === "LVL4_TRAIL") {
     parts.push("Jrd Primary is in high-protection trailing mode.");
+  } else if (state === "LVL1_LOCK" || state === "LVL2_LOCK" || state === "LVL3_LOCK") {
+    parts.push("Jrd Primary is locked with a live trailing floor.");
   } else if (isHoldingFamilyState(state)) {
     parts.push("Jrd Primary is live and being managed.");
   } else if (state === "WAITING_ENTRY") {
@@ -1829,6 +1878,10 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
     if (Number(netPct) > 0) parts.push(`Net is green at ${pctNum(netPct)}.`);
     else if (Number(netPct) < 0) parts.push(`Net is red at ${pctNum(netPct)}.`);
     else parts.push(`Net is flat at ${pctNum(netPct)}.`);
+  }
+
+  if (trailMovement) {
+    parts.push(trailMovement);
   }
 
   // Spread and Drawdown
