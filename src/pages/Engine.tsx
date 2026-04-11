@@ -864,6 +864,11 @@ function primaryExitFloorPct(slot: SlotRow) {
   return null;
 }
 
+function primaryExitFloorLabel(slot: SlotRow) {
+  const floor = primaryExitFloorPct(slot);
+  return floor != null && Number.isFinite(floor) ? pctNum(floor) : "Not armed";
+}
+
 function primaryTrailLabel(slot: SlotRow) {
   if (slot.level === 4) return "LVL4 peak trail";
   if (!(slot.level >= 1 && slot.level <= 3)) return "-";
@@ -881,6 +886,41 @@ function primaryTrailLabel(slot: SlotRow) {
   }
 
   return "Lock only";
+}
+
+function primaryTrailToneClass(slot: SlotRow) {
+  if (slot.level === 4) return "is-holding";
+  if (!(slot.level >= 1 && slot.level <= 3)) return "is-muted";
+
+  const lockPct = slot.lockPct;
+  const trailFloorPct = slot.levelTrailFloorPct;
+  if (
+    lockPct != null &&
+    Number.isFinite(lockPct) &&
+    trailFloorPct != null &&
+    Number.isFinite(trailFloorPct) &&
+    trailFloorPct > lockPct
+  ) {
+    return "is-holding";
+  }
+
+  return "is-tracking";
+}
+
+function primaryTrailFloorLabel(slot: SlotRow) {
+  if (slot.levelTrailFloorPct != null && Number.isFinite(slot.levelTrailFloorPct)) {
+    return pctNum(slot.levelTrailFloorPct);
+  }
+  if (slot.level != null && slot.level >= 1 && slot.level <= 3) return "Static lock only";
+  return "Not armed";
+}
+
+function primaryTrailPeakLabel(slot: SlotRow) {
+  if (slot.levelTrailPeakNetPct != null && Number.isFinite(slot.levelTrailPeakNetPct)) {
+    return pctNum(slot.levelTrailPeakNetPct);
+  }
+  if (slot.level === 4) return "Awaiting peak";
+  return "No peak yet";
 }
 
 function managerLevelTrailLabel(trail: ManagerLevelTrailConfig | undefined) {
@@ -2077,7 +2117,7 @@ function useEngineData(BASE: string): EngineData {
       const capitalRes = await fetchPublicCapital(ctrl.signal);
       if (disposedRef.current) return;
       setCapital(capitalRes);
-    } catch (e: unknown) {
+    } catch {
       if (disposedRef.current) return;
     } finally {
       ctrl.abort();
@@ -3177,7 +3217,27 @@ const SlotModal = React.memo(function SlotModal(props: {
           </CollapsibleBlock>
 
           <CollapsibleBlock title="Jrd Primary" defaultOpen>
-            <div className="slot-section">Core Metrics</div>
+          <div className="slot-section">Core Metrics</div>
+
+            <div className="slot-section">Primary Rail</div>
+            <div className="primary-rail-grid">
+              <div className={`primary-rail-item ${primaryTrailToneClass(slot)}`}>
+                <div className="slot-k">Exit Floor</div>
+                <div className="slot-v">{primaryExitFloorLabel(slot)}</div>
+              </div>
+              <div className={`primary-rail-item ${primaryTrailToneClass(slot)}`}>
+                <div className="slot-k">Primary Rail</div>
+                <div className="slot-v">{primaryTrailLabel(slot)}</div>
+              </div>
+              <div className="primary-rail-item">
+                <div className="slot-k">Trail Floor</div>
+                <div className="slot-v">{primaryTrailFloorLabel(slot)}</div>
+              </div>
+              <div className="primary-rail-item">
+                <div className="slot-k">Trail Peak Net</div>
+                <div className="slot-v">{primaryTrailPeakLabel(slot)}</div>
+              </div>
+            </div>
 
             <div className="slot-modal-grid">
               <div><div className="slot-k">Unit</div><div className="slot-v">{moneyAud(slot.unitAud)}</div></div>
@@ -3188,10 +3248,6 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Net</div><div className="slot-v">{pctNum(slot.netPct)}</div></div>
               <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "-"}</div></div>
               <div><div className="slot-k">Lock</div><div className="slot-v">{lockDisplay(slot)}</div></div>
-              <div><div className="slot-k">Exit Floor</div><div className="slot-v">{pctNum(primaryExitFloorPct(slot))}</div></div>
-              <div><div className="slot-k">Primary Rail</div><div className="slot-v">{primaryTrailLabel(slot)}</div></div>
-              <div><div className="slot-k">Trail Floor</div><div className="slot-v">{pctNum(slot.levelTrailFloorPct)}</div></div>
-              <div><div className="slot-k">Trail Peak Net</div><div className="slot-v">{pctNum(slot.levelTrailPeakNetPct)}</div></div>
               <div><div className="slot-k">Spread</div><div className="slot-v">{pctNum(slot.nowSpreadPct)}</div></div>
               <div><div className="slot-k">Drawdown</div><div className="slot-v">{pctNum(slot.drawdownPct)}</div></div>
               <div><div className="slot-k">Re-entry target</div><div className="slot-v">{fmt(slot.reentryTargetMid)}</div></div>
@@ -3545,18 +3601,41 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
         <div className="engine-upgrade-grid">
           <div className="engine-upgrade-item">
             <div className="engine-upgrade-k">Primary Ladder</div>
+            <div className="engine-upgrade-lines">
+              <div className="engine-upgrade-line">
+                <span className="engine-upgrade-line-label">LVL1</span>
+                <span className="engine-upgrade-line-value">{pctNum(holding?.lvl1Pct)} arm / {pctNum(holding?.lock1Pct)} lock</span>
+              </div>
+              <div className="engine-upgrade-line">
+                <span className="engine-upgrade-line-label">LVL2</span>
+                <span className="engine-upgrade-line-value">{pctNum(holding?.lvl2Pct)} arm / {pctNum(holding?.lock2Pct)} lock</span>
+              </div>
+              <div className="engine-upgrade-line">
+                <span className="engine-upgrade-line-label">LVL3</span>
+                <span className="engine-upgrade-line-value">{pctNum(holding?.lvl3Pct)} arm / {pctNum(holding?.lock3Pct)} lock</span>
+              </div>
+            </div>
             <div className="engine-upgrade-v">
-              L1 {pctNum(holding?.lvl1Pct)} / {pctNum(holding?.lock1Pct)} | L2 {pctNum(holding?.lvl2Pct)} / {pctNum(holding?.lock2Pct)} | L3 {pctNum(holding?.lvl3Pct)} / {pctNum(holding?.lock3Pct)}
+              LVL4 {pctNum(holding?.lvl4Pct)} | peak trail {pctNum(holding?.lvl4TrailPct)}
             </div>
-            <div className="engine-upgrade-sub">
-              LVL4 {pctNum(holding?.lvl4Pct)} | LVL4 trail {pctNum(holding?.lvl4TrailPct)}
-            </div>
+            <div className="engine-upgrade-sub">Levels 1-3 still defend their static lock floors before any additive trail takes over.</div>
           </div>
 
           <div className="engine-upgrade-item">
             <div className="engine-upgrade-k">Primary Level Trails</div>
-            <div className="engine-upgrade-v">
-              L1 {managerLevelTrailLabel(levelTrails?.lvl1)} | L2 {managerLevelTrailLabel(levelTrails?.lvl2)} | L3 {managerLevelTrailLabel(levelTrails?.lvl3)}
+            <div className="engine-upgrade-lines">
+              <div className="engine-upgrade-line">
+                <span className="engine-upgrade-line-label">LVL1</span>
+                <span className="engine-upgrade-line-value">{managerLevelTrailLabel(levelTrails?.lvl1)}</span>
+              </div>
+              <div className="engine-upgrade-line">
+                <span className="engine-upgrade-line-label">LVL2</span>
+                <span className="engine-upgrade-line-value">{managerLevelTrailLabel(levelTrails?.lvl2)}</span>
+              </div>
+              <div className="engine-upgrade-line">
+                <span className="engine-upgrade-line-label">LVL3</span>
+                <span className="engine-upgrade-line-value">{managerLevelTrailLabel(levelTrails?.lvl3)}</span>
+              </div>
             </div>
             <div className="engine-upgrade-sub">
               Fixed locks remain the minimum floor. These trails only raise the exit floor inside LVL1-LVL3 bands.
@@ -3795,7 +3874,7 @@ export default function Engine() {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
-  const fixedAllowlist = meta?.fixedSlots?.allowlist ?? [];
+  const fixedAllowlist = useMemo(() => meta?.fixedSlots?.allowlist ?? [], [meta?.fixedSlots?.allowlist]);
   const engineCoinSet = useMemo(
     () => new Set(fixedAllowlist.map((c) => String(c).toUpperCase())),
     [fixedAllowlist]
