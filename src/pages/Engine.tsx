@@ -878,6 +878,22 @@ function effectiveNowLabel(s: SlotRow) {
   return "-";
 }
 
+function effectiveNowMid(s: SlotRow) {
+  if (s.nowMid != null && Number.isFinite(s.nowMid)) return s.nowMid;
+  if (s.candidateMidPrev != null && Number.isFinite(s.candidateMidPrev)) return s.candidateMidPrev;
+  return null;
+}
+
+function reentryTargetHit(s: SlotRow) {
+  return (
+    s.reentryTargetMid != null &&
+    Number.isFinite(s.reentryTargetMid) &&
+    effectiveNowMid(s) != null &&
+    Number.isFinite(effectiveNowMid(s)) &&
+    Number(effectiveNowMid(s)) <= Number(s.reentryTargetMid)
+  );
+}
+
 function lockDisplay(s: SlotRow) {
   return pctNum(s.lockPct);
 }
@@ -1819,7 +1835,15 @@ function entryPhaseLabel(s: SlotRow) {
   const state = String(s.state || "").toUpperCase();
   const tracking = String(s.trackingState || "").toUpperCase();
 
-  if (state === "WAITING_ENTRY" && s.reentryTargetMid != null) return "Waiting for re-entry level";
+  if (state === "WAITING_ENTRY" && s.reentryTargetMid != null) {
+    if (reentryTargetHit(s)) {
+      if (tracking === "REVERSAL_CONFIRMING") return "Re-entry target hit, confirming reversal";
+      if (tracking === "SPREAD_BLOCKED") return "Re-entry target hit, spread blocked";
+      if (tracking === "NO_MARKET") return "Re-entry target hit, no market";
+      return "Re-entry target hit, waiting for reversal";
+    }
+    return "Waiting for re-entry level";
+  }
   if (tracking === "REVERSAL_CONFIRMING") return "Reversal confirming";
   if (tracking === "DRAWDOWN_SEEN") return "Drawdown observed";
   if (tracking === "TRACKING") return "Tracking structure";
@@ -1863,7 +1887,19 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   } else if (isHoldingFamilyState(state)) {
     parts.push("Jrd Primary is live and being managed.");
   } else if (state === "WAITING_ENTRY") {
-    parts.push("Jrd Primary is waiting for a qualified re-entry.");
+    if (reentryTargetHit(s)) {
+      if (tracking === "REVERSAL_CONFIRMING") {
+        parts.push("Jrd Primary has reached its re-entry target and reversal confirmation is building.");
+      } else if (tracking === "SPREAD_BLOCKED") {
+        parts.push("Jrd Primary has reached its re-entry target, but spread is blocking deployment.");
+      } else if (tracking === "NO_MARKET") {
+        parts.push("Jrd Primary has reached its re-entry target, but live market confirmation is unavailable.");
+      } else {
+        parts.push("Jrd Primary has reached its re-entry target and is waiting for reversal confirmation.");
+      }
+    } else {
+      parts.push("Jrd Primary is waiting for a qualified re-entry.");
+    }
   } else {
     parts.push("Jrd Primary is being observed.");
   }
