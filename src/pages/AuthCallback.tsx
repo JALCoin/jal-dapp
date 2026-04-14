@@ -9,7 +9,7 @@ export default function AuthCallback() {
   const [error, setError] = useState("");
 
   const nextPath = useMemo(() => {
-    return searchParams.get("next") || "/app/jal-sol";
+  return searchParams.get("next") || "/app/home";
   }, [searchParams]);
 
   useEffect(() => {

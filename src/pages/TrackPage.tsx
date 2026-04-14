@@ -20,7 +20,7 @@ export default function TrackPage() {
         <section className="card machine-surface panel-frame shop-panel track-panel">
           <div className="shop-header track-header">
             <div className="shop-header-main">
-              <p className="shop-eyebrow">JALSOL Storefront</p>
+              <p className="shop-eyebrow">Jeremy Aaron Lugg Store</p>
               <h1 className="home-title shop-title">Track Order</h1>
 
               <p className="home-lead shop-lead">

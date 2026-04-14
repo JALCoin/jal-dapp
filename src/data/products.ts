@@ -37,7 +37,6 @@ const EMAIL = "358jal@gmail.com";
 
 const STRIPE_LINKS = {
   hoodieXXL: "https://buy.stripe.com/cNi00ifVKbgn6Kr6ss0x207",
-  miniPillow: "",
 };
 
 function mailto(subject: string, bodyLines?: string[]) {
@@ -110,7 +109,7 @@ export const PRODUCTS: Product[] = [
     links: STRIPE_LINKS.hoodieXXL
       ? [
           {
-            label: "Claim",
+            label: "Buy Now",
             href: STRIPE_LINKS.hoodieXXL,
           },
         ]
@@ -120,25 +119,6 @@ export const PRODUCTS: Product[] = [
             href: preorderMailto("Pre-order - JALSOL Embroidered Hoodie (XXL) - $130.00 AUD"),
           },
         ],
-  },
-  {
-    id: "mini-pillow-plush",
-    title: "JALSOL Embroidered Mini Pillow Plush",
-    kind: "physical",
-    status: STRIPE_LINKS.miniPillow ? "active" : "coming_soon",
-    priceNote: "$17.50 AUD",
-    summary:
-      "Collectible mini plush with clean embroidery, simple entry pricing, and a repeatable physical production format.",
-    tags: ["Physical", "Handmade", "Preorder", "New"],
-    image: "/shop/mini-pillow-plush.jpg",
-    links: buildLinks({
-      stripeHref: STRIPE_LINKS.miniPillow || undefined,
-      stripeLabel: "Buy Now",
-      enquiryHref: preorderMailto(
-        "Pre-order - JALSOL Embroidered Mini Pillow Plush - $17.50 AUD"
-      ),
-      enquiryLabel: STRIPE_LINKS.miniPillow ? "Enquire" : "Pre-order via Email",
-    }),
   },
   {
     id: "solid-gold-cuff",
@@ -158,7 +138,7 @@ export const PRODUCTS: Product[] = [
         "Finish: polished / matte / brushed",
         "Engraving: yes / no (details):",
       ]),
-      enquiryLabel: "Request Access",
+      enquiryLabel: "Pre-order via Email",
     }),
   },
 ];

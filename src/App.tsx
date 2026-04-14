@@ -375,68 +375,68 @@ function AboutPage() {
           <h1 className="home-title">About Jeremy Aaron Lugg</h1>
           <p className="home-lead">
             <strong>Jeremy Aaron Lugg operates this public site under ABN 35 780 648 234.</strong>{" "}
-            I have always been drawn to building, process, design, and the way structure turns
-            ideas into something real.
+            JALSOL is the public business domain behind that work: a founder-led space shaped by
+            hands-on experience, systems thinking, product direction, and long-term interest in
+            digital markets.
           </p>
           <p className="home-lead">
-            My background is hands-on. I spent years learning through construction, workshop
-            environments, machining, and practical trade work. Those experiences shaped the way I
-            think: start with the foundations, understand the system, respect the tools, and build
-            carefully.
+            My background is practical first. Construction, workshop environments, machining, and
+            trade work taught me to think in structure, tolerances, process, and accountability.
+            That mindset still drives the way I approach websites, products, markets, and brand
+            building today.
           </p>
           <p className="home-lead">
-            Over time, that same mindset pulled me deeper into computers, digital tools, online
-            products, and eventually blockchain systems. What began as curiosity about how markets,
-            software, and infrastructure work evolved into a long-term effort to build something of
-            my own.
+            Over time, that same mindset pulled me deeper into digital systems, online products,
+            entrepreneurship, and cryptocurrency infrastructure. What started as curiosity became a
+            long-term effort to build something with a clear identity and a real public footprint.
           </p>
           <div className="home-links">
-            <a className="chip" href="/app/compliance">
-              Compliance Notice
-            </a>
-            <a className="chip" href="/app/shop">
-              Shop
+            <a className="chip" href="/app/legal">
+              Legal + Business Details
             </a>
             <a className="chip" href={LEGAL_CONTACT_MAILTO}>
               Contact
+            </a>
+            <a className="chip" href="/app/shop">
+              Shop
             </a>
           </div>
         </section>
 
         <section className="card machine-surface panel-frame">
           <h2 className="home-title" style={{ fontSize: "clamp(1.3rem, 2.2vw, 2rem)" }}>
-            My Story
+            Background
           </h2>
           <p className="home-lead">
-            I did not come into this through a conventional tech path. I came into it through work,
-            observation, and persistence. I learned from builders, tradesmen, workshop teams, and
-            people willing to give me a chance to develop real skills. I also learned through hard
-            changes in family life, responsibility, and the need to create stability for the people
-            closest to me.
+            I did not come into this through a conventional tech route. I came into it through
+            work, observation, persistence, and the kind of environments where what you build has
+            to hold up under pressure. Builders, tradesmen, workshop teams, and practical work
+            shaped the way I think about quality and responsibility.
           </p>
           <p className="home-lead">
             That combination of hands-on trade experience and deep curiosity about systems pushed me
-            toward entrepreneurship. I became interested in how products are built, how value moves,
-            how technology can be shaped into something useful, and how digital and physical work
-            can exist together under one business.
+            toward entrepreneurship. I became interested in how products are built, how money
+            moves, how software supports a business, and how a founder can shape both physical and
+            digital output under one public identity.
           </p>
           <p className="home-lead">
             The JAL identity comes from my initials, and the JALSOL project grew out of years of
-            research into software, online sales, cryptocurrency infrastructure, and blockchain
-            tools. For me, it represents experimentation, discipline, and the ongoing effort to
-            turn skill, process, and lived experience into something practical.
+            research into software, online commerce, cryptocurrency infrastructure, and blockchain
+            tools. For me, it represents discipline, experimentation, and the ongoing effort to
+            turn lived experience and technical curiosity into something that feels real.
           </p>
         </section>
 
         <section className="card machine-surface panel-frame">
           <h2 className="home-title" style={{ fontSize: "clamp(1.3rem, 2.2vw, 2rem)" }}>
-            What Shaped This Site
+            Areas Of Focus
           </h2>
           <ul className="home-identity-points">
-            <li>Construction and trade work taught me to respect structure, detail, and process.</li>
-            <li>Mechanical fitting and machining taught me precision, systems thinking, and repeatability.</li>
-            <li>Entrepreneurship taught me that products, money, and public offers must be simple, compliant, and accountable.</li>
-            <li>Research into blockchain and developer tooling showed me how technical systems can be turned into products and tools.</li>
+            <li>Founder-led business identity and public brand direction.</li>
+            <li>Systems thinking shaped by trade, workshop, and practical build environments.</li>
+            <li>Product direction across physical releases, storefronts, and digital business surfaces.</li>
+            <li>Long-term interest in cryptocurrency markets, blockchain systems, and technical infrastructure.</li>
+            <li>Clear public communication, legal visibility, and accountable business presentation.</li>
           </ul>
         </section>
 
@@ -445,19 +445,20 @@ function AboutPage() {
             What This Site Is Today
           </h2>
           <p className="home-lead">
-            Today, this public site is the business-facing surface for Jeremy Aaron Lugg. It
-            currently focuses on operator identity, legal clarity, and physical merch while public
-            interactive features remain paused for review.
+            Today, this public site is the business-facing surface for Jeremy Aaron Lugg. It is
+            designed to feel more like a professional founder domain than a generic project page:
+            clear identity, clear legal footing, a coherent public offer, and room for the brand to
+            grow carefully.
           </p>
           <p className="home-lead">
-            Internal development, including private operator tooling such as JAL Engine, remains a
-            separate matter from the current public offer. The public site is not presented as a
-            live trading platform, public exchange, or managed financial service.
+            Cryptocurrency remains part of the market context and long-term direction of the brand,
+            but the site is not presented as a live exchange, public brokerage, or managed
+            financial service. The goal is credibility, not noise.
           </p>
           <p className="home-lead">
-            The goal from here is straightforward: build carefully, stay compliant, and create
-            something real that reflects both the practical skills I have developed and the long
-            path that led me here.
+            The direction from here is straightforward: build carefully, stay accountable, and make
+            the public business domain feel strong enough to represent the person and the work
+            behind it.
           </p>
         </section>
       </div>
@@ -470,15 +471,16 @@ function LegalHubPage() {
     <main className="home-shell" aria-label="Legal pages">
       <div className="home-wrap">
         <section className="card machine-surface panel-frame">
-          <h1 className="home-title">Legal Pages</h1>
+          <h1 className="home-title">Legal And Business Details</h1>
           <p className="home-lead">
-            This page is the document hub for the site. Use it for the formal pages that set out
-            the current public boundary, operator details, customer rights, privacy handling, and
-            compliance posture.
+            This page is the public document hub for the site. It is where visitors can verify the
+            operator, review the key public documents, and understand the business-facing side of
+            JALSOL without guesswork.
           </p>
           <p className="home-lead">
-            If About is the plain-language story, Legal is the place for the documents and source
-            links that support that story.
+            If the About page explains the person and direction, this page explains the formal
+            business identity, privacy handling, terms, disclaimers, and the current public-site
+            settings that support that story.
           </p>
           <div className="home-links">
             <a className="chip" href="/terms">
@@ -491,7 +493,7 @@ function LegalHubPage() {
               Disclaimer
             </a>
             <a className="chip" href="/app/compliance">
-              Compliance Notice
+              Site Settings
             </a>
             <a
               className="chip"
@@ -506,13 +508,13 @@ function LegalHubPage() {
 
         <section className="card machine-surface panel-frame">
           <h2 className="home-title" style={{ fontSize: "clamp(1.3rem, 2.2vw, 2rem)" }}>
-            What Legal Should Cover
+            What This Hub Covers
           </h2>
           <ul className="home-identity-points">
-            <li>Terms of use and consumer-law boundaries</li>
-            <li>Privacy practices and contact points</li>
-            <li>Disclaimer language around current site activity</li>
-            <li>ABN identity and current compliance status</li>
+            <li>Terms of use, consumer-law boundaries, and public business identity.</li>
+            <li>Privacy practices, contact points, and information handling.</li>
+            <li>Disclaimer language around current site activity and market context.</li>
+            <li>ABN identity, public operator details, and current site settings.</li>
           </ul>
         </section>
       </div>
@@ -525,31 +527,32 @@ function ComplianceNoticePage() {
     <main className="home-shell" aria-label="Compliance notice">
       <div className="home-wrap">
         <section className="card machine-surface panel-frame">
-          <h1 className="home-title">Temporary Compliance Pause</h1>
+          <h1 className="home-title">Current Public-Site Settings</h1>
           <p className="home-lead">
-            Interactive site features are temporarily unavailable while registrations and legal
-            settings are reviewed.
+            Some interactive features remain unavailable while registrations and legal settings are
+            reviewed.
           </p>
           <p className="home-lead">
-            Physical merch, operator identity, and legal information remain available. Orders and
-            site activity continue to be supplied by Jeremy Aaron Lugg under ABN 35 780 648 234.
+            The public site currently focuses on founder identity, business clarity, legal
+            documentation, and physical merch supplied by Jeremy Aaron Lugg under ABN 35 780 648
+            234.
           </p>
           <p className="home-lead">
-            Internal operator tools may remain available to authenticated engineer accounts and are
-            not part of the current public site offer.
+            This page exists to keep the boundary transparent. It is not intended to overpower the
+            site, only to make the current public offer easy to understand.
           </p>
           <div className="home-links">
-            <a className="chip" href="/terms">
-              Terms
+            <a className="chip" href="/app/about">
+              About Jeremy
             </a>
-            <a className="chip" href="/privacy">
-              Privacy
-            </a>
-            <a className="chip" href="/disclaimer">
-              Disclaimer
+            <a className="chip" href="/app/legal">
+              Legal Hub
             </a>
             <a className="chip" href="/app/shop">
               Shop
+            </a>
+            <a className="chip" href="/terms">
+              Terms
             </a>
           </div>
         </section>
@@ -580,18 +583,18 @@ function SitewideNoticeBar() {
         padding: "12px 18px",
         borderBottom: "1px solid rgba(255,255,255,0.12)",
         background:
-          "linear-gradient(90deg, rgba(110,26,26,0.96), rgba(83,33,17,0.96), rgba(42,34,17,0.96))",
-        color: "#f6ead9",
+          "linear-gradient(90deg, rgba(56,46,20,0.96), rgba(34,34,24,0.96), rgba(14,18,22,0.98))",
+        color: "#f4ecd7",
         fontSize: "0.92rem",
         letterSpacing: "0.02em",
       }}
     >
-      Interactive features are temporarily paused while registrations and legal settings are
-      reviewed. Visit{" "}
+      Founder site for Jeremy Aaron Lugg. Some interactive features remain unavailable while legal
+      settings are reviewed. Visit{" "}
       <a href="/app/compliance" style={{ color: "#fff4d6" }}>
-        the compliance notice
+        current public-site settings
       </a>{" "}
-      for the current public site status.
+      for the latest public status.
     </div>
   );
 }

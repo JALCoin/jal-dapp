@@ -20,9 +20,17 @@ type Snapshot = {
   lastOkIso: string | null;
   lastPollAt?: number | null;
   lastPollIso?: string | null;
+  ageMsSinceOk?: number | null;
+  ageMsSincePoll?: number | null;
   err: string | null;
   counts: { all: number; aud: number; watch: number };
   watch: string[];
+  requiredAudCoins?: string[];
+  probe?: Record<string, unknown> | null;
+  roFallback?: {
+    enabled?: boolean;
+    delegatedTo?: string;
+  };
   pollMs?: number;
   url?: string;
   history?: {
@@ -506,6 +514,43 @@ type ManagerStatus = WorkerStatus & {
   };
 };
 
+type RotationDashboardSummary = {
+  policyEnabled?: boolean;
+  policyRunning?: boolean;
+  executorEnabled?: boolean;
+  executorRunning?: boolean;
+  executorDryRun?: boolean;
+  recommend?: boolean;
+  blockedReason?: string | null;
+  edgeScore?: number | null;
+  activeReservations?: number;
+  reservationStages?: Record<string, number>;
+  eligibleInCandidates?: number;
+  eligibleOutCandidates?: number;
+};
+
+type RotationDashboardDecision = {
+  recommend?: boolean;
+  edgeScore?: number | null;
+  rawEdgeScore?: number | null;
+  blockedReason?: string | null;
+  rotationReason?: string | null;
+  bestOut?: {
+    slotId?: string | null;
+    coin?: string | null;
+    state?: string | null;
+    score?: number | null;
+    sourceType?: string | null;
+  } | null;
+  bestIn?: {
+    slotId?: string | null;
+    coin?: string | null;
+    state?: string | null;
+    score?: number | null;
+  } | null;
+  [key: string]: unknown;
+};
+
 type PublicMetaResponse = {
   ok: boolean;
   ts: number;
@@ -592,6 +637,10 @@ type PublicMetaResponse = {
       configured?: number;
       byStatus?: Record<string, number>;
     };
+    marketFreshness?: {
+      pollMs?: number;
+      [key: string]: unknown;
+    };
     telemetry?: {
       eventsSeen?: number;
       eventsWritten?: number;
@@ -631,6 +680,9 @@ type PublicMetaResponse = {
         };
       };
     };
+    tradeTelemetry?: {
+      [key: string]: unknown;
+    };
     eventCompression?: {
       enabled?: boolean;
       windowMs?: number;
@@ -649,33 +701,76 @@ type PublicMetaResponse = {
       }>;
     };
     rotationDashboard?: {
-      summary?: {
-        policyEnabled?: boolean;
-        policyRunning?: boolean;
-        executorEnabled?: boolean;
-        executorRunning?: boolean;
-        executorDryRun?: boolean;
-        recommend?: boolean;
-        blockedReason?: string | null;
-        edgeScore?: number | null;
-        activeReservations?: number;
-        reservationStages?: Record<string, number>;
-        eligibleInCandidates?: number;
-        eligibleOutCandidates?: number;
+      summary?: RotationDashboardSummary;
+      recommendation?: RotationDashboardDecision | null;
+      executor?: {
+        lastActionAt?: number | null;
+        lastAction?: {
+          type?: string | null;
+          reason?: string | null;
+          reservationId?: string | null;
+          dryRun?: boolean;
+          outSlotId?: string | null;
+          inSlotId?: string | null;
+          edgeScore?: number | null;
+          error?: string | null;
+        } | null;
+        lastPair?: {
+          reservationId?: string | null;
+          outSlotId?: string | null;
+          outCoin?: string | null;
+          inSlotId?: string | null;
+          inCoin?: string | null;
+          edgeScore?: number | null;
+        } | null;
       };
-      policyEnabled?: boolean;
-      policyRunning?: boolean;
-      executorEnabled?: boolean;
-      executorRunning?: boolean;
-      executorDryRun?: boolean;
-      recommend?: boolean;
-      blockedReason?: string | null;
-      edgeScore?: number | null;
-      activeReservations?: number;
-      reservationStages?: Record<string, number>;
-      eligibleInCandidates?: number;
-      eligibleOutCandidates?: number;
-    };
+      reservations?: Array<{
+        reservationId?: string;
+        slotCount?: number;
+        stages?: string[];
+        updatedAt?: number | null;
+        out?: {
+          slotId?: string | null;
+          coin?: string | null;
+          state?: string | null;
+          stage?: string | null;
+        } | null;
+        in?: {
+          slotId?: string | null;
+          coin?: string | null;
+          state?: string | null;
+          stage?: string | null;
+        } | null;
+      }>;
+      candidates?: {
+        in?: Array<{
+          slotId?: string;
+          coin?: string | null;
+          score?: number | null;
+          eligible?: boolean;
+          blockedReason?: string | null;
+          targetExecutorEligible?: boolean;
+          sourceSlotId?: string | null;
+          edgeScore?: number | null;
+          reason?: string | null;
+        }>;
+        out?: Array<{
+          slotId?: string;
+          coin?: string | null;
+          state?: string | null;
+          score?: number | null;
+          eligible?: boolean;
+          blockedReason?: string | null;
+          sourceType?: string | null;
+          walletReady?: boolean;
+          walletBlockedReason?: string | null;
+          targetSlotId?: string | null;
+          targetCoin?: string | null;
+          edgeScore?: number | null;
+          reason?: string | null;
+        }>;
+      };
+    } & RotationDashboardSummary;
     rotationExecutor?: {
       enabled?: boolean;
       dryRun?: boolean;
@@ -741,6 +836,10 @@ type PublicCapitalResponse = {
     requireWaitingEligible?: boolean | null;
     walletRequireBasis?: boolean | null;
     walletMinSourceNetPct?: number | null;
+    minSourceAud?: number | null;
+    maxSourcePct?: number | null;
+    maxAudPerTrade?: number | null;
+    cooldownMs?: number | null;
   } | null;
   coins?: PublicCapitalCoin[] | null;
 };
@@ -3963,6 +4062,168 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   );
 });
 
+const RotationPolicyPanel = React.memo(function RotationPolicyPanel(props: {
+  meta: PublicMetaResponse | null;
+  capital: PublicCapitalResponse | null;
+  nowMs: number;
+}) {
+  const dashboard = props.meta?.runtime?.rotationDashboard;
+  const summary = dashboard?.summary ?? dashboard;
+  const recommendation = dashboard?.recommendation ?? null;
+  const executor = dashboard?.executor ?? null;
+  const reservations = Array.isArray(dashboard?.reservations) ? dashboard.reservations : [];
+  const outCandidates = Array.isArray(dashboard?.candidates?.out)
+    ? dashboard.candidates.out.slice(0, 4)
+    : [];
+  const inCandidates = Array.isArray(dashboard?.candidates?.in)
+    ? dashboard.candidates.in.slice(0, 4)
+    : [];
+
+  const policyState = !summary?.policyEnabled
+    ? "OFF"
+    : recommendation?.recommend
+    ? "RECOMMENDING"
+    : recommendation?.blockedReason || summary?.blockedReason
+    ? "BLOCKED"
+    : summary?.policyRunning
+    ? "SCANNING"
+    : "IDLE";
+
+  const executorAction = executor?.lastAction?.type
+    ? enumLabel(executor.lastAction.type)
+    : executor?.lastAction?.reason
+    ? reasonLabel(executor.lastAction.reason)
+    : "-";
+
+  return (
+    <div className="engine-bay">
+      <div className="bay-head">
+        <div className="bay-title">Rotation Policy</div>
+        <div className="bay-note">Read-only view of the current recommendation, pair reservations, and executor handoff state.</div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry capital-panel">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">Policy & Executor Surface</div>
+            <div className="engine-telemetry-note">
+              Policy {policyState} | Executor {rotationModeLabel(props.capital)} | Reservations {summary?.activeReservations ?? 0}
+            </div>
+          </div>
+        </div>
+
+        <div className="secondary-summary capital-summary">
+          <div className="secondary-grid capital-summary-grid">
+            <div><div className="slot-k">Policy State</div><div className="slot-v">{policyState}</div></div>
+            <div><div className="slot-k">Executor Mode</div><div className="slot-v">{rotationModeLabel(props.capital)}</div></div>
+            <div><div className="slot-k">Recommend</div><div className="slot-v">{yesNo(recommendation?.recommend)}</div></div>
+            <div><div className="slot-k">Net Edge</div><div className="slot-v">{fmt(recommendation?.edgeScore ?? summary?.edgeScore)}</div></div>
+            <div><div className="slot-k">Raw Edge</div><div className="slot-v">{fmt(recommendation?.rawEdgeScore)}</div></div>
+            <div><div className="slot-k">Blocked</div><div className="slot-v">{reasonLabel(recommendation?.blockedReason ?? summary?.blockedReason)}</div></div>
+            <div><div className="slot-k">Rotation Reason</div><div className="slot-v">{reasonLabel(recommendation?.rotationReason)}</div></div>
+            <div><div className="slot-k">Reservation Stages</div><div className="slot-v">{summarizeRecordTop(summary?.reservationStages, 4)}</div></div>
+            <div><div className="slot-k">Eligible Out</div><div className="slot-v">{summary?.eligibleOutCandidates ?? 0}</div></div>
+            <div><div className="slot-k">Eligible In</div><div className="slot-v">{summary?.eligibleInCandidates ?? 0}</div></div>
+            <div><div className="slot-k">Executor Action</div><div className="slot-v">{executorAction}</div></div>
+            <div><div className="slot-k">Action Age</div><div className="slot-v">{fmtTimestampAge(executor?.lastActionAt, props.nowMs)}</div></div>
+          </div>
+        </div>
+
+        <div className="slot-section">Current Decision</div>
+        {recommendation?.bestOut || recommendation?.bestIn ? (
+          <div className="secondary-list">
+            <div className="secondary-card">
+              <div className="secondary-grid capital-coin-grid">
+                <div><div className="slot-k">Best Out</div><div className="slot-v">{recommendation?.bestOut?.coin ?? recommendation?.bestOut?.slotId ?? "-"}</div></div>
+                <div><div className="slot-k">Out Slot</div><div className="slot-v">{recommendation?.bestOut?.slotId ?? "-"}</div></div>
+                <div><div className="slot-k">Out State</div><div className="slot-v">{recommendation?.bestOut?.state ?? "-"}</div></div>
+                <div><div className="slot-k">Out Score</div><div className="slot-v">{fmt(recommendation?.bestOut?.score)}</div></div>
+                <div><div className="slot-k">Source Type</div><div className="slot-v">{recommendation?.bestOut?.sourceType ?? "-"}</div></div>
+                <div><div className="slot-k">Best In</div><div className="slot-v">{recommendation?.bestIn?.coin ?? recommendation?.bestIn?.slotId ?? "-"}</div></div>
+                <div><div className="slot-k">In Slot</div><div className="slot-v">{recommendation?.bestIn?.slotId ?? "-"}</div></div>
+                <div><div className="slot-k">In State</div><div className="slot-v">{recommendation?.bestIn?.state ?? "-"}</div></div>
+                <div><div className="slot-k">In Score</div><div className="slot-v">{fmt(recommendation?.bestIn?.score)}</div></div>
+                <div><div className="slot-k">Last Pair</div><div className="slot-v">{executor?.lastPair?.outCoin ?? executor?.lastPair?.outSlotId ?? "-"} to {executor?.lastPair?.inCoin ?? executor?.lastPair?.inSlotId ?? "-"}</div></div>
+                <div><div className="slot-k">Last Pair Reservation</div><div className="slot-v">{executor?.lastPair?.reservationId ?? "-"}</div></div>
+                <div><div className="slot-k">Last Pair Edge</div><div className="slot-v">{fmt(executor?.lastPair?.edgeScore)}</div></div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="ledger-empty">
+            {summary?.policyEnabled
+              ? `No active recommendation is selected right now. ${reasonLabel(recommendation?.blockedReason ?? summary?.blockedReason)}`
+              : "Rotation policy is currently disabled."}
+          </div>
+        )}
+
+        <div className="slot-section">Active Reservations</div>
+        {reservations.length ? (
+          <div className="secondary-list">
+            {reservations.map((reservation) => (
+              <div key={reservation.reservationId ?? `${reservation.out?.slotId ?? "out"}-${reservation.in?.slotId ?? "in"}`} className="secondary-card">
+                <div className="secondary-grid capital-coin-grid">
+                  <div><div className="slot-k">Reservation</div><div className="slot-v">{reservation.reservationId ?? "-"}</div></div>
+                  <div><div className="slot-k">Stages</div><div className="slot-v">{reservation.stages?.join(" | ") || "-"}</div></div>
+                  <div><div className="slot-k">Updated</div><div className="slot-v">{fmtTimestampAge(reservation.updatedAt, props.nowMs)}</div></div>
+                  <div><div className="slot-k">Out</div><div className="slot-v">{reservation.out?.coin ?? reservation.out?.slotId ?? "-"}</div></div>
+                  <div><div className="slot-k">Out State</div><div className="slot-v">{reservation.out?.state ?? "-"}</div></div>
+                  <div><div className="slot-k">Out Stage</div><div className="slot-v">{reservation.out?.stage ?? "-"}</div></div>
+                  <div><div className="slot-k">In</div><div className="slot-v">{reservation.in?.coin ?? reservation.in?.slotId ?? "-"}</div></div>
+                  <div><div className="slot-k">In State</div><div className="slot-v">{reservation.in?.state ?? "-"}</div></div>
+                  <div><div className="slot-k">In Stage</div><div className="slot-v">{reservation.in?.stage ?? "-"}</div></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="ledger-empty">No paired reservations are active right now.</div>
+        )}
+
+        <div className="slot-section">Top Rotation Candidates</div>
+        {outCandidates.length || inCandidates.length ? (
+          <div className="secondary-list">
+            {outCandidates.map((candidate) => (
+              <div key={`rotation-out-${candidate.slotId ?? candidate.coin ?? "candidate"}`} className="secondary-card">
+                <div className="secondary-grid capital-coin-grid">
+                  <div><div className="slot-k">Out Coin</div><div className="slot-v">{candidate.coin ?? "-"}</div></div>
+                  <div><div className="slot-k">Slot</div><div className="slot-v">{candidate.slotId ?? "-"}</div></div>
+                  <div><div className="slot-k">State</div><div className="slot-v">{candidate.state ?? "-"}</div></div>
+                  <div><div className="slot-k">Eligible</div><div className="slot-v">{yesNo(candidate.eligible)}</div></div>
+                  <div><div className="slot-k">Score</div><div className="slot-v">{fmt(candidate.score)}</div></div>
+                  <div><div className="slot-k">Edge</div><div className="slot-v">{fmt(candidate.edgeScore)}</div></div>
+                  <div><div className="slot-k">Source Type</div><div className="slot-v">{candidate.sourceType ?? "-"}</div></div>
+                  <div><div className="slot-k">Target</div><div className="slot-v">{candidate.targetCoin ?? candidate.targetSlotId ?? "-"}</div></div>
+                  <div><div className="slot-k">Wallet Ready</div><div className="slot-v">{yesNo(candidate.walletReady)}</div></div>
+                  <div><div className="slot-k">Blocked</div><div className="slot-v">{reasonLabel(candidate.blockedReason ?? candidate.walletBlockedReason)}</div></div>
+                  <div><div className="slot-k">Reason</div><div className="slot-v">{reasonLabel(candidate.reason)}</div></div>
+                </div>
+              </div>
+            ))}
+            {inCandidates.map((candidate) => (
+              <div key={`rotation-in-${candidate.slotId ?? candidate.coin ?? "candidate"}`} className="secondary-card">
+                <div className="secondary-grid capital-coin-grid">
+                  <div><div className="slot-k">In Coin</div><div className="slot-v">{candidate.coin ?? "-"}</div></div>
+                  <div><div className="slot-k">Slot</div><div className="slot-v">{candidate.slotId ?? "-"}</div></div>
+                  <div><div className="slot-k">Eligible</div><div className="slot-v">{yesNo(candidate.eligible)}</div></div>
+                  <div><div className="slot-k">Score</div><div className="slot-v">{fmt(candidate.score)}</div></div>
+                  <div><div className="slot-k">Edge</div><div className="slot-v">{fmt(candidate.edgeScore)}</div></div>
+                  <div><div className="slot-k">Source Slot</div><div className="slot-v">{candidate.sourceSlotId ?? "-"}</div></div>
+                  <div><div className="slot-k">Executor Eligible</div><div className="slot-v">{yesNo(candidate.targetExecutorEligible)}</div></div>
+                  <div><div className="slot-k">Blocked</div><div className="slot-v">{reasonLabel(candidate.blockedReason)}</div></div>
+                  <div><div className="slot-k">Reason</div><div className="slot-v">{reasonLabel(candidate.reason)}</div></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="ledger-empty">No rotation candidates are currently surfaced by the public dashboard.</div>
+        )}
+      </div>
+    </div>
+  );
+});
+
 const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
   capital: PublicCapitalResponse | null;
   nowMs: number;
@@ -4499,6 +4760,7 @@ export default function Engine() {
                     view={view}
                     nowMs={nowMs}
                   />
+                  <RotationPolicyPanel meta={meta} capital={capital} nowMs={nowMs} />
                   <CapitalMobilityPanel capital={capital} nowMs={nowMs} />
                 </div>
               ) : null}

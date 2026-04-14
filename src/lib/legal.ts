@@ -48,6 +48,26 @@ export const OFFICIAL_SOURCES = {
     label: "business.gov.au - Legal essentials for business",
     href: "https://business.gov.au/legal/legal-essentials-for-business",
   },
+  homeBasedBusiness: {
+    label: "business.gov.au - Home-based businesses",
+    href: "https://business.gov.au/planning/business-structures-and-types/home-based-businesses",
+  },
+  gstRegistering: {
+    label: "ATO - Registering for GST",
+    href: "https://www.ato.gov.au/businesses-and-organisations/gst-excise-and-indirect-taxes/gst/registering-for-gst",
+  },
+  taxInvoices: {
+    label: "ATO - Tax invoices",
+    href: "https://www.ato.gov.au/businesses-and-organisations/gst-excise-and-indirect-taxes/gst/invoicing/tax-invoices",
+  },
+  recordKeeping: {
+    label: "ATO - Overview of record-keeping rules for business",
+    href: "https://www.ato.gov.au/businesses-and-organisations/preparing-lodging-and-paying/record-keeping-for-business/overview-of-record-keeping-rules-for-business",
+  },
+  buyingOnline: {
+    label: "ACCC - Buying online",
+    href: "https://www.accc.gov.au/consumers/buying-products-and-services/buying-online",
+  },
   protectCustomers: {
     label: "business.gov.au - Protect your customers' information",
     href: "https://business.gov.au/online-and-digital/cyber-security/protect-your-customers-information",
@@ -91,6 +111,18 @@ export const OFFICIAL_SOURCES = {
   refunds: {
     label: "ACCC - Repair, replace, refund, cancel",
     href: "https://www.accc.gov.au/consumers/consumer-rights-guarantees/repair-replace-refund",
+  },
+  productSafety: {
+    label: "business.gov.au - Product safety rules and standards",
+    href: "https://business.gov.au/legal/fair-trading/product-safety-rules-and-standards",
+  },
+  productLabelling: {
+    label: "business.gov.au - Labelling your products",
+    href: "https://business.gov.au/products-and-services/product-labelling/labelling-your-products",
+  },
+  spam: {
+    label: "ACMA - Avoid sending spam",
+    href: "https://www.acma.gov.au/avoid-sending-spam",
   },
   digitalAssets: {
     label: "ASIC - Digital assets: Financial products and services",
@@ -146,14 +178,14 @@ export const LEGAL_OPERATOR_FACTS: LegalFact[] = [
 ];
 
 export const JALSOL_ACTIVITY_BULLETS = [
-  "A physical merch store and made-to-order physical commissions.",
-  "Paid onboarding modules about wallets, signing, verification, self-custody and builder tooling.",
-  "A public read-only dashboard for Jeremy Aaron Lugg's own automated trading engine.",
-  "General educational and technical information about crypto tools and workflows.",
+  "A physical merch store with home-dispatched orders and made-to-order physical commissions.",
+  "Operator identity, contact details, and source-backed legal information about the current site boundary.",
+  "A temporary compliance notice while interactive site features are paused for review.",
+  "General business and support information published by Jeremy Aaron Lugg under ABN 35 780 648 234.",
 ];
 
 export const JALSOL_BOUNDARY_BULLETS = [
-  "JALSOL is not presented on this site as a public exchange, decentralised exchange, brokerage, custodian or managed trading service.",
-  "The engine page is a read-only telemetry surface for Jeremy Aaron Lugg's own engine, not a public trading account for customers.",
-  "If future features move into exchange, custody, brokerage, copy-trading, pooled capital or token-sale financial services, these pages will need to be updated and further legal review may be required.",
+  "This site is not currently presented as a public exchange, brokerage, custodian, managed trading service, or live interactive onboarding product.",
+  "Interactive site features are temporarily unavailable while registrations and legal settings are reviewed.",
+  "If future features move into exchange, custody, brokerage, copy-trading, pooled capital, wallet verification flows, or other regulated financial services, these pages will need to be updated and further legal review may be required.",
 ];

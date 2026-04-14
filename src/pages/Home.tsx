@@ -83,21 +83,21 @@ export default function Home() {
     () => [
       {
         id: "learn",
-        title: "Learn",
-        subtitle: "JAL/SOL onboarding and self-custody guidance",
-        desc: "The public education layer explains wallets, signing, token basics, and how to move carefully before taking any irreversible action.",
-        note: "Public onboarding only",
+        title: "Notice",
+        subtitle: "Interactive features are temporarily paused",
+        desc: "Public interactive routes are unavailable while registrations and legal settings are reviewed.",
+        note: "Compliance review in progress",
         tone: "gold",
-        route: "/app/jal-sol",
+        route: "/app/compliance",
       },
       {
         id: "observe",
-        title: "Observe",
-        subtitle: "Read-only engine telemetry",
-        desc: "The engine page exposes Jeremy Aaron Lugg's own automated trading dashboard as a public viewing surface without handing trading control to site visitors.",
-        note: "Read-only for visitors",
+        title: "Review",
+        subtitle: "Operator identity and legal pages",
+        desc: "The public site currently prioritises operator identity, legal disclosures, and a clearer boundary around what is and is not being offered.",
+        note: "Static information only",
         tone: "green",
-        route: "/app/engine",
+        route: "/app/about",
       },
       {
         id: "collect",
@@ -115,20 +115,20 @@ export default function Home() {
   const boundaryItems = useMemo<BoundaryItem[]>(
     () => [
       {
-        title: "Not a decentralised exchange",
-        desc: "jalsol.com does not run an on-chain swap venue, order book, or peer-to-peer execution layer for the public in its current live form.",
+        title: "Interactive features are paused",
+        desc: "Public interactive routes are temporarily redirected to a compliance notice while registrations and legal settings are reviewed.",
       },
       {
-        title: "No customer custody",
-        desc: "The site does not hold client wallets, private keys, or pooled balances as part of the current public offer.",
+        title: "Operator identity stays visible",
+        desc: "The public site continues to show who operates the business, the ABN details, and the legal pages that explain the current site boundary.",
       },
       {
-        title: "No managed trading for users",
-        desc: "The engine shown on-site is Jeremy's own operator-controlled system, not a customer trading service or copy-trading product.",
+        title: "Physical merch remains available",
+        desc: "The commercial layer is narrowed to ordinary physical merch and related support while other features are paused.",
       },
       {
-        title: "No digital access products in the shop",
-        desc: "The public storefront is limited to physical merch so the business activity is clearer and less likely to be read as financial access packaging.",
+        title: "Legal pages remain public",
+        desc: "Terms, privacy, and disclaimer pages remain available so visitors can see the current operator, boundaries, and contact points.",
       },
     ],
     []
@@ -137,39 +137,39 @@ export default function Home() {
   const legalGroups = useMemo<LegalGroup[]>(
     () => [
       {
-        title: "What JALSOL is",
-        desc: "The current public version is structured as a software, education, and merch site with a read-only engine dashboard.",
+        title: "What this site is",
+        desc: "The current public version is structured as a paused business site with legal information and physical merch.",
         points: [
-          "A public onboarding and self-custody learning surface",
-          "A public read-only dashboard for Jeremy Aaron Lugg's own engine",
+          "A site operated by Jeremy Aaron Lugg under ABN 35 780 648 234",
+          "A temporary compliance notice for paused interactive features",
           "A physical merch storefront",
         ],
       },
       {
-        title: "What JALSOL is not",
-        desc: "The site is intentionally not positioned as an exchange or managed investment product.",
+        title: "What this site is not",
+        desc: "The site is intentionally not positioned as a live interactive product during the pause.",
         points: [
-          "No public DEX or exchange is operated through the live site",
-          "No user funds are pooled for a common strategy",
-          "No trade execution is offered on behalf of site visitors",
+          "No live interactive workflow is being offered publicly",
+          "No transaction flow is being offered through the paused public routes",
+          "No public managed-service workflow is being offered through the site",
         ],
       },
       {
         title: "Why this is lower-risk",
-        desc: "These boundaries make the public offer closer to ordinary software, content, and merch than to a regulated trading venue.",
+        desc: "These boundaries make the public offer closer to ordinary business information and merch while the review is underway.",
         points: [
-          "Visitors can observe the engine without receiving trading control",
+          "Visitors are directed to notice and legal pages instead of interactive workflows",
           "Commercial activity is tied to physical products instead of access promises",
-          "Self-custody actions remain user-directed rather than site-custodied",
+          "The site clearly identifies the operator and current public boundary",
         ],
       },
       {
         title: "What would change the analysis",
-        desc: "These features would need fresh Australian legal review before launch.",
+        desc: "These features would need fresh Australian legal review before any future relaunch.",
         points: [
-          "Trading for customers or copy-trading from the engine",
-          "Customer custody, shared wallets, or pooled capital",
-          "Brokerage, exchange, or token-investment style marketing claims",
+          "Returning paused interactive flows to the public site",
+          "Adding customer transactions, managed services, or pooled-capital features",
+          "Making new financial or platform claims without updated legal review",
         ],
       },
     ],
@@ -180,35 +180,35 @@ export default function Home() {
     () => [
       {
         id: "jalsol",
-        kicker: "PUBLIC ONBOARDING",
-        title: "JAL/SOL",
-        desc: "Use the JAL/SOL layer to explain the project, wallet flow, self-custody steps, and token-building context without selling a trading product.",
+        kicker: "TEMPORARY NOTICE",
+        title: "Compliance Pause",
+        desc: "Interactive site features are paused while registrations and legal settings are reviewed.",
         tone: "gold",
-        previewTitle: "Onboarding surface",
-        previewDesc: "Education first, self-custody next, with the irreversible steps kept in the user's own hands.",
+        previewTitle: "Paused route",
+        previewDesc: "Visitors are redirected to a temporary compliance notice instead of live interactive workflows.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Education", "Wallet basics", "Self-custody", "Token building"],
-        note: "Best public label: onboarding and builder surface",
-        route: "/app/jal-sol",
+        tags: ["Paused", "Compliance", "Registration", "Review"],
+        note: "Temporary route while registration is reviewed",
+        route: "/app/compliance",
       },
       {
         id: "engine",
-        kicker: "PERSONAL ENGINE",
-        title: "JAL Engine",
-        desc: "The engine is best framed as Jeremy's own automated trading software with a public read-only dashboard, not as a user-facing exchange or managed platform.",
+        kicker: "LEGAL CLARITY",
+        title: "About And Terms",
+        desc: "Use the public site to identify the legal operator, current business activity, and the present limits of the offer while interactive features are paused.",
         tone: "green",
-        previewTitle: "Read-only telemetry",
-        previewDesc: "Machine state, lifecycle data, and public logs without handing visitors trading permissions.",
+        previewTitle: "Current boundaries",
+        previewDesc: "The public offer is reduced to identity, legal disclosures, and ordinary commerce pages.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Read-only", "Telemetry", "Operator dashboard", "Personal software"],
-        note: "Best public label: personal automated engine with public telemetry",
-        route: "/app/engine",
+        tags: ["ABN", "Terms", "Disclaimer", "Operator"],
+        note: "Best public label: site and business information",
+        route: "/app/about",
       },
       {
         id: "shop",
         kicker: "PHYSICAL STORE",
         title: "Shop",
-        desc: "The storefront now works as a clean merch surface for apparel, collectibles, and physical branded items tied to the JALSOL identity.",
+        desc: "The storefront now works as a clean merch surface for apparel, collectibles, and physical branded items sold through Jeremy Aaron Lugg's public site.",
         tone: "cyan",
         previewTitle: "Physical releases",
         previewDesc: "A simpler commerce layer built around physical products instead of digital access packages.",
@@ -247,7 +247,7 @@ export default function Home() {
 
         <section
           className="card machine-surface panel-frame home-console-hero jal-command-surface"
-          aria-label="JALSOL overview"
+          aria-label="Jeremy Aaron Lugg site overview"
         >
           <div className="home-console-hero-bg" aria-hidden="true">
             <img className="home-console-hero-logo" src="/JALSOL1.gif" alt="" />
@@ -255,41 +255,40 @@ export default function Home() {
 
           <div className="home-console-hero-foreground home-console-hero-foreground--identity">
             <div className="home-console-copy">
-              <div className="home-kicker">JALSOL - PUBLIC SOFTWARE SURFACE</div>
+              <div className="home-kicker">JEREMY AARON LUGG - PUBLIC SITE</div>
 
               <h1 className="home-title">
-                Personal trading engine, public onboarding, and physical merch.
+                Operator identity, legal clarity, and physical merch.
               </h1>
 
               <p className="home-lead">
-                <strong>Built and operated by Jeremy Aaron Lugg.</strong> The current public site is
-                best described as a crypto onboarding and builder surface, a read-only dashboard for
-                Jeremy's own automated engine, and a physical merch storefront.
+                <strong>Built and operated by Jeremy Aaron Lugg.</strong> Interactive site
+                features are temporarily paused
+                while registrations and legal settings are reviewed.
               </p>
 
               <p className="home-console-sublead">
-                The live site does not present itself as a decentralised exchange, brokerage, or
-                managed trading platform. The safer public framing is software, education,
-                self-custody guidance, and physical commerce around a personal operator-run engine.
+                The public site currently focuses on operator identity, legal disclosures, and
+                physical merch while the interactive surface is unavailable.
               </p>
 
               <div className="jal-links">
                 <button
                   type="button"
                   className="button gold"
-                  onClick={() => beginRoute("/app/jal-sol", "jalsol")}
+                  onClick={() => beginRoute("/app/compliance", "jalsol")}
                   disabled={loading}
                 >
-                  Open JAL/SOL
+                  Read Notice
                 </button>
 
                 <button
                   type="button"
                   className="button ghost"
-                  onClick={() => beginRoute("/app/engine", "engine")}
+                  onClick={() => beginRoute("/app/about", "engine")}
                   disabled={loading}
                 >
-                  View Engine
+                  About Jeremy
                 </button>
 
                 <button
@@ -308,19 +307,19 @@ export default function Home() {
                 <div className="home-console-side-kicker">CURRENT STRUCTURE</div>
                 <div className="home-console-side-title">What the live site includes</div>
                 <ul className="home-identity-points">
-                  <li>Public onboarding and self-custody guidance</li>
-                  <li>Read-only visibility into Jeremy's engine</li>
+                  <li>Operator identity and business details</li>
+                  <li>Terms, privacy, and disclaimer pages</li>
                   <li>Physical merch only in the storefront</li>
                 </ul>
               </div>
 
               <div className="home-console-side-card home-vision-card">
                 <div className="home-console-side-kicker">IF SOMEONE ASKS</div>
-                <div className="home-console-side-title">How to describe JALSOL</div>
+                <div className="home-console-side-title">How to describe the site</div>
                 <p className="home-identity-desc">
-                  JALSOL is a crypto education, self-custody onboarding, and physical merch site
-                  with a public read-only dashboard for Jeremy Aaron Lugg's own automated trading
-                  engine.
+                  This is Jeremy Aaron Lugg's public business site, operated under ABN 35 780 648
+                  234 and currently focused on legal information and physical merch while
+                  interactive features are paused for review.
                 </p>
               </div>
             </aside>
@@ -336,8 +335,8 @@ export default function Home() {
               <div className="home-kicker">CURRENT PUBLIC PILLARS</div>
               <h2 className="home-modules-title">Three clearer ways to understand the site</h2>
               <p className="home-modules-lead">
-                The homepage now separates JALSOL into its real public layers so the project reads
-                as software, onboarding, and merch rather than a public trading venue.
+                The homepage now separates what is still public from what has been temporarily
+                paused so the site does not continue presenting live interactive workflows.
               </p>
             </div>
           </div>
@@ -371,7 +370,7 @@ export default function Home() {
               <h2 className="home-modules-title">What keeps the current public version in a safer lane</h2>
               <p className="home-modules-lead">
                 These are the boundaries that matter most if you want the site to stay closer to a
-                personal software project and a normal merch business than to a regulated exchange.
+                paused information site and a normal merch business than to a regulated platform.
               </p>
             </div>
           </div>
@@ -420,8 +419,8 @@ export default function Home() {
             </div>
 
             <p className="home-legal-note">
-              If JALSOL ever adds trading for customers, pooled capital, custody, copy-trading, or
-              exchange-style execution, the homepage copy and the legal position both need to be
+              If this site later restores paused interactive features or adds new regulated
+              service activity, the homepage copy and the legal position both need to be
               reworked before launch.
             </p>
           </details>
@@ -438,8 +437,8 @@ export default function Home() {
               <div className="home-kicker">PRIMARY PUBLIC SURFACES</div>
               <h2 className="home-modules-title">Where each part of the project should live</h2>
               <p className="home-modules-lead">
-                These are the three surfaces worth leading with on the public site: onboarding,
-                read-only engine visibility, and physical merch.
+                These are the three public surfaces worth leading with during the compliance pause:
+                notice, legal information, and physical merch.
               </p>
             </div>
           </div>
