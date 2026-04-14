@@ -24,16 +24,22 @@ import Privacy from "./pages/Privacy";
 import Disclaimer from "./pages/Disclaimer";
 import TrackPage from "./pages/TrackPage";
 import { LEGAL_CONTACT_MAILTO, LEGAL_OPERATOR_NAME } from "./lib/legal";
+import { usePageMeta } from "./hooks/usePageMeta";
+import { useTheme, type ThemeMode } from "./hooks/useTheme";
 
 /* ------------------------ Header ------------------------ */
 function HeaderView({
   onMenu,
   onLogo,
+  onToggleTheme,
   isOpen,
+  theme,
 }: {
   onMenu: () => void;
   onLogo: () => void;
+  onToggleTheme: () => void;
   isOpen: boolean;
+  theme: ThemeMode;
 }) {
   return (
     <header className="site-header">
@@ -57,17 +63,28 @@ function HeaderView({
           <img className="logo header-logo" src="/JALSOL1.gif" alt={LEGAL_OPERATOR_NAME} />
         </button>
 
-        <button
-          className={`hamburger ${isOpen ? "is-open" : ""}`}
-          onClick={onMenu}
-          aria-label={isOpen ? "Close menu" : "Open menu"}
-          aria-haspopup="true"
-          aria-expanded={isOpen}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={onToggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+          </button>
+
+          <button
+            className={`hamburger ${isOpen ? "is-open" : ""}`}
+            onClick={onMenu}
+            aria-label={isOpen ? "Close menu" : "Open menu"}
+            aria-haspopup="true"
+            aria-expanded={isOpen}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
       </div>
     </header>
   );
@@ -87,19 +104,9 @@ function SidebarSection({
 }) {
   return (
     <section aria-label={title}>
-      <div
-        style={{
-          opacity: 0.78,
-          fontSize: "0.72rem",
-          letterSpacing: "0.22em",
-          textTransform: "uppercase",
-          margin: "8px 0 10px",
-        }}
-      >
-        {title}
-      </div>
+      <div className="sidebar-section-title">{title}</div>
 
-      <div style={{ display: "grid", gap: 10 }}>
+      <div className="sidebar-link-list">
         {items.map((it) => (
           <NavLink
             key={it.to}
@@ -274,42 +281,20 @@ function SidebarView({
       <button className="sidebar-overlay" aria-label="Close menu overlay" onClick={onClose} />
 
       <aside className="sidebar-nav" aria-label="Sidebar navigation">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <div
-            style={{
-              fontWeight: 900,
-              letterSpacing: ".10em",
-              textTransform: "uppercase",
-              opacity: 0.9,
-            }}
-          >
-            Menu
-          </div>
+        <div className="sidebar-topbar">
+          <div className="sidebar-panel-title">Menu</div>
 
           <button
             type="button"
             onClick={onClose}
             aria-label="Close sidebar"
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              border: "1px solid rgba(255,255,255,.12)",
-              background: "linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0))",
-            }}
+            className="sidebar-close"
           >
-            ×
+            X
           </button>
         </div>
 
-        <nav aria-label="Primary routes" style={{ display: "grid", gap: 14 }}>
+        <nav aria-label="Primary routes" className="sidebar-primary-nav">
           <AccountAccessPanel
             session={session}
             identity={accountIdentity}
@@ -330,7 +315,7 @@ function SidebarView({
           />
 
           <SidebarSection
-            title="Core"
+            title="Overview"
             onClose={onClose}
             items={[{ to: "/app/home", label: "Home" }]}
           />
@@ -353,12 +338,12 @@ function SidebarView({
           />
 
           <SidebarSection
-            title="System"
+            title="Public Site"
             onClose={onClose}
             items={[
-              { to: "/app/compliance", label: "Compliance Notice" },
+              { to: "/app/compliance", label: "Site Settings" },
               { to: "/app/about", label: "About Jeremy Aaron Lugg" },
-              { to: "/app/legal", label: "Legal Pages" },
+              { to: "/app/legal", label: "Legal + Business" },
             ]}
           />
         </nav>
@@ -368,6 +353,11 @@ function SidebarView({
 }
 
 function AboutPage() {
+  usePageMeta(
+    "About Jeremy Aaron Lugg",
+    "Founder-led business domain for Jeremy Aaron Lugg, shaped by hands-on work, systems thinking, crypto-market awareness, and physical JALSOL releases."
+  );
+
   return (
     <main className="home-shell" aria-label="About Jeremy Aaron Lugg">
       <div className="home-wrap">
@@ -467,6 +457,11 @@ function AboutPage() {
 }
 
 function LegalHubPage() {
+  usePageMeta(
+    "Legal And Business Details",
+    "Public legal and business document hub for JALSOL, including operator details, ABN visibility, privacy, terms, disclaimers, and current site settings."
+  );
+
   return (
     <main className="home-shell" aria-label="Legal pages">
       <div className="home-wrap">
@@ -523,6 +518,11 @@ function LegalHubPage() {
 }
 
 function ComplianceNoticePage() {
+  usePageMeta(
+    "Current Public-Site Settings",
+    "Current public-site settings for JALSOL, including the present business-facing offer, public legal boundaries, and feature availability."
+  );
+
   return (
     <main className="home-shell" aria-label="Compliance notice">
       <div className="home-wrap">
@@ -573,25 +573,10 @@ function RequireEngineerAccount({ children }: { children: ReactNode }) {
 
 function SitewideNoticeBar() {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 1200,
-        padding: "12px 18px",
-        borderBottom: "1px solid rgba(255,255,255,0.12)",
-        background:
-          "linear-gradient(90deg, rgba(56,46,20,0.96), rgba(34,34,24,0.96), rgba(14,18,22,0.98))",
-        color: "#f4ecd7",
-        fontSize: "0.92rem",
-        letterSpacing: "0.02em",
-      }}
-    >
+    <div role="status" aria-live="polite" className="sitewide-notice-bar">
       Founder site for Jeremy Aaron Lugg. Some interactive features remain unavailable while legal
       settings are reviewed. Visit{" "}
-      <a href="/app/compliance" style={{ color: "#fff4d6" }}>
+      <a href="/app/compliance" className="sitewide-notice-link">
         current public-site settings
       </a>{" "}
       for the latest public status.
@@ -600,7 +585,13 @@ function SitewideNoticeBar() {
 }
 
 /* ------------------------ App Shell (only for /app/*) ------------------------ */
-function AppShell() {
+function AppShell({
+  theme,
+  onToggleTheme,
+}: {
+  theme: ThemeMode;
+  onToggleTheme: () => void;
+}) {
   const {
     session,
     user,
@@ -700,7 +691,9 @@ function AppShell() {
       <HeaderView
         onMenu={() => setMenuOpen((v) => !v)}
         onLogo={() => navigate("/app/nav")}
+        onToggleTheme={onToggleTheme}
         isOpen={menuOpen}
+        theme={theme}
       />
 
       <SidebarView
@@ -722,7 +715,10 @@ function AppShell() {
       />
 
       <Routes>
-        <Route path="nav" element={<Landing mode="nav" />} />
+        <Route
+          path="nav"
+          element={<Landing mode="nav" theme={theme} onToggleTheme={onToggleTheme} />}
+        />
 
         <Route path="home" element={<Home />} />
         <Route path="about" element={<AboutPage />} />
@@ -769,14 +765,22 @@ function AppShell() {
 
 /* ------------------------ App Root ------------------------ */
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <BrowserRouter>
       <SitewideNoticeBar />
       <Routes>
-        <Route path="/" element={<Landing mode="entry" />} />
+        <Route
+          path="/"
+          element={<Landing mode="entry" theme={theme} onToggleTheme={toggleTheme} />}
+        />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/app/*" element={<AppShell />} />
+        <Route
+          path="/app/*"
+          element={<AppShell theme={theme} onToggleTheme={toggleTheme} />}
+        />
 
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />

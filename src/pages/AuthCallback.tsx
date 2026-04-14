@@ -2,14 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 export default function AuthCallback() {
+  usePageMeta(
+    "Completing Access",
+    "Finalizing your JALSOL access session and loading the next route in the public Jeremy Aaron Lugg domain."
+  );
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
 
   const nextPath = useMemo(() => {
-  return searchParams.get("next") || "/app/home";
+    return searchParams.get("next") || "/app/home";
   }, [searchParams]);
 
   useEffect(() => {
@@ -57,7 +63,7 @@ export default function AuthCallback() {
         const message =
           caughtError instanceof Error
             ? caughtError.message
-            : "Unable to complete JAL/SOL sign-in.";
+            : "Unable to complete JALSOL sign-in.";
 
         if (!active) return;
         setError(message);
@@ -72,12 +78,13 @@ export default function AuthCallback() {
   }, [navigate, nextPath, searchParams]);
 
   return (
-    <main className="home-shell" aria-label="Completing JAL/SOL sign-in">
+    <main className="home-shell" aria-label="Completing JALSOL sign-in">
       <div className="home-wrap">
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">Synchronizing Access</h1>
           <p className="home-lead">
-            Finalizing your Supabase session and loading the next JAL/SOL route.
+            Finalizing your session and loading the next route in the Jeremy Aaron Lugg public
+            domain.
           </p>
 
           {error ? <p className="jal-error-text">{error}</p> : null}

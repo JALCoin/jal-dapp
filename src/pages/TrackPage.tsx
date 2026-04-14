@@ -1,6 +1,12 @@
 import { useState } from "react";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 export default function TrackPage() {
+  usePageMeta(
+    "Track Order",
+    "Track physical JALSOL orders through the public Jeremy Aaron Lugg store using the official Australia Post shipment tracker."
+  );
+
   const [tracking, setTracking] = useState("");
 
   function handleTrack() {
@@ -20,12 +26,17 @@ export default function TrackPage() {
         <section className="card machine-surface panel-frame shop-panel track-panel">
           <div className="shop-header track-header">
             <div className="shop-header-main">
-              <p className="shop-eyebrow">Jeremy Aaron Lugg Store</p>
+              <p className="shop-eyebrow">Jeremy Aaron Lugg | Public Store</p>
               <h1 className="home-title shop-title">Track Order</h1>
 
               <p className="home-lead shop-lead">
                 Enter your Australia Post tracking number to continue into the official shipment
-                tracker.
+                tracker for your physical JALSOL order.
+              </p>
+
+              <p className="shop-section-copy">
+                Tracking is handled through Australia Post in a separate tab so the shipment status
+                always comes from the carrier directly.
               </p>
             </div>
 
@@ -47,7 +58,8 @@ export default function TrackPage() {
                 <p className="shop-section-kicker">Shipment Access</p>
                 <h2 className="shop-section-title">Tracking Console</h2>
                 <p className="shop-section-copy">
-                  Use the shipment reference supplied after purchase or dispatch confirmation.
+                  Use the shipment reference supplied after purchase or dispatch confirmation. If
+                  you do not have a tracking number yet, check your order email first.
                 </p>
               </div>
             </div>

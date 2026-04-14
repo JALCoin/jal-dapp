@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthProvider";
 import { isLikelyEmailAddress, resolveMagicLinkEmail } from "../lib/authIdentity";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 function buildRedirectUrl(nextPath: string) {
   const callbackUrl = new URL("/auth/callback", window.location.origin);
@@ -11,6 +12,11 @@ function buildRedirectUrl(nextPath: string) {
 }
 
 export default function Auth() {
+  usePageMeta(
+    "Site Access",
+    "Access your JALSOL site account for order-related information, member access, and authenticated routes tied to the public Jeremy Aaron Lugg domain."
+  );
+
   const navigate = useNavigate();
   const location = useLocation();
   const { loading, session, profile, isEngineer } = useAuth();
@@ -139,7 +145,7 @@ export default function Auth() {
           <p className="home-lead">
             {isEngineerAccessRequest
               ? "JAL Engine is a private operator surface. Sign in with your existing engineer account to continue."
-              : "Sign in to access your site account, order-related information, or internal operator tools. Public interactive features remain paused while compliance settings are reviewed."}
+              : "Sign in to access your site account, order-related information, and authenticated routes connected to the public Jeremy Aaron Lugg domain."}
           </p>
 
           <div className="home-links" style={{ justifyContent: "center" }}>

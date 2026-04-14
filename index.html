@@ -2,19 +2,47 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
-    <!-- JALSOL favicon -->
     <link rel="icon" type="image/png" href="/JAL.png?v=1" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Founder-led business domain for Jeremy Aaron Lugg, bringing together public business identity, crypto-market aware positioning, and physical JALSOL releases."
+    />
+    <meta name="theme-color" content="#07090c" />
+    <meta property="og:title" content="Jeremy Aaron Lugg | JALSOL" />
+    <meta
+      property="og:description"
+      content="Founder-led business domain for Jeremy Aaron Lugg, bringing together public business identity, crypto-market aware positioning, and physical JALSOL releases."
+    />
+    <meta property="og:type" content="website" />
+    <title>Jeremy Aaron Lugg | JALSOL</title>
 
-    <title>WELCOME TO JALSOL</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("jalsol-theme");
+          var theme =
+            stored === "dark" || stored === "light"
+              ? stored
+              : window.matchMedia("(prefers-color-scheme: light)").matches
+                ? "light"
+                : "dark";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          var themeColor = document.querySelector('meta[name="theme-color"]');
+          if (themeColor) {
+            themeColor.setAttribute("content", theme === "light" ? "#f3ede0" : "#07090c");
+          }
+        } catch (error) {
+          document.documentElement.dataset.theme = "dark";
+          document.documentElement.style.colorScheme = "dark";
+        }
+      })();
+    </script>
   </head>
 
   <body>
     <div id="root"></div>
-
-    <!-- Vite entry -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

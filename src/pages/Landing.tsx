@@ -1,9 +1,15 @@
 // src/pages/Landing.tsx
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { usePageMeta } from "../hooks/usePageMeta";
+import type { ThemeMode } from "../hooks/useTheme";
 
 type LandingMode = "entry" | "nav";
-type LandingProps = { mode: LandingMode };
+type LandingProps = {
+  mode: LandingMode;
+  theme: ThemeMode;
+  onToggleTheme: () => void;
+};
 
 type NavTo =
   | "/app/home"
@@ -16,11 +22,15 @@ type NavTo =
 function NavOverlay({
   onSelect,
   onClose,
+  onToggleTheme,
   disabled,
+  theme,
 }: {
   onSelect: (to: NavTo) => void;
   onClose: () => void;
+  onToggleTheme: () => void;
   disabled: boolean;
+  theme: ThemeMode;
 }) {
   return (
     <>
@@ -39,6 +49,16 @@ function NavOverlay({
       >
         <div className="nav-overlay-top">
           <button
+            type="button"
+            className="theme-toggle"
+            onClick={onToggleTheme}
+            disabled={disabled}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+          </button>
+
+          <button
             className="nav-back"
             type="button"
             onClick={onClose}
@@ -52,6 +72,15 @@ function NavOverlay({
           <button
             type="button"
             className="nav-pill"
+            onClick={() => onSelect("/app/about")}
+            disabled={disabled}
+          >
+            ABOUT
+          </button>
+
+          <button
+            type="button"
+            className="nav-pill"
             onClick={() => onSelect("/app/home")}
             disabled={disabled}
           >
@@ -61,10 +90,28 @@ function NavOverlay({
           <button
             type="button"
             className="nav-pill"
+            onClick={() => onSelect("/app/legal")}
+            disabled={disabled}
+          >
+            LEGAL + BUSINESS
+          </button>
+
+          <button
+            type="button"
+            className="nav-pill"
+            onClick={() => onSelect("/app/shop")}
+            disabled={disabled}
+          >
+            SHOP
+          </button>
+
+          <button
+            type="button"
+            className="nav-pill"
             onClick={() => onSelect("/app/compliance")}
             disabled={disabled}
           >
-            JAL/SOL
+            SITE SETTINGS
           </button>
 
           <button
@@ -75,35 +122,20 @@ function NavOverlay({
           >
             JAL~ENGINE
           </button>
-
-          <button
-            type="button"
-            className="nav-pill"
-            onClick={() => onSelect("/app/about")}
-            disabled={disabled}
-          >
-            ABOUT
-          </button>
-
-          <button
-            type="button"
-            className="nav-pill"
-            onClick={() => onSelect("/app/legal")}
-            disabled={disabled}
-          >
-            LEGAL
-          </button>
-
-          <button type="button" className="nav-pill" onClick={() => onSelect("/app/shop")} disabled={disabled}>
-            SHOP
-          </button>
         </div>
       </section>
     </>
   );
 }
 
-export default function Landing({ mode }: LandingProps) {
+export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
+  usePageMeta(
+    mode === "nav" ? "Site Navigation" : "Jeremy Aaron Lugg",
+    mode === "nav"
+      ? "Navigate the JALSOL founder site across home, about, legal and business details, the store, and current public-site settings."
+      : "Enter the founder-led public business domain of Jeremy Aaron Lugg and explore JALSOL across identity, legal clarity, and physical releases."
+  );
+
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -114,8 +146,8 @@ export default function Landing({ mode }: LandingProps) {
       navigate("/app/nav");
     };
 
-    window.addEventListener("JALSOL:OPEN_NAV" as any, onOpen);
-    return () => window.removeEventListener("JALSOL:OPEN_NAV" as any, onOpen);
+    window.addEventListener("JALSOL:OPEN_NAV", onOpen as EventListener);
+    return () => window.removeEventListener("JALSOL:OPEN_NAV", onOpen as EventListener);
   }, [navigate, location.pathname]);
 
   useEffect(() => {
@@ -152,14 +184,27 @@ export default function Landing({ mode }: LandingProps) {
         aria-label="Jeremy Aaron Lugg"
       >
         {!loading && (
-          <button
-            className="center-logo-btn"
-            onClick={enter}
-            aria-label="Enter Jeremy Aaron Lugg site"
-          >
-            <img className="center-logo" src="/JALSOL1.gif" alt="Jeremy Aaron Lugg" />
-            <div className="center-logo-hint">ENTER SITE</div>
-          </button>
+          <>
+            <div className="landing-tools">
+              <button
+                type="button"
+                className="theme-toggle"
+                onClick={onToggleTheme}
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? "Light Mode" : "Dark Mode"}
+              </button>
+            </div>
+
+            <button
+              className="center-logo-btn"
+              onClick={enter}
+              aria-label="Enter Jeremy Aaron Lugg site"
+            >
+              <img className="center-logo" src="/JALSOL1.gif" alt="Jeremy Aaron Lugg" />
+              <div className="center-logo-hint">ENTER SITE</div>
+            </button>
+          </>
         )}
 
         {loading && (
@@ -185,7 +230,9 @@ export default function Landing({ mode }: LandingProps) {
         <NavOverlay
           onSelect={handleNavSelect}
           onClose={() => navigate("/app/home")}
+          onToggleTheme={onToggleTheme}
           disabled={loading}
+          theme={theme}
         />
       )}
 

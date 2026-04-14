@@ -14,8 +14,8 @@ export default function Terms() {
       title="Terms"
       kicker="Site Terms"
       updated={LEGAL_REVIEWED_ON}
-      lead="These terms explain who currently operates this public site, what remains publicly available during the temporary pause, and which Australian consumer rights continue to apply."
-      badges={["Sole trader", "ABN identified", "Physical merch", "Compliance pause", "Source-backed"]}
+      lead="These terms explain who operates the JALSOL public business domain, what the current public offer includes, and which Australian consumer rights continue to apply."
+      badges={["Founder domain", "Sole trader", "ABN identified", "Physical merch", "Source-backed"]}
       facts={LEGAL_OPERATOR_FACTS}
       sections={[
         {

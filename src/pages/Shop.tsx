@@ -1,10 +1,11 @@
 import ProductStars from "../components/ProductStars";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { getActiveProducts, type Product } from "../data/products";
 import ReviewList from "../components/ReviewList";
 import ReviewFormModal from "../components/ReviewFormModal";
 import { getReviewsByProductId, type ProductReview } from "../lib/reviews";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 type SortMode = "featured" | "title-asc" | "title-desc";
 
@@ -61,7 +62,7 @@ function useProductReviewSummary(productId: string, enabled = true) {
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [loading, setLoading] = useState(false);
 
-  async function loadReviews() {
+  const loadReviews = useCallback(async () => {
     if (!enabled) {
       setReviews([]);
       return;
@@ -77,11 +78,11 @@ function useProductReviewSummary(productId: string, enabled = true) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [enabled, productId]);
 
   useEffect(() => {
     void loadReviews();
-  }, [productId, enabled]);
+  }, [loadReviews]);
 
   const averageRating =
     reviews.length > 0
@@ -391,6 +392,11 @@ function ProductCard({
 }
 
 export default function Shop() {
+  usePageMeta(
+    "Shop Physical Releases",
+    "Browse physical JALSOL releases through the public Jeremy Aaron Lugg store, including founder-brand merch and made-to-order objects."
+  );
+
   const [sort, setSort] = useState<SortMode>("featured");
   const [active, setActive] = useState<Product | null>(null);
   const [reviewRefreshToken, setReviewRefreshToken] = useState(0);
@@ -429,32 +435,37 @@ export default function Shop() {
         <section className="card machine-surface panel-frame shop-panel">
           <div className="shop-header">
             <div className="shop-header-main">
-              <p className="shop-eyebrow">Jeremy Aaron Lugg Store</p>
-              <h1 className="home-title shop-title">Physical Merch</h1>
+              <p className="shop-eyebrow">Jeremy Aaron Lugg | Public Store</p>
+              <h1 className="home-title shop-title">Physical JALSOL Releases</h1>
 
               <p className="home-lead shop-lead">
-                Physical releases only. No digital access products are sold through the storefront.
+                A cleaner founder-brand storefront built around physical releases only. No digital
+                access products are sold through the public shop.
               </p>
 
               <p className="shop-section-copy">
-                Orders are dispatched as a small sole-trader retail operation. Consumer guarantees,
-                shipping details and current legal notices remain available through the legal pages.
+                The store is designed to feel simple, tangible, and accountable: fewer releases,
+                clearer presentation, and direct connection to the public Jeremy Aaron Lugg
+                business domain.
               </p>
             </div>
 
             <div className="shop-header-links">
               <span className="chip">Jeremy Aaron Lugg</span>
+              <a className="chip" href="/app/legal">
+                Legal + Business
+              </a>
             </div>
           </div>
 
           <section className="shop-section" aria-label="Store products">
             <div className="shop-section-head">
               <div>
-                <p className="shop-section-kicker">Available Merch</p>
-                <h2 className="shop-section-title">Buy</h2>
+                <p className="shop-section-kicker">Current Releases</p>
+                <h2 className="shop-section-title">Browse The Store</h2>
                 <p className="shop-section-copy">
-                  Wearables and made-to-order physical commissions tied to the public Jeremy Aaron
-                  Lugg site.
+                  Wearables and made-to-order physical commissions tied directly to the public
+                  founder brand and business identity behind JALSOL.
                 </p>
               </div>
             </div>

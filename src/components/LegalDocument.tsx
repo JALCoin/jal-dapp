@@ -1,4 +1,7 @@
+import { Link } from "react-router-dom";
 import type { LegalFact, LegalSection, LegalSource } from "../lib/legal";
+import { ABN_LOOKUP_URL, LEGAL_CONTACT_MAILTO } from "../lib/legal";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 type LegalDocumentProps = {
   title: string;
@@ -12,6 +15,8 @@ type LegalDocumentProps = {
 };
 
 export default function LegalDocument(props: LegalDocumentProps) {
+  usePageMeta(props.title, props.lead);
+
   return (
     <main className="home-shell legal-page" aria-label={props.title}>
       <div className="home-wrap legal-wrap">
@@ -20,6 +25,21 @@ export default function LegalDocument(props: LegalDocumentProps) {
           <h1 className="home-title">{props.title}</h1>
           <p className="home-lead legal-lead">{props.lead}</p>
           <p className="legal-updated">Last reviewed: {props.updated}</p>
+
+          <div className="home-links legal-hero-links">
+            <Link className="chip" to="/app/legal">
+              Legal Hub
+            </Link>
+            <Link className="chip" to="/app/about">
+              About Jeremy
+            </Link>
+            <a className="chip" href={LEGAL_CONTACT_MAILTO}>
+              Contact
+            </a>
+            <a className="chip" href={ABN_LOOKUP_URL} target="_blank" rel="noreferrer">
+              ABN Lookup
+            </a>
+          </div>
 
           {props.badges?.length ? (
             <div className="legal-badges" aria-label="Document highlights">

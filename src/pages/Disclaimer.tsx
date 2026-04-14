@@ -13,8 +13,8 @@ export default function Disclaimer() {
       title="Disclaimer"
       kicker="General Information And Risk Boundary"
       updated={LEGAL_REVIEWED_ON}
-      lead="This page explains the current site boundary during the temporary compliance pause, including what the public site currently is not and the limits of the public offer."
-      badges={["No personal advice", "Temporary pause", "Not an exchange", "No live public trading features", "Source-backed"]}
+      lead="This page explains the current public boundary of the JALSOL business domain, including what the site does and does not present to visitors at this time."
+      badges={["No personal advice", "Founder domain", "Not an exchange", "Public boundary", "Source-backed"]}
       facts={LEGAL_OPERATOR_FACTS}
       sections={[
         {

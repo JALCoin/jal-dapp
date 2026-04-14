@@ -12,8 +12,8 @@ export default function Privacy() {
       title="Privacy"
       kicker="Privacy And Information Handling"
       updated={LEGAL_REVIEWED_ON}
-      lead="This page explains what personal information Jeremy Aaron Lugg's public site may handle through the merch store, support channels, temporary compliance pages and technical operations, and how requests can be made."
-      badges={["Orders", "Support", "Access requests", "Technical operations", "OAIC-guided"]}
+      lead="This page explains what personal information the JALSOL public business domain may handle through the merch store, support channels, account access, and technical operations, and how requests can be made."
+      badges={["Founder domain", "Orders", "Support", "Access requests", "OAIC-guided"]}
       facts={LEGAL_OPERATOR_FACTS}
       sections={[
         {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePageMeta } from "../hooks/usePageMeta";
 
 function fmtTime(d: Date) {
   const hh = String(d.getHours()).padStart(2, "0");
@@ -44,6 +45,11 @@ type RouteBand = {
 };
 
 export default function Home() {
+  usePageMeta(
+    "Jeremy Aaron Lugg",
+    "Founder-led business domain for Jeremy Aaron Lugg, bringing together public business identity, crypto-market aware positioning, and physical JALSOL releases."
+  );
+
   const navigate = useNavigate();
   const timerRef = useRef<number | null>(null);
 

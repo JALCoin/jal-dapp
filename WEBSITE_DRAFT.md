@@ -215,6 +215,47 @@ Lead:
 - Honest status labels
 - Clear support and shipping expectations
 
+## Track Order Page Draft
+
+### Page Goal
+
+Keep tracking simple, direct, and trustworthy.
+
+### Tracking Hero
+
+Headline:
+`Track your physical JALSOL order`
+
+Lead:
+`Enter your Australia Post tracking number to continue into the official shipment tracker.`
+
+### Tracking Notes
+
+- Use the carrier's official tracking experience
+- Keep the page short and clear
+- Link back to store and support when needed
+
+## Account Access Draft
+
+### Page Goal
+
+Make sign-in feel like part of a real business domain instead of a temporary admin screen.
+
+### Access Hero
+
+Headline:
+`Site access for orders, member routes, and authenticated tools`
+
+Lead:
+`Use magic-link sign-in to access your account, order-related information, and authenticated routes connected to the public Jeremy Aaron Lugg domain.`
+
+### Tone Guidance
+
+- Calm
+- Technical enough to feel competent
+- Not overcomplicated
+- Clear about which routes are private
+
 ## Footer Draft
 
 ### Layout
