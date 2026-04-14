@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import {
   ABN_LOOKUP_URL,
   LEGAL_ABN,
+  LEGAL_CONTACT_EMAIL,
   LEGAL_CONTACT_MAILTO,
   LEGAL_OPERATOR_NAME,
 } from "../lib/legal";
@@ -18,7 +19,7 @@ export default function Footer() {
             physical JALSOL releases.
           </p>
           <div className="jal-footer-contact">
-            <a href={LEGAL_CONTACT_MAILTO}>358jal@gmail.com</a>
+            <a href={LEGAL_CONTACT_MAILTO}>{LEGAL_CONTACT_EMAIL}</a>
             <a href={ABN_LOOKUP_URL} target="_blank" rel="noreferrer">
               ABN {LEGAL_ABN}
             </a>

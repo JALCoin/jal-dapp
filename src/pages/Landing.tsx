@@ -134,7 +134,7 @@ export default function Landing({ mode }: LandingProps) {
     window.setTimeout(() => {
       setLoading(false);
       navigate(to);
-    }, 5000);
+    }, 1200);
   };
 
   const enter = () => {
@@ -158,7 +158,7 @@ export default function Landing({ mode }: LandingProps) {
             aria-label="Enter Jeremy Aaron Lugg site"
           >
             <img className="center-logo" src="/JALSOL1.gif" alt="Jeremy Aaron Lugg" />
-            <div className="center-logo-hint">ENTER</div>
+            <div className="center-logo-hint">ENTER SITE</div>
           </button>
         )}
 

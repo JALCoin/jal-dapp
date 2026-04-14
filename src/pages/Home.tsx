@@ -77,34 +77,34 @@ export default function Home() {
     }, 1200);
   }
 
-  const networkLabel = "MAINNET";
+  const networkLabel = "PUBLIC DOMAIN";
 
   const homePillars = useMemo<HomePillar[]>(
     () => [
       {
-        id: "learn",
-        title: "Notice",
-        subtitle: "Interactive features are temporarily paused",
-        desc: "Public interactive routes are unavailable while registrations and legal settings are reviewed.",
-        note: "Compliance review in progress",
+        id: "founder",
+        title: "Founder",
+        subtitle: "Jeremy Aaron Lugg and the JALSOL direction",
+        desc: "Start with the person, background, and mindset shaping the business before you move into products, legal pages, or market-facing material.",
+        note: "Identity and story",
         tone: "gold",
-        route: "/app/compliance",
-      },
-      {
-        id: "observe",
-        title: "Review",
-        subtitle: "Operator identity and legal pages",
-        desc: "The public site currently prioritises operator identity, legal disclosures, and a clearer boundary around what is and is not being offered.",
-        note: "Static information only",
-        tone: "green",
         route: "/app/about",
       },
       {
-        id: "collect",
-        title: "Collect",
-        subtitle: "Physical merch and branded objects",
-        desc: "The storefront is now limited to physical releases so the commercial layer reads as ordinary merch rather than digital access or managed financial packaging.",
-        note: "Physical merch only",
+        id: "legal",
+        title: "Business",
+        subtitle: "Legal, business, and public-site details",
+        desc: "Review the public documents, business identity, and current site settings that make the domain feel accountable and professionally grounded.",
+        note: "Verify the public details",
+        tone: "green",
+        route: "/app/legal",
+      },
+      {
+        id: "shop",
+        title: "Store",
+        subtitle: "Physical releases and branded objects",
+        desc: "Browse a cleaner commercial layer focused on physical JALSOL releases presented as a founder-brand storefront rather than a crowded product catalogue.",
+        note: "Physical releases",
         tone: "cyan",
         route: "/app/shop",
       },
@@ -115,20 +115,20 @@ export default function Home() {
   const boundaryItems = useMemo<BoundaryItem[]>(
     () => [
       {
-        title: "Interactive features are paused",
-        desc: "Public interactive routes are temporarily redirected to a compliance notice while registrations and legal settings are reviewed.",
+        title: "Founder-led and attributable",
+        desc: "The site is built around a named operator, visible business details, and a public-facing identity rather than an anonymous project shell.",
       },
       {
-        title: "Operator identity stays visible",
-        desc: "The public site continues to show who operates the business, the ABN details, and the legal pages that explain the current site boundary.",
+        title: "Crypto-aware without reading like hype",
+        desc: "Cryptocurrency remains part of the market context and direction of the brand, but it does not overwhelm the business identity or replace substance.",
       },
       {
-        title: "Physical merch remains available",
-        desc: "The commercial layer is narrowed to ordinary physical merch and related support while other features are paused.",
+        title: "Public offer stays understandable",
+        desc: "Visitors can quickly see what the site is for now: founder identity, legal visibility, public contact points, and physical releases.",
       },
       {
-        title: "Legal pages remain public",
-        desc: "Terms, privacy, and disclaimer pages remain available so visitors can see the current operator, boundaries, and contact points.",
+        title: "Trust signals remain visible",
+        desc: "ABN details, legal pages, and official business contact points stay easy to verify so the site feels more like a real business domain than a landing page experiment.",
       },
     ],
     []
@@ -137,39 +137,39 @@ export default function Home() {
   const legalGroups = useMemo<LegalGroup[]>(
     () => [
       {
-        title: "What this site is",
-        desc: "The current public version is structured as a paused business site with legal information and physical merch.",
+        title: "What this site represents",
+        desc: "The public version is designed to represent Jeremy Aaron Lugg as a real operator with a real business domain.",
         points: [
-          "A site operated by Jeremy Aaron Lugg under ABN 35 780 648 234",
-          "A temporary compliance notice for paused interactive features",
-          "A physical merch storefront",
+          "A founder-led public business domain",
+          "A named operator with visible ABN and contact details",
+          "A brand environment where physical releases and market-aware positioning can live together",
         ],
       },
       {
-        title: "What this site is not",
-        desc: "The site is intentionally not positioned as a live interactive product during the pause.",
+        title: "How crypto fits",
+        desc: "Crypto belongs here as market context and technical direction, not as empty theatre.",
         points: [
-          "No live interactive workflow is being offered publicly",
-          "No transaction flow is being offered through the paused public routes",
-          "No public managed-service workflow is being offered through the site",
+          "It informs the tone, audience, and long-term direction of the site",
+          "It supports the identity of the brand without needing to dominate every message",
+          "It stays secondary to clarity, trust, and a coherent public offer",
         ],
       },
       {
-        title: "Why this is lower-risk",
-        desc: "These boundaries make the public offer closer to ordinary business information and merch while the review is underway.",
+        title: "Why the public site feels safer and clearer",
+        desc: "The site works better when visitors can understand the operator, the offer, and the current boundaries without friction.",
         points: [
-          "Visitors are directed to notice and legal pages instead of interactive workflows",
-          "Commercial activity is tied to physical products instead of access promises",
-          "The site clearly identifies the operator and current public boundary",
+          "The operator is named clearly",
+          "The legal pages are public and readable",
+          "The public commercial layer is limited to physical merch and supportable business activity",
         ],
       },
       {
-        title: "What would change the analysis",
-        desc: "These features would need fresh Australian legal review before any future relaunch.",
+        title: "What remains under review",
+        desc: "Some interactive features are still held back while legal settings are reviewed, and that boundary remains visible through the sitewide notice and legal pages.",
         points: [
-          "Returning paused interactive flows to the public site",
-          "Adding customer transactions, managed services, or pooled-capital features",
-          "Making new financial or platform claims without updated legal review",
+          "Interactive routes that go beyond the current public business surface",
+          "Any future financial-services style functionality or regulated market claims",
+          "Any expansion that changes the present legal or commercial reading of the site",
         ],
       },
     ],
@@ -179,42 +179,42 @@ export default function Home() {
   const routeBands = useMemo<RouteBand[]>(
     () => [
       {
-        id: "jalsol",
-        kicker: "TEMPORARY NOTICE",
-        title: "Compliance Pause",
-        desc: "Interactive site features are paused while registrations and legal settings are reviewed.",
+        id: "founder",
+        kicker: "FOUNDER PROFILE",
+        title: "About Jeremy",
+        desc: "The personal and professional background behind JALSOL, including the practical work, systems thinking, and market interest shaping the direction of the site.",
         tone: "gold",
-        previewTitle: "Paused route",
-        previewDesc: "Visitors are redirected to a temporary compliance notice instead of live interactive workflows.",
+        previewTitle: "Founder-led identity",
+        previewDesc: "A clearer story about the operator, the path behind the work, and why the site exists.",
         previewImage: "/JALSOL1.gif",
-        tags: ["Paused", "Compliance", "Registration", "Review"],
-        note: "Temporary route while registration is reviewed",
-        route: "/app/compliance",
+        tags: ["Founder", "Identity", "Background", "Direction"],
+        note: "Start here if you want the human context",
+        route: "/app/about",
       },
       {
-        id: "engine",
-        kicker: "LEGAL CLARITY",
-        title: "About And Terms",
-        desc: "Use the public site to identify the legal operator, current business activity, and the present limits of the offer while interactive features are paused.",
+        id: "legal",
+        kicker: "BUSINESS CLARITY",
+        title: "Legal Hub",
+        desc: "Use the document hub to verify the operator, read the public legal pages, and understand how the business-facing side of the site is currently presented.",
         tone: "green",
-        previewTitle: "Current boundaries",
-        previewDesc: "The public offer is reduced to identity, legal disclosures, and ordinary commerce pages.",
+        previewTitle: "Public business details",
+        previewDesc: "Legal pages, ABN visibility, contact points, and the current public-site settings in one place.",
         previewImage: "/JALSOL1.gif",
-        tags: ["ABN", "Terms", "Disclaimer", "Operator"],
-        note: "Best public label: site and business information",
-        route: "/app/about",
+        tags: ["ABN", "Legal", "Privacy", "Terms"],
+        note: "Use this to verify the business-facing details",
+        route: "/app/legal",
       },
       {
         id: "shop",
         kicker: "PHYSICAL STORE",
         title: "Shop",
-        desc: "The storefront now works as a clean merch surface for apparel, collectibles, and physical branded items sold through Jeremy Aaron Lugg's public site.",
+        desc: "The storefront works as a clean founder-brand merch surface for apparel, collectibles, and physical branded items sold through Jeremy Aaron Lugg's public site.",
         tone: "cyan",
         previewTitle: "Physical releases",
-        previewDesc: "A simpler commerce layer built around physical products instead of digital access packages.",
+        previewDesc: "A simpler commerce layer built around physical products, clearer presentation, and a more premium brand signal.",
         previewImage: "/JALSOL1.gif",
         tags: ["Physical merch", "Collectibles", "Apparel", "Brand objects"],
-        note: "Best public label: physical merch storefront",
+        note: "Best public label: founder-brand storefront",
         route: "/app/shop",
       },
     ],
@@ -255,40 +255,41 @@ export default function Home() {
 
           <div className="home-console-hero-foreground home-console-hero-foreground--identity">
             <div className="home-console-copy">
-              <div className="home-kicker">JEREMY AARON LUGG - PUBLIC SITE</div>
+              <div className="home-kicker">JEREMY AARON LUGG | FOUNDER SITE</div>
 
               <h1 className="home-title">
-                Operator identity, legal clarity, and physical merch.
+                A founder-led business domain built around crypto markets, product thinking, and
+                physical releases.
               </h1>
 
               <p className="home-lead">
-                <strong>Built and operated by Jeremy Aaron Lugg.</strong> Interactive site
-                features are temporarily paused
-                while registrations and legal settings are reviewed.
+                <strong>Built and operated by Jeremy Aaron Lugg under ABN 35 780 648 234.</strong>{" "}
+                JALSOL brings together founder identity, business clarity, market-aware branding,
+                and a growing catalogue of physical releases.
               </p>
 
               <p className="home-console-sublead">
-                The public site currently focuses on operator identity, legal disclosures, and
-                physical merch while the interactive surface is unavailable.
+                This site is designed to feel personal and accountable: one operator, one public
+                identity, one place to understand the business, the story, and the current offer.
               </p>
 
               <div className="jal-links">
                 <button
                   type="button"
                   className="button gold"
-                  onClick={() => beginRoute("/app/compliance", "jalsol")}
+                  onClick={() => beginRoute("/app/about", "founder")}
                   disabled={loading}
                 >
-                  Read Notice
+                  About Jeremy
                 </button>
 
                 <button
                   type="button"
                   className="button ghost"
-                  onClick={() => beginRoute("/app/about", "engine")}
+                  onClick={() => beginRoute("/app/legal", "legal")}
                   disabled={loading}
                 >
-                  About Jeremy
+                  Legal + Business
                 </button>
 
                 <button
@@ -305,21 +306,20 @@ export default function Home() {
             <aside className="home-console-side" aria-label="Project definition">
               <div className="home-console-side-card home-identity-card">
                 <div className="home-console-side-kicker">CURRENT STRUCTURE</div>
-                <div className="home-console-side-title">What the live site includes</div>
+                <div className="home-console-side-title">What lives inside the public site</div>
                 <ul className="home-identity-points">
-                  <li>Operator identity and business details</li>
-                  <li>Terms, privacy, and disclaimer pages</li>
-                  <li>Physical merch only in the storefront</li>
+                  <li>Founder identity and business details</li>
+                  <li>Public legal and business documents</li>
+                  <li>Physical JALSOL releases</li>
                 </ul>
               </div>
 
               <div className="home-console-side-card home-vision-card">
-                <div className="home-console-side-kicker">IF SOMEONE ASKS</div>
-                <div className="home-console-side-title">How to describe the site</div>
+                <div className="home-console-side-kicker">SITE SIGNAL</div>
+                <div className="home-console-side-title">How the brand should read</div>
                 <p className="home-identity-desc">
-                  This is Jeremy Aaron Lugg's public business site, operated under ABN 35 780 648
-                  234 and currently focused on legal information and physical merch while
-                  interactive features are paused for review.
+                  Founder-led, market-aware, and professionally grounded. Personal enough to carry
+                  your identity, but structured enough to read like a real business domain.
                 </p>
               </div>
             </aside>
@@ -335,8 +335,9 @@ export default function Home() {
               <div className="home-kicker">CURRENT PUBLIC PILLARS</div>
               <h2 className="home-modules-title">Three clearer ways to understand the site</h2>
               <p className="home-modules-lead">
-                The homepage now separates what is still public from what has been temporarily
-                paused so the site does not continue presenting live interactive workflows.
+                The homepage should lead with identity, business clarity, and a coherent
+                commercial layer so the site feels complete before a visitor ever reaches the legal
+                pages.
               </p>
             </div>
           </div>
@@ -367,10 +368,10 @@ export default function Home() {
           <div className="home-roadmap-head">
             <div>
               <div className="home-kicker">OPERATING BOUNDARIES</div>
-              <h2 className="home-modules-title">What keeps the current public version in a safer lane</h2>
+              <h2 className="home-modules-title">What keeps the public version professional</h2>
               <p className="home-modules-lead">
-                These are the boundaries that matter most if you want the site to stay closer to a
-                paused information site and a normal merch business than to a regulated platform.
+                These are the principles that make the public site feel more like a strong
+                founder-business domain and less like an unfinished crypto landing page.
               </p>
             </div>
           </div>
@@ -393,15 +394,15 @@ export default function Home() {
           <details className="home-legal-details">
             <summary className="home-legal-summary">
               <div className="home-legal-summary-copy">
-                <div className="home-legal-summary-kicker">LEGAL BOUNDARY SUMMARY</div>
-                <h2 className="home-modules-title">Open the plain-language explanation for why the current structure is lower-risk</h2>
+                <div className="home-legal-summary-kicker">PUBLIC SITE SUMMARY</div>
+                <h2 className="home-modules-title">Open the plain-language explanation for how the site is meant to read</h2>
                 <p className="home-modules-lead">
-                  This dropdown explains the present setup in practical terms. It is not legal
-                  advice, not a licence, and not a guarantee for future features.
+                  This dropdown explains the current public setup in practical terms. It is not
+                  legal advice, not a licence, and not a promise about future features.
                 </p>
               </div>
 
-              <div className="home-legal-summary-note">Open disclosure</div>
+              <div className="home-legal-summary-note">Open summary</div>
             </summary>
 
             <div className="home-legal-grid">
@@ -419,9 +420,8 @@ export default function Home() {
             </div>
 
             <p className="home-legal-note">
-              If this site later restores paused interactive features or adds new regulated
-              service activity, the homepage copy and the legal position both need to be
-              reworked before launch.
+              If the site later expands into new interactive or regulated activity, the public
+              positioning and legal framing should be reviewed together before launch.
             </p>
           </details>
         </section>
@@ -435,10 +435,10 @@ export default function Home() {
           <div className="home-modules-head">
             <div>
               <div className="home-kicker">PRIMARY PUBLIC SURFACES</div>
-              <h2 className="home-modules-title">Where each part of the project should live</h2>
+              <h2 className="home-modules-title">Where each part of the public site should live</h2>
               <p className="home-modules-lead">
-                These are the three public surfaces worth leading with during the compliance pause:
-                notice, legal information, and physical merch.
+                These are the three routes worth leading with right now: founder profile, legal and
+                business clarity, and the physical storefront.
               </p>
             </div>
           </div>
