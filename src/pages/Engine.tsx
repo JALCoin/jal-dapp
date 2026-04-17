@@ -993,10 +993,6 @@ function reentryTargetHit(s: SlotRow) {
   );
 }
 
-function lockDisplay(s: SlotRow) {
-  return pctNum(s.lockPct);
-}
-
 function primaryExitFloorPct(slot: SlotRow) {
   const lockPct = slot.lockPct;
   const trailFloorPct = slot.levelTrailFloorPct;
@@ -1416,28 +1412,6 @@ function suppressionLabel(
   return `${suppressed}/${seen} (${pct}%)`;
 }
 
-function secondaryOverviewSummary(slot: SlotRow) {
-  const total = getSecondaryRows(slot).length;
-  return `${primarySubslotDecisionLabel(slot)} | ${total}`;
-}
-
-function coinSpreadThresholdPct(slot: SlotRow) {
-  const coin = String(slot.coin || "").toUpperCase();
-
-  const perCoin: Record<string, number> = {
-    BTC: 0.3,
-    ETH: 0.35,
-    XRP: 0.3,
-    SOL: 0.3,
-    ADA: 0.45,
-    DOGE: 0.45,
-    LTC: 0.45,
-    TRX: 0.7,
-  };
-
-  return perCoin[coin] ?? 1.1;
-}
-
 function rotationDoctrineLabel(capital: PublicCapitalResponse | null | undefined) {
   return `Policy gate ${capital?.rotation?.enabled ? "ON" : "OFF"} | Basis required ${yesNo(capital?.rotation?.walletRequireBasis)} | Live executor ${yesNo(Boolean(capital?.rotation?.executorEnabled && (capital?.rotation?.liveEntryEnabled || capital?.rotation?.liveExitEnabled)))}`;
 }
@@ -1468,6 +1442,45 @@ function isHoldingFamilyState(state: SlotState | string | null | undefined) {
     s === "LVL3_LOCK" ||
     s === "LVL4_TRAIL"
   );
+}
+
+function hasActiveParentExposure(slot: SlotRow | null | undefined) {
+  const state = String(slot?.state || "").toUpperCase();
+  return isHoldingFamilyState(state) || state === "EXITING";
+}
+
+function liveParentGrossPct(slot: SlotRow | null | undefined) {
+  const grossPct = slot?.grossPct;
+  if (!slot || !hasActiveParentExposure(slot) || grossPct == null || !Number.isFinite(grossPct)) {
+    return null;
+  }
+  return grossPct;
+}
+
+function liveParentNetPct(slot: SlotRow | null | undefined) {
+  const netPct = slot?.netPct;
+  if (!slot || !hasActiveParentExposure(slot) || netPct == null || !Number.isFinite(netPct)) {
+    return null;
+  }
+  return netPct;
+}
+
+function primaryTotalGainPct(slot: SlotRow | null | undefined) {
+  const lifetimeNetPct = slot?.lifetimeNetPct;
+  if (lifetimeNetPct == null || !Number.isFinite(lifetimeNetPct)) return null;
+  return Number((lifetimeNetPct * 100).toFixed(3));
+}
+
+function secondaryLiveCount(slot: SlotRow | null | undefined) {
+  if (!slot) return 0;
+  return countActiveSecondaries(slot);
+}
+
+function secondaryTotalGainAud(slot: SlotRow | null | undefined) {
+  if (!slot) return null;
+  const lifetime = slot.subslotLifetimeProfitAud;
+  if (lifetime == null || !Number.isFinite(lifetime)) return null;
+  return lifetime;
 }
 
 function isTrackingFamilyState(state: string | null | undefined) {
@@ -1644,10 +1657,6 @@ function getActiveSecondaryRows(slot: SlotRow) {
   return getActiveSubslots(slot);
 }
 
-function hasActiveSubslots(slot: SlotRow) {
-  return getActiveSubslots(slot).length > 0;
-}
-
 function hasPendingSubslotBuys(slot: SlotRow) {
   return getSubslots(slot).some((subslot) => String(subslot.subslotState || "").toUpperCase() === "BUY_SUBMITTED");
 }
@@ -1699,12 +1708,12 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
 
   for (const s of slotRows) {
     const baseAud = Number(s.combinedEntryAud ?? s.entryAud ?? s.unitAud);
-    const netPct = Number(s.netPct);
+    const liveNet = liveParentNetPct(s);
     const parentProfitAud = Number(s.profitAud);
     const subslots = getSubslots(s);
 
-    if (isHoldingFamilyState(s.state) && Number.isFinite(baseAud) && Number.isFinite(netPct)) {
-      openPnl += baseAud * (netPct / 100);
+    if (hasActiveParentExposure(s) && Number.isFinite(baseAud) && liveNet != null && Number.isFinite(liveNet)) {
+      openPnl += baseAud * (liveNet / 100);
     }
 
     if (Number.isFinite(parentProfitAud)) {
@@ -1919,52 +1928,104 @@ function subslotTriggerSummary(subslot: SubslotRow) {
   return parts.length ? parts.join(" | ") : "Legacy trigger";
 }
 
-function engineDecisionLabel(s: SlotRow) {
+function readerStatusLabel(s: SlotRow) {
   const state = String(s.state || "").toUpperCase();
+  const liveNet = liveParentNetPct(s);
+
   if (state === "WAITING_ENTRY") return "Waiting";
   if (state === "DEPLOYING") return "Entering";
   if (state === "EXITING") return "Exiting";
   if (state === "LVL4_TRAIL") return "Trailing";
-  if (state === "LVL3_LOCK" || state === "LVL2_LOCK" || state === "LVL1_LOCK") return "Locked";
+  if (state === "LVL1_LOCK" || state === "LVL2_LOCK" || state === "LVL3_LOCK") return "Protected";
+  if (state === "HOLDING" && liveNet != null && Number(liveNet) > 0) return "Protected";
   if (state === "HOLDING") return "Holding";
   return "Watching";
 }
 
-function entryPhaseLabel(s: SlotRow) {
+function primaryProtectionLabel(slot: SlotRow) {
+  const state = String(slot.state || "").toUpperCase();
+  const floorPct = primaryExitFloorPct(slot);
+  const liveNet = liveParentNetPct(slot);
+
+  if (state === "EXITING") return "Sell resolving";
+  if (state === "DEPLOYING") return "Awaiting entry proof";
+
+  if (floorPct != null && Number.isFinite(floorPct)) {
+    const parts = [`Floor ${pctNum(floorPct)}`];
+    if (liveNet != null && Number.isFinite(liveNet)) {
+      const gapPct = Number(liveNet) - Number(floorPct);
+      parts.push(gapPct >= 0 ? `${pctNum(gapPct)} above` : `${pctNum(Math.abs(gapPct))} below`);
+    }
+    return parts.join(" | ");
+  }
+
+  if (isHoldingFamilyState(state)) {
+    if (liveNet != null && Number(liveNet) > 0) return "Green, floor not armed";
+    return "No floor yet";
+  }
+
+  if (state === "WAITING_ENTRY" && slot.reentryTargetMid != null && Number.isFinite(slot.reentryTargetMid)) {
+    return `Re-entry ${fmt(slot.reentryTargetMid)}`;
+  }
+
+  return "-";
+}
+
+function secondaryTradesLabel(slot: SlotRow | null | undefined) {
+  if (!slot) return "None";
+  const total = getSecondaryRows(slot).length;
+  const active = secondaryLiveCount(slot);
+  const totalGainAud = secondaryTotalGainAud(slot);
+  const parts: string[] = [];
+
+  if (!total) return "None";
+  if (active > 0) parts.push(`${active} live`);
+  if (hasPendingSubslotBuys(slot)) parts.push("entry pending");
+  if (hasPendingSubslotSells(slot)) parts.push("exit pending");
+  if (!parts.length) parts.push(`${total} recorded`);
+  if (totalGainAud != null) parts.push(moneyAud(totalGainAud));
+  return parts.join(" | ");
+}
+
+function nextActionLabel(s: SlotRow) {
   const state = String(s.state || "").toUpperCase();
   const tracking = String(s.trackingState || "").toUpperCase();
 
-  if (state === "WAITING_ENTRY" && s.reentryTargetMid != null) {
-    if (reentryTargetHit(s)) {
-      if (tracking === "REVERSAL_CONFIRMING") return "Re-entry target hit, confirming reversal";
-      if (tracking === "SPREAD_BLOCKED") return "Re-entry target hit, spread blocked";
-      if (tracking === "NO_MARKET") return "Re-entry target hit, no market";
-      return "Re-entry target hit, waiting for reversal";
-    }
-    return "Waiting for re-entry level";
-  }
-  if (tracking === "REVERSAL_CONFIRMING") return "Reversal confirming";
-  if (tracking === "DRAWDOWN_SEEN") return "Drawdown observed";
-  if (tracking === "TRACKING") return "Tracking structure";
-  if (tracking === "SPREAD_BLOCKED") return "Spread blocked";
-  if (tracking === "NO_MARKET") return "No market";
-  if (state === "DEPLOYING") return "Deploying";
-  if (isHoldingFamilyState(state)) return "Position established";
-  if (state === "EXITING") return "Exit in progress";
-  return "Idle";
-}
+  if (tracking === "PARENT_EXIT_WAIT_GREEN") return "Waiting for green exit";
+  if (state === "EXITING") return "Confirming exit fill";
+  if (state === "DEPLOYING") return "Confirming entry fill";
 
-function breakoutLabel(s: SlotRow) {
-  if (s.consolidationBreakoutReady === true) return "READY";
-  if (rawRegimeValue(s).includes("CONSOLIDATION")) return "BUILDING";
-  return "NO";
+  if (state === "WAITING_ENTRY") {
+    if (reentryTargetHit(s)) {
+      if (tracking === "REVERSAL_CONFIRMING") return "Waiting for reversal confirmation";
+      if (tracking === "SPREAD_BLOCKED") return "Spread blocking entry";
+      if (tracking === "NO_MARKET") return "Waiting for market read";
+      return "Waiting for reversal";
+    }
+    if (s.reentryTargetMid != null && Number.isFinite(s.reentryTargetMid)) return "Watching re-entry level";
+    return "Watching for setup";
+  }
+
+  if (hasPendingSubslotSells(s)) return "Managing secondary exit";
+  if (hasPendingSubslotBuys(s)) return "Managing secondary entry";
+  if (secondaryLiveCount(s) > 0) return "Managing secondary trades";
+  if (state === "LVL4_TRAIL" || state === "LVL1_LOCK" || state === "LVL2_LOCK" || state === "LVL3_LOCK") {
+    return "Holding above exit floor";
+  }
+  if (state === "HOLDING") {
+    const liveNet = liveParentNetPct(s);
+    return liveNet != null && Number(liveNet) > 0 ? "Building protection" : "Waiting for protection";
+  }
+
+  return "Observing";
 }
 
 function liveParentAnalysis(s: SlotRow, nowMs: number) {
   const parts: string[] = [];
 
   const nowMid = s.nowMid;
-  const netPct = s.netPct;
+  const netPct = liveParentNetPct(s);
+  const lifetimeNet = primaryTotalGainPct(s);
   const spreadPct = s.nowSpreadPct;
   const dd = s.drawdownPct;
   const breakout = s.consolidationBreakoutReady === true;
@@ -2013,6 +2074,8 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
     if (Number(netPct) > 0) parts.push(`Net is green at ${pctNum(netPct)}.`);
     else if (Number(netPct) < 0) parts.push(`Net is red at ${pctNum(netPct)}.`);
     else parts.push(`Net is flat at ${pctNum(netPct)}.`);
+  } else if (state === "WAITING_ENTRY" && Number.isFinite(lifetimeNet)) {
+    parts.push(`Lifetime net is ${pctNum(lifetimeNet)}.`);
   }
 
   if (trailMovement) {
@@ -2146,23 +2209,19 @@ function detailRowsForSlot(s: SlotRow, nowMs: number) {
     { k: "Slot", v: s.id },
     { k: "Coin", v: slotCoin(s) },
     { k: "Market", v: s.market ?? "-" },
-    { k: "State", v: stateLabel(s) },
-    { k: "Tracking", v: trackingLabel(s) },
-    { k: "Decision", v: engineDecisionLabel(s) },
+    { k: "Status", v: readerStatusLabel(s) },
+    { k: "Next action", v: nextActionLabel(s) },
     { k: "Regime", v: regimeLabel(s) },
-    { k: "Regime strength", v: s.regimeStrength != null ? String(s.regimeStrength) : "-" },
-    { k: "Trend score", v: s.regimeTrendScore != null ? String(s.regimeTrendScore) : "-" },
-    { k: "Breakout ready", v: s.consolidationBreakoutReady == null ? "-" : s.consolidationBreakoutReady ? "YES" : "NO" },
     { k: "Entry", v: effectiveEntryLabel(s) },
     { k: "Now", v: effectiveNowLabel(s) },
+    { k: "Live net", v: pctNum(liveParentNetPct(s)) },
+    { k: "Lifetime net", v: pctNum(primaryTotalGainPct(s)) },
+    { k: "Protection", v: primaryProtectionLabel(s) },
+    { k: "Secondary trades", v: secondaryTradesLabel(s) },
     { k: "Spread", v: pctNum(s.nowSpreadPct) },
-    { k: "Net", v: pctNum(s.netPct) },
-    { k: "Gross", v: pctNum(s.grossPct) },
     { k: "Unit", v: moneyAud(s.unitAud) },
     { k: "Cycles", v: String(s.cycles ?? 0) },
-    { k: "Lifetime net", v: pctNum(s.lifetimeNetPct) },
     { k: "Drawdown", v: pctNum(s.drawdownPct) },
-    { k: "Lock", v: lockDisplay(s) },
     { k: "Updated", v: slotHeartbeatLabel(s, nowMs) },
   ];
 }
@@ -2199,28 +2258,6 @@ function derivePriorityScore(s: SlotRow) {
   if (String(s.trackingState || "").toUpperCase() === "TRACKING") return 40;
   if (String(s.trackingState || "").toUpperCase() === "DRAWDOWN_SEEN") return 35;
   return 10;
-}
-
-function slotHealthLabel(s: SlotRow) {
-  const state = String(s.state || "").toUpperCase();
-  const tracking = String(s.trackingState || "").toUpperCase();
-  const spread = Number(s.nowSpreadPct);
-  const spreadLimit = coinSpreadThresholdPct(s);
-
-  if (state === "EXITING") return "RESOLVING EXIT";
-  if (state === "DEPLOYING") return "CONFIRMING ENTRY";
-  if (state === "LVL4_TRAIL") return "HIGH STRUCTURE";
-  if (isHoldingFamilyState(state) && Number(s.netPct) > 0) return "PROTECTED";
-  if (hasPendingSubslotSells(s)) return "JRD SECONDARY EXIT";
-  if (hasPendingSubslotBuys(s)) return "JRD SECONDARY ENTRY";
-  if (hasActiveSubslots(s)) return "JRD SECONDARY LIVE";
-  if (tracking === "REVERSAL_CONFIRMING") return "BUILDING";
-  if (s.consolidationBreakoutReady === true) return "READY";
-  if (tracking === "SPREAD_BLOCKED" || (Number.isFinite(spread) && spread > spreadLimit)) {
-    return "UNDER FRICTION";
-  }
-  if (tracking === "NO_MARKET") return "NO MARKET";
-  return "OBSERVING";
 }
 
 function getActiveTrackingCount(trackingStates: Record<string, number>) {
@@ -2479,15 +2516,15 @@ const EngineHero = React.memo(function EngineHero(props: {
       <div className="engine-hero-center">
         <h1 className="engine-title">JAL Engine</h1>
         <div className="engine-sub">
-          Jeremy Aaron Lugg&apos;s fixed-slot market machine with public read-only runtime proof.
-          Personal telemetry only, not a customer trading service or copy-trading prompt.
+          Private fixed-slot auto-trading dashboard for the 8-coin engine.
+          Read the outcome first, then open the machine proof when you need the deeper detail.
         </div>
 
         {view === "advanced" ? (
           <div className="card machine-surface panel-frame engine-telemetry engine-telemetry--compact">
             <div className="engine-mini">
               <div className="engine-mini-row">
-                <div className="mini-k">Architecture</div>
+                <div className="mini-k">System</div>
                 <div className="mini-v">{architecture}</div>
               </div>
               <div className="engine-mini-row">
@@ -2501,7 +2538,7 @@ const EngineHero = React.memo(function EngineHero(props: {
                 </div>
               </div>
               <div className="engine-mini-row">
-                <div className="mini-k">Last action</div>
+                <div className="mini-k">Last engine action</div>
                 <div className="mini-v">{lastAction}</div>
               </div>
             </div>
@@ -2509,13 +2546,13 @@ const EngineHero = React.memo(function EngineHero(props: {
         ) : null}
 
         <div className={`engine-runtime-warnings ${runtimeWarnings.length ? "has-warnings" : "is-clear"}`}>
-          <div className="engine-runtime-title">Runtime Warnings</div>
+          <div className="engine-runtime-title">Attention</div>
           {runtimeWarnings.length ? (
             runtimeWarnings.map((warning, index) => (
               <div key={`${warning}-${index}`} className="engine-runtime-warning">{warning}</div>
             ))
           ) : (
-            <div className="engine-runtime-warning engine-runtime-warning--muted">No runtime warnings.</div>
+            <div className="engine-runtime-warning engine-runtime-warning--muted">System clear.</div>
           )}
         </div>
       </div>
@@ -2540,7 +2577,7 @@ const EngineHero = React.memo(function EngineHero(props: {
         </div>
 
                 <div className="engine-auth-hint">
-          Clarity first. Diagnostics second. Every slot is explained as a machine decision.
+          Clarity first. Proof second. Each slot shows status, live performance, protection, and next action.
           <br />
           Snapshot: {formatSnapshotLabel(snap, nowMs)}
         </div>
@@ -2571,20 +2608,20 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
   return (
     <div className="engine-capture-grid" aria-label="Engine capture cards">
       <div className="engine-capture card machine-surface panel-frame">
-        <div className="cap-k">Estimated Open PnL</div>
+        <div className="cap-k">Open Positions</div>
         <div className="cap-v">{moneyAud(props.openPnl)}</div>
         <div className="cap-sub">
-          <span>Window Harvest {moneyAud(props.windowHarvest)}</span>
+          <span>Recorded {moneyAud(props.visibleRealized)}</span>
           <span>|</span>
-          <span>Visible Realized {moneyAud(props.visibleRealized)}</span>
+          <span>Window {moneyAud(props.windowHarvest)}</span>
         </div>
       </div>
 
       <div className="engine-capture card machine-surface panel-frame">
-        <div className="cap-k">Capital Mobility</div>
+        <div className="cap-k">Available Capital</div>
         <div className="cap-v">{moneyAud(props.audAvailable)}</div>
         <div className="cap-sub">
-          <span>Wallet Value {moneyAud(props.walletAudValue)}</span>
+          <span>Wallet {moneyAud(props.walletAudValue)}</span>
           <span>|</span>
           <span>Movable {moneyAud(props.movableAudEstimate)}</span>
           <span>|</span>
@@ -2593,7 +2630,7 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
       </div>
 
       <div className="engine-capture card machine-surface panel-frame">
-        <div className="cap-k">Registry Sweep</div>
+        <div className="cap-k">Market & Cadence</div>
         <div className="cap-v">{props.nextSweepLabel}</div>
         <div className="cap-sub">
           <span>Window {props.currentWindow ?? "-"}</span>
@@ -2603,24 +2640,24 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
       </div>
 
       <div className="engine-capture card machine-surface panel-frame">
-        <div className="cap-k">Fixed Slots</div>
+        <div className="cap-k">Positions</div>
         <div className="cap-v">
           {props.fixedPresent}/{props.fixedExpected}
         </div>
         <div className="cap-sub">
           <span>Tracking {props.trackingCount}</span>
           <span>|</span>
-          <span>Holding {props.holdingCount}</span>
+          <span>In play {props.holdingCount}</span>
         </div>
       </div>
 
       <div className="engine-capture card machine-surface panel-frame">
-        <div className="cap-k">Breakout Ready</div>
-        <div className="cap-v">{props.breakoutReady}</div>
+        <div className="cap-k">Secondary Trades</div>
+        <div className="cap-v">{props.activeSubslots}</div>
         <div className="cap-sub">
-          <span>Consolidation {props.consolidation}</span>
+          <span>Breakout ready {props.breakoutReady}</span>
           <span>|</span>
-          <span>Active Jrd Secondary {props.activeSubslots}</span>
+          <span>Consolidation {props.consolidation}</span>
         </div>
       </div>
     </div>
@@ -2755,9 +2792,9 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
     <div className="card machine-surface panel-frame engine-status-rail" aria-label="Live engine status">
       <div className="engine-telemetry-head">
         <div>
-          <div className="engine-telemetry-title">Live Engine Status</div>
+          <div className="engine-telemetry-title">Position Spotlight</div>
           <div className="engine-telemetry-note">
-            A public-facing explanation of Jeremy&apos;s own fixed-slot engine state.
+            One slot at a time, explained in plain language before the deeper machine detail.
           </div>
         </div>
 
@@ -2821,34 +2858,30 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
               </div>
 
               <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Decision</div>
+                <div className="engine-carousel-k">Status</div>
                 <div className={`engine-carousel-v ${stateClassName(stateLabel(carouselSlot))}`}>
-                  {engineDecisionLabel(carouselSlot)}
+                  {readerStatusLabel(carouselSlot)}
                 </div>
               </div>
 
               <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Position</div>
-                <div className={`engine-carousel-v ${stateClassName(stateLabel(carouselSlot))}`}>
-                  {stateLabel(carouselSlot)}
-                </div>
+                <div className="engine-carousel-k">Live Net</div>
+                <div className="engine-carousel-v">{pctNum(liveParentNetPct(carouselSlot))}</div>
               </div>
 
               <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Entry Phase</div>
-                <div className={`engine-carousel-v ${stateClassName(trackingLabel(carouselSlot))}`}>
-                  {entryPhaseLabel(carouselSlot)}
-                </div>
+                <div className="engine-carousel-k">Lifetime Net</div>
+                <div className="engine-carousel-v">{pctNum(primaryTotalGainPct(carouselSlot))}</div>
               </div>
 
               <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Health</div>
-                <div className="engine-carousel-v">{slotHealthLabel(carouselSlot)}</div>
+                <div className="engine-carousel-k">Protection</div>
+                <div className="engine-carousel-v">{primaryProtectionLabel(carouselSlot)}</div>
               </div>
 
               <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Net</div>
-                <div className="engine-carousel-v">{pctNum(carouselSlot.netPct)}</div>
+                <div className="engine-carousel-k">Next Action</div>
+                <div className="engine-carousel-v">{nextActionLabel(carouselSlot)}</div>
               </div>
 
               <div className="engine-carousel-metric">
@@ -2857,13 +2890,13 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
               </div>
 
               <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Breakout</div>
-                <div className="engine-carousel-v">{breakoutLabel(carouselSlot)}</div>
+                <div className="engine-carousel-k">Secondary Trades</div>
+                <div className="engine-carousel-v">{secondaryTradesLabel(carouselBaseSlot)}</div>
               </div>
 
               <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Cycles</div>
-                <div className="engine-carousel-v">{carouselSlot.cycles ?? 0}</div>
+                <div className="engine-carousel-k">Updated</div>
+                <div className="engine-carousel-v">{slotHeartbeatLabel(carouselSlot, props.nowMs)}</div>
               </div>
             </div>
 
@@ -3028,38 +3061,34 @@ const OverviewTable = React.memo(function OverviewTable(props: {
     <div className="card machine-surface panel-frame engine-ledger" aria-label="Overview cards">
       <div className="engine-ledger-top">
         <div>
-          <div className="engine-ledger-title">Focus Board</div>
+          <div className="engine-ledger-title">Reader Dashboard</div>
         </div>
       </div>
 
       <div className="ledger-table">
         <div className="ledger-head">
-  <div>Slot</div>
-  <div>Regime</div>
-  <div>Decision</div>
-  <div>Position</div>
-  <div>Jrd Secondary</div>
-  <div>Live Analysis</div>
-  <div>Health</div>
-  <div className="num">Net</div>
+  <div>Coin</div>
+  <div>Status</div>
+  <div className="num">Live Net</div>
+  <div className="num">Lifetime Net</div>
+  <div>Protection</div>
+  <div>Next Action</div>
+  <div>Secondary Trades</div>
+  <div className="num">Updated</div>
   <div className="num">Open</div>
 </div>
 
         {props.slots.length ? (
           props.slots.map((s) => (
             <button type="button" className="ledger-row" key={s.id} onClick={() => props.onOpenSlot(s.id)}>
-  <div className="ledger-slotid">{s.id}</div>
-  <div className={regimeToneClass(s)}>{regimeLabel(s)}</div>
-  <div>{engineDecisionLabel(s)}</div>
-  <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
-  <div className={primarySubslotToneClass(s)}>
-    {secondaryOverviewSummary(s)}
-  </div>
-  <div className="ledger-analysis">
-  {liveParentAnalysis(s, props.nowMs)}
-</div>
-  <div>{slotHealthLabel(s)}</div>
-  <div className="num">{pctNum(s.netPct)}</div>
+  <div className="ledger-slotid">{slotCoin(s)}</div>
+  <div className={stateClassName(stateLabel(s))}>{readerStatusLabel(s)}</div>
+  <div className="num">{pctNum(liveParentNetPct(s))}</div>
+  <div className="num">{pctNum(primaryTotalGainPct(s))}</div>
+  <div>{primaryProtectionLabel(s)}</div>
+  <div className="ledger-analysis">{nextActionLabel(s)}</div>
+  <div className={primarySubslotToneClass(s)}>{secondaryTradesLabel(s)}</div>
+  <div className="num">{slotHeartbeatLabel(s, props.nowMs)}</div>
   <div className="num ledger-view">Open</div>
 </button>
           ))
@@ -3084,9 +3113,9 @@ const LedgerTable = React.memo(function LedgerTable(props: {
     <div className="card machine-surface panel-frame engine-ledger" aria-label="Slots Ledger">
       <div className="engine-ledger-top">
         <div>
-          <div className="engine-ledger-title">Permanent Slots Ledger</div>
+          <div className="engine-ledger-title">Positions Ledger</div>
           <div className="engine-ledger-note">
-            Full fixed-slot registry with expandable machine proof, tactical detail, and diagnostics.
+            Fixed-slot positions with a simpler read on status, protection, and next action.
           </div>
         </div>
 
@@ -3100,11 +3129,11 @@ const LedgerTable = React.memo(function LedgerTable(props: {
           <div>Slot ID</div>
           <div>Coin</div>
           <div>Market</div>
-          <div>State</div>
-          <div>Regime</div>
-          <div>Health</div>
-          <div className="num">Unit</div>
-          <div className="num">Net</div>
+          <div>Status</div>
+          <div>Next Action</div>
+          <div>Secondary Trades</div>
+          <div className="num">Live Net</div>
+          <div className="num">Lifetime Net</div>
           <div className="num">Open</div>
         </div>
 
@@ -3126,11 +3155,11 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                   <div className="ledger-slotid">{s.id}</div>
                   <div>{slotCoin(s)}</div>
                   <div>{s.market ?? "-"}</div>
-                  <div className={stateClassName(stateLabel(s))}>{stateLabel(s)}</div>
-                  <div className={regimeToneClass(s)}>{regimeLabel(s)}</div>
-                  <div>{slotHealthLabel(s)}</div>
-                  <div className="num">{moneyAud(s.unitAud)}</div>
-                  <div className="num">{pctNum(s.netPct)}</div>
+                  <div className={stateClassName(stateLabel(s))}>{readerStatusLabel(s)}</div>
+                  <div>{nextActionLabel(s)}</div>
+                  <div className={primarySubslotToneClass(s)}>{secondaryTradesLabel(s)}</div>
+                  <div className="num">{pctNum(liveParentNetPct(s))}</div>
+                  <div className="num">{pctNum(primaryTotalGainPct(s))}</div>
                   <div className="num ledger-view">{expanded ? "Hide" : "Show"}</div>
                 </button>
 
@@ -3453,14 +3482,14 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div className="slot-modal-id">{slot.id}</div>
               <div className="slot-modal-sub">
                 {slotCoin(slot)} | {slot.market ?? "-"} |{" "}
-                <span className={stateClassName(stateLabel(slot))}>{stateLabel(slot)}</span> |{" "}
+                <span className={stateClassName(stateLabel(slot))}>{readerStatusLabel(slot)}</span> |{" "}
                 <span className={regimeToneClass(slot)}>{regimeLabel(slot)}</span>
               </div>
             </div>
 
             <div className="slot-modal-meta">
               <span className="slot-modal-chip">Esc to close</span>
-              <span className="slot-modal-chip">{slotHealthLabel(slot)}</span>
+              <span className="slot-modal-chip">{nextActionLabel(slot)}</span>
             </div>
           </div>
 
@@ -3474,51 +3503,51 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div className="slot-v">{slot.market ?? "-"}</div>
             </div>
             <div className="slot-modal-strip-item">
-              <div className="slot-k">State</div>
-              <div className={`slot-v ${stateClassName(stateLabel(slot))}`}>{stateLabel(slot)}</div>
+              <div className="slot-k">Status</div>
+              <div className={`slot-v ${stateClassName(stateLabel(slot))}`}>{readerStatusLabel(slot)}</div>
             </div>
             <div className="slot-modal-strip-item">
-              <div className="slot-k">Regime</div>
-              <div className={`slot-v ${regimeToneClass(slot)}`}>{regimeLabel(slot)}</div>
+              <div className="slot-k">Live Net</div>
+              <div className="slot-v">{pctNum(liveParentNetPct(slot))}</div>
             </div>
             <div className="slot-modal-strip-item">
-              <div className="slot-k">Health</div>
-              <div className="slot-v">{slotHealthLabel(slot)}</div>
+              <div className="slot-k">Lifetime Net</div>
+              <div className="slot-v">{pctNum(primaryTotalGainPct(slot))}</div>
             </div>
           </div>
 
           <CollapsibleBlock title="Overview" defaultOpen>
-            <div className="slot-section">Decision Summary</div>
+            <div className="slot-section">Reader Summary</div>
 
             <div className="slot-modal-grid">
               <div>
-                <div className="slot-k">Jrd Primary</div>
+                <div className="slot-k">Primary Position</div>
                 <div className="slot-v">{slot.id}</div>
               </div>
               <div>
-                <div className="slot-k">Decision</div>
-                <div className="slot-v">{engineDecisionLabel(slot)}</div>
+                <div className="slot-k">Status</div>
+                <div className="slot-v">{readerStatusLabel(slot)}</div>
               </div>
               <div>
-                <div className="slot-k">Position</div>
-                <div className={`slot-v ${stateClassName(stateLabel(slot))}`}>{stateLabel(slot)}</div>
+                <div className="slot-k">Next Action</div>
+                <div className="slot-v">{nextActionLabel(slot)}</div>
               </div>
               <div>
-                <div className="slot-k">Entry Phase</div>
-                <div className={`slot-v ${stateClassName(trackingLabel(slot))}`}>{entryPhaseLabel(slot)}</div>
+                <div className="slot-k">Protection</div>
+                <div className="slot-v">{primaryProtectionLabel(slot)}</div>
               </div>
               <div>
-                <div className="slot-k">Health</div>
-                <div className="slot-v">{slotHealthLabel(slot)}</div>
+                <div className="slot-k">Secondary Trades</div>
+                <div className="slot-v">{secondaryTradesLabel(slot)}</div>
               </div>
               <div>
-  <div className="slot-k">Decision Note</div>
+  <div className="slot-k">Reader Note</div>
   <div className="slot-v">{liveParentAnalysis(slot, nowMs)}</div>
 </div>
             </div>
           </CollapsibleBlock>
 
-          <CollapsibleBlock title="Jrd Primary" defaultOpen>
+          <CollapsibleBlock title="Primary Position" defaultOpen>
           <div className="slot-section">Core Metrics</div>
 
             <div className="slot-section">Primary Rail</div>
@@ -3566,12 +3595,14 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Cycles</div><div className="slot-v">{slot.cycles ?? 0}</div></div>
               <div><div className="slot-k">Entry</div><div className="slot-v">{effectiveEntryLabel(slot)}</div></div>
               <div><div className="slot-k">Now</div><div className="slot-v">{effectiveNowLabel(slot)}</div></div>
-              <div><div className="slot-k">Gross</div><div className="slot-v">{pctNum(slot.grossPct)}</div></div>
-              <div><div className="slot-k">Net</div><div className="slot-v">{pctNum(slot.netPct)}</div></div>
+              <div><div className="slot-k">Live Gross</div><div className="slot-v">{pctNum(liveParentGrossPct(slot))}</div></div>
+              <div><div className="slot-k">Live Net</div><div className="slot-v">{pctNum(liveParentNetPct(slot))}</div></div>
+              <div><div className="slot-k">Lifetime Net</div><div className="slot-v">{pctNum(primaryTotalGainPct(slot))}</div></div>
               <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "-"}</div></div>
-              <div><div className="slot-k">Lock</div><div className="slot-v">{lockDisplay(slot)}</div></div>
+              <div><div className="slot-k">Protection</div><div className="slot-v">{primaryProtectionLabel(slot)}</div></div>
               <div><div className="slot-k">Spread</div><div className="slot-v">{pctNum(slot.nowSpreadPct)}</div></div>
               <div><div className="slot-k">Drawdown</div><div className="slot-v">{pctNum(slot.drawdownPct)}</div></div>
+              <div><div className="slot-k">Secondary Trades</div><div className="slot-v">{secondaryTradesLabel(slot)}</div></div>
               <div><div className="slot-k">Re-entry target</div><div className="slot-v">{fmt(slot.reentryTargetMid)}</div></div>
               <div><div className="slot-k">Exit reason</div><div className="slot-v">{slot.exitReason ?? "-"}</div></div>
               <div><div className="slot-k">Created</div><div className="slot-v">{ageLabel(nowMs - slot.createdAt)}</div></div>
@@ -3579,20 +3610,20 @@ const SlotModal = React.memo(function SlotModal(props: {
             </div>
           </CollapsibleBlock>
 
-          <CollapsibleBlock title="Jrd Secondary" defaultOpen>
-            <div className="slot-section">Jrd Primary Secondary Summary</div>
+          <CollapsibleBlock title="Secondary Trades" defaultOpen>
+            <div className="slot-section">Secondary Summary</div>
 
               <div className="slot-modal-grid">
-              <div><div className="slot-k">Total Jrd Secondary</div><div className="slot-v">{getSecondaryRows(slot).length}</div></div>
+              <div><div className="slot-k">Total Secondary Trades</div><div className="slot-v">{getSecondaryRows(slot).length}</div></div>
               <div><div className="slot-k">Active</div><div className="slot-v">{getActiveSecondaryRows(slot).length}</div></div>
               <div><div className="slot-k">Pending Entry</div><div className="slot-v">{hasPendingSubslotBuys(slot) ? "YES" : "NO"}</div></div>
               <div><div className="slot-k">Pending Exit</div><div className="slot-v">{hasPendingSubslotSells(slot) ? "YES" : "NO"}</div></div>
-              <div><div className="slot-k">Open Jrd Secondary</div><div className="slot-v">{getSubslotOpenCount(slot)}</div></div>
-              <div><div className="slot-k">Closed Jrd Secondary</div><div className="slot-v">{getClosedSubslotCount(slot)}</div></div>
-              <div><div className="slot-k">Recorded Jrd Secondary Net Result</div><div className="slot-v">{moneyAud(getSubslotRealizedProfit(slot))}</div></div>
+              <div><div className="slot-k">Open Secondary Trades</div><div className="slot-v">{getSubslotOpenCount(slot)}</div></div>
+              <div><div className="slot-k">Closed Secondary Trades</div><div className="slot-v">{getClosedSubslotCount(slot)}</div></div>
+              <div><div className="slot-k">Total Net Gain (AUD)</div><div className="slot-v">{moneyAud(secondaryTotalGainAud(slot))}</div></div>
               {getSecondaryRows(slot).length ? (
                 <>
-                  <div><div className="slot-k">Latest Jrd Secondary</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
+                  <div><div className="slot-k">Latest Secondary Trade</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
                   <div><div className="slot-k">Latest Trigger Band</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerBandLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
                   <div><div className="slot-k">Latest Trigger Summary</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerSummary(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
                   <div><div className="slot-k">Latest Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
@@ -3603,14 +3634,14 @@ const SlotModal = React.memo(function SlotModal(props: {
 
             {getSecondaryRows(slot).length ? (
               <>
-                <div className="slot-section">Latest Jrd Secondary</div>
+                <div className="slot-section">Latest Secondary Trades</div>
                 <div><div className="slot-k">Live Analysis</div><div className="slot-v">{primaryLiveSubslotAnalysis(slot, nowMs)}</div></div>
 
               <div className="secondary-list subslot-list">
                 {getSecondaryRows(slot).map((subslot, index) => (
                   <div key={subslot.subslotId ?? `${slot.id}-modal-subslot-${index}`} className="secondary-card subslot-card">
                     <div className="slot-section">
-                      Jrd Secondary #{subslot.subslotSequence ?? index + 1} | {subslot.subslotId ?? "legacy"} | {subslotStateBadgeLabel(subslot)}
+                      Secondary Trade #{subslot.subslotSequence ?? index + 1} | {subslot.subslotId ?? "legacy"} | {subslotStateBadgeLabel(subslot)}
                     </div>
 
                     <div className="slot-modal-grid secondary-grid">
@@ -3624,9 +3655,9 @@ const SlotModal = React.memo(function SlotModal(props: {
                       <div><div className="slot-k">Entry Mid</div><div className="slot-v">{fmt(subslot.subslotEntryMid)}</div></div>
                       <div><div className="slot-k">Live Now</div><div className="slot-v">{subslotLiveNowLabel(subslot, slot)}</div></div>
                       <div><div className="slot-k">Gross</div><div className="slot-v">{pctNum(subslot.subslotGrossPct)}</div></div>
-                      <div><div className="slot-k">Net</div><div className="slot-v">{pctNum(subslot.subslotNetPct)}</div></div>
-                      <div><div className="slot-k">Net Result (AUD)</div><div className="slot-v">{moneyAud(subslot.subslotProfitAud)}</div></div>
-                      <div><div className="slot-k">Net Result (%)</div><div className="slot-v">{pctNum(subslot.subslotProfitPct)}</div></div>
+                      <div><div className="slot-k">Live Net</div><div className="slot-v">{pctNum(subslot.subslotNetPct)}</div></div>
+                      <div><div className="slot-k">Last Result (AUD)</div><div className="slot-v">{moneyAud(subslot.subslotProfitAud)}</div></div>
+                      <div><div className="slot-k">Last Result (%)</div><div className="slot-v">{pctNum(subslot.subslotProfitPct)}</div></div>
                       <div><div className="slot-k">Bounce</div><div className="slot-v">{pctNum(subslot.subslotBouncePct)}</div></div>
                       <div><div className="slot-k">EMA Gap</div><div className="slot-v">{pctNum(subslot.subslotEmaGapPct)}</div></div>
                       <div><div className="slot-k">Recovered</div><div className="slot-v">{subslot.subslotRecoveredConfirmed == null ? "-" : subslot.subslotRecoveredConfirmed ? "YES" : "NO"}</div></div>
@@ -3647,7 +3678,7 @@ const SlotModal = React.memo(function SlotModal(props: {
               </div>
               </>
             ) : (
-              <div className="slot-v">No Jrd Secondary records available.</div>
+              <div className="slot-v">No secondary trade records available.</div>
             )}
           </CollapsibleBlock>
 
@@ -3760,8 +3791,8 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div className="slot-modal-grid">
                 <div><div className="slot-k">Entry AUD</div><div className="slot-v">{moneyAud(slot.entryAud)}</div></div>
                 <div><div className="slot-k">Exit AUD</div><div className="slot-v">{moneyAud(slot.exitAud)}</div></div>
-                <div><div className="slot-k">Net Result (AUD)</div><div className="slot-v">{moneyAud(slot.profitAud)}</div></div>
-                <div><div className="slot-k">Net Result (%)</div><div className="slot-v">{pctNum(slot.profitPct)}</div></div>
+                <div><div className="slot-k">Last Exit Result (AUD)</div><div className="slot-v">{moneyAud(slot.profitAud)}</div></div>
+                <div><div className="slot-k">Last Exit Result (%)</div><div className="slot-v">{pctNum(slot.profitPct)}</div></div>
               </div>
             </CollapsibleBlock>
           )}
@@ -3839,8 +3870,8 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   return (
     <div className="engine-bay">
       <div className="bay-head">
-        <div className="bay-title">System Summary</div>
-        <div className="bay-note">Core machine state without the treasury detail layer.</div>
+        <div className="bay-title">Advanced System Summary</div>
+        <div className="bay-note">Engineering detail behind the simpler reader dashboard.</div>
       </div>
 
       <div className="card machine-surface panel-frame engine-telemetry">
@@ -4650,7 +4681,7 @@ export default function Engine() {
                   className={`engine-section-tab ${section === "focus" ? "active" : ""}`}
                   onClick={() => setSection("focus")}
                 >
-                  Focus
+                  Dashboard
                 </button>
 
                 <button
@@ -4658,7 +4689,7 @@ export default function Engine() {
                   className={`engine-section-tab ${section === "slots" ? "active" : ""}`}
                   onClick={() => setSection("slots")}
                 >
-                  Slots
+                  Positions
                 </button>
 
                 <button
@@ -4682,7 +4713,7 @@ export default function Engine() {
                   className={`engine-section-tab ${section === "events" ? "active" : ""}`}
                   onClick={() => setSection("events")}
                 >
-                  Events
+                  Activity
                 </button>
 
                 <button
@@ -4690,7 +4721,7 @@ export default function Engine() {
                   className={`engine-section-tab ${section === "about" ? "active" : ""}`}
                   onClick={() => setSection("about")}
                 >
-                  About
+                  Advanced
                 </button>
               </div>
 
@@ -4712,7 +4743,7 @@ export default function Engine() {
                     </div>
 
                     <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
-  <div className="cap-k">Tracking family</div>
+  <div className="cap-k">Entry Queue</div>
   <div className="cap-v">{getActiveTrackingCount(trackingStates)}</div>
   <div className="cap-sub">
     <span>TRACKING {trackingStates.TRACKING ?? 0}</span>
@@ -4724,7 +4755,7 @@ export default function Engine() {
 </div>
 
                     <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
-                      <div className="cap-k">Fixed universe</div>
+                      <div className="cap-k">Tradable Set</div>
                       <div className="cap-v">{fixedAllowlist.length}</div>
                       <div className="cap-sub">
                         <span>{fixedAllowlist.slice(0, 4).join(", ")}</span>
@@ -4782,7 +4813,7 @@ export default function Engine() {
 
             <div className="engine-divider" aria-hidden="true">
               <div className="engine-divider-line" />
-              <div className="engine-divider-label">Live Engine Status</div>
+              <div className="engine-divider-label">Position Spotlight</div>
               <div className="engine-divider-line" />
             </div>
 
