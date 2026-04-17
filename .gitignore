@@ -24,7 +24,5 @@ dist-ssr
 *.sw?
 solana-release-*.tar.bz2
 *:Zone.Identifier
-package-lock.json
-
 .vercel
 .env*.local

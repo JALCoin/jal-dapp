@@ -41,26 +41,15 @@ function HeaderView({
   isOpen: boolean;
   theme: ThemeMode;
 }) {
+  const headerLogoSrc = theme === "light" ? "/JALSOLLIGHT.gif" : "/JALSOL1.gif";
+
   return (
     <header className="site-header">
       <div className="header-inner">
-        <div className="social-links" aria-label="Social Links">
-          <a href="https://x.com/JAL358" target="_blank" rel="noopener noreferrer" aria-label="X">
-            <img src="/icons/X.png" alt="" />
-          </a>
-
-          <a
-            href="https://www.tiktok.com/@358jalsol"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="TikTok"
-          >
-            <img src="/icons/TikTok.png" alt="" />
-          </a>
-        </div>
+        <div className="header-spacer" aria-hidden="true" />
 
         <button type="button" onClick={onLogo} aria-label="Open navigation" className="logo-btn">
-          <img className="logo header-logo" src="/JALSOL1.gif" alt={LEGAL_OPERATOR_NAME} />
+          <img className="logo header-logo" src={headerLogoSrc} alt={LEGAL_OPERATOR_NAME} />
         </button>
 
         <div className="header-actions">
@@ -324,7 +313,7 @@ function SidebarView({
             <SidebarSection
               title="Operator"
               onClose={onClose}
-              items={[{ to: "/app/engine", label: "JAL Engine (Private)" }]}
+              items={[{ to: "/app/engine", label: "JAL Engine" }]}
             />
           ) : null}
 

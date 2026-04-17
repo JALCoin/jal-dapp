@@ -120,7 +120,7 @@ function NavOverlay({
             onClick={() => onSelect("/app/engine")}
             disabled={disabled}
           >
-            JAL~ENGINE
+            JAL ENGINE
           </button>
         </div>
       </section>
@@ -139,6 +139,8 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
+  const brandLogoSrc = theme === "light" ? "/JALSOLLIGHT.gif" : "/JALSOL1.gif";
+  const loadingLabel = mode === "nav" ? "Opening section" : "Opening public site";
 
   useEffect(() => {
     const onOpen = () => {
@@ -166,7 +168,7 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
     window.setTimeout(() => {
       setLoading(false);
       navigate(to);
-    }, 1200);
+    }, 900);
   };
 
   const enter = () => {
@@ -201,7 +203,7 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
               onClick={enter}
               aria-label="Enter Jeremy Aaron Lugg site"
             >
-              <img className="center-logo" src="/JALSOL1.gif" alt="Jeremy Aaron Lugg" />
+              <img className="center-logo" src={brandLogoSrc} alt="Jeremy Aaron Lugg" />
               <div className="center-logo-hint">ENTER SITE</div>
             </button>
           </>
@@ -214,7 +216,15 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
             aria-label="Loading"
             aria-live="polite"
           >
-            <img className="loading-logo" src="/JALSOL1.gif" alt="" />
+            <div className="loading-brand-lockup">
+              <div className="loading-logo-frame">
+                <img className="loading-logo" src={brandLogoSrc} alt="" />
+              </div>
+              <div className="loading-caption">{loadingLabel}</div>
+              <div className="loading-progress" aria-hidden="true">
+                <span className="loading-progress-bar" />
+              </div>
+            </div>
           </div>
         )}
       </main>
@@ -243,7 +253,15 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
           aria-label="Loading"
           aria-live="polite"
         >
-          <img className="loading-logo" src="/JALSOL1.gif" alt="" />
+          <div className="loading-brand-lockup">
+            <div className="loading-logo-frame">
+              <img className="loading-logo" src={brandLogoSrc} alt="" />
+            </div>
+            <div className="loading-caption">{loadingLabel}</div>
+            <div className="loading-progress" aria-hidden="true">
+              <span className="loading-progress-bar" />
+            </div>
+          </div>
         </div>
       )}
     </main>
