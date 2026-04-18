@@ -78,6 +78,43 @@ type TrackingState =
   | "REGISTRY_FAULT"
   | string;
 
+type ExitDecision = {
+  liveNetPct?: number | null;
+  liveGrossPct?: number | null;
+  spreadPct?: number | null;
+  drawdownPct?: number | null;
+  exitFloorPct?: number | null;
+  executableExitNetPct?: number | null;
+  executableExitProfitAud?: number | null;
+  executableExitAud?: number | null;
+  exitGateState?: string | null;
+  exitGateReason?: string | null;
+  exitTriggerAt?: number | null;
+  exitTriggerReason?: string | null;
+  exitWaitGreenSince?: number | null;
+  exitGreenConfirmTicks?: number | null;
+  exitBestExecutableNetPct?: number | null;
+  exitBestExecutableProfitAud?: number | null;
+  exitRequiredNetPct?: number | null;
+  exitRequiredProfitAud?: number | null;
+};
+
+type ReportingSummary = {
+  lastRealizedNetPct?: number | null;
+  lastRealizedProfitAud?: number | null;
+  lifetimeNetPct?: number | null;
+  totalNetGainAud?: number | null;
+  cycles?: number | null;
+};
+
+type SecondarySummary = {
+  liveCount?: number | null;
+  liveNetPct?: number | null;
+  totalNetGainAud?: number | null;
+  cycles?: number | null;
+  decision?: ExitDecision | null;
+};
+
 type SubslotRow = {
   subslotId?: string | null;
   subslotSequence?: number | null;
@@ -141,6 +178,8 @@ type SubslotRow = {
   subslotEmaFast?: number | null;
   subslotEmaSlow?: number | null;
   subslotConfirmTicks?: number | null;
+  decision?: ExitDecision | null;
+  reporting?: ReportingSummary | null;
 };
 
 type SlotRow = {
@@ -420,6 +459,10 @@ type SlotRow = {
   liveBuyLockActualCoinQty?: number | null;
   liveBuyLockActualRate?: number | null;
   liveBuyLockFilledAt?: number | null;
+
+  decision?: ExitDecision | null;
+  reporting?: ReportingSummary | null;
+  secondary?: SecondarySummary | null;
 
   [key: string]: unknown;
 };
@@ -1449,7 +1492,21 @@ function hasActiveParentExposure(slot: SlotRow | null | undefined) {
   return isHoldingFamilyState(state) || state === "EXITING";
 }
 
+function primaryDecision(slot: SlotRow | null | undefined) {
+  return slot?.decision ?? null;
+}
+
+function primaryReporting(slot: SlotRow | null | undefined) {
+  return slot?.reporting ?? null;
+}
+
+function secondarySummaryData(slot: SlotRow | null | undefined) {
+  return slot?.secondary ?? null;
+}
+
 function liveParentGrossPct(slot: SlotRow | null | undefined) {
+  const decisionGrossPct = primaryDecision(slot)?.liveGrossPct;
+  if (decisionGrossPct != null && Number.isFinite(decisionGrossPct)) return decisionGrossPct;
   const grossPct = slot?.grossPct;
   if (!slot || !hasActiveParentExposure(slot) || grossPct == null || !Number.isFinite(grossPct)) {
     return null;
@@ -1458,6 +1515,8 @@ function liveParentGrossPct(slot: SlotRow | null | undefined) {
 }
 
 function liveParentNetPct(slot: SlotRow | null | undefined) {
+  const decisionNetPct = primaryDecision(slot)?.liveNetPct;
+  if (decisionNetPct != null && Number.isFinite(decisionNetPct)) return decisionNetPct;
   const netPct = slot?.netPct;
   if (!slot || !hasActiveParentExposure(slot) || netPct == null || !Number.isFinite(netPct)) {
     return null;
@@ -1466,6 +1525,8 @@ function liveParentNetPct(slot: SlotRow | null | undefined) {
 }
 
 function primaryTotalGainPct(slot: SlotRow | null | undefined) {
+  const reportedPct = primaryReporting(slot)?.lifetimeNetPct;
+  if (reportedPct != null && Number.isFinite(reportedPct)) return reportedPct;
   const lifetimeNetPct = slot?.lifetimeNetPct;
   if (lifetimeNetPct == null || !Number.isFinite(lifetimeNetPct)) return null;
   return Number((lifetimeNetPct * 100).toFixed(3));
@@ -1473,11 +1534,15 @@ function primaryTotalGainPct(slot: SlotRow | null | undefined) {
 
 function secondaryLiveCount(slot: SlotRow | null | undefined) {
   if (!slot) return 0;
+  const liveCount = secondarySummaryData(slot)?.liveCount;
+  if (liveCount != null && Number.isFinite(liveCount)) return liveCount;
   return countActiveSecondaries(slot);
 }
 
 function secondaryTotalGainAud(slot: SlotRow | null | undefined) {
   if (!slot) return null;
+  const reportedAud = secondarySummaryData(slot)?.totalNetGainAud;
+  if (reportedAud != null && Number.isFinite(reportedAud)) return reportedAud;
   const lifetime = slot.subslotLifetimeProfitAud;
   if (lifetime == null || !Number.isFinite(lifetime)) return null;
   return lifetime;
@@ -1942,9 +2007,30 @@ function readerStatusLabel(s: SlotRow) {
   return "Watching";
 }
 
+function primaryReferenceLabel(slot: SlotRow | null | undefined) {
+  if (!slot) return "-";
+  if (slot.reentryTargetMid != null && Number.isFinite(slot.reentryTargetMid)) {
+    return fmt(slot.reentryTargetMid);
+  }
+  return "-";
+}
+
+function primarySetupStateLabel(slot: SlotRow) {
+  const tracking = String(slot.trackingState || "").toUpperCase();
+  const state = String(slot.state || "").toUpperCase();
+
+  if (state === "DEPLOYING") return "Entry submitting";
+  if (tracking === "REVERSAL_CONFIRMING") return "Reversal confirming";
+  if (tracking === "DRAWDOWN_SEEN") return "Drawdown seen";
+  if (tracking === "SPREAD_BLOCKED") return "Spread blocked";
+  if (tracking === "NO_MARKET") return "Waiting for market";
+  if (reentryTargetHit(slot)) return "Setup at reference";
+  return "Tracking setup";
+}
+
 function primaryProtectionLabel(slot: SlotRow) {
   const state = String(slot.state || "").toUpperCase();
-  const floorPct = primaryExitFloorPct(slot);
+  const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
   const liveNet = liveParentNetPct(slot);
 
   if (state === "EXITING") return "Sell resolving";
@@ -1965,7 +2051,7 @@ function primaryProtectionLabel(slot: SlotRow) {
   }
 
   if (state === "WAITING_ENTRY" && slot.reentryTargetMid != null && Number.isFinite(slot.reentryTargetMid)) {
-    return `Re-entry ${fmt(slot.reentryTargetMid)}`;
+    return `Reference ${fmt(slot.reentryTargetMid)}`;
   }
 
   return "-";
@@ -1996,13 +2082,12 @@ function nextActionLabel(s: SlotRow) {
   if (state === "DEPLOYING") return "Confirming entry fill";
 
   if (state === "WAITING_ENTRY") {
-    if (reentryTargetHit(s)) {
-      if (tracking === "REVERSAL_CONFIRMING") return "Waiting for reversal confirmation";
-      if (tracking === "SPREAD_BLOCKED") return "Spread blocking entry";
-      if (tracking === "NO_MARKET") return "Waiting for market read";
-      return "Waiting for reversal";
-    }
-    if (s.reentryTargetMid != null && Number.isFinite(s.reentryTargetMid)) return "Watching re-entry level";
+    if (tracking === "REVERSAL_CONFIRMING") return "Reversal confirming";
+    if (tracking === "DRAWDOWN_SEEN") return "Drawdown seen";
+    if (tracking === "SPREAD_BLOCKED") return "Spread blocking entry";
+    if (tracking === "NO_MARKET") return "Waiting for market read";
+    if (reentryTargetHit(s)) return "Setup has moved through the reference";
+    if (s.reentryTargetMid != null && Number.isFinite(s.reentryTargetMid)) return "Tracking setup from last exit";
     return "Watching for setup";
   }
 
@@ -2049,16 +2134,16 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   } else if (state === "WAITING_ENTRY") {
     if (reentryTargetHit(s)) {
       if (tracking === "REVERSAL_CONFIRMING") {
-        parts.push("Jrd Primary has reached its re-entry target and reversal confirmation is building.");
+        parts.push("Primary setup has moved through its reference from the last exit and reversal confirmation is building.");
       } else if (tracking === "SPREAD_BLOCKED") {
-        parts.push("Jrd Primary has reached its re-entry target, but spread is blocking deployment.");
+        parts.push("Primary setup has moved through its reference from the last exit, but spread is blocking deployment.");
       } else if (tracking === "NO_MARKET") {
-        parts.push("Jrd Primary has reached its re-entry target, but live market confirmation is unavailable.");
+        parts.push("Primary setup has moved through its reference from the last exit, but live market confirmation is unavailable.");
       } else {
-        parts.push("Jrd Primary has reached its re-entry target and is waiting for reversal confirmation.");
+        parts.push("Primary setup has moved through its reference from the last exit and is waiting for reversal confirmation.");
       }
     } else {
-      parts.push("Jrd Primary is waiting for a qualified re-entry.");
+      parts.push("Primary is waiting for a qualified setup.");
     }
   } else {
     parts.push("Jrd Primary is being observed.");
@@ -2204,28 +2289,6 @@ function primaryLiveSubslotAnalysis(slot: SlotRow, nowMs: number) {
   return primary ? liveSubslotAnalysis(primary, slot, nowMs) : "No Jrd Secondary records available.";
 }
 
-function detailRowsForSlot(s: SlotRow, nowMs: number) {
-  return [
-    { k: "Slot", v: s.id },
-    { k: "Coin", v: slotCoin(s) },
-    { k: "Market", v: s.market ?? "-" },
-    { k: "Status", v: readerStatusLabel(s) },
-    { k: "Next action", v: nextActionLabel(s) },
-    { k: "Regime", v: regimeLabel(s) },
-    { k: "Entry", v: effectiveEntryLabel(s) },
-    { k: "Now", v: effectiveNowLabel(s) },
-    { k: "Live net", v: pctNum(liveParentNetPct(s)) },
-    { k: "Lifetime net", v: pctNum(primaryTotalGainPct(s)) },
-    { k: "Protection", v: primaryProtectionLabel(s) },
-    { k: "Secondary trades", v: secondaryTradesLabel(s) },
-    { k: "Spread", v: pctNum(s.nowSpreadPct) },
-    { k: "Unit", v: moneyAud(s.unitAud) },
-    { k: "Cycles", v: String(s.cycles ?? 0) },
-    { k: "Drawdown", v: pctNum(s.drawdownPct) },
-    { k: "Updated", v: slotHeartbeatLabel(s, nowMs) },
-  ];
-}
-
 function sortMarketRows(rows: MarketRow[], sortKey: SortKey, sortDir: SortDir) {
   const dir = sortDir === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
@@ -2292,6 +2355,279 @@ function computeWindowHarvestFromSlots(slotRows: SlotRow[]) {
     subslotRealized: roundMoney(subslotRealized),
     totalRealized: roundMoney(parentRealized + subslotRealized),
   };
+}
+
+type PositionStageKey =
+  | "waiting-setup"
+  | "reversal-confirming"
+  | "entering"
+  | "live-primary"
+  | "protected-primary"
+  | "exit-waiting"
+  | "exiting";
+
+type PositionMetric = {
+  label: string;
+  value: string;
+  toneClass?: string;
+};
+
+const POSITION_STAGE_ORDER: Array<{ key: PositionStageKey; title: string; note: string }> = [
+  {
+    key: "waiting-setup",
+    title: "Waiting Setup",
+    note: "Primaries watching for a qualified pullback and bounce.",
+  },
+  {
+    key: "reversal-confirming",
+    title: "Reversal Confirming",
+    note: "Primaries close to entry if confirmation and spread hold.",
+  },
+  {
+    key: "entering",
+    title: "Entering",
+    note: "Primary entries are in flight and still proving the fill.",
+  },
+  {
+    key: "live-primary",
+    title: "Live Primary",
+    note: "Primaries are live but protection is not fully armed yet.",
+  },
+  {
+    key: "protected-primary",
+    title: "Protected Primary",
+    note: "Protection is armed and the Primary is being defended live.",
+  },
+  {
+    key: "exit-waiting",
+    title: "Exit Waiting",
+    note: "The Primary wants to exit, but the green sell gate is still blocking.",
+  },
+  {
+    key: "exiting",
+    title: "Exiting",
+    note: "Primary sells are resolving live.",
+  },
+];
+
+function primaryExecutableExitNetPct(slot: SlotRow | null | undefined) {
+  const value = primaryDecision(slot)?.executableExitNetPct;
+  return value != null && Number.isFinite(value) ? value : null;
+}
+
+function primaryExecutableExitProfitAud(slot: SlotRow | null | undefined) {
+  const value = primaryDecision(slot)?.executableExitProfitAud;
+  return value != null && Number.isFinite(value) ? value : null;
+}
+
+function primaryExitRequiredNetPct(slot: SlotRow | null | undefined) {
+  const value = primaryDecision(slot)?.exitRequiredNetPct;
+  return value != null && Number.isFinite(value) ? value : null;
+}
+
+function primaryExitRequiredProfitAud(slot: SlotRow | null | undefined) {
+  const value = primaryDecision(slot)?.exitRequiredProfitAud;
+  return value != null && Number.isFinite(value) ? value : null;
+}
+
+function primaryFloorGapPct(slot: SlotRow | null | undefined) {
+  if (!slot) return null;
+  const liveNet = liveParentNetPct(slot);
+  const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
+  if (liveNet == null || floorPct == null || !Number.isFinite(liveNet) || !Number.isFinite(floorPct)) {
+    return null;
+  }
+  return Number(liveNet) - Number(floorPct);
+}
+
+function positionStageForSlot(slot: SlotRow): PositionStageKey {
+  const state = String(slot.state || "").toUpperCase();
+  const tracking = String(slot.trackingState || "").toUpperCase();
+  const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
+
+  if (tracking === "PARENT_EXIT_WAIT_GREEN") return "exit-waiting";
+  if (state === "EXITING") return "exiting";
+  if (
+    state === "DEPLOYING" ||
+    tracking === "DEPLOYING" ||
+    tracking === "BUY_SUBMITTING" ||
+    tracking === "BUY_SUBMITTED" ||
+    tracking === "BUY_LOCK_SUBMITTED"
+  ) {
+    return "entering";
+  }
+  if (state === "WAITING_ENTRY" && tracking === "REVERSAL_CONFIRMING") return "reversal-confirming";
+  if (
+    state === "LVL1_LOCK" ||
+    state === "LVL2_LOCK" ||
+    state === "LVL3_LOCK" ||
+    state === "LVL4_TRAIL" ||
+    (state === "HOLDING" && floorPct != null && Number.isFinite(floorPct))
+  ) {
+    return "protected-primary";
+  }
+  if (state === "HOLDING") return "live-primary";
+  return "waiting-setup";
+}
+
+function positionStageMeta(key: PositionStageKey) {
+  return POSITION_STAGE_ORDER.find((entry) => entry.key === key) ?? POSITION_STAGE_ORDER[0];
+}
+
+function slotNeedsAction(slot: SlotRow) {
+  const tracking = String(slot.trackingState || "").toUpperCase();
+  const stage = positionStageForSlot(slot);
+  return (
+    stage === "entering" ||
+    stage === "exit-waiting" ||
+    stage === "exiting" ||
+    tracking === "SPREAD_BLOCKED" ||
+    tracking === "NO_MARKET" ||
+    hasPendingSubslotBuys(slot) ||
+    hasPendingSubslotSells(slot)
+  );
+}
+
+function actionNeededSummary(slot: SlotRow) {
+  const stage = positionStageForSlot(slot);
+  const decision = primaryDecision(slot);
+
+  if (stage === "exit-waiting") {
+    const parts = ["Primary waiting for a green exit."];
+    if (decision?.executableExitNetPct != null && Number.isFinite(decision.executableExitNetPct)) {
+      parts.push(`Now ${pctNum(decision.executableExitNetPct)}.`);
+    }
+    if (decision?.exitRequiredNetPct != null && Number.isFinite(decision.exitRequiredNetPct)) {
+      parts.push(`Needs ${pctNum(decision.exitRequiredNetPct)}.`);
+    }
+    if (decision?.exitGateReason) parts.push(decision.exitGateReason);
+    return parts.join(" ");
+  }
+
+  if (stage === "entering") return "Primary entry is confirming live.";
+  if (stage === "exiting") return "Primary sell is confirming live.";
+  if (hasPendingSubslotSells(slot)) return "Secondary exit is being managed.";
+  if (hasPendingSubslotBuys(slot)) return "Secondary entry is being managed.";
+  if (String(slot.trackingState || "").toUpperCase() === "SPREAD_BLOCKED") return "Spread is blocking the next Primary entry.";
+  if (String(slot.trackingState || "").toUpperCase() === "NO_MARKET") return "Waiting for a fresh market read.";
+  return nextActionLabel(slot);
+}
+
+function waitingPrimarySummary(slot: SlotRow) {
+  const parts = [primarySetupStateLabel(slot)];
+  if (slot.candidateDrawdownPct != null && Number.isFinite(slot.candidateDrawdownPct)) {
+    parts.push(`Drawdown ${pctNum(slot.candidateDrawdownPct)}`);
+  }
+  if (slot.candidateBouncePct != null && Number.isFinite(slot.candidateBouncePct)) {
+    parts.push(`Bounce ${pctNum(slot.candidateBouncePct)}`);
+  }
+  if (slot.nowSpreadPct != null && Number.isFinite(slot.nowSpreadPct)) {
+    parts.push(`Spread ${pctNum(slot.nowSpreadPct)}`);
+  }
+  return parts.join(" | ");
+}
+
+function activePrimarySummary(slot: SlotRow) {
+  const stage = positionStageForSlot(slot);
+  if (stage === "exit-waiting") return actionNeededSummary(slot);
+  if (stage === "exiting") return "Primary sell is resolving live.";
+  if (stage === "entering") return "Primary entry is confirming live.";
+  if (stage === "protected-primary") return "Protection is armed and the Primary is being defended live.";
+  return "Primary is live and still building protection.";
+}
+
+function positionStageSummary(slot: SlotRow) {
+  const stage = positionStageForSlot(slot);
+  if (stage === "waiting-setup" || stage === "reversal-confirming") return waitingPrimarySummary(slot);
+  if (stage === "entering" || stage === "exit-waiting" || stage === "exiting") return actionNeededSummary(slot);
+  return activePrimarySummary(slot);
+}
+
+function positionCardToneClass(slot: SlotRow) {
+  const stage = positionStageForSlot(slot);
+  if (stage === "exit-waiting") return "is-blocked";
+  if (stage === "exiting") return "is-exiting";
+  if (stage === "entering" || stage === "reversal-confirming") return "is-deploying";
+  if (stage === "protected-primary" || stage === "live-primary") return "is-holding";
+  return stateToneClass(slot);
+}
+
+function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] {
+  const stage = positionStageForSlot(slot);
+  const decision = primaryDecision(slot);
+  const floorGap = primaryFloorGapPct(slot);
+
+  if (stage === "waiting-setup") {
+    return [
+      { label: "Reference", value: primaryReferenceLabel(slot) },
+      { label: "Drawdown", value: pctNum(slot.candidateDrawdownPct ?? slot.drawdownPct) },
+      { label: "Bounce", value: pctNum(slot.candidateBouncePct) },
+      { label: "Spread", value: pctNum(slot.nowSpreadPct) },
+    ];
+  }
+
+  if (stage === "reversal-confirming") {
+    return [
+      { label: "Reference", value: primaryReferenceLabel(slot) },
+      { label: "Bounce", value: pctNum(slot.candidateBouncePct) },
+      { label: "Spread", value: pctNum(slot.nowSpreadPct) },
+      { label: "Signal", value: primarySetupStateLabel(slot), toneClass: "is-deploying" },
+    ];
+  }
+
+  if (stage === "entering") {
+    return [
+      { label: "Entry", value: effectiveEntryLabel(slot) },
+      { label: "Live Price", value: effectiveNowLabel(slot) },
+      { label: "Spread", value: pctNum(slot.nowSpreadPct) },
+      { label: "Updated", value: slotHeartbeatLabel(slot, nowMs) },
+    ];
+  }
+
+  if (stage === "live-primary") {
+    return [
+      { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
+      { label: "Live Price", value: effectiveNowLabel(slot) },
+      { label: "Protection", value: primaryProtectionLabel(slot) },
+      { label: "Secondary Trades", value: secondaryTradesLabel(slot), toneClass: primarySubslotToneClass(slot) },
+    ];
+  }
+
+  if (stage === "protected-primary") {
+    return [
+      { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
+      { label: "Exit Floor", value: pctNum(decision?.exitFloorPct ?? primaryExitFloorPct(slot)) },
+      {
+        label: "Gap To Floor",
+        value: floorGap == null ? "-" : floorGap >= 0 ? `${pctNum(floorGap)} above` : `${pctNum(Math.abs(floorGap))} below`,
+      },
+      { label: "Secondary Trades", value: secondaryTradesLabel(slot), toneClass: primarySubslotToneClass(slot) },
+    ];
+  }
+
+  if (stage === "exit-waiting") {
+    return [
+      {
+        label: "Executable Net",
+        value: pctNum(primaryExecutableExitNetPct(slot)),
+        toneClass: "is-blocked",
+      },
+      {
+        label: "Executable AUD",
+        value: moneyAud(primaryExecutableExitProfitAud(slot)),
+        toneClass: "is-blocked",
+      },
+      { label: "Required Net", value: pctNum(primaryExitRequiredNetPct(slot)) },
+      { label: "Required AUD", value: moneyAud(primaryExitRequiredProfitAud(slot)) },
+    ];
+  }
+
+  return [
+    { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-exiting" },
+    { label: "Expected Exit", value: moneyAud(slot.liveExitExpectedAud) },
+    { label: "Fill Status", value: slot.liveExitFillStatus ?? "-" },
+    { label: "Updated", value: slotHeartbeatLabel(slot, nowMs) },
+  ];
 }
 /* =========================
    Hooks
@@ -3057,44 +3393,172 @@ const OverviewTable = React.memo(function OverviewTable(props: {
   onOpenSlot: (id: string) => void;
   nowMs: number;
 }) {
+  const actionSlots = props.slots.filter(slotNeedsAction);
+  const liveSlots = props.slots.filter((slot) => {
+    const stage = positionStageForSlot(slot);
+    return (
+      stage === "entering" ||
+      stage === "live-primary" ||
+      stage === "protected-primary" ||
+      stage === "exit-waiting" ||
+      stage === "exiting"
+    );
+  });
+  const waitingSlots = props.slots.filter((slot) => String(slot.state || "").toUpperCase() === "WAITING_ENTRY");
+  const liveSecondaries = props.slots.reduce((sum, slot) => sum + secondaryLiveCount(slot), 0);
+
   return (
-    <div className="card machine-surface panel-frame engine-ledger" aria-label="Overview cards">
+    <div className="card machine-surface panel-frame engine-ledger engine-dashboard" aria-label="Overview cards">
       <div className="engine-ledger-top">
         <div>
           <div className="engine-ledger-title">Reader Dashboard</div>
+          <div className="engine-ledger-note">
+            Live summary first: what needs action now, what is already in motion, and what is building toward the next
+            Primary entry.
+          </div>
         </div>
       </div>
 
-      <div className="ledger-table">
-        <div className="ledger-head">
-  <div>Coin</div>
-  <div>Status</div>
-  <div className="num">Live Net</div>
-  <div className="num">Lifetime Net</div>
-  <div>Protection</div>
-  <div>Next Action</div>
-  <div>Secondary Trades</div>
-  <div className="num">Updated</div>
-  <div className="num">Open</div>
-</div>
+      <div className="dashboard-metric-grid" aria-label="Dashboard headline metrics">
+        <div className="dashboard-metric-card">
+          <div className="dashboard-metric-k">Action Needed</div>
+          <div className="dashboard-metric-v">{actionSlots.length}</div>
+          <div className="dashboard-metric-sub">Entries, exits, or blocked reads that need the closest attention.</div>
+        </div>
 
-        {props.slots.length ? (
-          props.slots.map((s) => (
-            <button type="button" className="ledger-row" key={s.id} onClick={() => props.onOpenSlot(s.id)}>
-  <div className="ledger-slotid">{slotCoin(s)}</div>
-  <div className={stateClassName(stateLabel(s))}>{readerStatusLabel(s)}</div>
-  <div className="num">{pctNum(liveParentNetPct(s))}</div>
-  <div className="num">{pctNum(primaryTotalGainPct(s))}</div>
-  <div>{primaryProtectionLabel(s)}</div>
-  <div className="ledger-analysis">{nextActionLabel(s)}</div>
-  <div className={primarySubslotToneClass(s)}>{secondaryTradesLabel(s)}</div>
-  <div className="num">{slotHeartbeatLabel(s, props.nowMs)}</div>
-  <div className="num ledger-view">Open</div>
-</button>
-          ))
-        ) : (
-          <div className="ledger-empty">No fixed slots available.</div>
-        )}
+        <div className="dashboard-metric-card">
+          <div className="dashboard-metric-k">Live Primaries</div>
+          <div className="dashboard-metric-v">{liveSlots.length}</div>
+          <div className="dashboard-metric-sub">Primaries entering, live, protected, or resolving an exit.</div>
+        </div>
+
+        <div className="dashboard-metric-card">
+          <div className="dashboard-metric-k">Waiting Primaries</div>
+          <div className="dashboard-metric-v">{waitingSlots.length}</div>
+          <div className="dashboard-metric-sub">Primaries tracking the next qualified setup.</div>
+        </div>
+
+        <div className="dashboard-metric-card">
+          <div className="dashboard-metric-k">Live Secondaries</div>
+          <div className="dashboard-metric-v">{liveSecondaries}</div>
+          <div className="dashboard-metric-sub">Secondary trades currently active across the fixed set.</div>
+        </div>
+      </div>
+
+      <div className="dashboard-shell">
+        <section className="dashboard-panel" aria-label="Action needed">
+          <div className="dashboard-panel-top">
+            <div>
+              <div className="dashboard-panel-title">Action Needed</div>
+              <div className="dashboard-panel-note">Only the live items that are actively moving or blocked.</div>
+            </div>
+            <div className="dashboard-panel-count">{actionSlots.length}</div>
+          </div>
+
+          {actionSlots.length ? (
+            <div className="dashboard-list">
+              {actionSlots.map((slot) => (
+                <button
+                  type="button"
+                  key={slot.id}
+                  className={`dashboard-row ${positionCardToneClass(slot)}`}
+                  onClick={() => props.onOpenSlot(slot.id)}
+                >
+                  <div className="dashboard-row-top">
+                    <div className="dashboard-row-coin">{slotCoin(slot)}</div>
+                    <div className="dashboard-row-badge">{positionStageMeta(positionStageForSlot(slot)).title}</div>
+                  </div>
+                  <div className="dashboard-row-copy">{actionNeededSummary(slot)}</div>
+                  <div className="dashboard-row-meta">
+                    <span>{secondaryTradesLabel(slot)}</span>
+                    <span>{slotHeartbeatLabel(slot, props.nowMs)}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="dashboard-empty">System clear. No Primary or Secondary stage needs immediate attention.</div>
+          )}
+        </section>
+
+        <section className="dashboard-panel" aria-label="Live primaries">
+          <div className="dashboard-panel-top">
+            <div>
+              <div className="dashboard-panel-title">Live Primaries</div>
+              <div className="dashboard-panel-note">What is already in motion, including protection and exit readiness.</div>
+            </div>
+            <div className="dashboard-panel-count">{liveSlots.length}</div>
+          </div>
+
+          {liveSlots.length ? (
+            <div className="dashboard-list">
+              {liveSlots.map((slot) => (
+                <button
+                  type="button"
+                  key={slot.id}
+                  className={`dashboard-row ${positionCardToneClass(slot)}`}
+                  onClick={() => props.onOpenSlot(slot.id)}
+                >
+                  <div className="dashboard-row-top">
+                    <div className="dashboard-row-coin">{slotCoin(slot)}</div>
+                    <div className="dashboard-row-badge">{positionStageMeta(positionStageForSlot(slot)).title}</div>
+                  </div>
+                  <div className="dashboard-row-stats">
+                    <span>Live Net {pctNum(liveParentNetPct(slot))}</span>
+                    <span>{primaryProtectionLabel(slot)}</span>
+                    <span>{secondaryTradesLabel(slot)}</span>
+                  </div>
+                  <div className="dashboard-row-meta">
+                    <span>{activePrimarySummary(slot)}</span>
+                    <span>{slotHeartbeatLabel(slot, props.nowMs)}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="dashboard-empty">No live Primaries right now.</div>
+          )}
+        </section>
+
+        <section className="dashboard-panel dashboard-panel--waiting" aria-label="Waiting primaries">
+          <div className="dashboard-panel-top">
+            <div>
+              <div className="dashboard-panel-title">Waiting Primaries</div>
+              <div className="dashboard-panel-note">Setup quality, not a hard re-entry trigger.</div>
+            </div>
+            <div className="dashboard-panel-count">{waitingSlots.length}</div>
+          </div>
+
+          {waitingSlots.length ? (
+            <div className="dashboard-list">
+              {waitingSlots.map((slot) => (
+                <button
+                  type="button"
+                  key={slot.id}
+                  className={`dashboard-row ${positionCardToneClass(slot)}`}
+                  onClick={() => props.onOpenSlot(slot.id)}
+                >
+                  <div className="dashboard-row-top">
+                    <div className="dashboard-row-coin">{slotCoin(slot)}</div>
+                    <div className="dashboard-row-badge">{primarySetupStateLabel(slot)}</div>
+                  </div>
+                  <div className="dashboard-row-stats">
+                    <span>Reference {primaryReferenceLabel(slot)}</span>
+                    <span>Drawdown {pctNum(slot.candidateDrawdownPct ?? slot.drawdownPct)}</span>
+                    <span>Bounce {pctNum(slot.candidateBouncePct)}</span>
+                    <span>Spread {pctNum(slot.nowSpreadPct)}</span>
+                  </div>
+                  <div className="dashboard-row-meta">
+                    <span>{nextActionLabel(slot)}</span>
+                    <span>{slotHeartbeatLabel(slot, props.nowMs)}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="dashboard-empty">No waiting Primaries in the current view.</div>
+          )}
+        </section>
       </div>
     </div>
   );
@@ -3103,19 +3567,32 @@ const OverviewTable = React.memo(function OverviewTable(props: {
 const LedgerTable = React.memo(function LedgerTable(props: {
   slots: SlotRow[];
   nowMs: number;
-  expandedLedgerSlotId: string | null;
-  setExpandedLedgerSlotId: React.Dispatch<React.SetStateAction<string | null>>;
   onOpenSlot: (id: string) => void;
   fixedPresent: number;
   fixedMissing: string[];
 }) {
+  const stageCounts = POSITION_STAGE_ORDER.reduce<Record<PositionStageKey, number>>((acc, stage) => {
+    acc[stage.key] = props.slots.filter((slot) => positionStageForSlot(slot) === stage.key).length;
+    return acc;
+  }, {
+    "waiting-setup": 0,
+    "reversal-confirming": 0,
+    entering: 0,
+    "live-primary": 0,
+    "protected-primary": 0,
+    "exit-waiting": 0,
+    exiting: 0,
+  });
+
+  const liveSecondaries = props.slots.reduce((sum, slot) => sum + secondaryLiveCount(slot), 0);
+
   return (
-    <div className="card machine-surface panel-frame engine-ledger" aria-label="Slots Ledger">
+    <div className="card machine-surface panel-frame engine-ledger engine-stage-board" aria-label="Slots Ledger">
       <div className="engine-ledger-top">
         <div>
-          <div className="engine-ledger-title">Positions Ledger</div>
+          <div className="engine-ledger-title">Positions Board</div>
           <div className="engine-ledger-note">
-            Fixed-slot positions with a simpler read on status, protection, and next action.
+            Primaries move between live stage sections automatically, with the relevant metrics shown for each stage.
           </div>
         </div>
 
@@ -3124,174 +3601,91 @@ const LedgerTable = React.memo(function LedgerTable(props: {
         </div>
       </div>
 
-      <div className="ledger-table">
-        <div className="ledger-head">
-          <div>Slot ID</div>
-          <div>Coin</div>
-          <div>Market</div>
-          <div>Status</div>
-          <div>Next Action</div>
-          <div>Secondary Trades</div>
-          <div className="num">Live Net</div>
-          <div className="num">Lifetime Net</div>
-          <div className="num">Open</div>
+      <div className="positions-summary-grid" aria-label="Position stage counts">
+        <div className="positions-summary-card">
+          <div className="positions-summary-k">Waiting Setup</div>
+          <div className="positions-summary-v">{stageCounts["waiting-setup"]}</div>
         </div>
+        <div className="positions-summary-card">
+          <div className="positions-summary-k">Reversal Confirming</div>
+          <div className="positions-summary-v">{stageCounts["reversal-confirming"]}</div>
+        </div>
+        <div className="positions-summary-card">
+          <div className="positions-summary-k">Live Primary</div>
+          <div className="positions-summary-v">{stageCounts["live-primary"]}</div>
+        </div>
+        <div className="positions-summary-card">
+          <div className="positions-summary-k">Protected Primary</div>
+          <div className="positions-summary-v">{stageCounts["protected-primary"]}</div>
+        </div>
+        <div className="positions-summary-card">
+          <div className="positions-summary-k">Exit Waiting</div>
+          <div className="positions-summary-v">{stageCounts["exit-waiting"]}</div>
+        </div>
+        <div className="positions-summary-card">
+          <div className="positions-summary-k">Live Secondaries</div>
+          <div className="positions-summary-v">{liveSecondaries}</div>
+        </div>
+      </div>
 
+      <div className="stage-board">
         {props.slots.length ? (
-          props.slots.map((s) => {
-            const expanded = props.expandedLedgerSlotId === s.id;
-            const rows = detailRowsForSlot(s, props.nowMs);
-            const subslots = getSecondaryRows(s);
+          POSITION_STAGE_ORDER.map((stageMeta) => {
+            const stageSlots = props.slots.filter((slot) => positionStageForSlot(slot) === stageMeta.key);
+            if (!stageSlots.length) return null;
 
             return (
-              <div key={s.id} className={`ledger-entry ${expanded ? "is-expanded" : ""}`}>
-                <button
-                  type="button"
-                  className="ledger-row"
-                  onClick={() => props.setExpandedLedgerSlotId((prev) => (prev === s.id ? null : s.id))}
-                  title="Toggle detail layer"
-                  aria-expanded={expanded}
-                >
-                  <div className="ledger-slotid">{s.id}</div>
-                  <div>{slotCoin(s)}</div>
-                  <div>{s.market ?? "-"}</div>
-                  <div className={stateClassName(stateLabel(s))}>{readerStatusLabel(s)}</div>
-                  <div>{nextActionLabel(s)}</div>
-                  <div className={primarySubslotToneClass(s)}>{secondaryTradesLabel(s)}</div>
-                  <div className="num">{pctNum(liveParentNetPct(s))}</div>
-                  <div className="num">{pctNum(primaryTotalGainPct(s))}</div>
-                  <div className="num ledger-view">{expanded ? "Hide" : "Show"}</div>
-                </button>
+              <section key={stageMeta.key} className="stage-section" aria-label={stageMeta.title}>
+                <div className="stage-section-top">
+                  <div>
+                    <div className="stage-section-title">{stageMeta.title}</div>
+                    <div className="stage-section-note">{stageMeta.note}</div>
+                  </div>
+                  <div className="stage-section-count">{stageSlots.length}</div>
+                </div>
 
-                {expanded ? (
-                  <div className="ledger-subpanel">
-                    <div className={`ledger-subpanel-badge ${regimeToneClass(s)}`}>
-                      {liveParentAnalysis(s, props.nowMs)}
-                    </div>
+                <div className="stage-card-grid">
+                  {stageSlots.map((slot) => {
+                    const stage = positionStageForSlot(slot);
+                    const metrics = positionMetricsForSlot(slot, props.nowMs);
 
-                    <div className="ledger-subpanel-grid">
-                      {rows.map((row) => (
-                        <div key={row.k} className="ledger-subpanel-item">
-                          <div className="ledger-subpanel-k">{row.k}</div>
-                          <div className="ledger-subpanel-v">{row.v}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className={`ledger-subpanel-badge secondary-summary ${primarySubslotToneClass(s)}`}>
-                      {primaryLiveSubslotAnalysis(s, props.nowMs)}
-                    </div>
-
-                    {subslots.length > 0 && (
-                      <div className="secondary-list subslot-list">
-                        {subslots.map((subslot, index) => (
-                          <div key={subslot.subslotId ?? `${s.id}-subslot-${index}`} className="secondary-card subslot-card">
-                            <div className="ledger-subpanel-grid secondary-grid">
-                              <div className="ledger-subpanel-item">
-                            <div className="ledger-subpanel-k">Jrd Secondary</div>
-                                <div className="ledger-subpanel-v">
-                                  Jrd Secondary #{subslot.subslotSequence ?? index + 1} | {subslot.subslotId ?? "legacy"}
-                                </div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Label</div>
-                                <div className={`ledger-subpanel-v ${subslotToneClass(subslot)}`}>{subslotStateBadgeLabel(subslot)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Trigger Band</div>
-                                <div className="ledger-subpanel-v">{subslotTriggerBandLabel(subslot)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Trigger Summary</div>
-                                <div className="ledger-subpanel-v">{subslotTriggerSummary(subslot)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">State</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotState ?? "-"}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Mode</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotEntryMode ?? "-"}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Signal</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotSignalState ?? "-"}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Net</div>
-                                <div className="ledger-subpanel-v">{pctNum(subslot.subslotNetPct)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Net Result (AUD)</div>
-                                <div className="ledger-subpanel-v">{moneyAud(subslot.subslotProfitAud)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Entry Mid</div>
-                                <div className="ledger-subpanel-v">{fmt(subslot.subslotEntryMid)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Live Now</div>
-                                <div className="ledger-subpanel-v">{subslotLiveNowLabel(subslot, s)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Bounce</div>
-                                <div className="ledger-subpanel-v">{pctNum(subslot.subslotBouncePct)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">EMA Gap</div>
-                                <div className="ledger-subpanel-v">{pctNum(subslot.subslotEmaGapPct)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Recovered</div>
-                                <div className="ledger-subpanel-v">
-                                  {subslot.subslotRecoveredConfirmed == null
-                                    ? "-"
-                                    : subslot.subslotRecoveredConfirmed
-                                    ? "YES"
-                                    : "NO"}
-                                </div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Exit Reason</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotExitReason ?? "-"}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Updated</div>
-                                <div className="ledger-subpanel-v">{subslotHeartbeatLabel(subslot, props.nowMs)}</div>
-                              </div>
-                              <div className="ledger-subpanel-item">
-                                <div className="ledger-subpanel-k">Reconcile</div>
-                                <div className="ledger-subpanel-v">{subslot.subslotLastReconcileNote ?? "-"}</div>
-                              </div>
-                            </div>
-
-                            <div className={`ledger-subpanel-badge ${subslotToneClass(subslot)}`}>
-                              {liveSubslotAnalysis(subslot, s, props.nowMs)}
-                            </div>
-
-                            {subslot.subslotLastError ? (
-                              <div className="ledger-subpanel-badge is-exiting">{subslot.subslotLastError}</div>
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="ledger-subpanel-actions">
+                    return (
                       <button
                         type="button"
-                        className="button ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          props.onOpenSlot(s.id);
-                        }}
+                        key={slot.id}
+                        className={`stage-card ${positionCardToneClass(slot)}`}
+                        onClick={() => props.onOpenSlot(slot.id)}
                       >
-                        Open Full Details
+                        <div className="stage-card-top">
+                          <div>
+                            <div className="stage-card-coin">{slotCoin(slot)}</div>
+                            <div className={`stage-card-status ${stateClassName(stateLabel(slot))}`}>{readerStatusLabel(slot)}</div>
+                          </div>
+                          <div className="stage-card-open">Open</div>
+                        </div>
+
+                        <div className="stage-card-market">{slot.market ?? `${slotCoin(slot)}/AUD`}</div>
+
+                        <div className="stage-card-metrics">
+                          {metrics.map((metric) => (
+                            <div key={metric.label} className="stage-card-metric">
+                              <div className="stage-card-k">{metric.label}</div>
+                              <div className={`stage-card-v ${metric.toneClass ?? ""}`}>{metric.value}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="stage-card-summary">{positionStageSummary(slot)}</div>
+
+                        <div className="stage-card-foot">
+                          <span>{stage === "waiting-setup" || stage === "reversal-confirming" ? `Reference ${primaryReferenceLabel(slot)}` : secondaryTradesLabel(slot)}</span>
+                          <span>{slotHeartbeatLabel(slot, props.nowMs)}</span>
+                        </div>
                       </button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+                    );
+                  })}
+                </div>
+              </section>
             );
           })
         ) : (
@@ -3593,7 +3987,7 @@ const SlotModal = React.memo(function SlotModal(props: {
             <div className="slot-modal-grid">
               <div><div className="slot-k">Unit</div><div className="slot-v">{moneyAud(slot.unitAud)}</div></div>
               <div><div className="slot-k">Cycles</div><div className="slot-v">{slot.cycles ?? 0}</div></div>
-              <div><div className="slot-k">Entry</div><div className="slot-v">{effectiveEntryLabel(slot)}</div></div>
+              <div><div className="slot-k">{String(slot.state || "").toUpperCase() === "WAITING_ENTRY" ? "Reference From Last Exit" : "Entry"}</div><div className="slot-v">{effectiveEntryLabel(slot)}</div></div>
               <div><div className="slot-k">Now</div><div className="slot-v">{effectiveNowLabel(slot)}</div></div>
               <div><div className="slot-k">Live Gross</div><div className="slot-v">{pctNum(liveParentGrossPct(slot))}</div></div>
               <div><div className="slot-k">Live Net</div><div className="slot-v">{pctNum(liveParentNetPct(slot))}</div></div>
@@ -3603,7 +3997,7 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Spread</div><div className="slot-v">{pctNum(slot.nowSpreadPct)}</div></div>
               <div><div className="slot-k">Drawdown</div><div className="slot-v">{pctNum(slot.drawdownPct)}</div></div>
               <div><div className="slot-k">Secondary Trades</div><div className="slot-v">{secondaryTradesLabel(slot)}</div></div>
-              <div><div className="slot-k">Re-entry target</div><div className="slot-v">{fmt(slot.reentryTargetMid)}</div></div>
+              <div><div className="slot-k">Reference From Last Exit</div><div className="slot-v">{fmt(slot.reentryTargetMid)}</div></div>
               <div><div className="slot-k">Exit reason</div><div className="slot-v">{slot.exitReason ?? "-"}</div></div>
               <div><div className="slot-k">Created</div><div className="slot-v">{ageLabel(nowMs - slot.createdAt)}</div></div>
               <div><div className="slot-k">Updated</div><div className="slot-v">{slotHeartbeatLabel(slot, nowMs)}</div></div>
@@ -4396,7 +4790,6 @@ export default function Engine() {
   const [eventsOpen, setEventsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [expandedLedgerSlotId, setExpandedLedgerSlotId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
@@ -4730,51 +5123,13 @@ export default function Engine() {
               ) : null}
 
               {section === "slots" ? (
-                <>
-                  <div className="engine-ledger-topgrid" aria-label="Jeroid status cards">
-                    <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
-                      <div className="cap-k">Registry</div>
-                      <div className="cap-v">{meta?.harvester?.running ? "RUNNING" : "STOPPED"}</div>
-                      <div className="cap-sub">
-                        <span>Phase {String(meta?.harvester?.phase ?? "-")}</span>
-                        <span>|</span>
-                        <span>Window {meta?.cadence?.currentWindow ?? "-"}</span>
-                      </div>
-                    </div>
-
-                    <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
-  <div className="cap-k">Entry Queue</div>
-  <div className="cap-v">{getActiveTrackingCount(trackingStates)}</div>
-  <div className="cap-sub">
-    <span>TRACKING {trackingStates.TRACKING ?? 0}</span>
-    <span>|</span>
-    <span>ARMED {trackingStates.ARMED ?? 0}</span>
-    <span>|</span>
-    <span>BLOCKED {trackingStates.SPREAD_BLOCKED ?? 0}</span>
-  </div>
-</div>
-
-                    <div className="engine-capture card machine-surface panel-frame" data-treasury="true">
-                      <div className="cap-k">Tradable Set</div>
-                      <div className="cap-v">{fixedAllowlist.length}</div>
-                      <div className="cap-sub">
-                        <span>{fixedAllowlist.slice(0, 4).join(", ")}</span>
-                        <span>|</span>
-                        <span>{fixedAllowlist.length > 4 ? `+${fixedAllowlist.length - 4} more` : "full set"}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <LedgerTable
-                    slots={filteredSlots}
-                    nowMs={nowMs}
-                    expandedLedgerSlotId={expandedLedgerSlotId}
-                    setExpandedLedgerSlotId={setExpandedLedgerSlotId}
-                    onOpenSlot={setSelectedSlotId}
-                    fixedPresent={fixedPresent}
-                    fixedMissing={fixedMissing}
-                  />
-                </>
+                <LedgerTable
+                  slots={filteredSlots}
+                  nowMs={nowMs}
+                  onOpenSlot={setSelectedSlotId}
+                  fixedPresent={fixedPresent}
+                  fixedMissing={fixedMissing}
+                />
               ) : null}
 
               {section === "capital" ? (
