@@ -973,6 +973,12 @@ function ageLabel(msSince: number | null | undefined) {
   return `${m}m`;
 }
 
+function recentAgeLabel(msSince: number | null | undefined) {
+  if (msSince == null || !Number.isFinite(msSince)) return "-";
+  if (msSince < 60000) return "just now";
+  return ageLabel(msSince);
+}
+
 function fmtEventTime(atMs: number) {
   const d = new Date(atMs);
   const hh = String(d.getHours()).padStart(2, "0");
@@ -1575,6 +1581,16 @@ function slotHeartbeatLabel(s: SlotRow, nowMs: number) {
   return "-";
 }
 
+function slotHeartbeatCardLabel(s: SlotRow, nowMs: number) {
+  if (s.updatedAt && Number.isFinite(s.updatedAt)) {
+    return recentAgeLabel(nowMs - s.updatedAt);
+  }
+  if (s.lastSeenAt && Number.isFinite(s.lastSeenAt)) {
+    return recentAgeLabel(nowMs - s.lastSeenAt);
+  }
+  return "-";
+}
+
 function getSubslots(slot: SlotRow): SubslotRow[] {
   if (Array.isArray(slot.subslots) && slot.subslots.length > 0) {
     return slot.subslots;
@@ -2036,7 +2052,7 @@ function primaryProtectionLabel(slot: SlotRow) {
   if (state === "EXITING") return "Sell resolving";
   if (state === "DEPLOYING") return "Awaiting entry proof";
 
-  if (floorPct != null && Number.isFinite(floorPct)) {
+  if (floorPct != null && Number.isFinite(floorPct) && Number(floorPct) > 0) {
     const parts = [`Floor ${pctNum(floorPct)}`];
     if (liveNet != null && Number.isFinite(liveNet)) {
       const gapPct = Number(liveNet) - Number(floorPct);
@@ -2434,7 +2450,13 @@ function primaryFloorGapPct(slot: SlotRow | null | undefined) {
   if (!slot) return null;
   const liveNet = liveParentNetPct(slot);
   const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
-  if (liveNet == null || floorPct == null || !Number.isFinite(liveNet) || !Number.isFinite(floorPct)) {
+  if (
+    liveNet == null ||
+    floorPct == null ||
+    !Number.isFinite(liveNet) ||
+    !Number.isFinite(floorPct) ||
+    Number(floorPct) <= 0
+  ) {
     return null;
   }
   return Number(liveNet) - Number(floorPct);
@@ -2444,6 +2466,7 @@ function positionStageForSlot(slot: SlotRow): PositionStageKey {
   const state = String(slot.state || "").toUpperCase();
   const tracking = String(slot.trackingState || "").toUpperCase();
   const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
+  const hasArmedFloor = floorPct != null && Number.isFinite(floorPct) && Number(floorPct) > 0;
 
   if (tracking === "PARENT_EXIT_WAIT_GREEN") return "exit-waiting";
   if (state === "EXITING") return "exiting";
@@ -2462,7 +2485,7 @@ function positionStageForSlot(slot: SlotRow): PositionStageKey {
     state === "LVL2_LOCK" ||
     state === "LVL3_LOCK" ||
     state === "LVL4_TRAIL" ||
-    (state === "HOLDING" && floorPct != null && Number.isFinite(floorPct))
+    (state === "HOLDING" && hasArmedFloor)
   ) {
     return "protected-primary";
   }
@@ -2493,14 +2516,30 @@ function actionNeededSummary(slot: SlotRow) {
   const decision = primaryDecision(slot);
 
   if (stage === "exit-waiting") {
-    const parts = ["Primary waiting for a green exit."];
-    if (decision?.executableExitNetPct != null && Number.isFinite(decision.executableExitNetPct)) {
-      parts.push(`Now ${pctNum(decision.executableExitNetPct)}.`);
+    const parts = ["Green exit is still blocked."];
+    if (
+      decision?.exitRequiredNetPct != null &&
+      Number.isFinite(decision.exitRequiredNetPct) &&
+      decision?.exitRequiredProfitAud != null &&
+      Number.isFinite(decision.exitRequiredProfitAud)
+    ) {
+      parts.push(
+        `Needs executable net above ${pctNum(decision.exitRequiredNetPct)} and executable profit above ${moneyAud(decision.exitRequiredProfitAud)}.`
+      );
+    } else if (decision?.exitRequiredNetPct != null && Number.isFinite(decision.exitRequiredNetPct)) {
+      parts.push(`Needs executable net above ${pctNum(decision.exitRequiredNetPct)}.`);
     }
-    if (decision?.exitRequiredNetPct != null && Number.isFinite(decision.exitRequiredNetPct)) {
-      parts.push(`Needs ${pctNum(decision.exitRequiredNetPct)}.`);
+    if (
+      decision?.executableExitNetPct != null &&
+      Number.isFinite(decision.executableExitNetPct) &&
+      decision?.executableExitProfitAud != null &&
+      Number.isFinite(decision.executableExitProfitAud)
+    ) {
+      parts.push(
+        `Current read is ${pctNum(decision.executableExitNetPct)} and ${moneyAud(decision.executableExitProfitAud)}.`
+      );
     }
-    if (decision?.exitGateReason) parts.push(decision.exitGateReason);
+    if (decision?.exitGateReason && !/needs\s*>?=/i.test(decision.exitGateReason)) parts.push(decision.exitGateReason);
     return parts.join(" ");
   }
 
@@ -2559,19 +2598,19 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
 
   if (stage === "waiting-setup") {
     return [
-      { label: "Reference", value: primaryReferenceLabel(slot) },
       { label: "Drawdown", value: pctNum(slot.candidateDrawdownPct ?? slot.drawdownPct) },
       { label: "Bounce", value: pctNum(slot.candidateBouncePct) },
       { label: "Spread", value: pctNum(slot.nowSpreadPct) },
+      { label: "Reference", value: primaryReferenceLabel(slot) },
     ];
   }
 
   if (stage === "reversal-confirming") {
     return [
-      { label: "Reference", value: primaryReferenceLabel(slot) },
       { label: "Bounce", value: pctNum(slot.candidateBouncePct) },
       { label: "Spread", value: pctNum(slot.nowSpreadPct) },
       { label: "Signal", value: primarySetupStateLabel(slot), toneClass: "is-deploying" },
+      { label: "Reference", value: primaryReferenceLabel(slot) },
     ];
   }
 
@@ -2580,7 +2619,7 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
       { label: "Entry", value: effectiveEntryLabel(slot) },
       { label: "Live Price", value: effectiveNowLabel(slot) },
       { label: "Spread", value: pctNum(slot.nowSpreadPct) },
-      { label: "Updated", value: slotHeartbeatLabel(slot, nowMs) },
+      { label: "Updated", value: slotHeartbeatCardLabel(slot, nowMs) },
     ];
   }
 
@@ -2626,7 +2665,7 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
     { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-exiting" },
     { label: "Expected Exit", value: moneyAud(slot.liveExitExpectedAud) },
     { label: "Fill Status", value: slot.liveExitFillStatus ?? "-" },
-    { label: "Updated", value: slotHeartbeatLabel(slot, nowMs) },
+    { label: "Updated", value: slotHeartbeatCardLabel(slot, nowMs) },
   ];
 }
 /* =========================
@@ -3399,9 +3438,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
     return (
       stage === "entering" ||
       stage === "live-primary" ||
-      stage === "protected-primary" ||
-      stage === "exit-waiting" ||
-      stage === "exiting"
+      stage === "protected-primary"
     );
   });
   const waitingSlots = props.slots.filter((slot) => String(slot.state || "").toUpperCase() === "WAITING_ENTRY");
@@ -3471,7 +3508,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                   <div className="dashboard-row-copy">{actionNeededSummary(slot)}</div>
                   <div className="dashboard-row-meta">
                     <span>{secondaryTradesLabel(slot)}</span>
-                    <span>{slotHeartbeatLabel(slot, props.nowMs)}</span>
+                    <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
                   </div>
                 </button>
               ))}
@@ -3510,7 +3547,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                   </div>
                   <div className="dashboard-row-meta">
                     <span>{activePrimarySummary(slot)}</span>
-                    <span>{slotHeartbeatLabel(slot, props.nowMs)}</span>
+                    <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
                   </div>
                 </button>
               ))}
@@ -3543,14 +3580,14 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     <div className="dashboard-row-badge">{primarySetupStateLabel(slot)}</div>
                   </div>
                   <div className="dashboard-row-stats">
-                    <span>Reference {primaryReferenceLabel(slot)}</span>
                     <span>Drawdown {pctNum(slot.candidateDrawdownPct ?? slot.drawdownPct)}</span>
                     <span>Bounce {pctNum(slot.candidateBouncePct)}</span>
                     <span>Spread {pctNum(slot.nowSpreadPct)}</span>
+                    <span>Reference {primaryReferenceLabel(slot)}</span>
                   </div>
                   <div className="dashboard-row-meta">
                     <span>{nextActionLabel(slot)}</span>
-                    <span>{slotHeartbeatLabel(slot, props.nowMs)}</span>
+                    <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
                   </div>
                 </button>
               ))}
@@ -3678,8 +3715,12 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                         <div className="stage-card-summary">{positionStageSummary(slot)}</div>
 
                         <div className="stage-card-foot">
-                          <span>{stage === "waiting-setup" || stage === "reversal-confirming" ? `Reference ${primaryReferenceLabel(slot)}` : secondaryTradesLabel(slot)}</span>
-                          <span>{slotHeartbeatLabel(slot, props.nowMs)}</span>
+                          <span>
+                            {stage === "waiting-setup" || stage === "reversal-confirming"
+                              ? `Last-exit reference ${primaryReferenceLabel(slot)}`
+                              : secondaryTradesLabel(slot)}
+                          </span>
+                          <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
                         </div>
                       </button>
                     );
