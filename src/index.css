@@ -10281,6 +10281,8 @@ button.home-route-band{
   display:grid;
   grid-template-columns:minmax(0, 1.05fr) minmax(0, 1.05fr) minmax(0, .9fr);
   gap:14px;
+  align-items:start;
+  align-content:start;
 }
 
 .dashboard-panel,
