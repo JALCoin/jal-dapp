@@ -1,6 +1,7 @@
 // src/pages/Landing.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import ThemeToggle from "../components/ThemeToggle";
 import { usePageMeta } from "../hooks/usePageMeta";
 import type { ThemeMode } from "../hooks/useTheme";
 
@@ -22,15 +23,11 @@ type NavTo =
 function NavOverlay({
   onSelect,
   onClose,
-  onToggleTheme,
   disabled,
-  theme,
 }: {
   onSelect: (to: NavTo) => void;
   onClose: () => void;
-  onToggleTheme: () => void;
   disabled: boolean;
-  theme: ThemeMode;
 }) {
   return (
     <>
@@ -48,16 +45,6 @@ function NavOverlay({
         aria-label="Navigation"
       >
         <div className="nav-overlay-top">
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={onToggleTheme}
-            disabled={disabled}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? "Light Mode" : "Dark Mode"}
-          </button>
-
           <button
             className="nav-back"
             type="button"
@@ -90,10 +77,10 @@ function NavOverlay({
           <button
             type="button"
             className="nav-pill"
-            onClick={() => onSelect("/app/legal")}
+            onClick={() => onSelect("/app/engine")}
             disabled={disabled}
           >
-            LEGAL + BUSINESS
+            $JAL~ENGINE
           </button>
 
           <button
@@ -117,10 +104,10 @@ function NavOverlay({
           <button
             type="button"
             className="nav-pill"
-            onClick={() => onSelect("/app/engine")}
+            onClick={() => onSelect("/app/legal")}
             disabled={disabled}
           >
-            JAL ENGINE
+            LEGAL+BUSINESS
           </button>
         </div>
       </section>
@@ -160,6 +147,31 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
     return () => document.body.removeAttribute("data-nav-open");
   }, [mode]);
 
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const viewport = window.visualViewport;
+
+    const syncViewportHeight = () => {
+      const visibleHeight = viewport?.height ?? window.innerHeight;
+      root.style.setProperty("--landing-viewport-height", `${visibleHeight}px`);
+    };
+
+    syncViewportHeight();
+
+    viewport?.addEventListener("resize", syncViewportHeight);
+    viewport?.addEventListener("scroll", syncViewportHeight);
+    window.addEventListener("resize", syncViewportHeight);
+    window.addEventListener("orientationchange", syncViewportHeight);
+
+    return () => {
+      viewport?.removeEventListener("resize", syncViewportHeight);
+      viewport?.removeEventListener("scroll", syncViewportHeight);
+      window.removeEventListener("resize", syncViewportHeight);
+      window.removeEventListener("orientationchange", syncViewportHeight);
+      root.style.removeProperty("--landing-viewport-height");
+    };
+  }, []);
+
   const showLoadingThenNavigate = (to: NavTo | "/app/nav") => {
     if (loading) return;
 
@@ -188,14 +200,7 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
         {!loading && (
           <>
             <div className="landing-tools">
-              <button
-                type="button"
-                className="theme-toggle"
-                onClick={onToggleTheme}
-                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              >
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
-              </button>
+              <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} />
             </div>
 
             <button
@@ -233,16 +238,14 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
 
   return (
     <main
-      className={`landing-blank ${loading ? "is-fading" : ""}`}
+      className={`landing-blank is-nav-route ${loading ? "is-fading" : ""}`}
       aria-label="Jeremy Aaron Lugg"
     >
       {!loading && (
         <NavOverlay
           onSelect={handleNavSelect}
           onClose={() => navigate("/app/home")}
-          onToggleTheme={onToggleTheme}
           disabled={loading}
-          theme={theme}
         />
       )}
 

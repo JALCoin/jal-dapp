@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -17,6 +17,7 @@ import ShopPage from "./pages/Shop";
 import AuthPage from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import Footer from "./components/Footer";
+import ThemeToggle from "./components/ThemeToggle";
 import RequireAuth from "./components/RequireAuth";
 import { useAuth } from "./context/AuthProvider";
 import Terms from "./pages/Terms";
@@ -31,20 +32,42 @@ import { useTheme, type ThemeMode } from "./hooks/useTheme";
 function HeaderView({
   onMenu,
   onLogo,
-  onToggleTheme,
   isOpen,
   theme,
 }: {
   onMenu: () => void;
   onLogo: () => void;
-  onToggleTheme: () => void;
   isOpen: boolean;
   theme: ThemeMode;
 }) {
   const headerLogoSrc = theme === "light" ? "/JALSOLLIGHT.gif" : "/JALSOL1.gif";
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const header = headerRef.current;
+
+    if (!header) return;
+
+    const syncHeight = () => {
+      root.style.setProperty("--app-header-height", `${header.offsetHeight}px`);
+    };
+
+    syncHeight();
+
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(syncHeight) : null;
+    observer?.observe(header);
+    window.addEventListener("resize", syncHeight);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", syncHeight);
+      root.style.removeProperty("--app-header-height");
+    };
+  }, []);
 
   return (
-    <header className="site-header">
+    <header ref={headerRef} className="site-header">
       <div className="header-inner">
         <div className="header-spacer" aria-hidden="true" />
 
@@ -53,15 +76,6 @@ function HeaderView({
         </button>
 
         <div className="header-actions">
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={onToggleTheme}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? "Light Mode" : "Dark Mode"}
-          </button>
-
           <button
             className={`hamburger ${isOpen ? "is-open" : ""}`}
             onClick={onMenu}
@@ -233,6 +247,8 @@ function AccountAccessPanel({
 function SidebarView({
   open,
   onClose,
+  theme,
+  onToggleTheme,
   session,
   accountIdentity,
   roleLabel,
@@ -249,6 +265,8 @@ function SidebarView({
 }: {
   open: boolean;
   onClose: () => void;
+  theme: ThemeMode;
+  onToggleTheme: () => void;
   session: boolean;
   accountIdentity: string;
   roleLabel: string;
@@ -336,6 +354,16 @@ function SidebarView({
             ]}
           />
         </nav>
+
+        <section className="sidebar-theme-panel" aria-label="Display theme">
+          <div className="sidebar-section-title">Display Theme</div>
+          <div className="sidebar-theme-row">
+            <span className="sidebar-theme-copy">
+              {theme === "light" ? "Light mode active" : "Dark mode active"}
+            </span>
+            <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} />
+          </div>
+        </section>
       </aside>
     </>
   );
@@ -561,8 +589,33 @@ function RequireEngineerAccount({ children }: { children: ReactNode }) {
 }
 
 function SitewideNoticeBar() {
+  const noticeRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const notice = noticeRef.current;
+
+    if (!notice) return;
+
+    const syncHeight = () => {
+      root.style.setProperty("--sitewide-notice-height", `${notice.offsetHeight}px`);
+    };
+
+    syncHeight();
+
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(syncHeight) : null;
+    observer?.observe(notice);
+    window.addEventListener("resize", syncHeight);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", syncHeight);
+      root.style.removeProperty("--sitewide-notice-height");
+    };
+  }, []);
+
   return (
-    <div role="status" aria-live="polite" className="sitewide-notice-bar">
+    <div ref={noticeRef} role="status" aria-live="polite" className="sitewide-notice-bar">
       Founder site for Jeremy Aaron Lugg. Some interactive features remain unavailable while legal
       settings are reviewed. Visit{" "}
       <a href="/app/compliance" className="sitewide-notice-link">
@@ -593,6 +646,7 @@ function AppShell({
   } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const isNavRoute = location.pathname === "/app/nav";
   const [menuOpen, setMenuOpen] = useState(false);
   const [switchingMode, setSwitchingMode] = useState(false);
   const [modeError, setModeError] = useState<string | null>(null);
@@ -680,7 +734,6 @@ function AppShell({
       <HeaderView
         onMenu={() => setMenuOpen((v) => !v)}
         onLogo={() => navigate("/app/nav")}
-        onToggleTheme={onToggleTheme}
         isOpen={menuOpen}
         theme={theme}
       />
@@ -688,6 +741,8 @@ function AppShell({
       <SidebarView
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
         session={Boolean(session)}
         accountIdentity={accountIdentity}
         roleLabel={roleLabel}
@@ -747,7 +802,7 @@ function AppShell({
         <Route path="*" element={<Navigate to="/app/nav" replace />} />
       </Routes>
 
-      <Footer />
+      {!isNavRoute && <Footer />}
     </>
   );
 }

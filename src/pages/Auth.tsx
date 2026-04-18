@@ -303,11 +303,11 @@ export default function Auth() {
                 After sign-in, this terminal will route you to <strong>{nextPath}</strong>.
               </p>
 
-              <p className="jal-auth-input-note">
-                {isEngineerAccessRequest
-                  ? "JAL Engine access requires an existing engineer account. Signing in as a standard member will not unlock the private operator surface."
-                  : "Create account and sign-in are separated here so first-time users don&apos;t get mixed into the returning-member flow."}
-              </p>
+                <p className="jal-auth-input-note">
+                  {isEngineerAccessRequest
+                    ? "JAL Engine access requires an existing engineer account. Signing in as a standard member will not unlock the private operator surface."
+                    : "Create account and sign-in are separated here so first-time users don't get mixed into the returning-member flow."}
+                </p>
 
               <div className="jal-bullets jal-bullets-auth">
                 <article className="jal-bullet">
