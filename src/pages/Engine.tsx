@@ -2041,6 +2041,14 @@ type EntryMilestone = {
   state: EntryMilestoneState;
   countsTowardEntry?: boolean;
 };
+type EntryProgressModel = {
+  referenceDone: boolean;
+  readyCount: number;
+  totalCount: number;
+  remainingCount: number;
+  waitingLabels: string[];
+  blocked: boolean;
+};
 
 function primaryCandidateBlockedReason(slot: SlotRow) {
   return String(slot.candidatePriorityBlockedReason || "").trim().toLowerCase();
@@ -2111,26 +2119,69 @@ function primaryEntryMilestones(slot: SlotRow): EntryMilestone[] {
   return milestones;
 }
 
-function primaryEntryCountdownLabel(slot: SlotRow) {
+function primaryEntryProgressModel(slot: SlotRow): EntryProgressModel {
   const milestones = primaryEntryMilestones(slot).filter((item) => item.countsTowardEntry !== false);
-  const remaining = milestones.filter((item) => item.state !== "done").length;
-  const confirm = primaryEntryConfirmProgress(slot);
+  const readyCount = milestones.filter((item) => item.state === "done").length;
+  const waitingLabels = milestones
+    .filter((item) => item.state !== "done")
+    .map((item) => {
+      if (item.label.startsWith("Drawdown")) return "Drawdown";
+      if (item.label.startsWith("Bounce")) return "Bounce";
+      if (item.label.startsWith("Trend")) return "Trend";
+      if (item.label.startsWith("Spread")) return item.label;
+      if (item.label.startsWith("Market")) return "Market read";
+      if (item.label.startsWith("Confirm")) return item.label;
+      return item.label;
+    });
 
-  if (remaining <= 0) return "Countdown to entry: ready";
-  if (!confirm.ready && remaining === 1 && confirm.total > 0) {
-    return `Countdown to entry: ${confirm.current}/${confirm.total} confirm ticks`;
-  }
-  return `Countdown to entry: ${remaining} gates remaining`;
+  return {
+    referenceDone: reentryTargetHit(slot),
+    readyCount,
+    totalCount: milestones.length,
+    remainingCount: Math.max(0, milestones.length - readyCount),
+    waitingLabels,
+    blocked: milestones.some((item) => item.state === "blocked"),
+  };
 }
 
-function primaryEntryMilestoneStrip(slot: SlotRow) {
+function primaryEntryCountdownLabel(slot: SlotRow) {
+  const progress = primaryEntryProgressModel(slot);
+  const confirm = primaryEntryConfirmProgress(slot);
+
+  if (progress.remainingCount <= 0) return "Entry ready";
+  if (!confirm.ready && progress.remainingCount === 1 && confirm.total > 0) {
+    return `Confirm ${confirm.current}/${confirm.total} remaining`;
+  }
+  return `${progress.remainingCount} gates remaining`;
+}
+
+function primaryEntryWaitingLabel(slot: SlotRow) {
+  const progress = primaryEntryProgressModel(slot);
+  if (!progress.waitingLabels.length) return "All entry gates are ready.";
+  if (progress.waitingLabels.length === 1) return `Waiting on ${progress.waitingLabels[0]}.`;
+  return `Waiting on ${progress.waitingLabels.join(", ")}.`;
+}
+
+function primaryEntryProgressBlock(slot: SlotRow) {
+  const progress = primaryEntryProgressModel(slot);
+  const fillPct = progress.totalCount > 0 ? Math.max(8, (progress.readyCount / progress.totalCount) * 100) : 0;
+  const toneClass = progress.remainingCount <= 0 ? "is-ready" : progress.blocked ? "is-blocked" : "is-active";
+
   return (
-    <div className="entry-milestones" aria-label="Primary entry milestones">
-      {primaryEntryMilestones(slot).map((item) => (
-        <span key={item.label} className={`entry-chip is-${item.state}`}>
-          {item.label}
+    <div className={`entry-progress ${toneClass}`} aria-label="Primary entry progress">
+      <div className="entry-progress-top">
+        <span className="entry-progress-label">Entry progress</span>
+        <span className="entry-progress-value">
+          {progress.readyCount}/{progress.totalCount} gates
         </span>
-      ))}
+      </div>
+      <div className="entry-progress-bar" aria-hidden="true">
+        <span style={{ width: `${fillPct}%` }} />
+      </div>
+      <div className="entry-progress-meta">
+        <span>{progress.referenceDone ? "Reference crossed" : "Reference pending"}</span>
+        <span>{primaryEntryCountdownLabel(slot)}</span>
+      </div>
     </div>
   );
 }
@@ -2657,7 +2708,7 @@ function actionNeededSummary(slot: SlotRow) {
 }
 
 function waitingPrimarySummary(slot: SlotRow) {
-  return primaryEntryCountdownLabel(slot);
+  return primaryEntryWaitingLabel(slot);
 }
 
 function activePrimarySummary(slot: SlotRow) {
@@ -3677,12 +3728,11 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     <span>Drawdown {pctNum(slot.candidateDrawdownPct ?? slot.drawdownPct)}</span>
                     <span>Bounce {pctNum(slot.candidateBouncePct)}</span>
                     <span>Spread {pctNum(slot.nowSpreadPct)}</span>
-                    <span>Reference {primaryReferenceLabel(slot)}</span>
                   </div>
-                  {primaryEntryMilestoneStrip(slot)}
-                  <div className="dashboard-row-copy">{primaryEntryCountdownLabel(slot)}</div>
+                  {primaryEntryProgressBlock(slot)}
+                  <div className="dashboard-row-copy">{primaryEntryWaitingLabel(slot)}</div>
                   <div className="dashboard-row-meta">
-                    <span>{nextActionLabel(slot)}</span>
+                    <span>Reference {primaryReferenceLabel(slot)}</span>
                     <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
                   </div>
                 </button>
@@ -3809,7 +3859,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                         </div>
 
                         {(stage === "waiting-setup" || stage === "reversal-confirming") &&
-                          primaryEntryMilestoneStrip(slot)}
+                          primaryEntryProgressBlock(slot)}
 
                         <div className="stage-card-summary">{positionStageSummary(slot)}</div>
 
