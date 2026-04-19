@@ -423,6 +423,10 @@ type SlotRow = {
   candidateScore?: number | null;
   candidateSelectorScore?: number | null;
   candidateReason?: string | null;
+  candidatePriorityEligible?: boolean | null;
+  candidatePriorityReason?: string | null;
+  candidatePriorityBlockedReason?: string | null;
+  candidatePriorityAt?: number | null;
 
   entryDrawdownPct?: number | null;
   entryBouncePct?: number | null;
@@ -2031,16 +2035,116 @@ function primaryReferenceLabel(slot: SlotRow | null | undefined) {
   return "-";
 }
 
+type EntryMilestoneState = "done" | "pending" | "blocked";
+type EntryMilestone = {
+  label: string;
+  state: EntryMilestoneState;
+  countsTowardEntry?: boolean;
+};
+
+function primaryCandidateBlockedReason(slot: SlotRow) {
+  return String(slot.candidatePriorityBlockedReason || "").trim().toLowerCase();
+}
+
+function primaryEntryConfirmProgress(slot: SlotRow) {
+  const blockedReason = primaryCandidateBlockedReason(slot);
+  const required = Math.max(0, Number(slot.entryConfirmTicks || 0));
+  const tracked = Math.max(0, Number(slot.candidateReversalTicks || 0));
+
+  const match = blockedReason.match(/^confirm_ticks_(\d+)_of_(\d+)$/);
+  const current = match ? Number(match[1]) : tracked;
+  const total = match ? Number(match[2]) : required;
+  const ready = slot.candidatePriorityEligible === true || total <= 0 || current >= total;
+
+  return { current, total, ready };
+}
+
+function primaryEntryMilestones(slot: SlotRow): EntryMilestone[] {
+  const tracking = String(slot.trackingState || "").toUpperCase();
+  const blockedReason = primaryCandidateBlockedReason(slot);
+  const referenceDone = reentryTargetHit(slot);
+  const marketReady = tracking !== "NO_MARKET" && blockedReason !== "market_unresolved";
+  const spreadReady =
+    tracking !== "SPREAD_BLOCKED" &&
+    !["spread_blowout", "spread_unresolved", "live_bidask_required", "bidask_unresolved"].includes(
+      blockedReason
+    );
+  const drawdownReady = blockedReason !== "drawdown_not_ready";
+  const bounceReady = drawdownReady && blockedReason !== "bounce_not_ready";
+  const trendReady = bounceReady && blockedReason !== "trend_not_ready";
+  const confirm = primaryEntryConfirmProgress(slot);
+
+  const milestones: EntryMilestone[] = [
+    {
+      label: referenceDone ? "Reference crossed" : "Reference pending",
+      state: referenceDone ? "done" : "pending",
+      countsTowardEntry: false,
+    },
+    {
+      label: drawdownReady ? "Drawdown ready" : "Drawdown pending",
+      state: drawdownReady ? "done" : "pending",
+    },
+    {
+      label: bounceReady ? "Bounce ready" : "Bounce pending",
+      state: bounceReady ? "done" : "pending",
+    },
+    {
+      label: trendReady ? "Trend ready" : "Trend pending",
+      state: trendReady ? "done" : "pending",
+    },
+  ];
+
+  if (!marketReady) {
+    milestones.push({ label: "Market read pending", state: "blocked" });
+  } else {
+    milestones.push({
+      label: spreadReady ? "Spread clear" : "Spread blocked",
+      state: spreadReady ? "done" : "blocked",
+    });
+  }
+
+  milestones.push({
+    label: confirm.ready ? "Confirm ready" : `Confirm ${confirm.current}/${confirm.total || 0}`,
+    state: confirm.ready ? "done" : "pending",
+  });
+
+  return milestones;
+}
+
+function primaryEntryCountdownLabel(slot: SlotRow) {
+  const milestones = primaryEntryMilestones(slot).filter((item) => item.countsTowardEntry !== false);
+  const remaining = milestones.filter((item) => item.state !== "done").length;
+  const confirm = primaryEntryConfirmProgress(slot);
+
+  if (remaining <= 0) return "Countdown to entry: ready";
+  if (!confirm.ready && remaining === 1 && confirm.total > 0) {
+    return `Countdown to entry: ${confirm.current}/${confirm.total} confirm ticks`;
+  }
+  return `Countdown to entry: ${remaining} gates remaining`;
+}
+
+function primaryEntryMilestoneStrip(slot: SlotRow) {
+  return (
+    <div className="entry-milestones" aria-label="Primary entry milestones">
+      {primaryEntryMilestones(slot).map((item) => (
+        <span key={item.label} className={`entry-chip is-${item.state}`}>
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function primarySetupStateLabel(slot: SlotRow) {
   const tracking = String(slot.trackingState || "").toUpperCase();
   const state = String(slot.state || "").toUpperCase();
 
   if (state === "DEPLOYING") return "Entry submitting";
   if (tracking === "REVERSAL_CONFIRMING") return "Reversal confirming";
-  if (tracking === "DRAWDOWN_SEEN") return "Drawdown seen";
+  if (tracking === "DRAWDOWN_SEEN") return "Drawdown ready";
   if (tracking === "SPREAD_BLOCKED") return "Spread blocked";
   if (tracking === "NO_MARKET") return "Waiting for market";
-  if (reentryTargetHit(slot)) return "Setup at reference";
+  if (reentryTargetHit(slot)) return "Reference crossed";
   return "Tracking setup";
 }
 
@@ -2099,10 +2203,10 @@ function nextActionLabel(s: SlotRow) {
 
   if (state === "WAITING_ENTRY") {
     if (tracking === "REVERSAL_CONFIRMING") return "Reversal confirming";
-    if (tracking === "DRAWDOWN_SEEN") return "Drawdown seen";
+    if (tracking === "DRAWDOWN_SEEN") return "Drawdown ready";
     if (tracking === "SPREAD_BLOCKED") return "Spread blocking entry";
     if (tracking === "NO_MARKET") return "Waiting for market read";
-    if (reentryTargetHit(s)) return "Setup has moved through the reference";
+    if (reentryTargetHit(s)) return "Reference crossed, waiting for remaining gates";
     if (s.reentryTargetMid != null && Number.isFinite(s.reentryTargetMid)) return "Tracking setup from last exit";
     return "Watching for setup";
   }
@@ -2150,13 +2254,13 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   } else if (state === "WAITING_ENTRY") {
     if (reentryTargetHit(s)) {
       if (tracking === "REVERSAL_CONFIRMING") {
-        parts.push("Primary setup has moved through its reference from the last exit and reversal confirmation is building.");
+        parts.push("Primary setup has crossed its last-exit reference and reversal confirmation is building.");
       } else if (tracking === "SPREAD_BLOCKED") {
-        parts.push("Primary setup has moved through its reference from the last exit, but spread is blocking deployment.");
+        parts.push("Primary setup has crossed its last-exit reference, but spread is blocking deployment.");
       } else if (tracking === "NO_MARKET") {
-        parts.push("Primary setup has moved through its reference from the last exit, but live market confirmation is unavailable.");
+        parts.push("Primary setup has crossed its last-exit reference, but live market confirmation is unavailable.");
       } else {
-        parts.push("Primary setup has moved through its reference from the last exit and is waiting for reversal confirmation.");
+        parts.push("Primary setup has crossed its last-exit reference and is still waiting for the remaining entry gates.");
       }
     } else {
       parts.push("Primary is waiting for a qualified setup.");
@@ -2553,17 +2657,7 @@ function actionNeededSummary(slot: SlotRow) {
 }
 
 function waitingPrimarySummary(slot: SlotRow) {
-  const parts = [primarySetupStateLabel(slot)];
-  if (slot.candidateDrawdownPct != null && Number.isFinite(slot.candidateDrawdownPct)) {
-    parts.push(`Drawdown ${pctNum(slot.candidateDrawdownPct)}`);
-  }
-  if (slot.candidateBouncePct != null && Number.isFinite(slot.candidateBouncePct)) {
-    parts.push(`Bounce ${pctNum(slot.candidateBouncePct)}`);
-  }
-  if (slot.nowSpreadPct != null && Number.isFinite(slot.nowSpreadPct)) {
-    parts.push(`Spread ${pctNum(slot.nowSpreadPct)}`);
-  }
-  return parts.join(" | ");
+  return primaryEntryCountdownLabel(slot);
 }
 
 function activePrimarySummary(slot: SlotRow) {
@@ -3585,6 +3679,8 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     <span>Spread {pctNum(slot.nowSpreadPct)}</span>
                     <span>Reference {primaryReferenceLabel(slot)}</span>
                   </div>
+                  {primaryEntryMilestoneStrip(slot)}
+                  <div className="dashboard-row-copy">{primaryEntryCountdownLabel(slot)}</div>
                   <div className="dashboard-row-meta">
                     <span>{nextActionLabel(slot)}</span>
                     <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
@@ -3711,6 +3807,9 @@ const LedgerTable = React.memo(function LedgerTable(props: {
                             </div>
                           ))}
                         </div>
+
+                        {(stage === "waiting-setup" || stage === "reversal-confirming") &&
+                          primaryEntryMilestoneStrip(slot)}
 
                         <div className="stage-card-summary">{positionStageSummary(slot)}</div>
 

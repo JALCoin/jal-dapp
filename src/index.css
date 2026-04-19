@@ -10425,6 +10425,43 @@ button.home-route-band{
   margin-top:10px;
 }
 
+.entry-milestones{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+
+.entry-chip{
+  padding:.28rem .62rem;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  font-size:.68rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.72);
+  white-space:nowrap;
+}
+
+.entry-chip.is-done{
+  border-color:rgba(17,241,167,.20);
+  background:rgba(17,241,167,.09);
+  color:rgba(198,255,233,.92);
+}
+
+.entry-chip.is-pending{
+  border-color:rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  color:rgba(231,255,247,.72);
+}
+
+.entry-chip.is-blocked{
+  border-color:rgba(255,108,108,.24);
+  background:rgba(255,108,108,.08);
+  color:rgba(255,213,213,.9);
+}
+
 .dashboard-empty{
   padding:16px;
   border-radius:16px;
@@ -10573,6 +10610,24 @@ button.home-route-band{
 :root[data-theme="light"] .stage-card-summary,
 :root[data-theme="light"] .stage-card-v{
   color:rgba(16,28,27,.92);
+}
+
+:root[data-theme="light"] .entry-chip{
+  border-color:rgba(19,35,30,.10);
+  background:rgba(255,255,255,.8);
+  color:rgba(19,35,30,.72);
+}
+
+:root[data-theme="light"] .entry-chip.is-done{
+  border-color:rgba(17,150,107,.22);
+  background:rgba(17,150,107,.10);
+  color:rgba(8,75,53,.92);
+}
+
+:root[data-theme="light"] .entry-chip.is-blocked{
+  border-color:rgba(178,50,50,.22);
+  background:rgba(178,50,50,.08);
+  color:rgba(120,32,32,.88);
 }
 
 :root[data-theme="light"] .dashboard-empty{
