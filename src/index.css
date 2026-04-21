@@ -10337,7 +10337,16 @@ button.home-route-band{
 
 .dashboard-list{
   display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(320px, 1fr);
   gap:10px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  align-items:start;
+  padding-bottom:4px;
+  scroll-snap-type:x proximity;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(17,241,167,.22) transparent;
 }
 
 .dashboard-row,
@@ -10356,6 +10365,11 @@ button.home-route-band{
     border-color var(--t-fast),
     box-shadow var(--t-fast),
     background var(--t-fast);
+}
+
+.dashboard-row{
+  width:auto;
+  scroll-snap-align:start;
 }
 
 .dashboard-row:hover,
