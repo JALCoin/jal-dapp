@@ -2370,6 +2370,106 @@ function primaryExitProgressBlock(
   );
 }
 
+type SecondaryRailItem = {
+  key: string;
+  label: string;
+  stateLabel: string;
+  toneClass: string;
+};
+
+function secondaryRailItemStateLabel(subslot: SubslotRow | null) {
+  if (!subslot) return "Idle";
+
+  const state = String(subslot.subslotState || "").toUpperCase();
+  const signal = String(subslot.subslotSignalState || "").toUpperCase();
+
+  if (state === "BUY_SUBMITTED") return "Entry";
+  if (state === "ACTIVE") return "Live";
+  if (state === "SELL_SUBMITTED") return "Exit";
+  if (signal === "REVERSAL_CONFIRMING") return "Confirm";
+  if (signal === "BOUNCE_SEEN") return "Bounce";
+  if (signal === "TRACKING") return "Track";
+  if (signal === "ARMED") return "Armed";
+  if (state === "CLOSED") return "Closed";
+  return "Idle";
+}
+
+function secondaryRailItems(slot: SlotRow): SecondaryRailItem[] {
+  const sorted = [...getSubslots(slot)].sort((a, b) => {
+    const aSeq = Number(a.subslotSequence);
+    const bSeq = Number(b.subslotSequence);
+    if (Number.isFinite(aSeq) && Number.isFinite(bSeq)) return aSeq - bSeq;
+    if (Number.isFinite(aSeq)) return -1;
+    if (Number.isFinite(bSeq)) return 1;
+    return 0;
+  });
+
+  const assigned = new Map<number, SubslotRow>();
+  const overflow: SubslotRow[] = [];
+
+  for (const subslot of sorted) {
+    const seq = Number(subslot.subslotSequence);
+    if (Number.isInteger(seq) && seq >= 1 && seq <= 5 && !assigned.has(seq)) {
+      assigned.set(seq, subslot);
+    } else {
+      overflow.push(subslot);
+    }
+  }
+
+  const items: SecondaryRailItem[] = [];
+
+  for (let index = 1; index <= 5; index += 1) {
+    const subslot = assigned.get(index) ?? overflow.shift() ?? null;
+    items.push({
+      key: subslot?.subslotId ?? `${slot.id}-secondary-${index}`,
+      label: `S${index}`,
+      stateLabel: secondaryRailItemStateLabel(subslot),
+      toneClass: subslot ? subslotToneClass(subslot) : "is-muted",
+    });
+  }
+
+  return items;
+}
+
+function secondaryRailSummary(slot: SlotRow) {
+  const openCount = getSubslotOpenCount(slot);
+  const activeCount = getActiveSecondaryRows(slot).length;
+  const realizedAud = getSubslotRealizedProfit(slot);
+  const parts: string[] = [];
+
+  if (!getSecondaryRows(slot).length) return "5 tactical secondary slots available during this Primary.";
+
+  if (openCount > 0) parts.push(`${openCount}/5 open`);
+  if (activeCount > 0) parts.push(`${activeCount} live`);
+  if (hasPendingSubslotBuys(slot)) parts.push("entry pending");
+  if (hasPendingSubslotSells(slot)) parts.push("exit pending");
+  if (realizedAud != null) parts.push(`realized ${moneyAud(realizedAud)}`);
+
+  return parts.length ? parts.join(" | ") : "Secondary rail idle.";
+}
+
+function primarySecondaryRail(slot: SlotRow) {
+  const items = secondaryRailItems(slot);
+
+  return (
+    <div className="entry-progress secondary-rail" aria-label="Primary secondary rail">
+      <div className="entry-progress-top">
+        <span className="entry-progress-label">Secondary rail</span>
+        <span className="entry-progress-value">{countActiveSecondaries(slot)}/5 live</span>
+      </div>
+      <div className="secondary-rail-track" aria-label="Secondary trade slots">
+        {items.map((item) => (
+          <div key={item.key} className={`secondary-rail-slot ${item.toneClass}`}>
+            <div className="secondary-rail-slot-label">{item.label}</div>
+            <div className="secondary-rail-slot-state">{item.stateLabel}</div>
+          </div>
+        ))}
+      </div>
+      <div className="secondary-rail-summary">{secondaryRailSummary(slot)}</div>
+    </div>
+  );
+}
+
 function primarySetupStateLabel(slot: SlotRow) {
   const tracking = String(slot.trackingState || "").toUpperCase();
   const state = String(slot.state || "").toUpperCase();
@@ -3883,6 +3983,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     <span>{secondaryTradesLabel(slot)}</span>
                   </div>
                   {primaryExitProgressBlock(slot, props.holding)}
+                  {primarySecondaryRail(slot)}
                   <div className="dashboard-row-meta">
                     <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
                   </div>
