@@ -2186,6 +2186,195 @@ function primaryEntryProgressBlock(slot: SlotRow) {
   );
 }
 
+type PrimaryExitLevelStep = {
+  key: "lvl1" | "lvl2" | "lvl3" | "lvl4";
+  title: string;
+  armPct: number;
+  floorPct: number | null;
+  trailing: boolean;
+};
+
+function primaryExitLevelSteps(holding: ManagerStatus["holding"] | null | undefined): PrimaryExitLevelStep[] {
+  const steps: PrimaryExitLevelStep[] = [];
+  const lvl1Pct = holding?.lvl1Pct;
+  const lvl2Pct = holding?.lvl2Pct;
+  const lvl3Pct = holding?.lvl3Pct;
+  const lvl4Pct = holding?.lvl4Pct;
+  const lock1Pct = holding?.lock1Pct;
+  const lock2Pct = holding?.lock2Pct;
+  const lock3Pct = holding?.lock3Pct;
+
+  if (lvl1Pct != null && Number.isFinite(lvl1Pct)) {
+    steps.push({
+      key: "lvl1",
+      title: "LVL1",
+      armPct: Number(lvl1Pct),
+      floorPct: lock1Pct != null && Number.isFinite(lock1Pct) ? Number(lock1Pct) : null,
+      trailing: false,
+    });
+  }
+
+  if (lvl2Pct != null && Number.isFinite(lvl2Pct)) {
+    steps.push({
+      key: "lvl2",
+      title: "LVL2",
+      armPct: Number(lvl2Pct),
+      floorPct: lock2Pct != null && Number.isFinite(lock2Pct) ? Number(lock2Pct) : null,
+      trailing: false,
+    });
+  }
+
+  if (lvl3Pct != null && Number.isFinite(lvl3Pct)) {
+    steps.push({
+      key: "lvl3",
+      title: "LVL3",
+      armPct: Number(lvl3Pct),
+      floorPct: lock3Pct != null && Number.isFinite(lock3Pct) ? Number(lock3Pct) : null,
+      trailing: false,
+    });
+  }
+
+  if (lvl4Pct != null && Number.isFinite(lvl4Pct)) {
+    steps.push({
+      key: "lvl4",
+      title: "LVL4",
+      armPct: Number(lvl4Pct),
+      floorPct: null,
+      trailing: true,
+    });
+  }
+
+  return steps;
+}
+
+function primaryExitCurrentStepIndex(slot: SlotRow) {
+  const state = String(slot.state || "").toUpperCase();
+  if (state === "LVL4_TRAIL" || slot.level === 4) return 4;
+  if (state === "LVL3_LOCK" || slot.level === 3) return 3;
+  if (state === "LVL2_LOCK" || slot.level === 2) return 2;
+  if (state === "LVL1_LOCK" || slot.level === 1) return 1;
+  return 0;
+}
+
+function clampPct01(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function primaryExitProgressModel(
+  slot: SlotRow,
+  holding: ManagerStatus["holding"] | null | undefined
+) {
+  const steps = primaryExitLevelSteps(holding);
+  const totalCount = steps.length;
+  const currentLevel = Math.min(primaryExitCurrentStepIndex(slot), totalCount);
+  const liveNet = liveParentNetPct(slot);
+  const currentFloor = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
+  const nextStep = currentLevel < totalCount ? steps[currentLevel] : null;
+  const laterSteps = nextStep ? steps.slice(currentLevel + 1) : [];
+
+  let fillPct = currentLevel >= totalCount && totalCount > 0 ? 100 : 0;
+  if (liveNet != null && Number.isFinite(liveNet) && totalCount > 0 && currentLevel < totalCount) {
+    const prevArm = currentLevel > 0 ? steps[currentLevel - 1]?.armPct ?? 0 : 0;
+    const nextArm = nextStep?.armPct ?? prevArm;
+    const span = Math.max(nextArm - prevArm, 0.0001);
+    const phasePct = clampPct01((Number(liveNet) - prevArm) / span);
+    fillPct = ((currentLevel + phasePct) / totalCount) * 100;
+  }
+  fillPct = totalCount > 0 ? Math.max(8, Math.min(100, fillPct)) : 0;
+
+  return {
+    steps,
+    totalCount,
+    currentLevel,
+    currentFloor,
+    liveNet,
+    nextStep,
+    laterSteps,
+    fillPct,
+    isTrailing: currentLevel >= totalCount && totalCount > 0,
+    isArmed: currentFloor != null && Number.isFinite(currentFloor) && Number(currentFloor) > 0,
+  };
+}
+
+function primaryExitCountdownLabel(
+  slot: SlotRow,
+  holding: ManagerStatus["holding"] | null | undefined
+) {
+  const progress = primaryExitProgressModel(slot, holding);
+  if (!progress.totalCount) return "Levels unavailable";
+  if (progress.isTrailing) return "Trail active";
+  if (!progress.nextStep) return "Protection armed";
+  return `${progress.totalCount - progress.currentLevel} levels remaining`;
+}
+
+function primaryExitWaitingLabel(
+  slot: SlotRow,
+  holding: ManagerStatus["holding"] | null | undefined
+) {
+  const progress = primaryExitProgressModel(slot, holding);
+  if (!progress.totalCount) return "Primary exit ladder is unavailable.";
+  if (progress.isTrailing) return "Trail mode is active and the exit floor can keep lifting.";
+
+  const parts: string[] = [];
+  if (progress.nextStep) {
+    parts.push(
+      progress.nextStep.trailing
+        ? `${progress.nextStep.title} trail arms at ${pctNum(progress.nextStep.armPct)}.`
+        : `${progress.nextStep.title} arms at ${pctNum(progress.nextStep.armPct)} and sets ${pctNum(progress.nextStep.floorPct)} as the next floor.`
+    );
+  }
+  if (progress.currentFloor != null && Number.isFinite(progress.currentFloor) && progress.currentFloor > 0) {
+    parts.push(`Current floor is ${pctNum(progress.currentFloor)}.`);
+  } else {
+    parts.push("No exit floor is armed yet.");
+  }
+  return parts.join(" ");
+}
+
+function primaryExitLaterLevelsLabel(
+  slot: SlotRow,
+  holding: ManagerStatus["holding"] | null | undefined
+) {
+  const progress = primaryExitProgressModel(slot, holding);
+  if (!progress.totalCount || !progress.laterSteps.length) return progress.isTrailing ? "Later: trail mode live" : "Later: none";
+  return `Later: ${progress.laterSteps
+    .map((step) => (step.trailing ? `${step.title} ${pctNum(step.armPct)} -> Trail` : `${step.title} ${pctNum(step.armPct)} -> ${pctNum(step.floorPct)}`))
+    .join(", ")}`;
+}
+
+function primaryExitProgressBlock(
+  slot: SlotRow,
+  holding: ManagerStatus["holding"] | null | undefined
+) {
+  const progress = primaryExitProgressModel(slot, holding);
+  if (!progress.totalCount) return null;
+
+  const toneClass = progress.isTrailing ? "is-ready" : progress.isArmed ? "is-active" : "is-blocked";
+
+  return (
+    <div className={`entry-progress exit-progress ${toneClass}`} aria-label="Primary exit progress">
+      <div className="entry-progress-top">
+        <span className="entry-progress-label">Exit progress</span>
+        <span className="entry-progress-value">
+          {progress.currentLevel}/{progress.totalCount} levels
+        </span>
+      </div>
+      <div className="entry-progress-bar" aria-hidden="true">
+        <span style={{ width: `${progress.fillPct}%` }} />
+      </div>
+      <div className="entry-progress-meta">
+        <span>
+          {progress.currentFloor != null && Number.isFinite(progress.currentFloor) && progress.currentFloor > 0
+            ? `Floor ${pctNum(progress.currentFloor)}`
+            : "No floor armed"}
+        </span>
+        <span>{primaryExitCountdownLabel(slot, holding)}</span>
+      </div>
+    </div>
+  );
+}
+
 function primarySetupStateLabel(slot: SlotRow) {
   const tracking = String(slot.trackingState || "").toUpperCase();
   const state = String(slot.state || "").toUpperCase();
@@ -3289,6 +3478,7 @@ const ControlsBar = React.memo(function ControlsBar(props: {
 
 const CarouselPanel = React.memo(function CarouselPanel(props: {
   slots: SlotRow[];
+  holding: ManagerStatus["holding"] | null | undefined;
   currentIndex: number;
   setCurrentIndex: React.Dispatch<React.SetStateAction<number>>;
   onOpenSlot: (id: string) => void;
@@ -3423,6 +3613,14 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
             <div className="engine-carousel-foot">
   <span>{liveParentAnalysis(carouselSlot, props.nowMs)}</span>
 </div>
+
+{carouselSlot && hasActiveParentExposure(carouselSlot) ? (
+  <div className="engine-carousel-progress">
+    {primaryExitProgressBlock(carouselSlot, props.holding)}
+    <div className="engine-carousel-progress-copy">{primaryExitWaitingLabel(carouselSlot, props.holding)}</div>
+    <div className="engine-carousel-progress-meta">{primaryExitLaterLevelsLabel(carouselSlot, props.holding)}</div>
+  </div>
+) : null}
 
 <div className="engine-carousel-insight">
   <div className="engine-carousel-k">Live Market Insight</div>
@@ -3574,6 +3772,7 @@ const MarketSurface = React.memo(function MarketSurface(props: {
 
 const OverviewTable = React.memo(function OverviewTable(props: {
   slots: SlotRow[];
+  holding: ManagerStatus["holding"] | null | undefined;
   onOpenSlot: (id: string) => void;
   nowMs: number;
 }) {
@@ -3690,8 +3889,10 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     <span>{primaryProtectionLabel(slot)}</span>
                     <span>{secondaryTradesLabel(slot)}</span>
                   </div>
+                  {primaryExitProgressBlock(slot, props.holding)}
+                  <div className="dashboard-row-copy">{primaryExitWaitingLabel(slot, props.holding)}</div>
                   <div className="dashboard-row-meta">
-                    <span>{activePrimarySummary(slot)}</span>
+                    <span>{primaryExitLaterLevelsLabel(slot, props.holding)}</span>
                     <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
                   </div>
                 </button>
@@ -5309,7 +5510,12 @@ export default function Engine() {
               </div>
 
               {section === "focus" ? (
-                <OverviewTable slots={filteredSlots} onOpenSlot={setSelectedSlotId} nowMs={nowMs} />
+                <OverviewTable
+                  slots={filteredSlots}
+                  holding={meta?.manager?.holding}
+                  onOpenSlot={setSelectedSlotId}
+                  nowMs={nowMs}
+                />
               ) : null}
 
               {section === "slots" ? (
@@ -5365,6 +5571,7 @@ export default function Engine() {
             <div className="engine-zone" data-zone="status">
               <CarouselPanel
                 slots={prioritizedSlots}
+                holding={meta?.manager?.holding}
                 currentIndex={carouselIndex}
                 setCurrentIndex={setCarouselIndex}
                 onOpenSlot={setSelectedSlotId}

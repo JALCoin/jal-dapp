@@ -10448,6 +10448,26 @@ button.home-route-band{
   background:rgba(17,241,167,.05);
 }
 
+.exit-progress{
+  border-color:rgba(96,180,255,.14);
+  background:rgba(96,180,255,.045);
+}
+
+.exit-progress.is-active{
+  border-color:rgba(96,180,255,.22);
+  background:rgba(96,180,255,.07);
+}
+
+.exit-progress.is-blocked{
+  border-color:rgba(244,200,106,.22);
+  background:rgba(244,200,106,.07);
+}
+
+.exit-progress.is-ready{
+  border-color:rgba(17,241,167,.20);
+  background:rgba(17,241,167,.05);
+}
+
 .entry-progress-top,
 .entry-progress-meta{
   display:flex;
@@ -10485,12 +10505,38 @@ button.home-route-band{
   background:linear-gradient(90deg, rgba(17,241,167,.45), rgba(17,241,167,.9));
 }
 
+.exit-progress .entry-progress-bar span{
+  background:linear-gradient(90deg, rgba(96,180,255,.46), rgba(96,180,255,.94));
+}
+
 .entry-progress.is-blocked .entry-progress-bar span{
   background:linear-gradient(90deg, rgba(255,145,145,.45), rgba(255,145,145,.88));
 }
 
+.exit-progress.is-blocked .entry-progress-bar span{
+  background:linear-gradient(90deg, rgba(244,200,106,.44), rgba(244,200,106,.92));
+}
+
 .entry-progress-meta{
   margin-top:9px;
+}
+
+.engine-carousel-progress{
+  display:grid;
+  gap:8px;
+}
+
+.engine-carousel-progress-copy{
+  font-size:.82rem;
+  line-height:1.55;
+  color:rgba(231,255,247,.82);
+}
+
+.engine-carousel-progress-meta{
+  font-size:.74rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.56);
 }
 
 .dashboard-empty{
@@ -10658,6 +10704,21 @@ button.home-route-band{
   background:rgba(178,50,50,.05);
 }
 
+:root[data-theme="light"] .exit-progress{
+  border-color:rgba(51,118,183,.16);
+  background:rgba(70,129,196,.06);
+}
+
+:root[data-theme="light"] .exit-progress.is-active{
+  border-color:rgba(51,118,183,.22);
+  background:rgba(70,129,196,.08);
+}
+
+:root[data-theme="light"] .exit-progress.is-blocked{
+  border-color:rgba(184,127,24,.20);
+  background:rgba(209,158,44,.08);
+}
+
 :root[data-theme="light"] .entry-progress-label,
 :root[data-theme="light"] .entry-progress-meta{
   color:rgba(31,54,51,.62);
@@ -10665,6 +10726,14 @@ button.home-route-band{
 
 :root[data-theme="light"] .entry-progress-value{
   color:rgba(16,28,27,.88);
+}
+
+:root[data-theme="light"] .engine-carousel-progress-copy{
+  color:rgba(16,28,27,.86);
+}
+
+:root[data-theme="light"] .engine-carousel-progress-meta{
+  color:rgba(31,54,51,.6);
 }
 
 :root[data-theme="light"] .dashboard-empty{
