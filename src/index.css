@@ -10631,6 +10631,13 @@ button.home-route-band{
   color:rgba(237,255,248,.9);
 }
 
+.secondary-rail-slot-counter{
+  margin-top:5px;
+  font-size:.7rem;
+  letter-spacing:.04em;
+  color:rgba(231,255,247,.68);
+}
+
 .secondary-rail-summary{
   margin-top:10px;
   font-size:.78rem;
@@ -10951,6 +10958,10 @@ button.home-route-band{
 :root[data-theme="light"] .secondary-rail-slot-state,
 :root[data-theme="light"] .secondary-rail-summary{
   color:rgba(16,28,27,.88);
+}
+
+:root[data-theme="light"] .secondary-rail-slot-counter{
+  color:rgba(31,54,51,.66);
 }
 
 :root[data-theme="light"] .execution-breakdown{
