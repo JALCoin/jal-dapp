@@ -104,6 +104,8 @@ type ReportingSummary = {
   lastRealizedProfitAud?: number | null;
   lifetimeNetPct?: number | null;
   totalNetGainAud?: number | null;
+  capitalLaneAud?: number | null;
+  deployedUnitAud?: number | null;
   cycles?: number | null;
 };
 
@@ -189,6 +191,7 @@ type SlotRow = {
   state: SlotState;
   trackingState?: TrackingState | null;
   unitAud: number;
+  visualUnitAud?: number | null;
 
   entryMid: number | null;
   nowMid: number | null;
@@ -1511,6 +1514,24 @@ function primaryDecision(slot: SlotRow | null | undefined) {
 
 function primaryReporting(slot: SlotRow | null | undefined) {
   return slot?.reporting ?? null;
+}
+
+function primaryCapitalLaneAud(slot: SlotRow | null | undefined) {
+  const candidates = [primaryReporting(slot)?.capitalLaneAud, slot?.visualUnitAud, slot?.unitAud];
+  for (const value of candidates) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function primaryDeployedUnitAud(slot: SlotRow | null | undefined) {
+  const candidates = [primaryReporting(slot)?.deployedUnitAud, slot?.unitAud];
+  for (const value of candidates) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
 }
 
 function secondarySummaryData(slot: SlotRow | null | undefined) {
@@ -3916,6 +3937,16 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
               </div>
 
               <div className="engine-carousel-metric">
+                <div className="engine-carousel-k">Capital Lane</div>
+                <div className="engine-carousel-v">{moneyAud(primaryCapitalLaneAud(carouselSlot))}</div>
+              </div>
+
+              <div className="engine-carousel-metric">
+                <div className="engine-carousel-k">Live Deployed</div>
+                <div className="engine-carousel-v">{moneyAud(primaryDeployedUnitAud(carouselSlot))}</div>
+              </div>
+
+              <div className="engine-carousel-metric">
                 <div className="engine-carousel-k">Protection</div>
                 <div className="engine-carousel-v">{primaryProtectionLabel(carouselSlot)}</div>
               </div>
@@ -4714,7 +4745,8 @@ const SlotModal = React.memo(function SlotModal(props: {
             </div>
 
             <div className="slot-modal-grid">
-              <div><div className="slot-k">Unit</div><div className="slot-v">{moneyAud(slot.unitAud)}</div></div>
+              <div><div className="slot-k">Capital Lane</div><div className="slot-v">{moneyAud(primaryCapitalLaneAud(slot))}</div></div>
+              <div><div className="slot-k">Live Deployed</div><div className="slot-v">{moneyAud(primaryDeployedUnitAud(slot))}</div></div>
               <div><div className="slot-k">Cycles</div><div className="slot-v">{slot.cycles ?? 0}</div></div>
               <div><div className="slot-k">{String(slot.state || "").toUpperCase() === "WAITING_ENTRY" ? "Reference From Last Exit" : "Entry"}</div><div className="slot-v">{effectiveEntryLabel(slot)}</div></div>
               <div><div className="slot-k">Now</div><div className="slot-v">{effectiveNowLabel(slot)}</div></div>
