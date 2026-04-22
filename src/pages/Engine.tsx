@@ -544,6 +544,9 @@ type ManagerStatus = WorkerStatus & {
     coinOverrides?: Record<string, string[]>;
   };
   subslot?: {
+    maxPerSlot?: number;
+    triggerParentNetPct?: number;
+    triggerParentNetBandsPct?: number[];
     costAwareEntry?: {
       enabled?: boolean;
       spreadMult?: number;
@@ -2013,24 +2016,88 @@ function subslotTriggerSummary(subslot: SubslotRow) {
   return parts.length ? parts.join(" | ") : "Legacy trigger";
 }
 
-function subslotLiveDistancePct(subslot: SubslotRow | null | undefined, parent: SlotRow | null | undefined) {
-  if (!subslot || !parent) return null;
+function configuredSubslotTriggerPct(
+  subslot: SubslotRow | null | undefined,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined,
+  fallbackBandIndex?: number | null
+) {
+  const directTriggerPct = Number(subslot?.subslotTriggerParentNetPct);
+  if (Number.isFinite(directTriggerPct)) return directTriggerPct;
 
-  const triggerPct = Number(subslot.subslotTriggerParentNetPct);
+  const configuredBands = Array.isArray(subslotConfig?.triggerParentNetBandsPct)
+    ? subslotConfig.triggerParentNetBandsPct
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value))
+    : [];
+
+  let bandIndex = Number(subslot?.subslotTriggerBandIndex);
+  if (!Number.isInteger(bandIndex) || bandIndex < 0) {
+    const sequenceIndex = Number(subslot?.subslotSequence);
+    if (Number.isInteger(sequenceIndex) && sequenceIndex >= 1) {
+      bandIndex = sequenceIndex - 1;
+    } else if (fallbackBandIndex != null && Number.isInteger(fallbackBandIndex) && fallbackBandIndex >= 0) {
+      bandIndex = fallbackBandIndex;
+    } else {
+      bandIndex = Number.NaN;
+    }
+  }
+
+  if (configuredBands.length && Number.isInteger(bandIndex) && bandIndex >= 0 && bandIndex < configuredBands.length) {
+    return configuredBands[bandIndex];
+  }
+
+  const configuredTriggerPct = Number(subslotConfig?.triggerParentNetPct);
+  if (Number.isFinite(configuredTriggerPct) && configuredTriggerPct > -900) {
+    return configuredTriggerPct;
+  }
+
+  return null;
+}
+
+function subslotLiveDistancePct(
+  subslot: SubslotRow | null | undefined,
+  parent: SlotRow | null | undefined,
+  subslotConfig?: ManagerStatus["subslot"] | null | undefined,
+  fallbackBandIndex?: number | null
+) {
+  if (!parent) return null;
+
+  const state = String(subslot?.subslotState || "").toUpperCase();
+  if (state === "ACTIVE" || state === "BUY_SUBMITTED") return 0;
+
+  const triggerPct = configuredSubslotTriggerPct(subslot, subslotConfig, fallbackBandIndex);
   const parentNetPct = liveParentNetPct(parent);
-  if (!Number.isFinite(triggerPct) || parentNetPct == null || !Number.isFinite(parentNetPct)) return null;
+  const normalizedTriggerPct = Number(triggerPct);
+  if (!Number.isFinite(normalizedTriggerPct) || parentNetPct == null || !Number.isFinite(parentNetPct)) return null;
 
   const remainingPct =
-    triggerPct < 0
-      ? Math.max(0, Number(parentNetPct) - triggerPct)
-      : Math.max(0, triggerPct - Number(parentNetPct));
+    normalizedTriggerPct < 0
+      ? Math.max(0, Number(parentNetPct) - normalizedTriggerPct)
+      : Math.max(0, normalizedTriggerPct - Number(parentNetPct));
 
   return Number(remainingPct.toFixed(3));
 }
 
-function subslotLiveCounterLabel(subslot: SubslotRow | null | undefined, parent: SlotRow | null | undefined) {
-  const distancePct = subslotLiveDistancePct(subslot, parent);
-  return distancePct == null ? "-" : `${pctNum(distancePct)} to live`;
+function subslotLiveCounterLabel(
+  subslot: SubslotRow | null | undefined,
+  parent: SlotRow | null | undefined,
+  subslotConfig?: ManagerStatus["subslot"] | null | undefined,
+  fallbackBandIndex?: number | null
+) {
+  const state = String(subslot?.subslotState || "").toUpperCase();
+  if (state === "ACTIVE") return "Live now";
+  if (state === "BUY_SUBMITTED") return "Entry pending";
+  if (state === "SELL_SUBMITTED") return "Exit pending";
+
+  const distancePct = subslotLiveDistancePct(subslot, parent, subslotConfig, fallbackBandIndex);
+  if (distancePct != null) return `${pctNum(distancePct)} to live`;
+
+  const signal = String(subslot?.subslotSignalState || "").toUpperCase();
+  if (signal === "ARMED") return "Armed";
+  if (signal === "REVERSAL_CONFIRMING") return "Confirming";
+  if (signal === "BOUNCE_SEEN" || signal === "TRACKING") return "Watching";
+  if (state === "CLOSED") return "Closed";
+  return "-";
 }
 
 function readerStatusLabel(s: SlotRow) {
@@ -2415,7 +2482,10 @@ function secondaryRailItemStateLabel(subslot: SubslotRow | null) {
   return "Idle";
 }
 
-function secondaryRailItems(slot: SlotRow): SecondaryRailItem[] {
+function secondaryRailItems(
+  slot: SlotRow,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined
+): SecondaryRailItem[] {
   const sorted = [...getSubslots(slot)].sort((a, b) => {
     const aSeq = Number(a.subslotSequence);
     const bSeq = Number(b.subslotSequence);
@@ -2445,7 +2515,7 @@ function secondaryRailItems(slot: SlotRow): SecondaryRailItem[] {
       key: subslot?.subslotId ?? `${slot.id}-secondary-${index}`,
       label: `S${index}`,
       stateLabel: secondaryRailItemStateLabel(subslot),
-      counterLabel: subslotLiveCounterLabel(subslot, slot),
+      counterLabel: subslotLiveCounterLabel(subslot, slot, subslotConfig, index - 1),
       toneClass: subslot ? subslotToneClass(subslot) : "is-muted",
     });
   }
@@ -2470,8 +2540,11 @@ function secondaryRailSummary(slot: SlotRow) {
   return parts.length ? parts.join(" | ") : "Secondary rail idle.";
 }
 
-function primarySecondaryRail(slot: SlotRow) {
-  const items = secondaryRailItems(slot);
+function primarySecondaryRail(
+  slot: SlotRow,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined
+) {
+  const items = secondaryRailItems(slot, subslotConfig);
 
   return (
     <div className="entry-progress secondary-rail" aria-label="Primary secondary rail">
@@ -3698,6 +3771,7 @@ const ControlsBar = React.memo(function ControlsBar(props: {
 const CarouselPanel = React.memo(function CarouselPanel(props: {
   slots: SlotRow[];
   holding: ManagerStatus["holding"] | null | undefined;
+  subslotConfig: ManagerStatus["subslot"] | null | undefined;
   currentIndex: number;
   setCurrentIndex: React.Dispatch<React.SetStateAction<number>>;
   onOpenSlot: (id: string) => void;
@@ -3887,10 +3961,12 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                     <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotTriggerParentNetPct)}</div>
                   </div>
 
-                  <div className="engine-subslot-item">
-                    <div className="engine-subslot-k">To Live</div>
-                    <div className="engine-subslot-v">{subslotLiveCounterLabel(carouselPrimary, carouselSlot)}</div>
-                  </div>
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">To Live</div>
+                      <div className="engine-subslot-v">
+                        {subslotLiveCounterLabel(carouselPrimary, carouselSlot, props.subslotConfig)}
+                      </div>
+                    </div>
 
                   <div className="engine-subslot-item">
                     <div className="engine-subslot-k">Parent @ Open</div>
@@ -3996,6 +4072,7 @@ const MarketSurface = React.memo(function MarketSurface(props: {
 const OverviewTable = React.memo(function OverviewTable(props: {
   slots: SlotRow[];
   holding: ManagerStatus["holding"] | null | undefined;
+  subslotConfig: ManagerStatus["subslot"] | null | undefined;
   onOpenSlot: (id: string) => void;
   nowMs: number;
 }) {
@@ -4113,7 +4190,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     <span>{secondaryTradesLabel(slot)}</span>
                   </div>
                   {primaryExitProgressBlock(slot, props.holding)}
-                  {primarySecondaryRail(slot)}
+                  {primarySecondaryRail(slot, props.subslotConfig)}
                   <div className="dashboard-row-meta">
                     <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
                   </div>
@@ -4467,6 +4544,7 @@ const CollapsibleBlock = React.memo(function CollapsibleBlock(props: {
 const SlotModal = React.memo(function SlotModal(props: {
   slot: SlotRow;
   events: SlotEvent[];
+  subslotConfig: ManagerStatus["subslot"] | null | undefined;
   nowMs: number;
   onClose: () => void;
 }) {
@@ -4631,12 +4709,12 @@ const SlotModal = React.memo(function SlotModal(props: {
               {getSecondaryRows(slot).length ? (
                 <>
                   <div><div className="slot-k">Latest Secondary Trade</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
-                  <div><div className="slot-k">Latest Trigger Band</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerBandLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
-                  <div><div className="slot-k">Latest Trigger Summary</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerSummary(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
-                  <div><div className="slot-k">Latest To Live</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotLiveCounterLabel(getPrimarySecondarySnapshot(slot) as SubslotRow, slot) : "-"}</div></div>
-                  <div><div className="slot-k">Latest Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
-                  <div><div className="slot-k">Latest Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
-                </>
+                    <div><div className="slot-k">Latest Trigger Band</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerBandLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Latest Trigger Summary</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerSummary(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Latest To Live</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotLiveCounterLabel(getPrimarySecondarySnapshot(slot) as SubslotRow, slot, props.subslotConfig) : "-"}</div></div>
+                    <div><div className="slot-k">Latest Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
+                    <div><div className="slot-k">Latest Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
+                  </>
               ) : null}
             </div>
 
@@ -4653,12 +4731,12 @@ const SlotModal = React.memo(function SlotModal(props: {
                     </div>
 
                     <div className="slot-modal-grid secondary-grid">
-                      <div><div className="slot-k">Trigger Band</div><div className="slot-v">{subslotTriggerBandLabel(subslot)}</div></div>
-                      <div><div className="slot-k">Trigger Level</div><div className="slot-v">{pctNum(subslot.subslotTriggerParentNetPct)}</div></div>
-                      <div><div className="slot-k">To Live</div><div className="slot-v">{subslotLiveCounterLabel(subslot, slot)}</div></div>
-                      <div><div className="slot-k">Parent Net @ Open</div><div className="slot-v">{pctNum(subslot.subslotEntryParentNetPct)}</div></div>
-                      <div><div className="slot-k">State</div><div className="slot-v">{subslot.subslotState ?? "-"}</div></div>
-                      <div><div className="slot-k">Mode</div><div className="slot-v">{subslot.subslotEntryMode ?? "-"}</div></div>
+                        <div><div className="slot-k">Trigger Band</div><div className="slot-v">{subslotTriggerBandLabel(subslot)}</div></div>
+                        <div><div className="slot-k">Trigger Level</div><div className="slot-v">{pctNum(subslot.subslotTriggerParentNetPct)}</div></div>
+                        <div><div className="slot-k">To Live</div><div className="slot-v">{subslotLiveCounterLabel(subslot, slot, props.subslotConfig)}</div></div>
+                        <div><div className="slot-k">Parent Net @ Open</div><div className="slot-v">{pctNum(subslot.subslotEntryParentNetPct)}</div></div>
+                        <div><div className="slot-k">State</div><div className="slot-v">{subslot.subslotState ?? "-"}</div></div>
+                        <div><div className="slot-k">Mode</div><div className="slot-v">{subslot.subslotEntryMode ?? "-"}</div></div>
                       <div><div className="slot-k">Signal</div><div className="slot-v">{subslot.subslotSignalState ?? "-"}</div></div>
                       <div><div className="slot-k">Confirm Ticks</div><div className="slot-v">{subslot.subslotConfirmTicks ?? "-"}</div></div>
                       <div><div className="slot-k">Entry Mid</div><div className="slot-v">{fmt(subslot.subslotEntryMid)}</div></div>
@@ -5737,6 +5815,7 @@ export default function Engine() {
                 <OverviewTable
                   slots={filteredSlots}
                   holding={meta?.manager?.holding}
+                  subslotConfig={meta?.manager?.subslot}
                   onOpenSlot={setSelectedSlotId}
                   nowMs={nowMs}
                 />
@@ -5796,6 +5875,7 @@ export default function Engine() {
               <CarouselPanel
                 slots={prioritizedSlots}
                 holding={meta?.manager?.holding}
+                subslotConfig={meta?.manager?.subslot}
                 currentIndex={carouselIndex}
                 setCurrentIndex={setCarouselIndex}
                 onOpenSlot={setSelectedSlotId}
@@ -5812,6 +5892,7 @@ export default function Engine() {
         <SlotModal
           slot={selectedSlot}
           events={selectedSlotEvents}
+          subslotConfig={meta?.manager?.subslot}
           nowMs={nowMs}
           onClose={() => setSelectedSlotId(null)}
         />
