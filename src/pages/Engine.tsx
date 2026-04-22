@@ -49,7 +49,7 @@ type Feed = "all" | "aud" | "watch" | "engine";
 type SortKey = "coin" | "spread" | "mid";
 type SortDir = "asc" | "desc";
 type ViewMode = "simple" | "advanced";
-type Section = "focus" | "slots" | "capital" | "market" | "events" | "about";
+type Section = "focus" | "behavior" | "slots" | "capital" | "market" | "events" | "about";
 
 type SlotState =
   | "WAITING_ENTRY"
@@ -528,6 +528,10 @@ type ManagerVolatilityTrailConfig = {
 };
 
 type ManagerStatus = WorkerStatus & {
+  reentry?: {
+    mode?: string;
+    dropPct?: number;
+  };
   holding?: {
     lvl1Pct?: number;
     lvl2Pct?: number;
@@ -547,7 +551,11 @@ type ManagerStatus = WorkerStatus & {
     coinOverrides?: Record<string, string[]>;
   };
   subslot?: {
+    enabled?: boolean;
     maxPerSlot?: number;
+    sizePctOfParent?: number;
+    minAud?: number;
+    maxForcedSizePct?: number;
     triggerParentNetPct?: number;
     triggerParentNetBandsPct?: number[];
     costAwareEntry?: {
@@ -912,6 +920,21 @@ type EngineData = {
   refresh: () => Promise<void>;
 };
 
+type BehaviorCard = {
+  title: string;
+  summary: string;
+  detail: string;
+};
+
+type BehaviorCoinProfile = {
+  coin: string;
+  personality: string;
+  executor: string;
+  primary: string;
+  secondary: string;
+  safeguards: string;
+};
+
 /* =========================
    Constants
 ========================= */
@@ -921,6 +944,206 @@ const DEV_DEFAULT = "http://localhost:8787";
 const CAROUSEL_INTERVAL_MS = 4500;
 const ENGINE_POLL_INTERVAL_MS = 3000;
 const CAPITAL_POLL_INTERVAL_MS = 15000;
+const ENGINE_BEHAVIOR_AS_OF = "22 Apr 2026";
+
+const PRIMARY_BEHAVIOR_CARDS: BehaviorCard[] = [
+  {
+    title: "Fixed Universe + Cadence",
+    summary:
+      "Eight permanent AUD slots stay assigned to BTC, ETH, XRP, SOL, DOGE, ADA, LTC, and TRX. The harvester keeps the registry intact every 5 seconds with AUD 25 baseline units.",
+    detail:
+      "Market polls every 3 seconds; executor and manager both work every 2 seconds. Entry and exit quotes older than 9 seconds are treated as stale.",
+  },
+  {
+    title: "Primary Entry Logic",
+    summary:
+      "Each coin waits for a drawdown-and-bounce reversal inside its own spread ceiling, then commits on a 1-tick confirmation with full-unit sizing.",
+    detail:
+      "EMA-up is not required. The executor uses ask/bid plus a 10 bps fee model, AUD 10 minimum entries, and continuation logic instead of long confirmation stacks.",
+  },
+  {
+    title: "Primary Profit Ladder",
+    summary:
+      "Global hold levels arm at 1.5%, 2.5%, 4.0%, and 6.0% net. Default lock floors are 0.70%, 1.40%, and 2.60%, with LVL4 switching to a 3.0% peak trail.",
+    detail:
+      "Most live behavior is then refined by per-coin trail overrides. Re-entry mode is EXIT_DROP with a 1.0% target below the last confirmed exit.",
+  },
+  {
+    title: "Exit Discipline",
+    summary:
+      "Jrd Primary exits stay green-first: the default release floor is 0.20% net or AUD 0.30, with 1 green confirmation tick before capital resets.",
+    detail:
+      "If a parent collapses to -14.0% net the secondary trigger ladder bottoms out. A busy Jrd Secondary can delay a parent from finalizing back to WAITING_ENTRY.",
+  },
+  {
+    title: "Primary Performance Memory",
+    summary:
+      "Recent primaries are scored over the last 8 trades. After 3 straight losses the affected coin cools down for 30 minutes.",
+    detail:
+      "Negative-EV half-sizing is OFF for primaries in this profile, so the engine prefers either full-size entries or temporary disablement instead of soft clipping.",
+  },
+];
+
+const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
+  {
+    title: "Jrd Secondary Mission",
+    summary:
+      "Secondaries harvest volatility inside a live primary instead of replacing it. Base size is 20% of parent capital, minimum AUD 3.50, maximum forced size 60%, and up to 8 cycles can exist before the parent resets.",
+    detail:
+      "Accounting stays separate during the hold and merges only when the parent returns to WAITING_ENTRY. Negative-EV half-sizing is ON for this layer.",
+  },
+  {
+    title: "Trigger And Cost Gate",
+    summary:
+      "The default secondary ladder fires only while the parent is underwater, using band triggers at -1.5%, -3.0%, -4.75%, -6.5%, -8.0%, -10.0%, -12.0%, and -14.0%.",
+    detail:
+      "Entry is cost-aware: net-after-cost must still clear 0.06%, spread multiplier is 1.00x, slippage buffer is 0.08%, and EMA-up is not required.",
+  },
+  {
+    title: "Recovery-First Exits",
+    summary:
+      "Before recovery, secondaries intentionally ignore red noise: stop-loss and early-failure exits stay disabled until post-fee recovery is confirmed.",
+    detail:
+      "Recovery floor is 0.25% over 2 confirming ticks. After recovery, weakness must persist for 3 ticks before giveback rules engage, with 20% giveback protection and a 0.25% protect floor.",
+  },
+  {
+    title: "Directional Playbooks",
+    summary:
+      "Uptrend secondaries use 15 second cooldowns, 0.60% take-profit, and a 0.14 trail after a 0.34 arm. Downtrend secondaries use 20 second cooldowns, 0.45% take-profit, and a 0.10 trail after a 0.24 arm.",
+    detail:
+      "Consolidation bull entries use a 0.015 EMA gap and 0.60% take-profit. Consolidation bear entries are more defensive, allowing 0.05 bounce and -0.01 EMA gap with a 0.45% take-profit.",
+  },
+  {
+    title: "Regime Engine",
+    summary:
+      "Regime detection is ON with 0.35 / 0.12 fast and slow alphas, a 0.10 minimum EMA gap, and 0.04 / 0.02 slope floors for uptrend recognition.",
+    detail:
+      "Chop flips are watched over 6 ticks. Consolidation is recognized after 3 compressed ticks, max 0.35% range, max 0.08 EMA gap, compression score at least 2, and breakout confirmation in 1 tick.",
+  },
+];
+
+const ENGINE_GUARDRAIL_CARDS: BehaviorCard[] = [
+  {
+    title: "Portfolio Guardrails",
+    summary:
+      "Portfolio risk is ON with 8 maximum in-play slots, 8 maximum underwater parents, and an AUD 15 free-buffer requirement.",
+    detail:
+      "The book does not hard-stop simply because every parent is red, but it still watches the average-net block line at -5.0%.",
+  },
+  {
+    title: "Live Quote Discipline",
+    summary:
+      "Quote guard is required. Global drift tolerance is 1.25% with a 10 second timeout; ETH, SOL, and XRP can widen to 2.75% on live buy quotes.",
+    detail:
+      "Market history and trade telemetry are both enabled, so the UI is backed by replayable quote history plus live submission diagnostics.",
+  },
+  {
+    title: "What Is Disabled",
+    summary:
+      "Rotation policy, rotation executor, and waiting-slot top-up are all OFF in this profile.",
+    detail:
+      "The engine is behaving like a pure fixed-slot primary-plus-secondary system, not a capital-rotation or treasury-raising strategy.",
+  },
+];
+
+const ENGINE_COIN_BEHAVIOR_PROFILES: BehaviorCoinProfile[] = [
+  {
+    coin: "BTC",
+    personality: "Tightest spread and cleanest secondary filter; the benchmark leader.",
+    executor:
+      "Primary entry allows spread up to 1.40%, drawdown 0.40%-8.00%, bounce at least 0.15%, and continuation EMA gap >= 0.005%, all with 1-tick confirmation.",
+    primary:
+      "Primary exits want at least 0.12% net or AUD 0.25. Trail rails keep 40%, 48%, and 58% of move after arming at 0.25%, 0.20%, and 0.25%. Adaptive vol trail is enabled but arm multiplier is 0.00, capped at 0.35%, with 28% minimum retain.",
+    secondary:
+      "Secondaries only fire in very clean conditions: spread <= 0.45%, bounce >= 0.35%, expected edge >= 0.10%, post-cost net >= 0.05%, and min exit AUD 0.08. Parent-trigger ladder is effectively disabled here.",
+    safeguards:
+      "BTC is the most selective coin in the book, favoring thinner spread and continuation clarity over deep oversold harvesting.",
+  },
+  {
+    coin: "ETH",
+    personality: "Balanced leader with fast continuation tolerance and moderately tight exits.",
+    executor:
+      "Primary entry allows spread up to 1.80%, drawdown 0.30%-10.00%, bounce >= 0.15%, continuation drawdown >= 0.04%, EMA gap >= 0.002%, and 1-tick confirmation.",
+    primary:
+      "Primary exits want 0.15% net or AUD 0.30. Trail rails arm at 0.15%, 0.20%, and 0.25%, then keep 42%, 50%, and 60%. Adaptive vol trail is ON with 0.95 arm mult, 0.40 max arm, and 30% minimum retain.",
+    secondary:
+      "Secondary layer tolerates flat EMA structure: EMA gap 0.00, spread <= 0.50%, bounce >= 0.25%, expected edge >= 0.10%, post-cost >= 0.06%, and min exit AUD 0.09.",
+    safeguards:
+      "Live buy drift can widen to 2.75%, so ETH can still participate during fast tape without turning fully loose.",
+  },
+  {
+    coin: "XRP",
+    personality: "Momentum-friendly and continuation-tolerant, but still spread-aware.",
+    executor:
+      "Primary entry allows spread up to 1.80%, drawdown 0.50%-10.00%, bounce >= 0.15%, continuation drawdown >= 0.01%, EMA gap >= 0.0004%, and 1-tick confirmation.",
+    primary:
+      "Primary exits want 0.15% net or AUD 0.30. Trail rails match ETH at 0.15% / 42%, 0.20% / 50%, and 0.25% / 60%. Adaptive vol trail is ON with 0.95 arm mult, 0.40 max arm, and 30% minimum retain.",
+    secondary:
+      "Secondaries can lean slightly counter-trend: EMA gap -0.01, spread <= 0.70%, bounce >= 0.25%, expected edge >= 0.10%, post-cost >= 0.08%, and min exit AUD 0.10.",
+    safeguards:
+      "A 2.75% live buy drift allowance plus slightly negative secondary EMA gap lets XRP engage rebounds earlier than ETH.",
+  },
+  {
+    coin: "SOL",
+    personality: "Fast beta breakout coin with explicit lock rails and no adaptive vol trail.",
+    executor:
+      "Primary entry allows spread up to 2.40%, drawdown 0.30%-10.00%, bounce >= 0.12%, continuation drawdown >= 0.08%, EMA gap >= 0.002%, and 1-tick confirmation.",
+    primary:
+      "Primary exits want 0.20% net or AUD 0.35. Locks step up to 0.95%, 1.75%, and 3.00%, while trails arm at 0.12%, 0.18%, and 0.24% and retain 50%, 60%, and 70%. Adaptive vol trail is OFF.",
+    secondary:
+      "Secondary layer uses EMA gap 0.02, spread <= 0.70%, bounce >= 0.25%, expected edge >= 0.10%, post-cost >= 0.08%, and min exit AUD 0.12. Consolidation bull entries can flatten the EMA gap to 0.00.",
+    safeguards:
+      "SOL also gets a 2.75% live buy drift allowance, but the exit rail stays explicit rather than volatility-shaped.",
+  },
+  {
+    coin: "ADA",
+    personality: "Slowest primary trigger, deepest recovery ladder, and staged band-driven harvesting.",
+    executor:
+      "Primary entry allows spread up to 2.20%, drawdown 0.60%-12.00%, bounce >= 0.18%, and 1-tick confirmation with no EMA-up requirement.",
+    primary:
+      "Primary exits want 0.24% net or AUD 0.38. Trail rails arm at 0.22%, 0.30%, and 0.38% and keep 34%, 42%, and 52%. Adaptive vol trail is ON with 1.10 arm mult, 0.65 max arm, and 20% minimum retain.",
+    secondary:
+      "Secondaries are band-only: -1.5%, -3.0%, -4.75%, -6.5%, -7.75%, -9.75%, -11.75%, and -14.0%. Core filters are spread <= 2.20%, bounce >= 0.25%, EMA gap 0.02, expected edge >= 0.10%, post-cost >= 0.10%, and min exit AUD 0.14. Consolidation spreads can stretch to 2.6% with bull edge 0.12 and bear edge 0.14.",
+    safeguards:
+      "ADA is tuned for staged underwater recovery rather than shallow noise. The extra banding makes it one of the most deliberate rebound harvesters in the set.",
+  },
+  {
+    coin: "DOGE",
+    personality: "Loose spread tolerance and aggressive lock floors for meme-volatility harvesting.",
+    executor:
+      "Primary entry allows spread up to 3.00%, drawdown 0.40%-12.00%, bounce >= 0.12%, and 1-tick confirmation.",
+    primary:
+      "Primary exits want 0.32% net or AUD 0.45. Hard locks are 1.00%, 1.85%, and 3.10%, while trails arm at 0.14%, 0.20%, and 0.26% and retain 52%, 62%, and 72%. Adaptive vol trail is OFF.",
+    secondary:
+      "Secondaries can stay negative on structure: EMA gap -0.20, downtrend EMA gap -0.20, spread <= 3.00%, bounce >= 0.20%, expected edge >= 0.10%, post-cost >= 0.12%, and min exit AUD 0.16. Consolidation lanes allow 3.2% spread with bull edge 0.12 and bear edge 0.14.",
+    safeguards:
+      "The parent band ladder runs from -1.5% to -14.0%, making DOGE a deep-recovery specialist rather than a neat-trend coin.",
+  },
+  {
+    coin: "LTC",
+    personality: "Middle-weight mean-reversion coin with wider secondary spread tolerance.",
+    executor:
+      "Primary entry allows spread up to 2.60%, drawdown 0.60%-12.00%, bounce >= 0.18%, and 1-tick confirmation.",
+    primary:
+      "Primary exits want 0.22% net or AUD 0.35. Trail rails arm at 0.18%, 0.24%, and 0.30% and keep 38%, 46%, and 56%. Adaptive vol trail is ON with 1.05 arm mult, 0.50 max arm, and 24% minimum retain.",
+    secondary:
+      "Secondaries allow EMA gap 0.00, spread <= 3.50%, bounce >= 0.25%, expected edge >= 0.10%, post-cost >= 0.10%, and min exit AUD 0.12.",
+    safeguards:
+      "LTC is less fussy than BTC or ETH on spread, but it still demands clean net-after-cost recovery before a secondary is worth keeping.",
+  },
+  {
+    coin: "TRX",
+    personality: "High-lock, high-noise book end tuned for thinner-market rebounds.",
+    executor:
+      "Primary entry allows spread up to 3.40%, drawdown 0.40%-12.00%, bounce >= 0.12%, and 1-tick confirmation.",
+    primary:
+      "Primary exits want 0.36% net or AUD 0.45. Locks step to 1.05%, 1.95%, and 3.20%, while trails arm at 0.14%, 0.20%, and 0.26% and retain 54%, 64%, and 74%. Adaptive vol trail is OFF.",
+    secondary:
+      "Secondaries use EMA gap 0.015, spread <= 2.80%, bounce >= 0.20%, expected edge >= 0.08%, post-cost >= 0.12%, and min exit AUD 0.16. Consolidation lanes allow 3.4% spread with bull edge 0.10 and bear edge 0.12.",
+    safeguards:
+      "TRX is one of the most profit-demanding parents in the book, so it waits longer before releasing green than the majors do.",
+  },
+];
 
 /* =========================
    Helpers
@@ -970,6 +1193,13 @@ function msToCountdown(ms: number | null | undefined) {
   const ss = s % 60;
   const pad = (x: number) => String(x).padStart(2, "0");
   return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+}
+
+function msToShortLabel(ms: number | null | undefined) {
+  if (ms == null || !Number.isFinite(ms)) return "-";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  const secs = ms / 1000;
+  return Number.isInteger(secs) ? `${secs.toFixed(0)}s` : `${secs.toFixed(1)}s`;
 }
 
 function ageLabel(msSince: number | null | undefined) {
@@ -1566,6 +1796,31 @@ function primaryTotalGainPct(slot: SlotRow | null | undefined) {
   return Number((lifetimeNetPct * 100).toFixed(3));
 }
 
+function primaryTotalGainAud(slot: SlotRow | null | undefined) {
+  if (!slot) return null;
+  const reportedAud = primaryReporting(slot)?.totalNetGainAud;
+  if (reportedAud != null && Number.isFinite(reportedAud)) return reportedAud;
+  return null;
+}
+
+function primaryLastRealizedNetPct(slot: SlotRow | null | undefined) {
+  if (!slot) return null;
+  const reportedPct = primaryReporting(slot)?.lastRealizedNetPct;
+  if (reportedPct != null && Number.isFinite(reportedPct)) return reportedPct;
+  const fallbackPct = slot.profitPct;
+  if (fallbackPct == null || !Number.isFinite(fallbackPct)) return null;
+  return fallbackPct;
+}
+
+function primaryLastRealizedProfitAud(slot: SlotRow | null | undefined) {
+  if (!slot) return null;
+  const reportedAud = primaryReporting(slot)?.lastRealizedProfitAud;
+  if (reportedAud != null && Number.isFinite(reportedAud)) return reportedAud;
+  const fallbackAud = slot.profitAud;
+  if (fallbackAud == null || !Number.isFinite(fallbackAud)) return null;
+  return fallbackAud;
+}
+
 function secondaryLiveCount(slot: SlotRow | null | undefined) {
   if (!slot) return 0;
   const liveCount = secondarySummaryData(slot)?.liveCount;
@@ -1818,28 +2073,38 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
   for (const s of slotRows) {
     const baseAud = Number(s.combinedEntryAud ?? s.entryAud ?? s.unitAud);
     const liveNet = liveParentNetPct(s);
-    const parentProfitAud = Number(s.profitAud);
-    const subslots = getSubslots(s);
+    const parentRealizedAud = primaryTotalGainAud(s);
+    const secondaryRealizedAud = secondaryTotalGainAud(s);
 
     if (hasActiveParentExposure(s) && Number.isFinite(baseAud) && liveNet != null && Number.isFinite(liveNet)) {
       openPnl += baseAud * (liveNet / 100);
     }
 
-    if (Number.isFinite(parentProfitAud)) {
-      visibleRealized += parentProfitAud;
+    if (parentRealizedAud != null && Number.isFinite(parentRealizedAud)) {
+      visibleRealized += parentRealizedAud;
+    } else {
+      const fallbackParentProfitAud = Number(s.profitAud);
+      if (Number.isFinite(fallbackParentProfitAud)) {
+        visibleRealized += fallbackParentProfitAud;
+      }
     }
 
-    if (subslots.length > 0) {
-      for (const subslot of subslots) {
-        const subslotProfit = Number(subslot.subslotProfitAud);
-        if (Number.isFinite(subslotProfit)) {
-          visibleRealized += subslotProfit;
-        }
-      }
+    if (secondaryRealizedAud != null && Number.isFinite(secondaryRealizedAud)) {
+      visibleRealized += secondaryRealizedAud;
     } else {
-      const subslotProfitAud = Number(s.subslotProfitAud);
-      if (Number.isFinite(subslotProfitAud)) {
-        visibleRealized += subslotProfitAud;
+      const subslots = getSubslots(s);
+      if (subslots.length > 0) {
+        for (const subslot of subslots) {
+          const subslotProfit = Number(subslot.subslotProfitAud);
+          if (Number.isFinite(subslotProfit)) {
+            visibleRealized += subslotProfit;
+          }
+        }
+      } else {
+        const subslotProfitAud = Number(s.subslotProfitAud);
+        if (Number.isFinite(subslotProfitAud)) {
+          visibleRealized += subslotProfitAud;
+        }
       }
     }
   }
@@ -3671,9 +3936,9 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
         <div className="cap-k">Open Positions</div>
         <div className="cap-v">{moneyAud(props.openPnl)}</div>
         <div className="cap-sub">
-          <span>Recorded {moneyAud(props.visibleRealized)}</span>
+          <span>Realized Total {moneyAud(props.visibleRealized)}</span>
           <span>|</span>
-          <span>Window {moneyAud(props.windowHarvest)}</span>
+          <span>Recent Window {moneyAud(props.windowHarvest)}</span>
         </div>
       </div>
 
@@ -4501,6 +4766,200 @@ const EventsPanel = React.memo(function EventsPanel(props: {
   );
 });
 
+const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
+  meta: PublicMetaResponse | null;
+  fixedAllowlist: string[];
+  executionMode: string;
+}) {
+  const allowlistLabel = props.fixedAllowlist.length
+    ? props.fixedAllowlist.join(", ")
+    : "BTC, ETH, XRP, SOL, DOGE, ADA, LTC, TRX";
+  const gates = props.meta?.gates;
+  const manager = props.meta?.manager;
+  const subslot = manager?.subslot;
+  const quoteGuard = props.meta?.runtime?.quoteGuard;
+
+  const secondaryBaseSize =
+    subslot?.sizePctOfParent != null && Number.isFinite(subslot.sizePctOfParent)
+      ? `${(subslot.sizePctOfParent * 100).toFixed(0)}%`
+      : "20%";
+  const secondaryForcedCap =
+    subslot?.maxForcedSizePct != null && Number.isFinite(subslot.maxForcedSizePct)
+      ? `${(subslot.maxForcedSizePct * 100).toFixed(0)}%`
+      : "60%";
+
+  return (
+    <div className="engine-bay">
+      <div className="bay-head">
+        <div className="bay-title">Trading Behavior Blueprint</div>
+        <div className="bay-note">
+          Current fixed-slot machine profile rendered from the {ENGINE_BEHAVIOR_AS_OF} configuration snapshot.
+        </div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">How This Version Trades</div>
+            <div className="engine-telemetry-note">
+              JAL Engine is currently behaving as a live, fixed-universe AUD book. Primaries seek controlled drawdown reversals, secondaries harvest intrahold volatility, and disabled rotation means capital stays inside its slot until a parent fully exits.
+            </div>
+          </div>
+        </div>
+
+        <div className="slot-modal-grid">
+          <div>
+            <div className="slot-k">Config Snapshot</div>
+            <div className="slot-v">{ENGINE_BEHAVIOR_AS_OF}</div>
+          </div>
+          <div>
+            <div className="slot-k">Universe</div>
+            <div className="slot-v">{allowlistLabel}</div>
+          </div>
+          <div>
+            <div className="slot-k">Execution</div>
+            <div className="slot-v">
+              {props.executionMode} | live {yesNo(props.meta?.engine?.liveTradingEnabled)} | writes{" "}
+              {yesNo(gates?.writeEnabled)}
+            </div>
+          </div>
+          <div>
+            <div className="slot-k">Cadence</div>
+            <div className="slot-v">
+              market {msToShortLabel(props.meta?.runtime?.marketFreshness?.pollMs as number | null | undefined)} | executor{" "}
+              {msToShortLabel(gates?.executorTickMs)} | manager {msToShortLabel(gates?.managerTickMs)} | harvester{" "}
+              {msToShortLabel(gates?.harvesterTickMs)}
+            </div>
+          </div>
+          <div>
+            <div className="slot-k">Entry Model</div>
+            <div className="slot-v">FULL_UNIT | min {moneyAud(10)} | 10 bps fee | ask/bid+fee</div>
+          </div>
+          <div>
+            <div className="slot-k">Re-entry</div>
+            <div className="slot-v">
+              {manager?.reentry?.mode ?? "EXIT_DROP"} | drop {pctNum(manager?.reentry?.dropPct ?? 0.01)}
+            </div>
+          </div>
+          <div>
+            <div className="slot-k">Jrd Secondary</div>
+            <div className="slot-v">
+              {subslot?.enabled === false ? "OFF" : "ON"} | up to {subslot?.maxPerSlot ?? 8} cycles | base {secondaryBaseSize}
+            </div>
+          </div>
+          <div>
+            <div className="slot-k">Secondary Minimums</div>
+            <div className="slot-v">
+              min {moneyAud(subslot?.minAud ?? 3.5)} | forced cap {secondaryForcedCap}
+            </div>
+          </div>
+          <div>
+            <div className="slot-k">Quote Guard</div>
+            <div className="slot-v">{quoteGuardLabel(quoteGuard)}</div>
+          </div>
+          <div>
+            <div className="slot-k">Rotation / Top-up</div>
+            <div className="slot-v">
+              rotation {yesNo(gates?.rotationEnabled)} | executor {yesNo(gates?.rotationExecutorEnabled)} | top-up{" "}
+              {yesNo(gates?.topupEnabled)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">Primary Lifecycle</div>
+            <div className="engine-telemetry-note">What has to happen before Jrd Primary enters, scales its floor, and exits.</div>
+          </div>
+        </div>
+
+        <div className="engine-upgrade-grid">
+          {PRIMARY_BEHAVIOR_CARDS.map((card) => (
+            <div key={card.title} className="engine-upgrade-item">
+              <div className="engine-upgrade-k">{card.title}</div>
+              <div className="engine-upgrade-v">{card.summary}</div>
+              <div className="engine-upgrade-sub">{card.detail}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">Jrd Secondary Playbook</div>
+            <div className="engine-telemetry-note">How the intrahold tactical layer decides when to engage and when it is finally allowed to leave.</div>
+          </div>
+        </div>
+
+        <div className="engine-upgrade-grid">
+          {SECONDARY_BEHAVIOR_CARDS.map((card) => (
+            <div key={card.title} className="engine-upgrade-item">
+              <div className="engine-upgrade-k">{card.title}</div>
+              <div className="engine-upgrade-v">{card.summary}</div>
+              <div className="engine-upgrade-sub">{card.detail}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">Coin-By-Coin Profiles</div>
+            <div className="engine-telemetry-note">Each slot shares the same machine architecture, but the thresholds below change the personality of the trade.</div>
+          </div>
+        </div>
+
+        <div className="engine-upgrade-grid">
+          {ENGINE_COIN_BEHAVIOR_PROFILES.map((profile) => (
+            <div key={profile.coin} className="engine-upgrade-item">
+              <div className="engine-upgrade-k">{profile.coin}</div>
+              <div className="engine-upgrade-v">{profile.personality}</div>
+              <div className="engine-upgrade-lines">
+                <div className="engine-upgrade-line">
+                  <span className="engine-upgrade-line-label">Entry</span>
+                  <span className="engine-upgrade-line-value">{profile.executor}</span>
+                </div>
+                <div className="engine-upgrade-line">
+                  <span className="engine-upgrade-line-label">Primary</span>
+                  <span className="engine-upgrade-line-value">{profile.primary}</span>
+                </div>
+                <div className="engine-upgrade-line">
+                  <span className="engine-upgrade-line-label">Secondary</span>
+                  <span className="engine-upgrade-line-value">{profile.secondary}</span>
+                </div>
+              </div>
+              <div className="engine-upgrade-sub">{profile.safeguards}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">Guardrails And Disabled Systems</div>
+            <div className="engine-telemetry-note">The final layer is not signal generation. It is permissioning, quote validation, and deciding what this engine is not allowed to do.</div>
+          </div>
+        </div>
+
+        <div className="engine-upgrade-grid">
+          {ENGINE_GUARDRAIL_CARDS.map((card) => (
+            <div key={card.title} className="engine-upgrade-item">
+              <div className="engine-upgrade-k">{card.title}</div>
+              <div className="engine-upgrade-v">{card.summary}</div>
+              <div className="engine-upgrade-sub">{card.detail}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
+
 const AboutPanel = React.memo(function AboutPanel(props: {
   aboutOpen: boolean;
   setAboutOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -4942,14 +5401,18 @@ const SlotModal = React.memo(function SlotModal(props: {
           {(slot.realizedAt != null ||
             slot.entryAud != null ||
             slot.exitAud != null ||
-            slot.profitAud != null ||
-            slot.profitPct != null) && (
-            <CollapsibleBlock title="Recorded Outcomes" defaultOpen={false}>
+            primaryLastRealizedProfitAud(slot) != null ||
+            primaryLastRealizedNetPct(slot) != null ||
+            primaryTotalGainAud(slot) != null ||
+            secondaryTotalGainAud(slot) != null) && (
+            <CollapsibleBlock title="Realized Exit Context" defaultOpen={false}>
               <div className="slot-modal-grid">
                 <div><div className="slot-k">Entry AUD</div><div className="slot-v">{moneyAud(slot.entryAud)}</div></div>
                 <div><div className="slot-k">Exit AUD</div><div className="slot-v">{moneyAud(slot.exitAud)}</div></div>
-                <div><div className="slot-k">Last Exit Result (AUD)</div><div className="slot-v">{moneyAud(slot.profitAud)}</div></div>
-                <div><div className="slot-k">Last Exit Result (%)</div><div className="slot-v">{pctNum(slot.profitPct)}</div></div>
+                <div><div className="slot-k">Last Primary Exit (AUD)</div><div className="slot-v">{moneyAud(primaryLastRealizedProfitAud(slot))}</div></div>
+                <div><div className="slot-k">Last Primary Exit (%)</div><div className="slot-v">{pctNum(primaryLastRealizedNetPct(slot))}</div></div>
+                <div><div className="slot-k">Primary Realized Total</div><div className="slot-v">{moneyAud(primaryTotalGainAud(slot))}</div></div>
+                <div><div className="slot-k">Secondary Realized Total</div><div className="slot-v">{moneyAud(secondaryTotalGainAud(slot))}</div></div>
               </div>
             </CollapsibleBlock>
           )}
@@ -5842,6 +6305,14 @@ export default function Engine() {
 
                 <button
                   type="button"
+                  className={`engine-section-tab ${section === "behavior" ? "active" : ""}`}
+                  onClick={() => setSection("behavior")}
+                >
+                  Behavior
+                </button>
+
+                <button
+                  type="button"
                   className={`engine-section-tab ${section === "slots" ? "active" : ""}`}
                   onClick={() => setSection("slots")}
                 >
@@ -5888,6 +6359,14 @@ export default function Engine() {
                   subslotConfig={meta?.manager?.subslot}
                   onOpenSlot={setSelectedSlotId}
                   nowMs={nowMs}
+                />
+              ) : null}
+
+              {section === "behavior" ? (
+                <TradingBehaviorPanel
+                  meta={meta}
+                  fixedAllowlist={fixedAllowlist}
+                  executionMode={executionMode}
                 />
               ) : null}
 
