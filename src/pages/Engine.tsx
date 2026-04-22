@@ -2470,6 +2470,101 @@ function primarySecondaryRail(slot: SlotRow) {
   );
 }
 
+function primaryRoundTripFeePct(slot: SlotRow | null | undefined) {
+  const feeBps = slot?.feeBps;
+  if (feeBps == null || !Number.isFinite(feeBps)) return null;
+  return Number((((Number(feeBps) * 2) / 100)).toFixed(3));
+}
+
+function primaryGrossNetGapPct(slot: SlotRow | null | undefined) {
+  const grossPct = liveParentGrossPct(slot);
+  const netPct = liveParentNetPct(slot);
+  if (grossPct == null || !Number.isFinite(grossPct) || netPct == null || !Number.isFinite(netPct)) return null;
+  return Number(Math.abs(grossPct - netPct).toFixed(3));
+}
+
+function primaryGrossNetSummary(slot: SlotRow) {
+  const gapPct = primaryGrossNetGapPct(slot);
+  const entrySpreadRaw = Number(slot.entrySpreadPct);
+  const liveSpreadRaw = Number(slot.nowSpreadPct);
+  const entrySpreadPct = Number.isFinite(entrySpreadRaw) ? entrySpreadRaw : null;
+  const liveSpreadPct = Number.isFinite(liveSpreadRaw) ? liveSpreadRaw : null;
+  const feePct = primaryRoundTripFeePct(slot);
+  const parts: string[] = [
+    "Gross follows mid-price movement.",
+    "Net uses executable ask-to-bid pricing.",
+  ];
+
+  if (Number.isFinite(entrySpreadPct) || Number.isFinite(liveSpreadPct)) {
+    parts.push(
+      `Entry spread ${pctNum(Number.isFinite(entrySpreadPct) ? entrySpreadPct : null)}, live spread ${pctNum(
+        Number.isFinite(liveSpreadPct) ? liveSpreadPct : null
+      )}.`
+    );
+  }
+
+  if (feePct != null && Number.isFinite(feePct)) {
+    parts.push(`Round-trip fees ${pctNum(feePct)}.`);
+  }
+
+  if (gapPct != null && Number.isFinite(gapPct)) {
+    parts.push(`That compresses the executable move by ${pctNum(gapPct)}.`);
+  }
+
+  return parts.join(" ");
+}
+
+function primaryGrossNetBreakdownBlock(slot: SlotRow) {
+  const grossPct = liveParentGrossPct(slot);
+  const netPct = liveParentNetPct(slot);
+  if (grossPct == null || !Number.isFinite(grossPct) || netPct == null || !Number.isFinite(netPct)) return null;
+
+  const gapPct = primaryGrossNetGapPct(slot);
+  const feePct = primaryRoundTripFeePct(slot);
+  const entrySpreadRaw = Number(slot.entrySpreadPct);
+  const liveSpreadRaw = Number(slot.nowSpreadPct);
+  const entrySpreadPct = Number.isFinite(entrySpreadRaw) ? entrySpreadRaw : null;
+  const liveSpreadPct = Number.isFinite(liveSpreadRaw) ? liveSpreadRaw : null;
+
+  return (
+    <div className="entry-progress execution-breakdown" aria-label="Primary gross versus net">
+      <div className="entry-progress-top">
+        <span className="entry-progress-label">Gross vs Net</span>
+        <span className="entry-progress-value">
+          Gap {pctNum(gapPct)}
+        </span>
+      </div>
+      <div className="execution-breakdown-grid">
+        <div className="execution-breakdown-metric">
+          <div className="execution-breakdown-k">Gross</div>
+          <div className="execution-breakdown-v">{pctNum(grossPct)}</div>
+        </div>
+        <div className="execution-breakdown-metric">
+          <div className="execution-breakdown-k">Net</div>
+          <div className="execution-breakdown-v">{pctNum(netPct)}</div>
+        </div>
+        <div className="execution-breakdown-metric">
+          <div className="execution-breakdown-k">Entry Spread</div>
+          <div className="execution-breakdown-v">{pctNum(entrySpreadPct)}</div>
+        </div>
+        <div className="execution-breakdown-metric">
+          <div className="execution-breakdown-k">Live Spread</div>
+          <div className="execution-breakdown-v">{pctNum(liveSpreadPct)}</div>
+        </div>
+        <div className="execution-breakdown-metric">
+          <div className="execution-breakdown-k">Round-trip Fees</div>
+          <div className="execution-breakdown-v">{pctNum(feePct)}</div>
+        </div>
+        <div className="execution-breakdown-metric">
+          <div className="execution-breakdown-k">Compression</div>
+          <div className="execution-breakdown-v">{pctNum(gapPct)}</div>
+        </div>
+      </div>
+      <div className="execution-breakdown-copy">{primaryGrossNetSummary(slot)}</div>
+    </div>
+  );
+}
+
 function primarySetupStateLabel(slot: SlotRow) {
   const tracking = String(slot.trackingState || "").toUpperCase();
   const state = String(slot.state || "").toUpperCase();
@@ -3712,6 +3807,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
 {carouselSlot && hasActiveParentExposure(carouselSlot) ? (
   <div className="engine-carousel-progress">
     {primaryExitProgressBlock(carouselSlot, props.holding)}
+    {primaryGrossNetBreakdownBlock(carouselSlot)}
   </div>
 ) : null}
 
