@@ -1566,6 +1566,31 @@ function primaryTotalGainPct(slot: SlotRow | null | undefined) {
   return Number((lifetimeNetPct * 100).toFixed(3));
 }
 
+function primaryTotalGainAud(slot: SlotRow | null | undefined) {
+  if (!slot) return null;
+  const reportedAud = primaryReporting(slot)?.totalNetGainAud;
+  if (reportedAud != null && Number.isFinite(reportedAud)) return reportedAud;
+  return null;
+}
+
+function primaryLastRealizedNetPct(slot: SlotRow | null | undefined) {
+  if (!slot) return null;
+  const reportedPct = primaryReporting(slot)?.lastRealizedNetPct;
+  if (reportedPct != null && Number.isFinite(reportedPct)) return reportedPct;
+  const fallbackPct = slot.profitPct;
+  if (fallbackPct == null || !Number.isFinite(fallbackPct)) return null;
+  return fallbackPct;
+}
+
+function primaryLastRealizedProfitAud(slot: SlotRow | null | undefined) {
+  if (!slot) return null;
+  const reportedAud = primaryReporting(slot)?.lastRealizedProfitAud;
+  if (reportedAud != null && Number.isFinite(reportedAud)) return reportedAud;
+  const fallbackAud = slot.profitAud;
+  if (fallbackAud == null || !Number.isFinite(fallbackAud)) return null;
+  return fallbackAud;
+}
+
 function secondaryLiveCount(slot: SlotRow | null | undefined) {
   if (!slot) return 0;
   const liveCount = secondarySummaryData(slot)?.liveCount;
@@ -1818,28 +1843,38 @@ function computeSlotFinancials(slotRows: SlotRow[]) {
   for (const s of slotRows) {
     const baseAud = Number(s.combinedEntryAud ?? s.entryAud ?? s.unitAud);
     const liveNet = liveParentNetPct(s);
-    const parentProfitAud = Number(s.profitAud);
-    const subslots = getSubslots(s);
+    const parentRealizedAud = primaryTotalGainAud(s);
+    const secondaryRealizedAud = secondaryTotalGainAud(s);
 
     if (hasActiveParentExposure(s) && Number.isFinite(baseAud) && liveNet != null && Number.isFinite(liveNet)) {
       openPnl += baseAud * (liveNet / 100);
     }
 
-    if (Number.isFinite(parentProfitAud)) {
-      visibleRealized += parentProfitAud;
+    if (parentRealizedAud != null && Number.isFinite(parentRealizedAud)) {
+      visibleRealized += parentRealizedAud;
+    } else {
+      const fallbackParentProfitAud = Number(s.profitAud);
+      if (Number.isFinite(fallbackParentProfitAud)) {
+        visibleRealized += fallbackParentProfitAud;
+      }
     }
 
-    if (subslots.length > 0) {
-      for (const subslot of subslots) {
-        const subslotProfit = Number(subslot.subslotProfitAud);
-        if (Number.isFinite(subslotProfit)) {
-          visibleRealized += subslotProfit;
-        }
-      }
+    if (secondaryRealizedAud != null && Number.isFinite(secondaryRealizedAud)) {
+      visibleRealized += secondaryRealizedAud;
     } else {
-      const subslotProfitAud = Number(s.subslotProfitAud);
-      if (Number.isFinite(subslotProfitAud)) {
-        visibleRealized += subslotProfitAud;
+      const subslots = getSubslots(s);
+      if (subslots.length > 0) {
+        for (const subslot of subslots) {
+          const subslotProfit = Number(subslot.subslotProfitAud);
+          if (Number.isFinite(subslotProfit)) {
+            visibleRealized += subslotProfit;
+          }
+        }
+      } else {
+        const subslotProfitAud = Number(s.subslotProfitAud);
+        if (Number.isFinite(subslotProfitAud)) {
+          visibleRealized += subslotProfitAud;
+        }
       }
     }
   }
@@ -3671,9 +3706,9 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
         <div className="cap-k">Open Positions</div>
         <div className="cap-v">{moneyAud(props.openPnl)}</div>
         <div className="cap-sub">
-          <span>Recorded {moneyAud(props.visibleRealized)}</span>
+          <span>Realized Total {moneyAud(props.visibleRealized)}</span>
           <span>|</span>
-          <span>Window {moneyAud(props.windowHarvest)}</span>
+          <span>Recent Window {moneyAud(props.windowHarvest)}</span>
         </div>
       </div>
 
@@ -4942,14 +4977,18 @@ const SlotModal = React.memo(function SlotModal(props: {
           {(slot.realizedAt != null ||
             slot.entryAud != null ||
             slot.exitAud != null ||
-            slot.profitAud != null ||
-            slot.profitPct != null) && (
-            <CollapsibleBlock title="Recorded Outcomes" defaultOpen={false}>
+            primaryLastRealizedProfitAud(slot) != null ||
+            primaryLastRealizedNetPct(slot) != null ||
+            primaryTotalGainAud(slot) != null ||
+            secondaryTotalGainAud(slot) != null) && (
+            <CollapsibleBlock title="Realized Exit Context" defaultOpen={false}>
               <div className="slot-modal-grid">
                 <div><div className="slot-k">Entry AUD</div><div className="slot-v">{moneyAud(slot.entryAud)}</div></div>
                 <div><div className="slot-k">Exit AUD</div><div className="slot-v">{moneyAud(slot.exitAud)}</div></div>
-                <div><div className="slot-k">Last Exit Result (AUD)</div><div className="slot-v">{moneyAud(slot.profitAud)}</div></div>
-                <div><div className="slot-k">Last Exit Result (%)</div><div className="slot-v">{pctNum(slot.profitPct)}</div></div>
+                <div><div className="slot-k">Last Primary Exit (AUD)</div><div className="slot-v">{moneyAud(primaryLastRealizedProfitAud(slot))}</div></div>
+                <div><div className="slot-k">Last Primary Exit (%)</div><div className="slot-v">{pctNum(primaryLastRealizedNetPct(slot))}</div></div>
+                <div><div className="slot-k">Primary Realized Total</div><div className="slot-v">{moneyAud(primaryTotalGainAud(slot))}</div></div>
+                <div><div className="slot-k">Secondary Realized Total</div><div className="slot-v">{moneyAud(secondaryTotalGainAud(slot))}</div></div>
               </div>
             </CollapsibleBlock>
           )}
