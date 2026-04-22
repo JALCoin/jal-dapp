@@ -2482,10 +2482,41 @@ function secondaryRailItemStateLabel(subslot: SubslotRow | null) {
   return "Idle";
 }
 
+function secondaryRailSlotCapacity(
+  slot: SlotRow,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined
+) {
+  const railMax = 8;
+  const configuredBands = Array.isArray(subslotConfig?.triggerParentNetBandsPct)
+    ? subslotConfig.triggerParentNetBandsPct
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value))
+    : [];
+  const bandCount = configuredBands.length;
+  const configuredMaxPerSlot = Number(subslotConfig?.maxPerSlot);
+  const maxPerSlot =
+    Number.isInteger(configuredMaxPerSlot) && configuredMaxPerSlot > 0
+      ? configuredMaxPerSlot
+      : null;
+  const sequenceMax = getSubslots(slot).reduce((max, subslot) => {
+    const seq = Number(subslot?.subslotSequence);
+    return Number.isInteger(seq) && seq > max ? seq : max;
+  }, 0);
+
+  let capacity =
+    bandCount > 0
+      ? (maxPerSlot != null ? Math.min(maxPerSlot, bandCount) : bandCount)
+      : (maxPerSlot ?? 5);
+
+  capacity = Math.max(capacity, sequenceMax || 0);
+  return Math.max(1, Math.min(railMax, capacity));
+}
+
 function secondaryRailItems(
   slot: SlotRow,
   subslotConfig: ManagerStatus["subslot"] | null | undefined
 ): SecondaryRailItem[] {
+  const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
   const sorted = [...getSubslots(slot)].sort((a, b) => {
     const aSeq = Number(a.subslotSequence);
     const bSeq = Number(b.subslotSequence);
@@ -2500,7 +2531,7 @@ function secondaryRailItems(
 
   for (const subslot of sorted) {
     const seq = Number(subslot.subslotSequence);
-    if (Number.isInteger(seq) && seq >= 1 && seq <= 5 && !assigned.has(seq)) {
+    if (Number.isInteger(seq) && seq >= 1 && seq <= slotCapacity && !assigned.has(seq)) {
       assigned.set(seq, subslot);
     } else {
       overflow.push(subslot);
@@ -2509,7 +2540,7 @@ function secondaryRailItems(
 
   const items: SecondaryRailItem[] = [];
 
-  for (let index = 1; index <= 5; index += 1) {
+  for (let index = 1; index <= slotCapacity; index += 1) {
     const subslot = assigned.get(index) ?? overflow.shift() ?? null;
     items.push({
       key: subslot?.subslotId ?? `${slot.id}-secondary-${index}`,
@@ -2523,15 +2554,21 @@ function secondaryRailItems(
   return items;
 }
 
-function secondaryRailSummary(slot: SlotRow) {
+function secondaryRailSummary(
+  slot: SlotRow,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined
+) {
+  const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
   const openCount = getSubslotOpenCount(slot);
   const activeCount = getActiveSecondaryRows(slot).length;
   const realizedAud = getSubslotRealizedProfit(slot);
   const parts: string[] = [];
 
-  if (!getSecondaryRows(slot).length) return "5 tactical secondary slots available during this Primary.";
+  if (!getSecondaryRows(slot).length) {
+    return `${slotCapacity} tactical secondary slots available during this Primary.`;
+  }
 
-  if (openCount > 0) parts.push(`${openCount}/5 open`);
+  if (openCount > 0) parts.push(`${openCount}/${slotCapacity} open`);
   if (activeCount > 0) parts.push(`${activeCount} live`);
   if (hasPendingSubslotBuys(slot)) parts.push("entry pending");
   if (hasPendingSubslotSells(slot)) parts.push("exit pending");
@@ -2544,13 +2581,14 @@ function primarySecondaryRail(
   slot: SlotRow,
   subslotConfig: ManagerStatus["subslot"] | null | undefined
 ) {
+  const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
   const items = secondaryRailItems(slot, subslotConfig);
 
   return (
     <div className="entry-progress secondary-rail" aria-label="Primary secondary rail">
       <div className="entry-progress-top">
         <span className="entry-progress-label">Secondary rail</span>
-        <span className="entry-progress-value">{countActiveSecondaries(slot)}/5 live</span>
+        <span className="entry-progress-value">{countActiveSecondaries(slot)}/{slotCapacity} live</span>
       </div>
       <div className="secondary-rail-track" aria-label="Secondary trade slots">
         {items.map((item) => (
@@ -2561,7 +2599,7 @@ function primarySecondaryRail(
           </div>
         ))}
       </div>
-      <div className="secondary-rail-summary">{secondaryRailSummary(slot)}</div>
+      <div className="secondary-rail-summary">{secondaryRailSummary(slot, subslotConfig)}</div>
     </div>
   );
 }
