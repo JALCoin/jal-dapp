@@ -3575,8 +3575,8 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
 
   if (stage === "live-primary") {
     return [
-      { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
-      { label: "Live Price", value: effectiveNowLabel(slot) },
+      { label: "Exec Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
+      { label: "Live Gross", value: pctNum(liveParentGrossPct(slot)), toneClass: "is-tracking" },
       { label: "Protection", value: primaryProtectionLabel(slot) },
       { label: "Secondary Trades", value: secondaryTradesLabel(slot), toneClass: primarySubslotToneClass(slot) },
     ];
@@ -3584,13 +3584,13 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
 
   if (stage === "protected-primary") {
     return [
-      { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
+      { label: "Exec Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
+      { label: "Live Gross", value: pctNum(liveParentGrossPct(slot)), toneClass: "is-tracking" },
       { label: "Exit Floor", value: pctNum(decision?.exitFloorPct ?? primaryExitFloorPct(slot)) },
       {
         label: "Gap To Floor",
         value: floorGap == null ? "-" : floorGap >= 0 ? `${pctNum(floorGap)} above` : `${pctNum(Math.abs(floorGap))} below`,
       },
-      { label: "Secondary Trades", value: secondaryTradesLabel(slot), toneClass: primarySubslotToneClass(slot) },
     ];
   }
 
@@ -3612,10 +3612,10 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
   }
 
   return [
-    { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-exiting" },
+    { label: "Exec Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-exiting" },
+    { label: "Live Gross", value: pctNum(liveParentGrossPct(slot)), toneClass: "is-tracking" },
     { label: "Expected Exit", value: moneyAud(slot.liveExitExpectedAud) },
     { label: "Fill Status", value: slot.liveExitFillStatus ?? "-" },
-    { label: "Updated", value: slotHeartbeatCardLabel(slot, nowMs) },
   ];
 }
 /* =========================
@@ -4122,6 +4122,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
           <div className="engine-telemetry-title">Position Spotlight</div>
           <div className="engine-telemetry-note">
             One slot at a time, explained in plain language before the deeper machine detail.
+            Exec Net uses executable pricing after costs. Live Gross tracks the midpoint move.
           </div>
         </div>
 
@@ -4192,18 +4193,18 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
               </div>
 
               <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Live Net</div>
+                <div className="engine-carousel-k">Exec Net</div>
                 <div className="engine-carousel-v">{pctNum(liveParentNetPct(carouselSlot))}</div>
+              </div>
+
+              <div className="engine-carousel-metric">
+                <div className="engine-carousel-k">Live Gross</div>
+                <div className="engine-carousel-v">{pctNum(liveParentGrossPct(carouselSlot))}</div>
               </div>
 
               <div className="engine-carousel-metric">
                 <div className="engine-carousel-k">Lifetime Net</div>
                 <div className="engine-carousel-v">{pctNum(primaryTotalGainPct(carouselSlot))}</div>
-              </div>
-
-              <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Capital Lane</div>
-                <div className="engine-carousel-v">{moneyAud(primaryCapitalLaneAud(carouselSlot))}</div>
               </div>
 
               <div className="engine-carousel-metric">
@@ -4500,7 +4501,9 @@ const OverviewTable = React.memo(function OverviewTable(props: {
           <div className="dashboard-panel-top">
             <div>
               <div className="dashboard-panel-title">Live Primaries</div>
-              <div className="dashboard-panel-note">What is already in motion, including protection and exit readiness.</div>
+              <div className="dashboard-panel-note">
+                What is already in motion, including protection and exit readiness. Exec Net uses executable bid/fees. Live Gross follows the midpoint.
+              </div>
             </div>
             <div className="dashboard-panel-count">{liveSlots.length}</div>
           </div>
@@ -4519,9 +4522,9 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     <div className="dashboard-row-badge">{positionStageMeta(positionStageForSlot(slot)).title}</div>
                   </div>
                   <div className="dashboard-row-stats">
-                    <span>Live Net {pctNum(liveParentNetPct(slot))}</span>
+                    <span>Exec Net {pctNum(liveParentNetPct(slot))}</span>
+                    <span>Live Gross {pctNum(liveParentGrossPct(slot))}</span>
                     <span>{primaryProtectionLabel(slot)}</span>
-                    <span>{secondaryTradesLabel(slot)}</span>
                   </div>
                   {primaryExitProgressBlock(slot, props.holding)}
                   {primarySecondaryRail(slot, props.subslotConfig)}
@@ -5120,8 +5123,12 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div className={`slot-v ${stateClassName(stateLabel(slot))}`}>{readerStatusLabel(slot)}</div>
             </div>
             <div className="slot-modal-strip-item">
-              <div className="slot-k">Live Net</div>
+              <div className="slot-k">Exec Net</div>
               <div className="slot-v">{pctNum(liveParentNetPct(slot))}</div>
+            </div>
+            <div className="slot-modal-strip-item">
+              <div className="slot-k">Live Gross</div>
+              <div className="slot-v">{pctNum(liveParentGrossPct(slot))}</div>
             </div>
             <div className="slot-modal-strip-item">
               <div className="slot-k">Lifetime Net</div>
@@ -5210,7 +5217,7 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">{String(slot.state || "").toUpperCase() === "WAITING_ENTRY" ? "Reference From Last Exit" : "Entry"}</div><div className="slot-v">{effectiveEntryLabel(slot)}</div></div>
               <div><div className="slot-k">Now</div><div className="slot-v">{effectiveNowLabel(slot)}</div></div>
               <div><div className="slot-k">Live Gross</div><div className="slot-v">{pctNum(liveParentGrossPct(slot))}</div></div>
-              <div><div className="slot-k">Live Net</div><div className="slot-v">{pctNum(liveParentNetPct(slot))}</div></div>
+              <div><div className="slot-k">Exec Net</div><div className="slot-v">{pctNum(liveParentNetPct(slot))}</div></div>
               <div><div className="slot-k">Lifetime Net</div><div className="slot-v">{pctNum(primaryTotalGainPct(slot))}</div></div>
               <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "-"}</div></div>
               <div><div className="slot-k">Protection</div><div className="slot-v">{primaryProtectionLabel(slot)}</div></div>
