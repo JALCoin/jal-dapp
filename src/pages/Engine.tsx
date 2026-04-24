@@ -148,6 +148,13 @@ type SubslotRow = {
   subslotLastError?: string | null;
   subslotLastReconcileAt?: number | null;
   subslotLastReconcileNote?: string | null;
+  subslotEntryQuoteRate?: number | null;
+  subslotEntryQuoteAbsoluteDriftPct?: number | null;
+  subslotEntryQuoteAdverseDriftPct?: number | null;
+  subslotEntryQuoteUsed?: boolean | null;
+  subslotEntryQuoteAdjusted?: boolean | null;
+  subslotEntryMarketAgeMs?: number | null;
+  subslotEntryMarketMaxAgeMs?: number | null;
 
   subslotRequestedAud?: number | null;
   subslotRequestedCoinQty?: number | null;
@@ -180,6 +187,20 @@ type SubslotRow = {
   subslotEmaFast?: number | null;
   subslotEmaSlow?: number | null;
   subslotConfirmTicks?: number | null;
+  subslotExecutableExitAud?: number | null;
+  subslotExecutableExitProfitAud?: number | null;
+  subslotExecutableExitNetPct?: number | null;
+  subslotExitTriggerAt?: number | null;
+  subslotExitTriggerReason?: string | null;
+  subslotExitGateState?: string | null;
+  subslotExitGateReason?: string | null;
+  subslotExitWaitGreenSince?: number | null;
+  subslotBestExecutableExitNetPct?: number | null;
+  subslotBestExecutableExitProfitAud?: number | null;
+  subslotExitRequiredNetPct?: number | null;
+  subslotExitRequiredProfitAud?: number | null;
+  subslotEffectiveTakeProfitNetPct?: number | null;
+  subslotGreenStallTicks?: number | null;
   decision?: ExitDecision | null;
   reporting?: ReportingSummary | null;
 };
@@ -311,6 +332,13 @@ type SlotRow = {
   subslotLastError?: string | null;
   subslotLastReconcileAt?: number | null;
   subslotLastReconcileNote?: string | null;
+  subslotEntryQuoteRate?: number | null;
+  subslotEntryQuoteAbsoluteDriftPct?: number | null;
+  subslotEntryQuoteAdverseDriftPct?: number | null;
+  subslotEntryQuoteUsed?: boolean | null;
+  subslotEntryQuoteAdjusted?: boolean | null;
+  subslotEntryMarketAgeMs?: number | null;
+  subslotEntryMarketMaxAgeMs?: number | null;
 
   subslotPendingMergeAud?: number | null;
   subslotLastMergedAud?: number | null;
@@ -326,6 +354,20 @@ type SlotRow = {
   subslotEmaSlow?: number | null;
   subslotEmaGapPct?: number | null;
   subslotConfirmTicks?: number | null;
+  subslotExecutableExitAud?: number | null;
+  subslotExecutableExitProfitAud?: number | null;
+  subslotExecutableExitNetPct?: number | null;
+  subslotExitTriggerAt?: number | null;
+  subslotExitTriggerReason?: string | null;
+  subslotExitGateState?: string | null;
+  subslotExitGateReason?: string | null;
+  subslotExitWaitGreenSince?: number | null;
+  subslotBestExecutableExitNetPct?: number | null;
+  subslotBestExecutableExitProfitAud?: number | null;
+  subslotExitRequiredNetPct?: number | null;
+  subslotExitRequiredProfitAud?: number | null;
+  subslotEffectiveTakeProfitNetPct?: number | null;
+  subslotGreenStallTicks?: number | null;
   subslotSignalState?: string | null;
   subslotSignalReason?: string | null;
   subslotEntryMode?: string | null;
@@ -556,8 +598,60 @@ type ManagerStatus = WorkerStatus & {
     sizePctOfParent?: number;
     minAud?: number;
     maxForcedSizePct?: number;
+    minWinExitNetPct?: number;
+    minWinExitAud?: number;
+    exitGreenConfirmTicks?: number;
     triggerParentNetPct?: number;
     triggerParentNetBandsPct?: number[];
+    takeProfitEnabled?: boolean;
+    takeProfitNetPct?: number;
+    recoveryFloorNetPct?: number;
+    recoveryConfirmTicks?: number;
+    postRecoveryWeaknessTicks?: number;
+    postRecoveryGivebackPct?: number;
+    postRecoveryProtectFloorNetPct?: number;
+    requireRecoveryBeforeExit?: boolean;
+    triggerBandReuse?: {
+      enabled?: boolean;
+      cooldownMs?: number;
+    };
+    bandSizing?: {
+      enabled?: boolean;
+      stepMult?: number;
+      maxMult?: number;
+    };
+    entryPacing?: {
+      enabled?: boolean;
+      pacingMs?: number;
+      bypassParentDeltaPct?: number;
+    };
+    perfReuse?: {
+      enabled?: boolean;
+      minWinRatePct?: number;
+      minEvPct?: number;
+      confirmTickReduction?: number;
+      minEdgeReliefPct?: number;
+      pacingMult?: number;
+      sizeBoostMult?: number;
+    };
+    bandHarvest?: {
+      enabled?: boolean;
+      stepPct?: number;
+      minNetPct?: number;
+    };
+    greenStall?: {
+      enabled?: boolean;
+      ticks?: number;
+      armFactor?: number;
+      minNetPct?: number;
+      improveNetEpsilonPct?: number;
+      improveProfitAud?: number;
+    };
+    parentRecoveryExit?: {
+      enabled?: boolean;
+      recoveryDeltaPct?: number;
+      targetParentNetPct?: number;
+    };
     costAwareEntry?: {
       enabled?: boolean;
       spreadMult?: number;
@@ -988,30 +1082,30 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Jrd Secondary Mission",
     summary:
-      "Secondaries harvest volatility inside a live primary instead of replacing it. Base size is 20% of parent capital, minimum AUD 3.50, maximum forced size 60%, and up to 8 cycles can exist before the parent resets.",
+      "Secondaries harvest volatility inside a live primary instead of replacing it. Base sizing, forced caps, and cycle depth now follow the live configuration rendered below rather than a hard-coded profile card.",
     detail:
-      "Accounting stays separate during the hold and merges only when the parent returns to WAITING_ENTRY. Negative-EV half-sizing is ON for this layer.",
+      "Accounting stays separate during the hold and merges only when the parent returns to WAITING_ENTRY. Performance memory, pacing, and trigger-band reuse now shape how quickly this layer can recycle.",
   },
   {
     title: "Trigger And Cost Gate",
     summary:
-      "The default secondary ladder fires only while the parent is underwater, using band triggers at -1.5%, -3.0%, -4.75%, -6.5%, -8.0%, -10.0%, -12.0%, and -14.0%.",
+      "The secondary ladder still keys off negative parent-net trigger bands, but reusable bands and pacing now prevent the rail from overstating readiness or firing too aggressively during one long parent hold.",
     detail:
-      "Entry is cost-aware: net-after-cost must still clear 0.06%, spread multiplier is 1.00x, slippage buffer is 0.08%, and EMA-up is not required.",
+      "Entry remains cost-aware and quote-aware: spread, net-after-cost, confirmation, and live quote quality all have to survive before a secondary can actually buy.",
   },
   {
     title: "Recovery-First Exits",
     summary:
       "Before recovery, secondaries intentionally ignore red noise: stop-loss and early-failure exits stay disabled until post-fee recovery is confirmed.",
     detail:
-      "Recovery floor is 0.25% over 2 confirming ticks. After recovery, weakness must persist for 3 ticks before giveback rules engage, with 20% giveback protection and a 0.25% protect floor.",
+      "After recovery, the exit layer can now harvest through executable take-profit, trailing, green-stall, band-aware targets, and parent-recovery exits while still honoring executable green thresholds.",
   },
   {
     title: "Directional Playbooks",
     summary:
-      "Uptrend secondaries use 15 second cooldowns, 0.60% take-profit, and a 0.14 trail after a 0.34 arm. Downtrend secondaries use 20 second cooldowns, 0.45% take-profit, and a 0.10 trail after a 0.24 arm.",
+      "Directional and consolidation profiles still control cooldown, EMA gap, take-profit, and trail behavior, but the live engine now layers that on top of recovery-first law and executable exit gating.",
     detail:
-      "Consolidation bull entries use a 0.015 EMA gap and 0.60% take-profit. Consolidation bear entries are more defensive, allowing 0.05 bounce and -0.01 EMA gap with a 0.45% take-profit.",
+      "This means a bullish or bearish setup can arm differently, but it still has to pass the same final executable sell test before the UI will report it as truly ready to leave.",
   },
   {
     title: "Regime Engine",
@@ -1040,9 +1134,9 @@ const ENGINE_GUARDRAIL_CARDS: BehaviorCard[] = [
   {
     title: "What Is Disabled",
     summary:
-      "Rotation policy, rotation executor, and waiting-slot top-up are all OFF in this profile.",
+      "Rotation behavior follows live gate state; the engine surface should not assume rotation or top-up are permanently OFF.",
     detail:
-      "The engine is behaving like a pure fixed-slot primary-plus-secondary system, not a capital-rotation or treasury-raising strategy.",
+      "This view is still primarily a fixed-slot primary-plus-secondary machine, but the live gates above are the source of truth for whether rotation and waiting-slot top-up are currently active.",
   },
 ];
 
@@ -1909,6 +2003,13 @@ function getSubslots(slot: SlotRow): SubslotRow[] {
       subslotLastError: slot.subslotLastError,
       subslotLastReconcileAt: slot.subslotLastReconcileAt,
       subslotLastReconcileNote: slot.subslotLastReconcileNote,
+      subslotEntryQuoteRate: slot.subslotEntryQuoteRate,
+      subslotEntryQuoteAbsoluteDriftPct: slot.subslotEntryQuoteAbsoluteDriftPct,
+      subslotEntryQuoteAdverseDriftPct: slot.subslotEntryQuoteAdverseDriftPct,
+      subslotEntryQuoteUsed: slot.subslotEntryQuoteUsed,
+      subslotEntryQuoteAdjusted: slot.subslotEntryQuoteAdjusted,
+      subslotEntryMarketAgeMs: slot.subslotEntryMarketAgeMs,
+      subslotEntryMarketMaxAgeMs: slot.subslotEntryMarketMaxAgeMs,
       subslotRequestedAud: slot.subslotRequestedAud,
       subslotRequestedCoinQty: slot.subslotRequestedCoinQty,
       subslotSubmittedRate: slot.subslotSubmittedRate,
@@ -1940,6 +2041,20 @@ function getSubslots(slot: SlotRow): SubslotRow[] {
       subslotEmaFast: slot.subslotEmaFast,
       subslotEmaSlow: slot.subslotEmaSlow,
       subslotConfirmTicks: slot.subslotConfirmTicks,
+      subslotExecutableExitAud: slot.subslotExecutableExitAud,
+      subslotExecutableExitProfitAud: slot.subslotExecutableExitProfitAud,
+      subslotExecutableExitNetPct: slot.subslotExecutableExitNetPct,
+      subslotExitTriggerAt: slot.subslotExitTriggerAt,
+      subslotExitTriggerReason: slot.subslotExitTriggerReason,
+      subslotExitGateState: slot.subslotExitGateState,
+      subslotExitGateReason: slot.subslotExitGateReason,
+      subslotExitWaitGreenSince: slot.subslotExitWaitGreenSince,
+      subslotBestExecutableExitNetPct: slot.subslotBestExecutableExitNetPct,
+      subslotBestExecutableExitProfitAud: slot.subslotBestExecutableExitProfitAud,
+      subslotExitRequiredNetPct: slot.subslotExitRequiredNetPct,
+      subslotExitRequiredProfitAud: slot.subslotExitRequiredProfitAud,
+      subslotEffectiveTakeProfitNetPct: slot.subslotEffectiveTakeProfitNetPct,
+      subslotGreenStallTicks: slot.subslotGreenStallTicks,
     },
   ];
 }
@@ -2212,11 +2327,183 @@ function subslotModeLabel(s: SlotRow) {
   return "TACTICAL CAPTURE";
 }
 
+function finiteMetric(value: unknown) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function subslotDecisionData(subslot: SubslotRow | null | undefined) {
+  return subslot?.decision ?? null;
+}
+
+function subslotExecutableExitNetPct(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslotDecisionData(subslot)?.executableExitNetPct ?? subslot?.subslotExecutableExitNetPct);
+}
+
+function subslotExecutableExitProfitAud(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslotDecisionData(subslot)?.executableExitProfitAud ?? subslot?.subslotExecutableExitProfitAud);
+}
+
+function subslotExecutableExitAud(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslotDecisionData(subslot)?.executableExitAud ?? subslot?.subslotExecutableExitAud);
+}
+
+function subslotExitGateState(subslot: SubslotRow | null | undefined) {
+  const raw = subslotDecisionData(subslot)?.exitGateState ?? subslot?.subslotExitGateState;
+  return raw ? String(raw) : null;
+}
+
+function subslotExitGateReason(subslot: SubslotRow | null | undefined) {
+  const raw = subslotDecisionData(subslot)?.exitGateReason ?? subslot?.subslotExitGateReason;
+  return raw ? String(raw) : null;
+}
+
+function subslotExitTriggerAt(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslotDecisionData(subslot)?.exitTriggerAt ?? subslot?.subslotExitTriggerAt);
+}
+
+function subslotExitTriggerReason(subslot: SubslotRow | null | undefined) {
+  const raw = subslotDecisionData(subslot)?.exitTriggerReason ?? subslot?.subslotExitTriggerReason;
+  return raw ? String(raw) : null;
+}
+
+function subslotExitWaitGreenSince(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslotDecisionData(subslot)?.exitWaitGreenSince ?? subslot?.subslotExitWaitGreenSince);
+}
+
+function subslotBestExecutableExitNetPct(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(
+    subslotDecisionData(subslot)?.exitBestExecutableNetPct ?? subslot?.subslotBestExecutableExitNetPct
+  );
+}
+
+function subslotBestExecutableExitProfitAud(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(
+    subslotDecisionData(subslot)?.exitBestExecutableProfitAud ?? subslot?.subslotBestExecutableExitProfitAud
+  );
+}
+
+function subslotExitRequiredNetPct(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslotDecisionData(subslot)?.exitRequiredNetPct ?? subslot?.subslotExitRequiredNetPct);
+}
+
+function subslotExitRequiredProfitAud(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(
+    subslotDecisionData(subslot)?.exitRequiredProfitAud ?? subslot?.subslotExitRequiredProfitAud
+  );
+}
+
+function subslotEffectiveTakeProfitNetPct(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslot?.subslotEffectiveTakeProfitNetPct);
+}
+
+function subslotGreenStallTicks(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslot?.subslotGreenStallTicks);
+}
+
+function subslotEntryQuoteRate(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslot?.subslotEntryQuoteRate);
+}
+
+function subslotEntryQuoteAbsoluteDriftPct(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslot?.subslotEntryQuoteAbsoluteDriftPct);
+}
+
+function subslotEntryQuoteAdverseDriftPct(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslot?.subslotEntryQuoteAdverseDriftPct);
+}
+
+function subslotEntryMarketAgeMs(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslot?.subslotEntryMarketAgeMs);
+}
+
+function subslotEntryMarketMaxAgeMs(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslot?.subslotEntryMarketMaxAgeMs);
+}
+
+function subslotHasExitGateData(subslot: SubslotRow | null | undefined) {
+  return Boolean(
+    subslotExitGateState(subslot) ||
+      subslotExitGateReason(subslot) ||
+      subslotExitTriggerReason(subslot) ||
+      subslotExecutableExitNetPct(subslot) != null ||
+      subslotBestExecutableExitNetPct(subslot) != null ||
+      subslotExitRequiredNetPct(subslot) != null ||
+      subslotExitRequiredProfitAud(subslot) != null ||
+      subslotEffectiveTakeProfitNetPct(subslot) != null ||
+      subslotGreenStallTicks(subslot) != null
+  );
+}
+
+function subslotHasEntryQualityData(subslot: SubslotRow | null | undefined) {
+  return Boolean(
+    subslotEntryQuoteRate(subslot) != null ||
+      subslotEntryQuoteAbsoluteDriftPct(subslot) != null ||
+      subslotEntryQuoteAdverseDriftPct(subslot) != null ||
+      subslot?.subslotEntryQuoteUsed != null ||
+      subslot?.subslotEntryQuoteAdjusted != null ||
+      subslotEntryMarketAgeMs(subslot) != null ||
+      subslotEntryMarketMaxAgeMs(subslot) != null
+  );
+}
+
+function subslotExitGateStateLabel(subslot: SubslotRow | null | undefined) {
+  const gateState = subslotExitGateState(subslot);
+  if (gateState) return enumLabel(gateState);
+  if (subslot?.subslotRecoveredConfirmed === false) return "Recovery Required";
+  if (String(subslot?.subslotState || "").toUpperCase() === "ACTIVE") return "Monitoring Exit";
+  return "-";
+}
+
+function subslotExitNeedsLabel(subslot: SubslotRow | null | undefined) {
+  const netPct = subslotExitRequiredNetPct(subslot);
+  const profitAud = subslotExitRequiredProfitAud(subslot);
+  if (netPct == null && profitAud == null) return "-";
+  return `${pctNum(netPct)} | ${moneyAud(profitAud)}`;
+}
+
+function subslotExecutableExitLabel(subslot: SubslotRow | null | undefined) {
+  const netPct = subslotExecutableExitNetPct(subslot);
+  const profitAud = subslotExecutableExitProfitAud(subslot);
+  if (netPct == null && profitAud == null) return "-";
+  return `${pctNum(netPct)} | ${moneyAud(profitAud)}`;
+}
+
+function subslotBestExecutableExitLabel(subslot: SubslotRow | null | undefined) {
+  const netPct = subslotBestExecutableExitNetPct(subslot);
+  const profitAud = subslotBestExecutableExitProfitAud(subslot);
+  if (netPct == null && profitAud == null) return "-";
+  return `${pctNum(netPct)} | ${moneyAud(profitAud)}`;
+}
+
+function subslotEntryQuoteStatusLabel(subslot: SubslotRow | null | undefined) {
+  const used = subslot?.subslotEntryQuoteUsed;
+  const adjusted = subslot?.subslotEntryQuoteAdjusted;
+
+  if (used == null && adjusted == null) return "-";
+  if (used === false) return "Snapshot entry";
+  if (used === true && adjusted === true) return "Quote adjusted";
+  if (used === true) return "Quote used";
+  return yesNo(used);
+}
+
+function subslotEntryMarketFreshnessLabel(subslot: SubslotRow | null | undefined) {
+  const ageMs = subslotEntryMarketAgeMs(subslot);
+  const maxMs = subslotEntryMarketMaxAgeMs(subslot);
+  if (ageMs == null && maxMs == null) return "-";
+  return `${msToShortLabel(ageMs)} / ${msToShortLabel(maxMs)}`;
+}
+
 function subslotDecisionLabel(subslot: SubslotRow) {
   const sub = String(subslot.subslotState || "").toUpperCase();
   const signal = String(subslot.subslotSignalState || "").toUpperCase();
+  const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
+  const triggerReason = subslotExitTriggerReason(subslot);
 
   if (sub === "BUY_SUBMITTED") return "Entry pending";
+  if (sub === "ACTIVE" && gateState === "WAIT_GREEN") return "Waiting for green exit";
+  if (sub === "ACTIVE" && triggerReason) return "Exit trigger armed";
+  if (sub === "ACTIVE" && subslot.subslotRecoveredConfirmed === true) return "Recovered and harvesting";
   if (sub === "ACTIVE") return "Trade active";
   if (sub === "SELL_SUBMITTED") return "Exit pending";
   if (sub === "CLOSED" && subslot.subslotExitReason) return "Last trade closed";
@@ -2371,14 +2658,25 @@ function subslotLiveCounterLabel(
   fallbackBandIndex?: number | null
 ) {
   const state = String(subslot?.subslotState || "").toUpperCase();
+  const signal = String(subslot?.subslotSignalState || "").toUpperCase();
+  const isPlaceholder = !subslot?.subslotId;
   if (state === "ACTIVE") return "Live now";
   if (state === "BUY_SUBMITTED") return "Entry pending";
   if (state === "SELL_SUBMITTED") return "Exit pending";
 
   const distancePct = subslotLiveDistancePct(subslot, parent, subslotConfig, fallbackBandIndex);
-  if (distancePct != null) return `${pctNum(distancePct)} to live`;
+  if (distancePct != null) {
+    if (distancePct === 0) {
+      if (signal === "REVERSAL_CONFIRMING") return "Band met | confirming";
+      if (signal === "BOUNCE_SEEN") return "Band met | bounce seen";
+      if (signal === "TRACKING") return "Band met | watching";
+      if (signal === "ARMED") return "Band met | waiting gates";
+      if (isPlaceholder || state === "CLOSED") return "Band met | waiting gates";
+      return "Band met";
+    }
+    return `${pctNum(distancePct)} to live`;
+  }
 
-  const signal = String(subslot?.subslotSignalState || "").toUpperCase();
   if (signal === "ARMED") return "Armed";
   if (signal === "REVERSAL_CONFIRMING") return "Confirming";
   if (signal === "BOUNCE_SEEN" || signal === "TRACKING") return "Watching";
@@ -2985,6 +3283,123 @@ function primaryGrossNetBreakdownBlock(slot: SlotRow) {
   );
 }
 
+function subslotExitGateBlock(
+  subslot: SubslotRow | null | undefined,
+  nowMs: number,
+  variant: "compact" | "full" = "full"
+) {
+  if (!subslot || !subslotHasExitGateData(subslot)) return null;
+
+  const gateState = subslotExitGateStateLabel(subslot);
+  const gateReason = subslotExitGateReason(subslot);
+  const triggerReason = subslotExitTriggerReason(subslot);
+  const executableNetPct = subslotExecutableExitNetPct(subslot);
+  const executableProfitAud = subslotExecutableExitProfitAud(subslot);
+  const executableExitAud = subslotExecutableExitAud(subslot);
+  const bestExecutableNetPct = subslotBestExecutableExitNetPct(subslot);
+  const bestExecutableProfitAud = subslotBestExecutableExitProfitAud(subslot);
+  const requiredNetPct = subslotExitRequiredNetPct(subslot);
+  const requiredProfitAud = subslotExitRequiredProfitAud(subslot);
+  const effectiveTakeProfitPct = subslotEffectiveTakeProfitNetPct(subslot);
+  const greenStallTicks = subslotGreenStallTicks(subslot);
+  const waitSince = subslotExitWaitGreenSince(subslot);
+  const triggerAt = subslotExitTriggerAt(subslot);
+
+  const compactMetrics = [
+    { label: "Gate", value: gateState },
+    { label: "Needs", value: subslotExitNeedsLabel(subslot) },
+    { label: "Exec Exit", value: subslotExecutableExitLabel(subslot) },
+    { label: "Best Seen", value: subslotBestExecutableExitLabel(subslot) },
+  ];
+
+  const fullMetrics = [
+    { label: "Gate", value: gateState },
+    { label: "Needs", value: subslotExitNeedsLabel(subslot) },
+    { label: "Exec Exit", value: subslotExecutableExitLabel(subslot) },
+    { label: "Exit AUD", value: moneyAud(executableExitAud) },
+    { label: "Best Seen", value: subslotBestExecutableExitLabel(subslot) },
+    { label: "Trigger", value: reasonLabel(triggerReason) },
+    { label: "Waiting Since", value: waitSince != null ? ageLabel(nowMs - waitSince) : "-" },
+    { label: "Triggered", value: triggerAt != null ? ageLabel(nowMs - triggerAt) : "-" },
+    { label: "Take Profit", value: pctNum(effectiveTakeProfitPct) },
+    { label: "Green Stall", value: greenStallTicks != null ? `${greenStallTicks}` : "-" },
+  ];
+
+  const copyParts = [
+    gateReason ? `Gate reason: ${reasonLabel(gateReason)}.` : null,
+    triggerReason ? `Trigger: ${reasonLabel(triggerReason)}.` : null,
+    requiredNetPct != null || requiredProfitAud != null
+      ? `Green requirement stays at ${pctNum(requiredNetPct)} and ${moneyAud(requiredProfitAud)}.`
+      : null,
+    executableNetPct != null || executableProfitAud != null
+      ? `Executable exit is currently ${pctNum(executableNetPct)} and ${moneyAud(executableProfitAud)}.`
+      : null,
+    bestExecutableNetPct != null || bestExecutableProfitAud != null
+      ? `Best executable progress seen is ${pctNum(bestExecutableNetPct)} and ${moneyAud(bestExecutableProfitAud)}.`
+      : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="entry-progress execution-breakdown" aria-label="Secondary exit gate">
+      <div className="entry-progress-top">
+        <span className="entry-progress-label">Secondary Exit Gate</span>
+        <span className="entry-progress-value">{gateState}</span>
+      </div>
+      <div className="execution-breakdown-grid">
+        {(variant === "compact" ? compactMetrics : fullMetrics).map((metric) => (
+          <div key={metric.label} className="execution-breakdown-metric">
+            <div className="execution-breakdown-k">{metric.label}</div>
+            <div className="execution-breakdown-v">{metric.value}</div>
+          </div>
+        ))}
+      </div>
+      {copyParts.length ? <div className="execution-breakdown-copy">{copyParts.join(" ")}</div> : null}
+    </div>
+  );
+}
+
+function subslotEntryQualityBlock(subslot: SubslotRow | null | undefined, variant: "compact" | "full" = "full") {
+  if (!subslot || !subslotHasEntryQualityData(subslot)) return null;
+
+  const metrics = [
+    { label: "Quote Status", value: subslotEntryQuoteStatusLabel(subslot) },
+    { label: "Quote Rate", value: fmt(subslotEntryQuoteRate(subslot)) },
+    { label: "Abs Drift", value: pctNum(subslotEntryQuoteAbsoluteDriftPct(subslot)) },
+    { label: "Adverse Drift", value: pctNum(subslotEntryQuoteAdverseDriftPct(subslot)) },
+    { label: "Market Age", value: subslotEntryMarketFreshnessLabel(subslot) },
+  ];
+
+  const compactMetrics = metrics.filter((metric) =>
+    ["Quote Status", "Abs Drift", "Market Age"].includes(metric.label)
+  );
+
+  const copyParts = [
+    subslot?.subslotEntryQuoteUsed === true ? "Secondary buy used the shared live quote guard." : null,
+    subslot?.subslotEntryQuoteAdjusted === true ? "Quote drift forced an adjusted entry rate." : null,
+    subslotEntryQuoteAbsoluteDriftPct(subslot) != null
+      ? `Recorded absolute drift was ${pctNum(subslotEntryQuoteAbsoluteDriftPct(subslot))}.`
+      : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="entry-progress execution-breakdown" aria-label="Secondary entry quality">
+      <div className="entry-progress-top">
+        <span className="entry-progress-label">Secondary Entry Quality</span>
+        <span className="entry-progress-value">{subslotEntryQuoteStatusLabel(subslot)}</span>
+      </div>
+      <div className="execution-breakdown-grid">
+        {(variant === "compact" ? compactMetrics : metrics).map((metric) => (
+          <div key={metric.label} className="execution-breakdown-metric">
+            <div className="execution-breakdown-k">{metric.label}</div>
+            <div className="execution-breakdown-v">{metric.value}</div>
+          </div>
+        ))}
+      </div>
+      {copyParts.length ? <div className="execution-breakdown-copy">{copyParts.join(" ")}</div> : null}
+    </div>
+  );
+}
+
 function primarySetupStateLabel(slot: SlotRow) {
   const tracking = String(slot.trackingState || "").toUpperCase();
   const state = String(slot.state || "").toUpperCase();
@@ -3189,6 +3604,19 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
   const liveNow = subslot.subslotNowMid ?? parent.nowMid;
   const updated = subslotHeartbeatLabel(subslot, nowMs);
   const liveDistancePct = subslotLiveDistancePct(subslot, parent);
+  const gateState = subslotExitGateState(subslot);
+  const gateReason = subslotExitGateReason(subslot);
+  const triggerReason = subslotExitTriggerReason(subslot);
+  const executableNetPct = subslotExecutableExitNetPct(subslot);
+  const executableProfitAud = subslotExecutableExitProfitAud(subslot);
+  const bestExecutableNetPct = subslotBestExecutableExitNetPct(subslot);
+  const bestExecutableProfitAud = subslotBestExecutableExitProfitAud(subslot);
+  const requiredNetPct = subslotExitRequiredNetPct(subslot);
+  const requiredProfitAud = subslotExitRequiredProfitAud(subslot);
+  const effectiveTakeProfitPct = subslotEffectiveTakeProfitNetPct(subslot);
+  const greenStallTicks = subslotGreenStallTicks(subslot);
+  const quoteDriftPct = subslotEntryQuoteAbsoluteDriftPct(subslot);
+  const quoteStatus = subslotEntryQuoteStatusLabel(subslot);
 
   // Subslot State Analysis
   if (subState === "BUY_SUBMITTED") {
@@ -3213,7 +3641,7 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
 
   if (liveDistancePct != null) {
     if (liveDistancePct > 0) parts.push(`${pctNum(liveDistancePct)} remains before Jrd Secondary goes live.`);
-    else parts.push("Jrd Secondary live trigger is met.");
+    else parts.push("Band trigger is met. Secondary still needs spread, confirmation, pacing, and edge gates to align.");
   }
 
   // Signal Analysis
@@ -3243,6 +3671,44 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
     else parts.push(`Jrd Secondary net is flat at ${pctNum(netPct)}.`);
   }
 
+  if (subslot.subslotRecoveredConfirmed === false) {
+    parts.push("Recovery-first exit law is still active.");
+  } else if (subslot.subslotRecoveredConfirmed === true) {
+    parts.push("Recovered green logic is active.");
+  }
+
+  if (gateState) {
+    parts.push(`Exit gate is ${enumLabel(gateState)}.`);
+  }
+
+  if (gateReason && gateReason !== "-") {
+    parts.push(`Gate reason: ${reasonLabel(gateReason)}.`);
+  }
+
+  if (triggerReason) {
+    parts.push(`Exit trigger: ${reasonLabel(triggerReason)}.`);
+  }
+
+  if (requiredNetPct != null || requiredProfitAud != null) {
+    parts.push(`Green threshold is ${pctNum(requiredNetPct)} and ${moneyAud(requiredProfitAud)}.`);
+  }
+
+  if (Number.isFinite(executableNetPct) || Number.isFinite(executableProfitAud)) {
+    parts.push(`Executable exit is ${pctNum(executableNetPct)} and ${moneyAud(executableProfitAud)} right now.`);
+  }
+
+  if (Number.isFinite(bestExecutableNetPct) || Number.isFinite(bestExecutableProfitAud)) {
+    parts.push(`Best executable seen is ${pctNum(bestExecutableNetPct)} and ${moneyAud(bestExecutableProfitAud)}.`);
+  }
+
+  if (effectiveTakeProfitPct != null) {
+    parts.push(`Effective take-profit target is ${pctNum(effectiveTakeProfitPct)}.`);
+  }
+
+  if (greenStallTicks != null && greenStallTicks > 0) {
+    parts.push(`Green stall counter is ${greenStallTicks} ticks.`);
+  }
+
   // Bounce and EMA Gap Analysis
   if (Number.isFinite(bouncePct)) {
     parts.push(`Bounce is ${pctNum(bouncePct)}.`);
@@ -3250,6 +3716,14 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
 
   if (Number.isFinite(emaGapPct)) {
     parts.push(`EMA gap is ${pctNum(emaGapPct)}.`);
+  }
+
+  if (quoteStatus !== "-") {
+    parts.push(`Entry quality: ${quoteStatus.toLowerCase()}.`);
+  }
+
+  if (quoteDriftPct != null) {
+    parts.push(`Quote drift was ${pctNum(quoteDriftPct)} at entry.`);
   }
 
   // Updated Time
@@ -4285,16 +4759,17 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
               </div>
 
               {carouselPrimary && (isSubslotBusy(carouselPrimary) || !isIdleSubslot(carouselPrimary)) ? (
-                <div className="engine-subslot-grid">
-                  <div className="engine-subslot-item">
-                    <div className="engine-subslot-k">Band</div>
-                    <div className="engine-subslot-v">{subslotTriggerBandLabel(carouselPrimary)}</div>
-                  </div>
+                <>
+                  <div className="engine-subslot-grid">
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Band</div>
+                      <div className="engine-subslot-v">{subslotTriggerBandLabel(carouselPrimary)}</div>
+                    </div>
 
-                  <div className="engine-subslot-item">
-                    <div className="engine-subslot-k">Trigger</div>
-                    <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotTriggerParentNetPct)}</div>
-                  </div>
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Trigger</div>
+                      <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotTriggerParentNetPct)}</div>
+                    </div>
 
                     <div className="engine-subslot-item">
                       <div className="engine-subslot-k">To Live</div>
@@ -4303,33 +4778,37 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                       </div>
                     </div>
 
-                  <div className="engine-subslot-item">
-                    <div className="engine-subslot-k">Parent @ Open</div>
-                    <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotEntryParentNetPct)}</div>
-                  </div>
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Parent @ Open</div>
+                      <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotEntryParentNetPct)}</div>
+                    </div>
 
-                  <div className="engine-subslot-item">
-                    <div className="engine-subslot-k">Signal</div>
-                    <div className="engine-subslot-v">{carouselSlot.subslotSignalState ?? "-"}</div>
-                  </div>
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Signal</div>
+                      <div className="engine-subslot-v">{carouselPrimary.subslotSignalState ?? "-"}</div>
+                    </div>
 
-                  <div className="engine-subslot-item">
-                    <div className="engine-subslot-k">Confirm</div>
-                    <div className="engine-subslot-v">
-                      {carouselSlot.subslotConfirmTicks != null ? carouselSlot.subslotConfirmTicks : "-"}
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Confirm</div>
+                      <div className="engine-subslot-v">
+                        {carouselPrimary.subslotConfirmTicks != null ? carouselPrimary.subslotConfirmTicks : "-"}
+                      </div>
+                    </div>
+
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Bounce</div>
+                      <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotBouncePct)}</div>
+                    </div>
+
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">EMA Gap</div>
+                      <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotEmaGapPct)}</div>
                     </div>
                   </div>
 
-                  <div className="engine-subslot-item">
-                    <div className="engine-subslot-k">Bounce</div>
-                    <div className="engine-subslot-v">{pctNum(carouselSlot.subslotBouncePct)}</div>
-                  </div>
-
-                  <div className="engine-subslot-item">
-                    <div className="engine-subslot-k">EMA Gap</div>
-                    <div className="engine-subslot-v">{pctNum(carouselSlot.subslotEmaGapPct)}</div>
-                  </div>
-                </div>
+                  {subslotExitGateBlock(carouselPrimary, props.nowMs, "compact")}
+                  {subslotEntryQualityBlock(carouselPrimary, "compact")}
+                </>
               ) : null}
             </div>
           </button>
@@ -4790,6 +5269,32 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
     subslot?.maxForcedSizePct != null && Number.isFinite(subslot.maxForcedSizePct)
       ? `${(subslot.maxForcedSizePct * 100).toFixed(0)}%`
       : "60%";
+  const secondaryBandSizing =
+    subslot?.bandSizing?.enabled === true
+      ? `ON | step ${(Number(subslot.bandSizing?.stepMult ?? 0) * 100).toFixed(0)}% | cap ${(Number(
+          subslot.bandSizing?.maxMult ?? 0
+        ) * 100).toFixed(0)}%`
+      : "OFF | fixed base sizing";
+  const secondaryTriggerReuse = `${yesNo(subslot?.triggerBandReuse?.enabled)} | cooldown ${msToShortLabel(
+    subslot?.triggerBandReuse?.cooldownMs
+  )}`;
+  const secondaryEntryPacing = `${yesNo(subslot?.entryPacing?.enabled)} | ${msToShortLabel(
+    subslot?.entryPacing?.pacingMs
+  )} | bypass ${pctNum(subslot?.entryPacing?.bypassParentDeltaPct)}`;
+  const secondaryPerfReuse = `${yesNo(subslot?.perfReuse?.enabled)} | confirm -${
+    subslot?.perfReuse?.confirmTickReduction ?? 0
+  } | pace x${Number(subslot?.perfReuse?.pacingMult ?? 0).toFixed(2)}`;
+  const secondaryExitHarvest = [
+    subslot?.takeProfitEnabled === true ? "take profit" : null,
+    subslot?.bandHarvest?.enabled === true ? "band harvest" : null,
+    subslot?.greenStall?.enabled === true ? "green stall" : null,
+    subslot?.parentRecoveryExit?.enabled === true ? "parent recovery" : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+  const secondaryRecovery = `recover ${pctNum(subslot?.recoveryFloorNetPct)} in ${subslot?.recoveryConfirmTicks ?? "-"} ticks | green confirm ${
+    subslot?.exitGreenConfirmTicks ?? "-"
+  }`;
 
   return (
     <div className="engine-bay">
@@ -4866,6 +5371,46 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
               rotation {yesNo(gates?.rotationEnabled)} | executor {yesNo(gates?.rotationExecutorEnabled)} | top-up{" "}
               {yesNo(gates?.topupEnabled)}
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card machine-surface panel-frame engine-telemetry">
+        <div className="engine-telemetry-head">
+          <div>
+            <div className="engine-telemetry-title">Secondary Upgrades Live</div>
+            <div className="engine-telemetry-note">
+              This block reflects the live secondary entry and exit upgrades now active on the backend, including reusable bands, pacing, quote-aware entry telemetry, and upgraded executable exit harvesting.
+            </div>
+          </div>
+        </div>
+
+        <div className="slot-modal-grid">
+          <div>
+            <div className="slot-k">Sizing</div>
+            <div className="slot-v">
+              base {secondaryBaseSize} | forced cap {secondaryForcedCap} | band sizing {secondaryBandSizing}
+            </div>
+          </div>
+          <div>
+            <div className="slot-k">Trigger Reuse</div>
+            <div className="slot-v">{secondaryTriggerReuse}</div>
+          </div>
+          <div>
+            <div className="slot-k">Entry Pacing</div>
+            <div className="slot-v">{secondaryEntryPacing}</div>
+          </div>
+          <div>
+            <div className="slot-k">Perf Reuse</div>
+            <div className="slot-v">{secondaryPerfReuse}</div>
+          </div>
+          <div>
+            <div className="slot-k">Exit Harvesting</div>
+            <div className="slot-v">{secondaryExitHarvest || "Recovery-first only"}</div>
+          </div>
+          <div>
+            <div className="slot-k">Recovery / Green Gate</div>
+            <div className="slot-v">{secondaryRecovery}</div>
           </div>
         </div>
       </div>
@@ -5250,6 +5795,10 @@ const SlotModal = React.memo(function SlotModal(props: {
                     <div><div className="slot-k">Latest To Live</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotLiveCounterLabel(getPrimarySecondarySnapshot(slot) as SubslotRow, slot, props.subslotConfig) : "-"}</div></div>
                     <div><div className="slot-k">Latest Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
                     <div><div className="slot-k">Latest Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
+                    <div><div className="slot-k">Latest Exit Gate</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExitGateStateLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Latest Needs</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExitNeedsLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Latest Exec Exit</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExecutableExitLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Latest Quote Quality</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotEntryQuoteStatusLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
                   </>
               ) : null}
             </div>
@@ -5258,6 +5807,8 @@ const SlotModal = React.memo(function SlotModal(props: {
               <>
                 <div className="slot-section">Latest Secondary Trades</div>
                 <div><div className="slot-k">Live Analysis</div><div className="slot-v">{primaryLiveSubslotAnalysis(slot, nowMs)}</div></div>
+                {subslotExitGateBlock(getPrimarySecondarySnapshot(slot), nowMs)}
+                {subslotEntryQualityBlock(getPrimarySecondarySnapshot(slot))}
 
               <div className="secondary-list subslot-list">
                 {getSecondaryRows(slot).map((subslot, index) => (
@@ -5290,6 +5841,9 @@ const SlotModal = React.memo(function SlotModal(props: {
                       <div><div className="slot-k">Updated</div><div className="slot-v">{subslotHeartbeatLabel(subslot, nowMs)}</div></div>
                       <div><div className="slot-k">Reconcile Note</div><div className="slot-v">{subslot.subslotLastReconcileNote ?? "-"}</div></div>
                     </div>
+
+                    {subslotExitGateBlock(subslot, nowMs)}
+                    {subslotEntryQualityBlock(subslot)}
 
                     <div><div className="slot-k">Live Analysis</div><div className="slot-v">{liveSubslotAnalysis(subslot, slot, nowMs)}</div></div>
 
