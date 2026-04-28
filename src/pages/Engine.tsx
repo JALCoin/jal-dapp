@@ -109,6 +109,27 @@ type ReportingSummary = {
   cycles?: number | null;
 };
 
+type ExecutionComparison = {
+  compareScope?: string | null;
+  fillStatus?: string | null;
+  exactFillKnown?: boolean | null;
+  netBasisRate?: number | null;
+  netBasisSource?: string | null;
+  grossBasisMid?: number | null;
+  grossBasisSource?: string | null;
+  nowBid?: number | null;
+  nowAsk?: number | null;
+  nowMid?: number | null;
+  spreadPct?: number | null;
+  feeBps?: number | null;
+  roundTripFeeBps?: number | null;
+};
+
+type PrimarySurface = {
+  compareScope?: string | null;
+  comparison?: ExecutionComparison | null;
+};
+
 type SecondarySummary = {
   liveCount?: number | null;
   liveNetPct?: number | null;
@@ -201,6 +222,7 @@ type SubslotRow = {
   subslotExitRequiredProfitAud?: number | null;
   subslotEffectiveTakeProfitNetPct?: number | null;
   subslotGreenStallTicks?: number | null;
+  comparison?: ExecutionComparison | null;
   decision?: ExitDecision | null;
   reporting?: ReportingSummary | null;
 };
@@ -271,6 +293,7 @@ type SlotRow = {
   liveEntryActualCoinQty?: number | null;
   liveEntryActualRate?: number | null;
   liveEntryFilledAt?: number | null;
+  liveExactBackfillVersion?: string | null;
 
   liveExitOrderId?: string | null;
   liveExitRequestedCoinQty?: number | null;
@@ -512,6 +535,7 @@ type SlotRow = {
   decision?: ExitDecision | null;
   reporting?: ReportingSummary | null;
   secondary?: SecondarySummary | null;
+  primary?: PrimarySurface | null;
 
   [key: string]: unknown;
 };
@@ -1363,6 +1387,93 @@ function effectiveNowLabel(s: SlotRow) {
 function effectiveNowMid(s: SlotRow) {
   if (s.nowMid != null && Number.isFinite(s.nowMid)) return s.nowMid;
   if (s.candidateMidPrev != null && Number.isFinite(s.candidateMidPrev)) return s.candidateMidPrev;
+  return null;
+}
+
+function bpsPctLabel(bps: number | null | undefined) {
+  if (bps == null || !Number.isFinite(bps)) return "-";
+  return `${(Number(bps) / 100).toFixed(2)}%`;
+}
+
+function primaryComparison(slot: SlotRow | null | undefined) {
+  return slot?.primary?.comparison ?? null;
+}
+
+function secondaryComparison(subslot: SubslotRow | null | undefined) {
+  return subslot?.comparison ?? null;
+}
+
+function basisSourceLabel(source: string | null | undefined) {
+  const normalized = String(source || "").trim().toLowerCase();
+  const mapped: Record<string, string> = {
+    primary_actual_fill: "Primary actual fill",
+    primary_submitted_rate: "Primary submitted rate",
+    primary_entry_ask: "Primary entry ask",
+    primary_entry_mid: "Primary entry mid",
+    secondary_actual_fill: "Secondary actual fill",
+    secondary_submitted_rate: "Secondary submitted rate",
+    secondary_entry_mid: "Secondary entry mid",
+  };
+  if (mapped[normalized]) return mapped[normalized];
+  return enumLabel(source);
+}
+
+function primaryNetBasisRate(slot: SlotRow | null | undefined) {
+  const comparison = primaryComparison(slot);
+  if (comparison?.netBasisRate != null && Number.isFinite(comparison.netBasisRate)) return comparison.netBasisRate;
+  if (slot?.liveEntryActualRate != null && Number.isFinite(slot.liveEntryActualRate)) return slot.liveEntryActualRate;
+  if (slot?.liveEntrySubmittedRate != null && Number.isFinite(slot.liveEntrySubmittedRate)) return slot.liveEntrySubmittedRate;
+  return null;
+}
+
+function primaryGrossBasisMid(slot: SlotRow | null | undefined) {
+  const comparison = primaryComparison(slot);
+  if (comparison?.grossBasisMid != null && Number.isFinite(comparison.grossBasisMid)) return comparison.grossBasisMid;
+  if (slot?.entryMid != null && Number.isFinite(slot.entryMid)) return slot.entryMid;
+  return null;
+}
+
+function primaryNowBid(slot: SlotRow | null | undefined) {
+  const comparison = primaryComparison(slot);
+  if (comparison?.nowBid != null && Number.isFinite(comparison.nowBid)) return comparison.nowBid;
+  if (slot?.nowBid != null && Number.isFinite(slot.nowBid)) return slot.nowBid;
+  return null;
+}
+
+function primaryComparisonScopeLabel(slot: SlotRow | null | undefined) {
+  if (!slot) return "-";
+  if (getSecondaryRows(slot).length) {
+    return "Top metrics here are the Primary. Secondary trades below reconcile separately.";
+  }
+  return "Primary-only slot metrics.";
+}
+
+function primaryFillProofLabel(slot: SlotRow | null | undefined) {
+  const comparison = primaryComparison(slot);
+  if (comparison?.exactFillKnown === true) {
+    return `Exact fill | ${enumLabel(comparison.fillStatus)}`;
+  }
+  if (comparison?.fillStatus) {
+    return `Pending exact fill | ${enumLabel(comparison.fillStatus)}`;
+  }
+  return "-";
+}
+
+function primaryFeeFrictionLabel(slot: SlotRow | null | undefined) {
+  const comparison = primaryComparison(slot);
+  const parts: string[] = [];
+  if (slot?.frictionModel) parts.push(slot.frictionModel);
+  if (comparison?.roundTripFeeBps != null && Number.isFinite(comparison.roundTripFeeBps)) {
+    parts.push(`${bpsPctLabel(comparison.roundTripFeeBps)} round-trip fee`);
+  } else if (slot?.feeBps != null && Number.isFinite(slot.feeBps)) {
+    parts.push(`${bpsPctLabel(Number(slot.feeBps) * 2)} round-trip fee`);
+  }
+  return parts.length ? parts.join(" | ") : "-";
+}
+
+function comparisonNowMid(comparison: ExecutionComparison | null | undefined, fallback: number | null | undefined) {
+  if (comparison?.nowMid != null && Number.isFinite(comparison.nowMid)) return comparison.nowMid;
+  if (fallback != null && Number.isFinite(fallback)) return fallback;
   return null;
 }
 
@@ -3189,9 +3300,15 @@ function primarySecondaryRail(
 }
 
 function primaryRoundTripFeePct(slot: SlotRow | null | undefined) {
-  const feeBps = slot?.feeBps;
-  if (feeBps == null || !Number.isFinite(feeBps)) return null;
-  return Number((((Number(feeBps) * 2) / 100)).toFixed(3));
+  const comparison = primaryComparison(slot);
+  const roundTripFeeBps =
+    comparison?.roundTripFeeBps != null && Number.isFinite(comparison.roundTripFeeBps)
+      ? comparison.roundTripFeeBps
+      : slot?.feeBps != null && Number.isFinite(slot.feeBps)
+        ? Number(slot.feeBps) * 2
+        : null;
+  if (roundTripFeeBps == null || !Number.isFinite(roundTripFeeBps)) return null;
+  return Number((Number(roundTripFeeBps) / 100).toFixed(3));
 }
 
 function primaryGrossNetGapPct(slot: SlotRow | null | undefined) {
@@ -3209,9 +3326,20 @@ function primaryGrossNetSummary(slot: SlotRow) {
   const liveSpreadPct = Number.isFinite(liveSpreadRaw) ? liveSpreadRaw : null;
   const feePct = primaryRoundTripFeePct(slot);
   const parts: string[] = [
-    "Live Gross shows the same parent move before friction and fees.",
-    "Live Net is the executable parent exit after spread and fees.",
+    "Live Gross shows the same primary move before friction and fees.",
+    "Live Net is the executable primary exit after spread and fees.",
   ];
+
+  const comparison = primaryComparison(slot);
+  if (comparison?.exactFillKnown === true && comparison.netBasisRate != null) {
+    parts.push(`Primary net basis is reconciled to actual CoinSpot fill ${fmt(comparison.netBasisRate)}.`);
+  } else if (comparison?.netBasisRate != null) {
+    parts.push(
+      `Primary net basis is still using ${basisSourceLabel(comparison.netBasisSource).toLowerCase()} ${fmt(
+        comparison.netBasisRate
+      )} while exact fill proof is pending.`
+    );
+  }
 
   if (Number.isFinite(entrySpreadPct) || Number.isFinite(liveSpreadPct)) {
     parts.push(
@@ -3504,6 +3632,7 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   const regime = rawRegimeValue(s);
   const updated = slotHeartbeatLabel(s, nowMs);
   const trailMovement = primaryTrailMovementLabel(s);
+  const comparison = primaryComparison(s);
 
   // Parent State Analysis
   if (state === "EXITING") {
@@ -3546,6 +3675,20 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
     else parts.push(`Net is flat at ${pctNum(netPct)}.`);
   } else if (state === "WAITING_ENTRY" && Number.isFinite(lifetimeNet)) {
     parts.push(`Lifetime net is ${pctNum(lifetimeNet)}.`);
+  }
+
+  if (comparison?.exactFillKnown === true && comparison.netBasisRate != null) {
+    parts.push(`Primary net basis is reconciled to actual CoinSpot fill ${fmt(comparison.netBasisRate)}.`);
+  } else if (comparison?.netBasisRate != null) {
+    parts.push(
+      `Primary net basis is still using ${basisSourceLabel(comparison.netBasisSource).toLowerCase()} ${fmt(
+        comparison.netBasisRate
+      )} while exact fill proof is pending.`
+    );
+  }
+
+  if (getSecondaryRows(s).length) {
+    parts.push("Secondary trades below reconcile separately from this primary.");
   }
 
   if (trailMovement) {
@@ -4592,13 +4735,13 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
   return (
     <div className="card machine-surface panel-frame engine-status-rail" aria-label="Live engine status">
       <div className="engine-telemetry-head">
-        <div>
-          <div className="engine-telemetry-title">Position Spotlight</div>
-          <div className="engine-telemetry-note">
-            One slot at a time, explained in plain language before the deeper machine detail.
-            Live Net tracks the executable parent exit after spread and fees. Live Gross shows the same parent move before friction and fees.
+          <div>
+            <div className="engine-telemetry-title">Position Spotlight</div>
+            <div className="engine-telemetry-note">
+              One slot at a time, explained in plain language before the deeper machine detail.
+            Live Net tracks the executable primary exit after spread and fees. Live Gross shows the same primary move before friction and fees.
+            </div>
           </div>
-        </div>
 
         <div className="engine-carousel-controls">
           <button
@@ -4981,7 +5124,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
             <div>
               <div className="dashboard-panel-title">Live Primaries</div>
               <div className="dashboard-panel-note">
-                What is already in motion, including protection and exit readiness. Live Net is the executable parent exit after spread and fees. Live Gross is the same parent move before friction and fees.
+                What is already in motion, including protection and exit readiness. Live Net is the executable primary exit after spread and fees. Live Gross is the same primary move before friction and fees.
               </div>
             </div>
             <div className="dashboard-panel-count">{liveSlots.length}</div>
@@ -5714,6 +5857,11 @@ const SlotModal = React.memo(function SlotModal(props: {
 
           <CollapsibleBlock title="Primary Position" defaultOpen>
           <div className="slot-section">Core Metrics</div>
+          <div className="slot-v">
+            Live Net uses the current primary sell bid after round-trip fees. Live Gross tracks the same primary
+            move before friction and fees.
+          </div>
+          <div className="slot-v">{primaryComparisonScopeLabel(slot)}</div>
 
             <div className="slot-section">Primary Rail</div>
             <div className="primary-rail-grid">
@@ -5759,14 +5907,22 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Capital Lane</div><div className="slot-v">{moneyAud(primaryCapitalLaneAud(slot))}</div></div>
               <div><div className="slot-k">Live Deployed</div><div className="slot-v">{moneyAud(primaryDeployedUnitAud(slot))}</div></div>
               <div><div className="slot-k">Cycles</div><div className="slot-v">{slot.cycles ?? 0}</div></div>
-              <div><div className="slot-k">{String(slot.state || "").toUpperCase() === "WAITING_ENTRY" ? "Reference From Last Exit" : "Entry"}</div><div className="slot-v">{effectiveEntryLabel(slot)}</div></div>
-              <div><div className="slot-k">Now</div><div className="slot-v">{effectiveNowLabel(slot)}</div></div>
+              <div><div className="slot-k">{String(slot.state || "").toUpperCase() === "WAITING_ENTRY" ? "Reference From Last Exit" : "Entry Mid"}</div><div className="slot-v">{effectiveEntryLabel(slot)}</div></div>
+              <div><div className="slot-k">Now Mid</div><div className="slot-v">{effectiveNowLabel(slot)}</div></div>
+              <div><div className="slot-k">Now Bid</div><div className="slot-v">{fmt(primaryNowBid(slot))}</div></div>
+              <div><div className="slot-k">Gross Basis Mid</div><div className="slot-v">{fmt(primaryGrossBasisMid(slot))}</div></div>
+              <div><div className="slot-k">Net Basis Rate</div><div className="slot-v">{fmt(primaryNetBasisRate(slot))}</div></div>
+              <div><div className="slot-k">Basis Source</div><div className="slot-v">{basisSourceLabel(primaryComparison(slot)?.netBasisSource)}</div></div>
+              <div><div className="slot-k">Fill Proof</div><div className="slot-v">{primaryFillProofLabel(slot)}</div></div>
+              <div><div className="slot-k">Submitted Rate</div><div className="slot-v">{fmt(slot.liveEntrySubmittedRate)}</div></div>
+              <div><div className="slot-k">Actual Fill Rate</div><div className="slot-v">{fmt(slot.liveEntryActualRate)}</div></div>
               <div><div className="slot-k">Live Gross</div><div className="slot-v">{pctNum(liveParentGrossPct(slot))}</div></div>
               <div><div className="slot-k">Live Net</div><div className="slot-v">{pctNum(liveParentNetPct(slot))}</div></div>
               <div><div className="slot-k">Lifetime Net</div><div className="slot-v">{pctNum(primaryTotalGainPct(slot))}</div></div>
               <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "-"}</div></div>
               <div><div className="slot-k">Protection</div><div className="slot-v">{primaryProtectionLabel(slot)}</div></div>
               <div><div className="slot-k">Spread</div><div className="slot-v">{pctNum(slot.nowSpreadPct)}</div></div>
+              <div><div className="slot-k">Fee / Friction</div><div className="slot-v">{primaryFeeFrictionLabel(slot)}</div></div>
               <div><div className="slot-k">Drawdown</div><div className="slot-v">{pctNum(slot.drawdownPct)}</div></div>
               <div><div className="slot-k">Secondary Trades</div><div className="slot-v">{secondaryTradesLabel(slot)}</div></div>
               <div><div className="slot-k">Reference From Last Exit</div><div className="slot-v">{fmt(slot.reentryTargetMid)}</div></div>
@@ -5827,7 +5983,10 @@ const SlotModal = React.memo(function SlotModal(props: {
                       <div><div className="slot-k">Signal</div><div className="slot-v">{subslot.subslotSignalState ?? "-"}</div></div>
                       <div><div className="slot-k">Confirm Ticks</div><div className="slot-v">{subslot.subslotConfirmTicks ?? "-"}</div></div>
                       <div><div className="slot-k">Entry Mid</div><div className="slot-v">{fmt(subslot.subslotEntryMid)}</div></div>
-                      <div><div className="slot-k">Live Now</div><div className="slot-v">{subslotLiveNowLabel(subslot, slot)}</div></div>
+                      <div><div className="slot-k">Now Mid</div><div className="slot-v">{fmt(comparisonNowMid(secondaryComparison(subslot), subslot.subslotNowMid ?? slot.nowMid))}</div></div>
+                      <div><div className="slot-k">Net Basis Rate</div><div className="slot-v">{fmt(secondaryComparison(subslot)?.netBasisRate ?? subslot.subslotActualRate ?? subslot.subslotSubmittedRate)}</div></div>
+                      <div><div className="slot-k">Basis Source</div><div className="slot-v">{basisSourceLabel(secondaryComparison(subslot)?.netBasisSource)}</div></div>
+                      <div><div className="slot-k">Actual Fill Rate</div><div className="slot-v">{fmt(subslot.subslotActualRate)}</div></div>
                       <div><div className="slot-k">Gross</div><div className="slot-v">{pctNum(subslot.subslotGrossPct)}</div></div>
                       <div><div className="slot-k">Live Net</div><div className="slot-v">{pctNum(subslot.subslotNetPct)}</div></div>
                       <div><div className="slot-k">Last Result (AUD)</div><div className="slot-v">{moneyAud(subslot.subslotProfitAud)}</div></div>
