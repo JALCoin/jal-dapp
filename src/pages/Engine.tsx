@@ -1083,7 +1083,7 @@ const PRIMARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Primary Profit Ladder",
     summary:
-      "Global hold levels arm at 1.5%, 2.5%, 4.0%, and 6.0% net. Default lock floors are 0.70%, 1.40%, and 2.60%, with LVL4 switching to a 3.0% peak trail.",
+      "Global hold levels arm at 1.5%, 2.5%, 4.0%, and 6.0% net. Default lock floors are 0.70%, 1.40%, and 2.60%, with LVL4 now arming a bid trail plus a retained executable-net floor.",
     detail:
       "Most live behavior is then refined by per-coin trail overrides. Re-entry mode is EXIT_DROP with a 1.0% target below the last confirmed exit.",
   },
@@ -1543,7 +1543,7 @@ function primaryLvl4NetTrailBufferPct(slot: SlotRow) {
 }
 
 function primaryTrailLabel(slot: SlotRow) {
-  if (slot.level === 4) return "LVL4 bid + net trail";
+  if (slot.level === 4) return "LVL4 armed dual trail";
   if (!(slot.level >= 1 && slot.level <= 3)) return "-";
 
   const lockPct = slot.lockPct;
@@ -3172,7 +3172,7 @@ function primaryExitCountdownLabel(
 ) {
   const progress = primaryExitProgressModel(slot, holding);
   if (!progress.totalCount) return "Levels unavailable";
-  if (progress.isTrailing) return "Trail active";
+  if (progress.isTrailing) return "Dual trail active";
   if (!progress.nextStep) return "Protection armed";
   return `${progress.totalCount - progress.currentLevel} levels remaining`;
 }
@@ -3199,9 +3199,16 @@ function primaryExitProgressBlock(
       </div>
       <div className="entry-progress-meta">
         <span>
-          {progress.currentFloor != null && Number.isFinite(progress.currentFloor) && progress.currentFloor > 0
-            ? `Floor ${pctNum(progress.currentFloor)}`
-            : "No floor armed"}
+          {progress.isTrailing
+            ? (() => {
+                const lvl4Step = progress.steps.find((step) => step.key === "lvl4");
+                return lvl4Step?.armPct != null && Number.isFinite(lvl4Step.armPct)
+                  ? `LVL4 armed at ${pctNum(lvl4Step.armPct)}`
+                  : "LVL4 armed";
+              })()
+            : progress.currentFloor != null && Number.isFinite(progress.currentFloor) && progress.currentFloor > 0
+              ? `Floor ${pctNum(progress.currentFloor)}`
+              : "No floor armed"}
         </span>
         <span>{primaryExitCountdownLabel(slot, holding)}</span>
       </div>
@@ -3635,12 +3642,12 @@ function primaryProtectionLabel(slot: SlotRow) {
   if (state === "DEPLOYING") return "Awaiting entry proof";
 
   if (state === "LVL4_TRAIL") {
-    const parts = ["LVL4 dual trail"];
+    const parts = ["LVL4 armed", "exit on first breach"];
     if (lvl4FloorBid != null && Number.isFinite(lvl4FloorBid)) {
-      parts.push(`bid ${fmt(lvl4FloorBid)}`);
+      parts.push(`bid floor ${fmt(lvl4FloorBid)}`);
     }
     if (lvl4FloorNetPct != null && Number.isFinite(lvl4FloorNetPct)) {
-      parts.push(`net ${pctNum(lvl4FloorNetPct)}`);
+      parts.push(`net floor ${pctNum(lvl4FloorNetPct)}`);
     }
     if (lvl4BidBufferPct != null && Number.isFinite(lvl4BidBufferPct)) {
       parts.push(`bid ${pctNum(lvl4BidBufferPct)} left`);
