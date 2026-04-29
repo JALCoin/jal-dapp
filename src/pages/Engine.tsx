@@ -2275,11 +2275,17 @@ function secondaryPriorityScore(subslot: SubslotRow) {
   return 10;
 }
 
-function getRelevantSecondaryRow(slot: SlotRow): SubslotRow | null {
+function getCurrentSecondaryRow(slot: SlotRow): SubslotRow | null {
   const secondaries = getSubslots(slot);
   if (!secondaries.length) return null;
+  const current = secondaries.filter((subslot) => {
+    const state = String(subslot.subslotState || "").toUpperCase();
+    if (state === "ACTIVE" || state === "BUY_SUBMITTED" || state === "SELL_SUBMITTED") return true;
+    return isSubslotBusy(subslot);
+  });
+  if (!current.length) return null;
 
-  return [...secondaries].sort((a, b) => {
+  return [...current].sort((a, b) => {
     const scoreDelta = secondaryPriorityScore(b) - secondaryPriorityScore(a);
     if (scoreDelta !== 0) return scoreDelta;
 
@@ -2302,7 +2308,7 @@ function getRelevantSecondaryRow(slot: SlotRow): SubslotRow | null {
 }
 
 function getPrimarySecondarySnapshot(slot: SlotRow) {
-  return getRelevantSecondaryRow(slot);
+  return getCurrentSecondaryRow(slot);
 }
 
 function isSubslotBusy(subslot: SubslotRow): boolean {
@@ -2737,7 +2743,8 @@ function primarySubslotToneClass(slot: SlotRow) {
 
 function primarySubslotDecisionLabel(slot: SlotRow) {
   const primary = getPrimarySecondarySnapshot(slot);
-  return primary ? subslotDecisionLabel(primary) : "Idle";
+  if (primary) return subslotDecisionLabel(primary);
+  return getSubslots(slot).length ? "Awaiting primary exit" : "Idle";
 }
 
 function primarySubslotLiveNowLabel(slot: SlotRow) {
@@ -3988,7 +3995,10 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
 
 function primaryLiveSubslotAnalysis(slot: SlotRow, nowMs: number) {
   const primary = getPrimarySecondarySnapshot(slot);
-  return primary ? liveSubslotAnalysis(primary, slot, nowMs) : "No Jrd Secondary records available.";
+  if (primary) return liveSubslotAnalysis(primary, slot, nowMs);
+  return getSubslots(slot).length
+    ? "No active Jrd Secondary. Waiting for the next secondary setup or the normal primary exit."
+    : "No Jrd Secondary records available.";
 }
 
 function sortMarketRows(rows: MarketRow[], sortKey: SortKey, sortDir: SortDir) {
@@ -6066,23 +6076,23 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Total Net Gain (AUD)</div><div className="slot-v">{moneyAud(secondaryTotalGainAud(slot))}</div></div>
               {getSecondaryRows(slot).length ? (
                 <>
-                  <div><div className="slot-k">Latest Secondary Trade</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
-                    <div><div className="slot-k">Latest Trigger Band</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerBandLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
-                    <div><div className="slot-k">Latest Trigger Summary</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerSummary(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
-                    <div><div className="slot-k">Latest To Live</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotLiveCounterLabel(getPrimarySecondarySnapshot(slot) as SubslotRow, slot, props.subslotConfig) : "-"}</div></div>
-                    <div><div className="slot-k">Latest Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
-                    <div><div className="slot-k">Latest Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
-                    <div><div className="slot-k">Latest Exit Gate</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExitGateStateLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
-                    <div><div className="slot-k">Latest Needs</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExitNeedsLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
-                    <div><div className="slot-k">Latest Exec Exit</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExecutableExitLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
-                    <div><div className="slot-k">Latest Quote Quality</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotEntryQuoteStatusLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                  <div><div className="slot-k">Current Secondary State</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
+                    <div><div className="slot-k">Current Trigger Band</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerBandLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Current Trigger Summary</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerSummary(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Current To Live</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotLiveCounterLabel(getPrimarySecondarySnapshot(slot) as SubslotRow, slot, props.subslotConfig) : "-"}</div></div>
+                    <div><div className="slot-k">Current Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
+                    <div><div className="slot-k">Current Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
+                    <div><div className="slot-k">Current Exit Gate</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExitGateStateLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Current Needs</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExitNeedsLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Current Exec Exit</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExecutableExitLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Current Quote Quality</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotEntryQuoteStatusLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
                   </>
               ) : null}
             </div>
 
             {getSecondaryRows(slot).length ? (
               <>
-                <div className="slot-section">Latest Secondary Trades</div>
+                <div className="slot-section">Secondary Trade History</div>
                 <div><div className="slot-k">Live Analysis</div><div className="slot-v">{primaryLiveSubslotAnalysis(slot, nowMs)}</div></div>
                 {subslotExitGateBlock(getPrimarySecondarySnapshot(slot), nowMs)}
                 {subslotEntryQualityBlock(getPrimarySecondarySnapshot(slot))}
