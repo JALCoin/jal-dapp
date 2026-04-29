@@ -612,6 +612,7 @@ type ManagerStatus = WorkerStatus & {
       lvl1?: ManagerLevelTrailConfig;
       lvl2?: ManagerLevelTrailConfig;
       lvl3?: ManagerLevelTrailConfig;
+      lvl4Net?: ManagerLevelTrailConfig;
       volatility?: ManagerVolatilityTrailConfig;
     };
     coinOverrides?: Record<string, string[]>;
@@ -1511,6 +1512,12 @@ function primaryLvl4TrailFloorBid(slot: SlotRow) {
   return Number(peakBid) * (1 - LVL4_TRAIL_FALLBACK_PCT);
 }
 
+function primaryLvl4NetTrailFloorPct(slot: SlotRow) {
+  if (slot.level !== 4) return null;
+  const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
+  return floorPct != null && Number.isFinite(floorPct) ? Number(floorPct) : null;
+}
+
 function primaryLvl4TrailBufferPct(slot: SlotRow) {
   const floorBid = primaryLvl4TrailFloorBid(slot);
   const nowBid = primaryComparison(slot)?.nowBid ?? slot.nowBid;
@@ -1523,8 +1530,20 @@ function primaryLvl4TrailBufferPct(slot: SlotRow) {
   return ((Number(nowBid) - floorBid) / Number(nowBid)) * 100;
 }
 
+function primaryLvl4NetTrailBufferPct(slot: SlotRow) {
+  const floorPct = primaryLvl4NetTrailFloorPct(slot);
+  const liveNet = liveParentNetPct(slot);
+  if (
+    !(floorPct != null && Number.isFinite(floorPct)) ||
+    !(liveNet != null && Number.isFinite(liveNet))
+  ) {
+    return null;
+  }
+  return Number(liveNet) - Number(floorPct);
+}
+
 function primaryTrailLabel(slot: SlotRow) {
-  if (slot.level === 4) return "LVL4 peak trail";
+  if (slot.level === 4) return "LVL4 bid + net trail";
   if (!(slot.level >= 1 && slot.level <= 3)) return "-";
 
   const lockPct = slot.lockPct;
@@ -1563,8 +1582,16 @@ function primaryTrailToneClass(slot: SlotRow) {
 
 function primaryTrailFloorLabel(slot: SlotRow) {
   const lvl4FloorBid = primaryLvl4TrailFloorBid(slot);
-  if (slot.level === 4 && lvl4FloorBid != null && Number.isFinite(lvl4FloorBid)) {
-    return `Bid ${fmt(lvl4FloorBid)}`;
+  const lvl4FloorNet = primaryLvl4NetTrailFloorPct(slot);
+  if (slot.level === 4) {
+    const parts: string[] = [];
+    if (lvl4FloorBid != null && Number.isFinite(lvl4FloorBid)) {
+      parts.push(`Bid ${fmt(lvl4FloorBid)}`);
+    }
+    if (lvl4FloorNet != null && Number.isFinite(lvl4FloorNet)) {
+      parts.push(`Net ${pctNum(lvl4FloorNet)}`);
+    }
+    if (parts.length) return parts.join(" | ");
   }
   if (slot.levelTrailFloorPct != null && Number.isFinite(slot.levelTrailFloorPct)) {
     return pctNum(slot.levelTrailFloorPct);
@@ -1574,14 +1601,41 @@ function primaryTrailFloorLabel(slot: SlotRow) {
 }
 
 function primaryTrailPeakLabel(slot: SlotRow) {
-  if (slot.level === 4 && slot.peakBid != null && Number.isFinite(slot.peakBid)) {
-    return `Bid ${fmt(slot.peakBid)}`;
+  if (slot.level === 4) {
+    const parts: string[] = [];
+    if (slot.peakBid != null && Number.isFinite(slot.peakBid)) {
+      parts.push(`Bid ${fmt(slot.peakBid)}`);
+    }
+    if (slot.levelTrailPeakNetPct != null && Number.isFinite(slot.levelTrailPeakNetPct)) {
+      parts.push(`Net ${pctNum(slot.levelTrailPeakNetPct)}`);
+    }
+    if (parts.length) return parts.join(" | ");
   }
   if (slot.levelTrailPeakNetPct != null && Number.isFinite(slot.levelTrailPeakNetPct)) {
     return pctNum(slot.levelTrailPeakNetPct);
   }
   if (slot.level === 4) return "Awaiting peak";
   return "No peak yet";
+}
+
+function primaryTrailFloorTitle(slot: SlotRow) {
+  return slot.level === 4 ? "Trail Floors" : "Trail Floor";
+}
+
+function primaryTrailPeakTitle(slot: SlotRow) {
+  return slot.level === 4 ? "Trail Peaks" : "Trail Peak Net";
+}
+
+function primaryLvl4BidBufferLabel(slot: SlotRow) {
+  const bufferPct = primaryLvl4TrailBufferPct(slot);
+  if (!(bufferPct != null && Number.isFinite(bufferPct))) return "-";
+  return bufferPct >= 0 ? `${pctNum(bufferPct)} to exit` : `${pctNum(Math.abs(bufferPct))} below`;
+}
+
+function primaryLvl4NetBufferLabel(slot: SlotRow) {
+  const bufferPct = primaryLvl4NetTrailBufferPct(slot);
+  if (!(bufferPct != null && Number.isFinite(bufferPct))) return "-";
+  return bufferPct >= 0 ? `${pctNum(bufferPct)} above` : `${pctNum(Math.abs(bufferPct))} below`;
 }
 
 function primaryTrailMovementLabel(slot: SlotRow) {
@@ -3573,18 +3627,26 @@ function primaryProtectionLabel(slot: SlotRow) {
   const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
   const liveNet = liveParentNetPct(slot);
   const lvl4FloorBid = primaryLvl4TrailFloorBid(slot);
-  const lvl4BufferPct = primaryLvl4TrailBufferPct(slot);
+  const lvl4BidBufferPct = primaryLvl4TrailBufferPct(slot);
+  const lvl4FloorNetPct = primaryLvl4NetTrailFloorPct(slot);
+  const lvl4NetBufferPct = primaryLvl4NetTrailBufferPct(slot);
 
   if (state === "EXITING") return "Sell resolving";
   if (state === "DEPLOYING") return "Awaiting entry proof";
 
   if (state === "LVL4_TRAIL") {
-    const parts = ["LVL4 trail active"];
+    const parts = ["LVL4 dual trail"];
     if (lvl4FloorBid != null && Number.isFinite(lvl4FloorBid)) {
       parts.push(`bid ${fmt(lvl4FloorBid)}`);
     }
-    if (lvl4BufferPct != null && Number.isFinite(lvl4BufferPct)) {
-      parts.push(`${pctNum(lvl4BufferPct)} to exit`);
+    if (lvl4FloorNetPct != null && Number.isFinite(lvl4FloorNetPct)) {
+      parts.push(`net ${pctNum(lvl4FloorNetPct)}`);
+    }
+    if (lvl4BidBufferPct != null && Number.isFinite(lvl4BidBufferPct)) {
+      parts.push(`bid ${pctNum(lvl4BidBufferPct)} left`);
+    }
+    if (lvl4NetBufferPct != null && Number.isFinite(lvl4NetBufferPct)) {
+      parts.push(`net ${pctNum(lvl4NetBufferPct)} above`);
     }
     return parts.join(" | ");
   }
@@ -5914,13 +5976,25 @@ const SlotModal = React.memo(function SlotModal(props: {
                 <div className="slot-v">{primaryTrailLabel(slot)}</div>
               </div>
               <div className="primary-rail-item">
-                <div className="slot-k">Trail Floor</div>
+                <div className="slot-k">{primaryTrailFloorTitle(slot)}</div>
                 <div className="slot-v">{primaryTrailFloorLabel(slot)}</div>
               </div>
               <div className="primary-rail-item">
-                <div className="slot-k">Trail Peak Net</div>
+                <div className="slot-k">{primaryTrailPeakTitle(slot)}</div>
                 <div className="slot-v">{primaryTrailPeakLabel(slot)}</div>
               </div>
+              {slot.level === 4 ? (
+                <>
+                  <div className="primary-rail-item">
+                    <div className="slot-k">Bid Buffer To Exit</div>
+                    <div className="slot-v">{primaryLvl4BidBufferLabel(slot)}</div>
+                  </div>
+                  <div className="primary-rail-item">
+                    <div className="slot-k">Net Buffer To Exit</div>
+                    <div className="slot-v">{primaryLvl4NetBufferLabel(slot)}</div>
+                  </div>
+                </>
+              ) : null}
             </div>
 
             <div className="slot-section">Adaptive Trail Inputs</div>
@@ -6350,9 +6424,9 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
               </div>
             </div>
             <div className="engine-upgrade-v">
-              LVL4 {pctNum(holding?.lvl4Pct)} | peak trail {pctNum(holding?.lvl4TrailPct)}
+              LVL4 {pctNum(holding?.lvl4Pct)} | bid trail {pctNum(holding?.lvl4TrailPct)} | exit on first breach
             </div>
-            <div className="engine-upgrade-sub">Levels 1-3 still defend their static lock floors before any additive trail takes over.</div>
+            <div className="engine-upgrade-sub">Levels 1-3 still defend their static lock floors before any additive trail takes over. LVL4 now layers a retained net floor over the open bid trail.</div>
           </div>
 
           <div className="engine-upgrade-item">
@@ -6369,6 +6443,10 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
               <div className="engine-upgrade-line">
                 <span className="engine-upgrade-line-label">LVL3</span>
                 <span className="engine-upgrade-line-value">{managerLevelTrailLabel(levelTrails?.lvl3)}</span>
+              </div>
+              <div className="engine-upgrade-line">
+                <span className="engine-upgrade-line-label">LVL4 NET</span>
+                <span className="engine-upgrade-line-value">{managerLevelTrailLabel(levelTrails?.lvl4Net)}</span>
               </div>
             </div>
             <div className="engine-upgrade-v">
