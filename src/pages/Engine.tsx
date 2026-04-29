@@ -1503,6 +1503,26 @@ function primaryExitFloorLabel(slot: SlotRow) {
   return floor != null && Number.isFinite(floor) ? pctNum(floor) : "Not armed";
 }
 
+const LVL4_TRAIL_FALLBACK_PCT = 0.03;
+
+function primaryLvl4TrailFloorBid(slot: SlotRow) {
+  const peakBid = slot.peakBid;
+  if (!(peakBid != null && Number.isFinite(peakBid) && Number(peakBid) > 0)) return null;
+  return Number(peakBid) * (1 - LVL4_TRAIL_FALLBACK_PCT);
+}
+
+function primaryLvl4TrailBufferPct(slot: SlotRow) {
+  const floorBid = primaryLvl4TrailFloorBid(slot);
+  const nowBid = primaryComparison(slot)?.nowBid ?? slot.nowBid;
+  if (
+    !(floorBid != null && Number.isFinite(floorBid) && floorBid > 0) ||
+    !(nowBid != null && Number.isFinite(nowBid) && Number(nowBid) > 0)
+  ) {
+    return null;
+  }
+  return ((Number(nowBid) - floorBid) / Number(nowBid)) * 100;
+}
+
 function primaryTrailLabel(slot: SlotRow) {
   if (slot.level === 4) return "LVL4 peak trail";
   if (!(slot.level >= 1 && slot.level <= 3)) return "-";
@@ -1542,6 +1562,10 @@ function primaryTrailToneClass(slot: SlotRow) {
 }
 
 function primaryTrailFloorLabel(slot: SlotRow) {
+  const lvl4FloorBid = primaryLvl4TrailFloorBid(slot);
+  if (slot.level === 4 && lvl4FloorBid != null && Number.isFinite(lvl4FloorBid)) {
+    return `Bid ${fmt(lvl4FloorBid)}`;
+  }
   if (slot.levelTrailFloorPct != null && Number.isFinite(slot.levelTrailFloorPct)) {
     return pctNum(slot.levelTrailFloorPct);
   }
@@ -1550,6 +1574,9 @@ function primaryTrailFloorLabel(slot: SlotRow) {
 }
 
 function primaryTrailPeakLabel(slot: SlotRow) {
+  if (slot.level === 4 && slot.peakBid != null && Number.isFinite(slot.peakBid)) {
+    return `Bid ${fmt(slot.peakBid)}`;
+  }
   if (slot.levelTrailPeakNetPct != null && Number.isFinite(slot.levelTrailPeakNetPct)) {
     return pctNum(slot.levelTrailPeakNetPct);
   }
@@ -3545,9 +3572,22 @@ function primaryProtectionLabel(slot: SlotRow) {
   const state = String(slot.state || "").toUpperCase();
   const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
   const liveNet = liveParentNetPct(slot);
+  const lvl4FloorBid = primaryLvl4TrailFloorBid(slot);
+  const lvl4BufferPct = primaryLvl4TrailBufferPct(slot);
 
   if (state === "EXITING") return "Sell resolving";
   if (state === "DEPLOYING") return "Awaiting entry proof";
+
+  if (state === "LVL4_TRAIL") {
+    const parts = ["LVL4 trail active"];
+    if (lvl4FloorBid != null && Number.isFinite(lvl4FloorBid)) {
+      parts.push(`bid ${fmt(lvl4FloorBid)}`);
+    }
+    if (lvl4BufferPct != null && Number.isFinite(lvl4BufferPct)) {
+      parts.push(`${pctNum(lvl4BufferPct)} to exit`);
+    }
+    return parts.join(" | ");
+  }
 
   if (floorPct != null && Number.isFinite(floorPct) && Number(floorPct) > 0) {
     const parts = [`Floor ${pctNum(floorPct)}`];
