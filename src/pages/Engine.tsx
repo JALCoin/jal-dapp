@@ -4198,7 +4198,6 @@ function slotNeedsAction(slot: SlotRow) {
   const stage = positionStageForSlot(slot);
   return (
     stage === "entering" ||
-    stage === "exit-waiting" ||
     stage === "exiting" ||
     tracking === "SPREAD_BLOCKED" ||
     tracking === "NO_MARKET" ||
@@ -5157,6 +5156,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
     const stage = positionStageForSlot(slot);
     return (
       stage === "entering" ||
+      stage === "exit-waiting" ||
       stage === "live-primary" ||
       stage === "protected-primary"
     );
