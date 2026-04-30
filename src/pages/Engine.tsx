@@ -132,6 +132,7 @@ type PrimarySurface = {
 
 type SecondarySummary = {
   liveCount?: number | null;
+  openCount?: number | null;
   liveNetPct?: number | null;
   totalNetGainAud?: number | null;
   cycles?: number | null;
@@ -145,6 +146,8 @@ type SubslotRow = {
   subslotTriggerParentNetPct?: number | null;
   subslotEntryParentNetPct?: number | null;
   subslotState?: string | null;
+  subslotIntegrityState?: string | null;
+  subslotExcludedFromOccupancy?: boolean | null;
   subslotEntryMode?: string | null;
   subslotSignalState?: string | null;
   subslotSignalReason?: string | null;
@@ -313,6 +316,8 @@ type SlotRow = {
   subslotActive?: boolean | null;
   subslotCount?: number | null;
   subslotState?: string | null;
+  subslotIntegrityState?: string | null;
+  subslotExcludedFromOccupancy?: boolean | null;
   subslotOpenedAt?: number | null;
   subslotClosedAt?: number | null;
   subslotCooldownUntil?: number | null;
@@ -2111,7 +2116,7 @@ function primaryLastRealizedProfitAud(slot: SlotRow | null | undefined) {
 function secondaryLiveCount(slot: SlotRow | null | undefined) {
   if (!slot) return 0;
   const localLiveCount = countActiveSecondaries(slot);
-  if (getSubslots(slot).length) return localLiveCount;
+  if (getSecondaryRows(slot).length) return localLiveCount;
   const liveCount = secondarySummaryData(slot)?.liveCount;
   if (liveCount != null && Number.isFinite(liveCount)) return liveCount;
   return localLiveCount;
@@ -2175,6 +2180,8 @@ function getSubslots(slot: SlotRow): SubslotRow[] {
       subslotId: slot.subslotOrderId ?? `${slot.id}-legacy-subslot`,
       subslotSequence: slot.subslotCount ?? 1,
       subslotState: slot.subslotState,
+      subslotIntegrityState: slot.subslotIntegrityState,
+      subslotExcludedFromOccupancy: slot.subslotExcludedFromOccupancy,
       subslotTriggerBandIndex: slot.subslotTriggerBandIndex,
       subslotTriggerParentNetPct: slot.subslotTriggerParentNetPct,
       subslotEntryParentNetPct: slot.subslotEntryParentNetPct,
@@ -2255,12 +2262,23 @@ function getSubslots(slot: SlotRow): SubslotRow[] {
 }
 
 function getSecondaryRows(slot: SlotRow) {
-  return getSubslots(slot);
+  return getSubslots(slot).filter((subslot) => !isExcludedSecondaryOccupancy(subslot));
 }
 
 function getPrimarySubslot(slot: SlotRow): SubslotRow | null {
-  const subslots = getSubslots(slot);
+  const subslots = getSecondaryRows(slot);
   return subslots.length ? subslots[0] : null;
+}
+
+function secondaryIntegrityState(subslot: SubslotRow | null | undefined) {
+  return String(subslot?.subslotIntegrityState || "").trim().toUpperCase();
+}
+
+function isExcludedSecondaryOccupancy(subslot: SubslotRow | null | undefined) {
+  const integrity = secondaryIntegrityState(subslot);
+  return subslot?.subslotExcludedFromOccupancy === true ||
+    integrity === "QUARANTINED_DUST_FILL" ||
+    integrity === "CLOSED_RECONCILE_REMNANT";
 }
 
 function secondaryPriorityScore(subslot: SubslotRow) {
@@ -2279,7 +2297,7 @@ function secondaryPriorityScore(subslot: SubslotRow) {
 }
 
 function getCurrentSecondaryRow(slot: SlotRow): SubslotRow | null {
-  const secondaries = getSubslots(slot);
+  const secondaries = getSecondaryRows(slot);
   if (!secondaries.length) return null;
   const current = secondaries.filter((subslot) => {
     const state = String(subslot.subslotState || "").toUpperCase();
@@ -2315,6 +2333,7 @@ function getPrimarySecondarySnapshot(slot: SlotRow) {
 }
 
 function isSubslotBusy(subslot: SubslotRow): boolean {
+  if (isExcludedSecondaryOccupancy(subslot)) return false;
   const state = String(subslot.subslotState || "").toUpperCase();
   const signal = String(subslot.subslotSignalState || "").toUpperCase();
   return (
@@ -2330,7 +2349,7 @@ function isSubslotBusy(subslot: SubslotRow): boolean {
 }
 
 function getActiveSubslots(slot: SlotRow): SubslotRow[] {
-  return getSubslots(slot).filter((subslot) => String(subslot.subslotState || "").toUpperCase() === "ACTIVE");
+  return getSecondaryRows(slot).filter((subslot) => String(subslot.subslotState || "").toUpperCase() === "ACTIVE");
 }
 
 function getActiveSecondaryRows(slot: SlotRow) {
@@ -2338,15 +2357,15 @@ function getActiveSecondaryRows(slot: SlotRow) {
 }
 
 function hasPendingSubslotBuys(slot: SlotRow) {
-  return getSubslots(slot).some((subslot) => String(subslot.subslotState || "").toUpperCase() === "BUY_SUBMITTED");
+  return getSecondaryRows(slot).some((subslot) => String(subslot.subslotState || "").toUpperCase() === "BUY_SUBMITTED");
 }
 
 function hasPendingSubslotSells(slot: SlotRow) {
-  return getSubslots(slot).some((subslot) => String(subslot.subslotState || "").toUpperCase() === "SELL_SUBMITTED");
+  return getSecondaryRows(slot).some((subslot) => String(subslot.subslotState || "").toUpperCase() === "SELL_SUBMITTED");
 }
 
 function getSubslotOpenCount(slot: SlotRow) {
-  return getSubslots(slot).filter((subslot) => {
+  return getSecondaryRows(slot).filter((subslot) => {
     const state = String(subslot.subslotState || "").toUpperCase();
     return state === "ACTIVE" || state === "BUY_SUBMITTED" || state === "SELL_SUBMITTED";
   }).length;
@@ -2362,7 +2381,7 @@ function getSubslotRealizedProfit(slot: SlotRow) {
 }
 
 function getClosedSubslotCount(slot: SlotRow) {
-  return getSubslots(slot).filter((subslot) => String(subslot.subslotState || "").toUpperCase() === "CLOSED").length;
+  return getSecondaryRows(slot).filter((subslot) => String(subslot.subslotState || "").toUpperCase() === "CLOSED").length;
 }
 
 function countActiveSecondaries(slot: SlotRow) {
@@ -2747,7 +2766,7 @@ function primarySubslotToneClass(slot: SlotRow) {
 function primarySubslotDecisionLabel(slot: SlotRow) {
   const primary = getPrimarySecondarySnapshot(slot);
   if (primary) return subslotDecisionLabel(primary);
-  return getSubslots(slot).length ? "Awaiting primary exit" : "Idle";
+  return getSecondaryRows(slot).length ? "Awaiting primary exit" : "Idle";
 }
 
 function primarySubslotLiveNowLabel(slot: SlotRow) {
@@ -3422,7 +3441,7 @@ function secondaryRailItems(
 ): SecondaryRailItem[] {
   const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
   const configuredBands = configuredSubslotTriggerBands(subslotConfig, slot.coin);
-  const currentRows = getSubslots(slot).filter((subslot) => {
+  const currentRows = getSecondaryRows(slot).filter((subslot) => {
     const state = String(subslot.subslotState || "").toUpperCase();
     return state === "ACTIVE" || state === "BUY_SUBMITTED" || state === "SELL_SUBMITTED" || isSubslotBusy(subslot);
   });
@@ -4139,7 +4158,7 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
 function primaryLiveSubslotAnalysis(slot: SlotRow, nowMs: number) {
   const primary = getPrimarySecondarySnapshot(slot);
   if (primary) return liveSubslotAnalysis(primary, slot, nowMs);
-  return getSubslots(slot).length
+  return getSecondaryRows(slot).length
     ? "No active Jrd Secondary. Waiting for the next secondary setup or the normal primary exit."
     : "No Jrd Secondary records available.";
 }
@@ -4159,7 +4178,7 @@ function sortMarketRows(rows: MarketRow[], sortKey: SortKey, sortDir: SortDir) {
 }
 
 function derivePriorityScore(s: SlotRow) {
-  const subslots = getSubslots(s);
+  const subslots = getSecondaryRows(s);
   const hasPendingSell = subslots.some((subslot) => String(subslot.subslotState || "").toUpperCase() === "SELL_SUBMITTED");
   const hasPendingBuy = subslots.some((subslot) => String(subslot.subslotState || "").toUpperCase() === "BUY_SUBMITTED");
   const hasActive = subslots.some((subslot) => String(subslot.subslotState || "").toUpperCase() === "ACTIVE");
@@ -7055,14 +7074,14 @@ export default function Engine() {
     const q = query.trim().toUpperCase();
     let list = slotRows.slice();
 
-    if (q) {
-      list = list.filter((s) => {
-        const subslotFields = getSubslots(s).flatMap((subslot) => [
-          subslot.subslotId ?? "",
-          subslot.subslotState ?? "",
-          subslot.subslotSignalState ?? "",
-          subslot.subslotEntryMode ?? "",
-          subslot.subslotExitReason ?? "",
+      if (q) {
+        list = list.filter((s) => {
+          const subslotFields = getSecondaryRows(s).flatMap((subslot) => [
+            subslot.subslotId ?? "",
+            subslot.subslotState ?? "",
+            subslot.subslotSignalState ?? "",
+            subslot.subslotEntryMode ?? "",
+            subslot.subslotExitReason ?? "",
         ]);
         const fields = [
           s.coin ?? "",
@@ -7211,7 +7230,7 @@ export default function Engine() {
     if (regime.includes("CONSOLIDATION")) out.consolidation += 1;
     if (s.consolidationBreakoutReady === true) out.breakoutReady += 1;
     if (String(s.state).toUpperCase() === "WAITING_ENTRY") out.waiting += 1;
-    for (const subslot of getSubslots(s)) {
+    for (const subslot of getSecondaryRows(s)) {
       const state = String(subslot.subslotState || "").toUpperCase();
       if (state === "ACTIVE") out.activeSubslots += 1;
       if (state === "BUY_SUBMITTED") out.pendingSubslotEntries += 1;
