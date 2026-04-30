@@ -3292,6 +3292,10 @@ type SecondaryRailItem = {
   stateLabel: string;
   counterLabel: string;
   toneClass: string;
+  isActive: boolean;
+  isPendingBuy: boolean;
+  isPendingSell: boolean;
+  isOpen: boolean;
 };
 
 function secondaryRequiresRecoveryStyle(subslot: SubslotRow | null | undefined, parent: SlotRow) {
@@ -3306,9 +3310,9 @@ function secondaryRailBandContextLabel(
   fallbackBandIndex?: number | null
 ) {
   const triggerPct = configuredSubslotTriggerPct(subslot, subslotConfig, parent.coin, fallbackBandIndex);
-  if (triggerPct != null && Number.isFinite(triggerPct)) return `Band ${pctNum(triggerPct)}`;
+  if (triggerPct != null && Number.isFinite(triggerPct)) return `Parent band ${pctNum(triggerPct)}`;
   if (subslot) return subslotTriggerBandLabel(subslot);
-  return "Band";
+  return "Parent band";
 }
 
 function secondaryRailItemStateLabel(
@@ -3318,29 +3322,7 @@ function secondaryRailItemStateLabel(
   fallbackBandIndex?: number | null
 ) {
   const bandLabel = secondaryRailBandContextLabel(subslot, parent, subslotConfig, fallbackBandIndex);
-  if (!subslot) return `Idle | ${bandLabel}`;
-
-  const state = String(subslot.subslotState || "").toUpperCase();
-  const signal = String(subslot.subslotSignalState || "").toUpperCase();
-  const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
-
-  if (state === "BUY_SUBMITTED") return `Entry | ${bandLabel}`;
-  if (state === "SELL_SUBMITTED") return `Exit | ${bandLabel}`;
-  if (state === "ACTIVE") {
-    if (gateState === "READY") return `Sell ready | ${bandLabel}`;
-    if (gateState === "WAIT_CONFIRM") return `Sell confirm | ${bandLabel}`;
-    if (gateState === "WAIT_GREEN") return `Sell gate | ${bandLabel}`;
-    if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot.subslotRecoveredConfirmed === false) {
-      return `Hold | ${bandLabel}`;
-    }
-    return `Live | ${bandLabel}`;
-  }
-  if (signal === "REVERSAL_CONFIRMING") return `Confirm | ${bandLabel}`;
-  if (signal === "BOUNCE_SEEN") return `Bounce | ${bandLabel}`;
-  if (signal === "TRACKING") return `Track | ${bandLabel}`;
-  if (signal === "ARMED") return `Armed | ${bandLabel}`;
-  if (state === "CLOSED") return `Closed | ${bandLabel}`;
-  return `Idle | ${bandLabel}`;
+  return bandLabel;
 }
 
 function secondaryRailCounterLabel(
@@ -3354,28 +3336,58 @@ function secondaryRailCounterLabel(
     const executableNetPct = subslotExecutableExitNetPct(subslot);
     const requiredNetPct = subslotExitRequiredNetPct(subslot);
     const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
-    const netLabel = executableNetPct != null ? `Net ${pctNum(executableNetPct)}` : "Net ?";
+    const netLabel = executableNetPct != null ? `Now net ${pctNum(executableNetPct)}` : "Now net unavailable";
     if (gateState === "WAIT_GREEN" && requiredNetPct != null) {
-      return `${netLabel} | need ${pctNum(requiredNetPct)}`;
+      return `${netLabel} | sell at >= ${pctNum(requiredNetPct)}`;
     }
     if (gateState === "WAIT_CONFIRM") {
-      return `${netLabel} | confirming exit`;
+      return `${netLabel} | confirming sell`;
     }
     if (gateState === "READY") {
-      return `${netLabel} | exit ready`;
+      return `${netLabel} | sell ready`;
     }
     if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot?.subslotRecoveredConfirmed === false) {
-      return `${netLabel} | waiting recovery`;
+      return `${netLabel} | holding for recovery`;
     }
     if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot?.subslotRecoveredConfirmed === true) {
-      return `${netLabel} | harvesting`;
+      return `${netLabel} | waiting harvest exit`;
     }
-    if (executableNetPct != null) return `${netLabel} | monitoring`;
-    return "Monitoring exit";
+    if (executableNetPct != null) return `${netLabel} | live trade`;
+    return "Live trade | monitoring exit";
   }
-  if (state === "BUY_SUBMITTED") return "Awaiting fill";
-  if (state === "SELL_SUBMITTED") return "Awaiting exit fill";
-  return subslotLiveCounterLabel(subslot, parent, subslotConfig, fallbackBandIndex);
+  if (state === "BUY_SUBMITTED") return "Buy submitted | awaiting fill";
+  if (state === "SELL_SUBMITTED") return "Sell submitted | awaiting fill";
+
+  const signal = String(subslot?.subslotSignalState || "").toUpperCase();
+  const distancePct = subslotLiveDistancePct(subslot, parent, subslotConfig, fallbackBandIndex);
+  if (distancePct != null) {
+    if (distancePct === 0) {
+      if (signal === "REVERSAL_CONFIRMING") return "Buy eligible | confirming";
+      if (signal === "BOUNCE_SEEN") return "Buy eligible | bounce seen";
+      if (signal === "TRACKING") return "Buy eligible | watching";
+      return "Buy eligible now";
+    }
+    return `Parent needs ${pctNum(distancePct)} more drawdown`;
+  }
+
+  if (signal === "ARMED") return "Buy band armed";
+  if (signal === "REVERSAL_CONFIRMING") return "Buy confirming";
+  if (signal === "BOUNCE_SEEN" || signal === "TRACKING") return "Watching for buy";
+  if (state === "CLOSED") return "Trade closed";
+  return "Waiting for parent drawdown";
+}
+
+function secondaryRailVisualCounts(items: SecondaryRailItem[]) {
+  return items.reduce(
+    (acc, item) => {
+      if (item.isActive) acc.active += 1;
+      if (item.isPendingBuy) acc.pendingBuy += 1;
+      if (item.isPendingSell) acc.pendingSell += 1;
+      if (item.isOpen) acc.open += 1;
+      return acc;
+    },
+    { active: 0, pendingBuy: 0, pendingSell: 0, open: 0 }
+  );
 }
 
 function secondaryRailSlotCapacity(
@@ -3460,6 +3472,10 @@ function secondaryRailItems(
         : distancePct === 0
           ? "is-tracking"
           : "is-muted",
+      isActive: String(liveSubslot?.subslotState || "").toUpperCase() === "ACTIVE",
+      isPendingBuy: String(liveSubslot?.subslotState || "").toUpperCase() === "BUY_SUBMITTED",
+      isPendingSell: String(liveSubslot?.subslotState || "").toUpperCase() === "SELL_SUBMITTED",
+      isOpen: ["ACTIVE", "BUY_SUBMITTED", "SELL_SUBMITTED"].includes(String(liveSubslot?.subslotState || "").toUpperCase()),
     });
   }
 
@@ -3468,11 +3484,11 @@ function secondaryRailItems(
 
 function secondaryRailSummary(
   slot: SlotRow,
+  items: SecondaryRailItem[],
   subslotConfig: ManagerStatus["subslot"] | null | undefined
 ) {
   const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
-  const openCount = getSubslotOpenCount(slot);
-  const activeCount = getActiveSecondaryRows(slot).length;
+  const counts = secondaryRailVisualCounts(items);
   const realizedAud = getSubslotRealizedProfit(slot);
   const parts: string[] = [];
 
@@ -3480,10 +3496,10 @@ function secondaryRailSummary(
     return `${slotCapacity} tactical secondary slots available during this Primary.`;
   }
 
-  if (openCount > 0) parts.push(`${openCount}/${slotCapacity} open`);
-  if (activeCount > 0) parts.push(`${activeCount} live`);
-  if (hasPendingSubslotBuys(slot)) parts.push("entry pending");
-  if (hasPendingSubslotSells(slot)) parts.push("exit pending");
+  if (counts.open > 0) parts.push(`${counts.open}/${slotCapacity} open`);
+  if (counts.active > 0) parts.push(`${counts.active} live`);
+  if (counts.pendingBuy > 0) parts.push("entry pending");
+  if (counts.pendingSell > 0) parts.push("exit pending");
   if (realizedAud != null) parts.push(`realized ${moneyAud(realizedAud)}`);
 
   return parts.length ? parts.join(" | ") : "Secondary rail idle.";
@@ -3495,10 +3511,9 @@ function primarySecondaryRail(
 ) {
   const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
   const items = secondaryRailItems(slot, subslotConfig);
-  const activeCount = countActiveSecondaries(slot);
-  const openCount = getSubslotOpenCount(slot);
+  const counts = secondaryRailVisualCounts(items);
   const railValue =
-    openCount > activeCount ? `${openCount}/${slotCapacity} open` : `${activeCount}/${slotCapacity} live`;
+    counts.open > counts.active ? `${counts.open}/${slotCapacity} open` : `${counts.active}/${slotCapacity} live`;
 
   return (
     <div className="entry-progress secondary-rail" aria-label="Primary secondary rail">
@@ -3515,7 +3530,7 @@ function primarySecondaryRail(
           </div>
         ))}
       </div>
-      <div className="secondary-rail-summary">{secondaryRailSummary(slot, subslotConfig)}</div>
+      <div className="secondary-rail-summary">{secondaryRailSummary(slot, items, subslotConfig)}</div>
     </div>
   );
 }
