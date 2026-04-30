@@ -3338,40 +3338,40 @@ function secondaryRailCounterLabel(
     const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
     const netLabel = executableNetPct != null ? `Now net ${pctNum(executableNetPct)}` : "Now net unavailable";
     if (gateState === "WAIT_GREEN" && requiredNetPct != null) {
-      return `${netLabel} | sell at >= ${pctNum(requiredNetPct)}`;
+      return `${netLabel} | waiting for green sell >= +${pctNum(Math.abs(requiredNetPct))}`;
     }
     if (gateState === "WAIT_CONFIRM") {
-      return `${netLabel} | confirming sell`;
+      return `${netLabel} | green sell confirming`;
     }
     if (gateState === "READY") {
-      return `${netLabel} | sell ready`;
+      return `${netLabel} | green sell ready`;
     }
     if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot?.subslotRecoveredConfirmed === false) {
-      return `${netLabel} | holding for recovery`;
+      return `${netLabel} | recovery hold active`;
     }
     if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot?.subslotRecoveredConfirmed === true) {
-      return `${netLabel} | waiting harvest exit`;
+      return `${netLabel} | harvest exit waiting`;
     }
-    if (executableNetPct != null) return `${netLabel} | live trade`;
-    return "Live trade | monitoring exit";
+    if (executableNetPct != null) return `${netLabel} | monitoring`;
+    return "Live trade | monitoring";
   }
-  if (state === "BUY_SUBMITTED") return "Buy submitted | awaiting fill";
-  if (state === "SELL_SUBMITTED") return "Sell submitted | awaiting fill";
+  if (state === "BUY_SUBMITTED") return "Band reached | buy submitted, awaiting fill";
+  if (state === "SELL_SUBMITTED") return "Green sell submitted | awaiting fill";
 
   const signal = String(subslot?.subslotSignalState || "").toUpperCase();
   const distancePct = subslotLiveDistancePct(subslot, parent, subslotConfig, fallbackBandIndex);
   if (distancePct != null) {
     if (distancePct === 0) {
-      if (signal === "REVERSAL_CONFIRMING") return "Buy eligible | confirming";
-      if (signal === "BOUNCE_SEEN") return "Buy eligible | bounce seen";
-      if (signal === "TRACKING") return "Buy eligible | watching";
-      return "Buy eligible now";
+      if (signal === "REVERSAL_CONFIRMING") return "Band reached | buy confirming";
+      if (signal === "BOUNCE_SEEN") return "Band reached | bounce seen";
+      if (signal === "TRACKING") return "Band reached | monitoring buy";
+      return "Band reached | buy eligible now";
     }
     return `Parent needs ${pctNum(distancePct)} more drawdown`;
   }
 
-  if (signal === "ARMED") return "Buy band armed";
-  if (signal === "REVERSAL_CONFIRMING") return "Buy confirming";
+  if (signal === "ARMED") return "Waiting for parent band";
+  if (signal === "REVERSAL_CONFIRMING") return "Waiting for buy confirm";
   if (signal === "BOUNCE_SEEN" || signal === "TRACKING") return "Watching for buy";
   if (state === "CLOSED") return "Trade closed";
   return "Waiting for parent drawdown";
