@@ -2770,11 +2770,48 @@ function subslotStateBadgeLabel(subslot: SubslotRow) {
 
 function subslotTriggerBandLabel(subslot: SubslotRow) {
   const index = Number(subslot.subslotTriggerBandIndex);
-  if (Number.isInteger(index) && index >= 0) return `Band ${index + 1}`;
+  if (Number.isInteger(index) && index >= 1) return `Band ${index}`;
   if (subslot.subslotTriggerParentNetPct != null && Number.isFinite(subslot.subslotTriggerParentNetPct)) {
     return "Band trigger";
   }
   return "Legacy trigger";
+}
+
+function configuredSubslotTriggerBands(subslotConfig: ManagerStatus["subslot"] | null | undefined) {
+  return Array.isArray(subslotConfig?.triggerParentNetBandsPct)
+    ? subslotConfig.triggerParentNetBandsPct
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value))
+    : [];
+}
+
+function normalizedSubslotBandIndex(
+  subslot: SubslotRow | null | undefined,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined,
+  fallbackBandIndex?: number | null
+) {
+  const bandIndex = Number(subslot?.subslotTriggerBandIndex);
+  if (Number.isInteger(bandIndex) && bandIndex >= 1) {
+    return bandIndex - 1;
+  }
+
+  const configuredBands = configuredSubslotTriggerBands(subslotConfig);
+  const directTriggerPct = Number(subslot?.subslotTriggerParentNetPct);
+  if (configuredBands.length && Number.isFinite(directTriggerPct)) {
+    const matchedIndex = configuredBands.findIndex((value) => Math.abs(value - directTriggerPct) <= 0.0005);
+    if (matchedIndex >= 0) return matchedIndex;
+  }
+
+  const sequenceIndex = Number(subslot?.subslotSequence);
+  if (Number.isInteger(sequenceIndex) && sequenceIndex >= 1) {
+    return sequenceIndex - 1;
+  }
+
+  if (fallbackBandIndex != null && Number.isInteger(fallbackBandIndex) && fallbackBandIndex >= 0) {
+    return fallbackBandIndex;
+  }
+
+  return null;
 }
 
 function subslotTriggerSummary(subslot: SubslotRow) {
@@ -2798,25 +2835,10 @@ function configuredSubslotTriggerPct(
   const directTriggerPct = Number(subslot?.subslotTriggerParentNetPct);
   if (Number.isFinite(directTriggerPct)) return directTriggerPct;
 
-  const configuredBands = Array.isArray(subslotConfig?.triggerParentNetBandsPct)
-    ? subslotConfig.triggerParentNetBandsPct
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value))
-    : [];
+  const configuredBands = configuredSubslotTriggerBands(subslotConfig);
+  const bandIndex = normalizedSubslotBandIndex(subslot, subslotConfig, fallbackBandIndex);
 
-  let bandIndex = Number(subslot?.subslotTriggerBandIndex);
-  if (!Number.isInteger(bandIndex) || bandIndex < 0) {
-    const sequenceIndex = Number(subslot?.subslotSequence);
-    if (Number.isInteger(sequenceIndex) && sequenceIndex >= 1) {
-      bandIndex = sequenceIndex - 1;
-    } else if (fallbackBandIndex != null && Number.isInteger(fallbackBandIndex) && fallbackBandIndex >= 0) {
-      bandIndex = fallbackBandIndex;
-    } else {
-      bandIndex = Number.NaN;
-    }
-  }
-
-  if (configuredBands.length && Number.isInteger(bandIndex) && bandIndex >= 0 && bandIndex < configuredBands.length) {
+  if (configuredBands.length && bandIndex != null && bandIndex >= 0 && bandIndex < configuredBands.length) {
     return configuredBands[bandIndex];
   }
 
@@ -2868,14 +2890,14 @@ function subslotLiveCounterLabel(
   const distancePct = subslotLiveDistancePct(subslot, parent, subslotConfig, fallbackBandIndex);
   if (distancePct != null) {
     if (distancePct === 0) {
-      if (signal === "REVERSAL_CONFIRMING") return "Band met | confirming";
-      if (signal === "BOUNCE_SEEN") return "Band met | bounce seen";
-      if (signal === "TRACKING") return "Band met | watching";
-      if (signal === "ARMED") return "Band met | waiting gates";
-      if (isPlaceholder || state === "CLOSED") return "Band met | waiting gates";
-      return "Band met";
+      if (signal === "REVERSAL_CONFIRMING") return "Threshold met | confirming";
+      if (signal === "BOUNCE_SEEN") return "Threshold met | bounce seen";
+      if (signal === "TRACKING") return "Threshold met | watching";
+      if (signal === "ARMED") return "Threshold met";
+      if (isPlaceholder || state === "CLOSED") return "Threshold met";
+      return "Threshold met";
     }
-    return `${pctNum(distancePct)} to live`;
+    return `${pctNum(distancePct)} to trigger`;
   }
 
   if (signal === "ARMED") return "Armed";
@@ -3274,6 +3296,28 @@ function secondaryRailItemStateLabel(subslot: SubslotRow | null) {
   return "Idle";
 }
 
+function secondaryRailCounterLabel(
+  subslot: SubslotRow | null | undefined,
+  parent: SlotRow,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined,
+  fallbackBandIndex?: number | null
+) {
+  const state = String(subslot?.subslotState || "").toUpperCase();
+  if (state === "ACTIVE") {
+    const executableNetPct = subslotExecutableExitNetPct(subslot);
+    const requiredNetPct = subslotExitRequiredNetPct(subslot);
+    const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
+    if (gateState === "WAIT_GREEN" && executableNetPct != null && requiredNetPct != null) {
+      return `Net ${pctNum(executableNetPct)} | need ${pctNum(requiredNetPct)}`;
+    }
+    if (executableNetPct != null) return `Net ${pctNum(executableNetPct)}`;
+    return "Monitoring exit";
+  }
+  if (state === "BUY_SUBMITTED") return "Awaiting fill";
+  if (state === "SELL_SUBMITTED") return "Awaiting exit fill";
+  return subslotLiveCounterLabel(subslot, parent, subslotConfig, fallbackBandIndex);
+}
+
 function secondaryRailSlotCapacity(
   slot: SlotRow,
   subslotConfig: ManagerStatus["subslot"] | null | undefined
@@ -3309,37 +3353,57 @@ function secondaryRailItems(
   subslotConfig: ManagerStatus["subslot"] | null | undefined
 ): SecondaryRailItem[] {
   const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
-  const sorted = [...getSubslots(slot)].sort((a, b) => {
-    const aSeq = Number(a.subslotSequence);
-    const bSeq = Number(b.subslotSequence);
-    if (Number.isFinite(aSeq) && Number.isFinite(bSeq)) return aSeq - bSeq;
-    if (Number.isFinite(aSeq)) return -1;
-    if (Number.isFinite(bSeq)) return 1;
-    return 0;
+  const configuredBands = configuredSubslotTriggerBands(subslotConfig);
+  const currentRows = getSubslots(slot).filter((subslot) => {
+    const state = String(subslot.subslotState || "").toUpperCase();
+    return state === "ACTIVE" || state === "BUY_SUBMITTED" || state === "SELL_SUBMITTED" || isSubslotBusy(subslot);
   });
 
   const assigned = new Map<number, SubslotRow>();
-  const overflow: SubslotRow[] = [];
+  const grouped = new Map<number, SubslotRow[]>();
 
-  for (const subslot of sorted) {
-    const seq = Number(subslot.subslotSequence);
-    if (Number.isInteger(seq) && seq >= 1 && seq <= slotCapacity && !assigned.has(seq)) {
-      assigned.set(seq, subslot);
-    } else {
-      overflow.push(subslot);
-    }
+  for (const subslot of currentRows) {
+    const bandIndex = normalizedSubslotBandIndex(subslot, subslotConfig, null);
+    if (bandIndex == null || bandIndex < 0 || bandIndex >= slotCapacity) continue;
+    const group = grouped.get(bandIndex) ?? [];
+    group.push(subslot);
+    grouped.set(bandIndex, group);
+  }
+
+  for (const [bandIndex, group] of grouped.entries()) {
+    const current = [...group].sort((a, b) => {
+      const scoreDelta = secondaryPriorityScore(b) - secondaryPriorityScore(a);
+      if (scoreDelta !== 0) return scoreDelta;
+      const aAt = Number(a.subslotLastReconcileAt ?? a.subslotClosedAt ?? a.subslotOpenedAt ?? a.subslotSequence ?? 0);
+      const bAt = Number(b.subslotLastReconcileAt ?? b.subslotClosedAt ?? b.subslotOpenedAt ?? b.subslotSequence ?? 0);
+      return bAt - aAt;
+    })[0] ?? null;
+    if (current) assigned.set(bandIndex, current);
   }
 
   const items: SecondaryRailItem[] = [];
 
-  for (let index = 1; index <= slotCapacity; index += 1) {
-    const subslot = assigned.get(index) ?? overflow.shift() ?? null;
+  for (let index = 0; index < slotCapacity; index += 1) {
+    const liveSubslot = assigned.get(index) ?? null;
+    const triggerPct = configuredBands[index] ?? null;
+    const subslot =
+      liveSubslot ??
+      ({
+        subslotSequence: index + 1,
+        subslotTriggerBandIndex: index + 1,
+        subslotTriggerParentNetPct: triggerPct,
+      } as SubslotRow);
+    const distancePct = subslotLiveDistancePct(subslot, slot, subslotConfig, index);
     items.push({
-      key: subslot?.subslotId ?? `${slot.id}-secondary-${index}`,
-      label: `S${index}`,
+      key: liveSubslot?.subslotId ?? `${slot.id}-secondary-band-${index + 1}`,
+      label: `S${index + 1}`,
       stateLabel: secondaryRailItemStateLabel(subslot),
-      counterLabel: subslotLiveCounterLabel(subslot, slot, subslotConfig, index - 1),
-      toneClass: subslot ? subslotToneClass(subslot) : "is-muted",
+      counterLabel: secondaryRailCounterLabel(subslot, slot, subslotConfig, index),
+      toneClass: liveSubslot
+        ? subslotToneClass(liveSubslot)
+        : distancePct === 0
+          ? "is-tracking"
+          : "is-muted",
     });
   }
 
@@ -5041,7 +5105,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                     </div>
 
                     <div className="engine-subslot-item">
-                      <div className="engine-subslot-k">To Live</div>
+                      <div className="engine-subslot-k">Trigger / Exit</div>
                       <div className="engine-subslot-v">
                         {subslotLiveCounterLabel(carouselPrimary, carouselSlot, props.subslotConfig)}
                       </div>
@@ -6087,7 +6151,7 @@ const SlotModal = React.memo(function SlotModal(props: {
                   <div><div className="slot-k">Current Secondary State</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
                     <div><div className="slot-k">Current Trigger Band</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerBandLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
                     <div><div className="slot-k">Current Trigger Summary</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerSummary(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
-                    <div><div className="slot-k">Current To Live</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotLiveCounterLabel(getPrimarySecondarySnapshot(slot) as SubslotRow, slot, props.subslotConfig) : "-"}</div></div>
+                    <div><div className="slot-k">Current Trigger / Exit</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotLiveCounterLabel(getPrimarySecondarySnapshot(slot) as SubslotRow, slot, props.subslotConfig) : "-"}</div></div>
                     <div><div className="slot-k">Current Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
                     <div><div className="slot-k">Current Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
                     <div><div className="slot-k">Current Exit Gate</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExitGateStateLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
@@ -6115,7 +6179,7 @@ const SlotModal = React.memo(function SlotModal(props: {
                     <div className="slot-modal-grid secondary-grid">
                         <div><div className="slot-k">Trigger Band</div><div className="slot-v">{subslotTriggerBandLabel(subslot)}</div></div>
                         <div><div className="slot-k">Trigger Level</div><div className="slot-v">{pctNum(subslot.subslotTriggerParentNetPct)}</div></div>
-                        <div><div className="slot-k">To Live</div><div className="slot-v">{subslotLiveCounterLabel(subslot, slot, props.subslotConfig)}</div></div>
+                        <div><div className="slot-k">Trigger / Exit</div><div className="slot-v">{subslotLiveCounterLabel(subslot, slot, props.subslotConfig)}</div></div>
                         <div><div className="slot-k">Parent Net @ Open</div><div className="slot-v">{pctNum(subslot.subslotEntryParentNetPct)}</div></div>
                         <div><div className="slot-k">State</div><div className="slot-v">{subslot.subslotState ?? "-"}</div></div>
                         <div><div className="slot-k">Mode</div><div className="slot-v">{subslot.subslotEntryMode ?? "-"}</div></div>
