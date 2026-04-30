@@ -628,6 +628,7 @@ type ManagerStatus = WorkerStatus & {
     exitGreenConfirmTicks?: number;
     triggerParentNetPct?: number;
     triggerParentNetBandsPct?: number[];
+    coinTriggerBands?: Record<string, number[]>;
     takeProfitEnabled?: boolean;
     takeProfitNetPct?: number;
     recoveryFloorNetPct?: number;
@@ -2777,9 +2778,21 @@ function subslotTriggerBandLabel(subslot: SubslotRow) {
   return "Legacy trigger";
 }
 
-function configuredSubslotTriggerBands(subslotConfig: ManagerStatus["subslot"] | null | undefined) {
-  return Array.isArray(subslotConfig?.triggerParentNetBandsPct)
-    ? subslotConfig.triggerParentNetBandsPct
+function configuredSubslotTriggerBands(
+  subslotConfig: ManagerStatus["subslot"] | null | undefined,
+  coin?: string | null
+) {
+  const normalizedCoin = String(coin || "").trim().toUpperCase();
+  const coinBands =
+    normalizedCoin && subslotConfig?.coinTriggerBands
+      ? subslotConfig.coinTriggerBands[normalizedCoin]
+      : null;
+  const source = Array.isArray(coinBands) && coinBands.length
+    ? coinBands
+    : subslotConfig?.triggerParentNetBandsPct;
+
+  return Array.isArray(source)
+    ? source
         .map((value) => Number(value))
         .filter((value) => Number.isFinite(value))
     : [];
@@ -2788,6 +2801,7 @@ function configuredSubslotTriggerBands(subslotConfig: ManagerStatus["subslot"] |
 function normalizedSubslotBandIndex(
   subslot: SubslotRow | null | undefined,
   subslotConfig: ManagerStatus["subslot"] | null | undefined,
+  coin?: string | null,
   fallbackBandIndex?: number | null
 ) {
   const bandIndex = Number(subslot?.subslotTriggerBandIndex);
@@ -2795,7 +2809,7 @@ function normalizedSubslotBandIndex(
     return bandIndex - 1;
   }
 
-  const configuredBands = configuredSubslotTriggerBands(subslotConfig);
+  const configuredBands = configuredSubslotTriggerBands(subslotConfig, coin);
   const directTriggerPct = Number(subslot?.subslotTriggerParentNetPct);
   if (configuredBands.length && Number.isFinite(directTriggerPct)) {
     const matchedIndex = configuredBands.findIndex((value) => Math.abs(value - directTriggerPct) <= 0.0005);
@@ -2830,13 +2844,14 @@ function subslotTriggerSummary(subslot: SubslotRow) {
 function configuredSubslotTriggerPct(
   subslot: SubslotRow | null | undefined,
   subslotConfig: ManagerStatus["subslot"] | null | undefined,
+  coin?: string | null,
   fallbackBandIndex?: number | null
 ) {
   const directTriggerPct = Number(subslot?.subslotTriggerParentNetPct);
   if (Number.isFinite(directTriggerPct)) return directTriggerPct;
 
-  const configuredBands = configuredSubslotTriggerBands(subslotConfig);
-  const bandIndex = normalizedSubslotBandIndex(subslot, subslotConfig, fallbackBandIndex);
+  const configuredBands = configuredSubslotTriggerBands(subslotConfig, coin);
+  const bandIndex = normalizedSubslotBandIndex(subslot, subslotConfig, coin, fallbackBandIndex);
 
   if (configuredBands.length && bandIndex != null && bandIndex >= 0 && bandIndex < configuredBands.length) {
     return configuredBands[bandIndex];
@@ -2861,7 +2876,7 @@ function subslotLiveDistancePct(
   const state = String(subslot?.subslotState || "").toUpperCase();
   if (state === "ACTIVE" || state === "BUY_SUBMITTED") return 0;
 
-  const triggerPct = configuredSubslotTriggerPct(subslot, subslotConfig, fallbackBandIndex);
+  const triggerPct = configuredSubslotTriggerPct(subslot, subslotConfig, parent?.coin, fallbackBandIndex);
   const parentNetPct = liveParentNetPct(parent);
   const normalizedTriggerPct = Number(triggerPct);
   if (!Number.isFinite(normalizedTriggerPct) || parentNetPct == null || !Number.isFinite(parentNetPct)) return null;
@@ -3279,21 +3294,53 @@ type SecondaryRailItem = {
   toneClass: string;
 };
 
-function secondaryRailItemStateLabel(subslot: SubslotRow | null) {
-  if (!subslot) return "Idle";
+function secondaryRequiresRecoveryStyle(subslot: SubslotRow | null | undefined, parent: SlotRow) {
+  const regime = String(subslot?.subslotEntryMode || parent.regime || "UNKNOWN").trim().toUpperCase();
+  return regime === "DOWNTREND" || regime === "CONSOLIDATION_BEAR";
+}
+
+function secondaryRailBandContextLabel(
+  subslot: SubslotRow | null | undefined,
+  parent: SlotRow,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined,
+  fallbackBandIndex?: number | null
+) {
+  const triggerPct = configuredSubslotTriggerPct(subslot, subslotConfig, parent.coin, fallbackBandIndex);
+  if (triggerPct != null && Number.isFinite(triggerPct)) return `Band ${pctNum(triggerPct)}`;
+  if (subslot) return subslotTriggerBandLabel(subslot);
+  return "Band";
+}
+
+function secondaryRailItemStateLabel(
+  subslot: SubslotRow | null,
+  parent: SlotRow,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined,
+  fallbackBandIndex?: number | null
+) {
+  const bandLabel = secondaryRailBandContextLabel(subslot, parent, subslotConfig, fallbackBandIndex);
+  if (!subslot) return `Idle | ${bandLabel}`;
 
   const state = String(subslot.subslotState || "").toUpperCase();
   const signal = String(subslot.subslotSignalState || "").toUpperCase();
+  const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
 
-  if (state === "BUY_SUBMITTED") return "Entry";
-  if (state === "ACTIVE") return "Live";
-  if (state === "SELL_SUBMITTED") return "Exit";
-  if (signal === "REVERSAL_CONFIRMING") return "Confirm";
-  if (signal === "BOUNCE_SEEN") return "Bounce";
-  if (signal === "TRACKING") return "Track";
-  if (signal === "ARMED") return "Armed";
-  if (state === "CLOSED") return "Closed";
-  return "Idle";
+  if (state === "BUY_SUBMITTED") return `Entry | ${bandLabel}`;
+  if (state === "SELL_SUBMITTED") return `Exit | ${bandLabel}`;
+  if (state === "ACTIVE") {
+    if (gateState === "READY") return `Sell ready | ${bandLabel}`;
+    if (gateState === "WAIT_CONFIRM") return `Sell confirm | ${bandLabel}`;
+    if (gateState === "WAIT_GREEN") return `Sell gate | ${bandLabel}`;
+    if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot.subslotRecoveredConfirmed === false) {
+      return `Hold | ${bandLabel}`;
+    }
+    return `Live | ${bandLabel}`;
+  }
+  if (signal === "REVERSAL_CONFIRMING") return `Confirm | ${bandLabel}`;
+  if (signal === "BOUNCE_SEEN") return `Bounce | ${bandLabel}`;
+  if (signal === "TRACKING") return `Track | ${bandLabel}`;
+  if (signal === "ARMED") return `Armed | ${bandLabel}`;
+  if (state === "CLOSED") return `Closed | ${bandLabel}`;
+  return `Idle | ${bandLabel}`;
 }
 
 function secondaryRailCounterLabel(
@@ -3307,13 +3354,23 @@ function secondaryRailCounterLabel(
     const executableNetPct = subslotExecutableExitNetPct(subslot);
     const requiredNetPct = subslotExitRequiredNetPct(subslot);
     const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
+    const netLabel = executableNetPct != null ? `Net ${pctNum(executableNetPct)}` : "Net ?";
     if (gateState === "WAIT_GREEN" && requiredNetPct != null) {
-      return `Need ${pctNum(requiredNetPct)} for exit`;
+      return `${netLabel} | need ${pctNum(requiredNetPct)}`;
+    }
+    if (gateState === "WAIT_CONFIRM") {
+      return `${netLabel} | confirming exit`;
     }
     if (gateState === "READY") {
-      return "Exit ready";
+      return `${netLabel} | exit ready`;
     }
-    if (executableNetPct != null) return `Net ${pctNum(executableNetPct)}`;
+    if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot?.subslotRecoveredConfirmed === false) {
+      return `${netLabel} | waiting recovery`;
+    }
+    if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot?.subslotRecoveredConfirmed === true) {
+      return `${netLabel} | harvesting`;
+    }
+    if (executableNetPct != null) return `${netLabel} | monitoring`;
     return "Monitoring exit";
   }
   if (state === "BUY_SUBMITTED") return "Awaiting fill";
@@ -3326,11 +3383,7 @@ function secondaryRailSlotCapacity(
   subslotConfig: ManagerStatus["subslot"] | null | undefined
 ) {
   const railMax = 8;
-  const configuredBands = Array.isArray(subslotConfig?.triggerParentNetBandsPct)
-    ? subslotConfig.triggerParentNetBandsPct
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value))
-    : [];
+  const configuredBands = configuredSubslotTriggerBands(subslotConfig, slot.coin);
   const bandCount = configuredBands.length;
   const configuredMaxPerSlot = Number(subslotConfig?.maxPerSlot);
   const maxPerSlot =
@@ -3356,7 +3409,7 @@ function secondaryRailItems(
   subslotConfig: ManagerStatus["subslot"] | null | undefined
 ): SecondaryRailItem[] {
   const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
-  const configuredBands = configuredSubslotTriggerBands(subslotConfig);
+  const configuredBands = configuredSubslotTriggerBands(subslotConfig, slot.coin);
   const currentRows = getSubslots(slot).filter((subslot) => {
     const state = String(subslot.subslotState || "").toUpperCase();
     return state === "ACTIVE" || state === "BUY_SUBMITTED" || state === "SELL_SUBMITTED" || isSubslotBusy(subslot);
@@ -3366,7 +3419,7 @@ function secondaryRailItems(
   const grouped = new Map<number, SubslotRow[]>();
 
   for (const subslot of currentRows) {
-    const bandIndex = normalizedSubslotBandIndex(subslot, subslotConfig, null);
+    const bandIndex = normalizedSubslotBandIndex(subslot, subslotConfig, slot.coin, null);
     if (bandIndex == null || bandIndex < 0 || bandIndex >= slotCapacity) continue;
     const group = grouped.get(bandIndex) ?? [];
     group.push(subslot);
@@ -3400,7 +3453,7 @@ function secondaryRailItems(
     items.push({
       key: liveSubslot?.subslotId ?? `${slot.id}-secondary-band-${index + 1}`,
       label: `S${index + 1}`,
-      stateLabel: secondaryRailItemStateLabel(subslot),
+      stateLabel: secondaryRailItemStateLabel(subslot, slot, subslotConfig, index),
       counterLabel: secondaryRailCounterLabel(subslot, slot, subslotConfig, index),
       toneClass: liveSubslot
         ? subslotToneClass(liveSubslot)
