@@ -3307,8 +3307,11 @@ function secondaryRailCounterLabel(
     const executableNetPct = subslotExecutableExitNetPct(subslot);
     const requiredNetPct = subslotExitRequiredNetPct(subslot);
     const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
-    if (gateState === "WAIT_GREEN" && executableNetPct != null && requiredNetPct != null) {
-      return `Net ${pctNum(executableNetPct)} | need ${pctNum(requiredNetPct)}`;
+    if (gateState === "WAIT_GREEN" && requiredNetPct != null) {
+      return `Need ${pctNum(requiredNetPct)} for exit`;
+    }
+    if (gateState === "READY") {
+      return "Exit ready";
     }
     if (executableNetPct != null) return `Net ${pctNum(executableNetPct)}`;
     return "Monitoring exit";
