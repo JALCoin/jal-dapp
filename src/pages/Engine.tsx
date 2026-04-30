@@ -3317,11 +3317,6 @@ type SecondaryRailItem = {
   isOpen: boolean;
 };
 
-function secondaryRequiresRecoveryStyle(subslot: SubslotRow | null | undefined, parent: SlotRow) {
-  const regime = String(subslot?.subslotEntryMode || parent.regime || "UNKNOWN").trim().toUpperCase();
-  return regime === "DOWNTREND" || regime === "CONSOLIDATION_BEAR";
-}
-
 function secondaryRailBandContextLabel(
   subslot: SubslotRow | null | undefined,
   parent: SlotRow,
@@ -3364,12 +3359,6 @@ function secondaryRailCounterLabel(
     }
     if (gateState === "READY") {
       return `${netLabel} | green sell ready`;
-    }
-    if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot?.subslotRecoveredConfirmed === false) {
-      return `${netLabel} | recovery hold active`;
-    }
-    if (secondaryRequiresRecoveryStyle(subslot, parent) && subslot?.subslotRecoveredConfirmed === true) {
-      return `${netLabel} | harvest exit waiting`;
     }
     if (executableNetPct != null) return `${netLabel} | monitoring`;
     return "Live trade | monitoring";
