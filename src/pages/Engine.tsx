@@ -1114,23 +1114,23 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Trigger And Cost Gate",
     summary:
-      "The secondary ladder still keys off negative parent-net trigger bands, but reusable bands and pacing now prevent the rail from overstating readiness or firing too aggressively during one long parent hold.",
+      "The secondary ladder still keys off negative parent-net trigger bands, but trigger-touch mode now lets fresh entries buy on the crossed threshold instead of waiting for the old confirmation stack.",
     detail:
-      "Entry remains cost-aware and quote-aware: spread, net-after-cost, confirmation, and live quote quality all have to survive before a secondary can actually buy.",
+      "Reusable bands, cooldown, market availability, size, and parent-collapse safety still matter, but spread, net-after-cost, EMA-gap, and confirmation no longer block threshold-touch entries.",
   },
   {
     title: "Recovery-First Exits",
     summary:
-      "Before recovery, secondaries intentionally ignore red noise: stop-loss and early-failure exits stay disabled until post-fee recovery is confirmed.",
+      "Bearish regimes still use the recovery-style hold before they will harvest a secondary, so downtrends and consolidation-bear setups remain patient after entry.",
     detail:
-      "After recovery, the exit layer can now harvest through executable take-profit, trailing, green-stall, band-aware targets, and parent-recovery exits while still honoring executable green thresholds.",
+      "Once recovery is confirmed, the exit layer can still harvest through executable take-profit, trailing, green-stall, band-aware targets, and parent-recovery exits while honoring executable green thresholds.",
   },
   {
     title: "Directional Playbooks",
     summary:
-      "Directional and consolidation profiles still control cooldown, EMA gap, take-profit, and trail behavior, but the live engine now layers that on top of recovery-first law and executable exit gating.",
+      "Constructive regimes now release faster: uptrend, consolidation-bull, chop, and unknown setups can take the first executable green instead of waiting for bearish recovery rules.",
     detail:
-      "This means a bullish or bearish setup can arm differently, but it still has to pass the same final executable sell test before the UI will report it as truly ready to leave.",
+      "This means regime decides whether a secondary behaves like a recovery-hold harvest or a first-green release, while every exit still has to pass the same executable green test before the UI reports it as ready to leave.",
   },
   {
     title: "Regime Engine",
@@ -2109,9 +2109,11 @@ function primaryLastRealizedProfitAud(slot: SlotRow | null | undefined) {
 
 function secondaryLiveCount(slot: SlotRow | null | undefined) {
   if (!slot) return 0;
+  const localLiveCount = countActiveSecondaries(slot);
+  if (getSubslots(slot).length) return localLiveCount;
   const liveCount = secondarySummaryData(slot)?.liveCount;
   if (liveCount != null && Number.isFinite(liveCount)) return liveCount;
-  return countActiveSecondaries(slot);
+  return localLiveCount;
 }
 
 function secondaryTotalGainAud(slot: SlotRow | null | undefined) {
@@ -3373,12 +3375,16 @@ function primarySecondaryRail(
 ) {
   const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
   const items = secondaryRailItems(slot, subslotConfig);
+  const activeCount = countActiveSecondaries(slot);
+  const openCount = getSubslotOpenCount(slot);
+  const railValue =
+    openCount > activeCount ? `${openCount}/${slotCapacity} open` : `${activeCount}/${slotCapacity} live`;
 
   return (
     <div className="entry-progress secondary-rail" aria-label="Primary secondary rail">
       <div className="entry-progress-top">
         <span className="entry-progress-label">Secondary rail</span>
-        <span className="entry-progress-value">{countActiveSecondaries(slot)}/{slotCapacity} live</span>
+        <span className="entry-progress-value">{railValue}</span>
       </div>
       <div className="secondary-rail-track" aria-label="Secondary trade slots">
         {items.map((item) => (
@@ -3690,11 +3696,13 @@ function secondaryTradesLabel(slot: SlotRow | null | undefined) {
   if (!slot) return "None";
   const total = getSecondaryRows(slot).length;
   const active = secondaryLiveCount(slot);
+  const open = getSubslotOpenCount(slot);
   const totalGainAud = secondaryTotalGainAud(slot);
   const parts: string[] = [];
 
   if (!total) return "None";
-  if (active > 0) parts.push(`${active} live`);
+  if (open > 0) parts.push(`${open} open`);
+  if (active > 0 && active !== open) parts.push(`${active} live`);
   if (hasPendingSubslotBuys(slot)) parts.push("entry pending");
   if (hasPendingSubslotSells(slot)) parts.push("exit pending");
   if (!parts.length) parts.push(`${total} recorded`);
