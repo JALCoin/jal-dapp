@@ -16,6 +16,7 @@ import Engine from "./pages/Engine";
 import ShopPage from "./pages/Shop";
 import AuthPage from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
+import DonateButton from "./components/DonateButton";
 import Footer from "./components/Footer";
 import ThemeToggle from "./components/ThemeToggle";
 import RequireAuth from "./components/RequireAuth";
@@ -362,6 +363,9 @@ function SidebarView({
               {theme === "light" ? "Light mode active" : "Dark mode active"}
             </span>
             <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} />
+          </div>
+          <div className="sidebar-donate-row">
+            <DonateButton className="donate-button--sidebar" />
           </div>
         </section>
       </aside>

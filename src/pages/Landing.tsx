@@ -1,6 +1,7 @@
 // src/pages/Landing.tsx
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import DonateButton from "../components/DonateButton";
 import ThemeToggle from "../components/ThemeToggle";
 import { usePageMeta } from "../hooks/usePageMeta";
 import type { ThemeMode } from "../hooks/useTheme";
@@ -199,6 +200,7 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
       >
         {!loading && (
           <>
+            <DonateButton className="donate-button--landing" />
             <div className="landing-tools">
               <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} />
             </div>

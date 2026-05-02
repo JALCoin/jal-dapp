@@ -1,6 +1,7 @@
 import ProductStars from "../components/ProductStars";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import DonateButton from "../components/DonateButton";
 import { getActiveProducts, type Product } from "../data/products";
 import ReviewList from "../components/ReviewList";
 import ReviewFormModal from "../components/ReviewFormModal";
@@ -451,6 +452,7 @@ export default function Shop() {
             </div>
 
             <div className="shop-header-links">
+              <DonateButton className="donate-button--shop" />
               <span className="chip">Jeremy Aaron Lugg</span>
               <a className="chip" href="/app/legal">
                 Legal + Business
