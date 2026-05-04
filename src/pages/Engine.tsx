@@ -106,6 +106,8 @@ type ReportingSummary = {
   totalNetGainAud?: number | null;
   capitalLaneAud?: number | null;
   deployedUnitAud?: number | null;
+  entryTargetAud?: number | null;
+  entryRequestedAud?: number | null;
   cycles?: number | null;
 };
 
@@ -128,6 +130,11 @@ type ExecutionComparison = {
 type PrimarySurface = {
   compareScope?: string | null;
   comparison?: ExecutionComparison | null;
+  entry?: {
+    targetAud?: number | null;
+    requestedAud?: number | null;
+    actualAud?: number | null;
+  } | null;
 };
 
 type SecondarySummary = {
@@ -238,6 +245,8 @@ type SlotRow = {
   trackingState?: TrackingState | null;
   unitAud: number;
   visualUnitAud?: number | null;
+  primaryEntryTargetAud?: number | null;
+  primaryEntryRequestedAud?: number | null;
 
   entryMid: number | null;
   nowMid: number | null;
@@ -500,6 +509,10 @@ type SlotRow = {
   candidatePriorityReason?: string | null;
   candidatePriorityBlockedReason?: string | null;
   candidatePriorityAt?: number | null;
+  candidateFundingState?: string | null;
+  candidateEntrySizingMode?: string | null;
+  candidateAudNeeded?: number | null;
+  candidateAudAvailable?: number | null;
 
   entryDrawdownPct?: number | null;
   entryBouncePct?: number | null;
@@ -619,6 +632,12 @@ type ManagerStatus = WorkerStatus & {
       lvl3?: ManagerLevelTrailConfig;
       lvl4Net?: ManagerLevelTrailConfig;
       volatility?: ManagerVolatilityTrailConfig;
+    };
+    exitPolicy?: {
+      minWinExitNetPct?: number;
+      minWinExitAud?: number;
+      greenConfirmTicks?: number;
+      lockExitRequireGreen?: boolean;
     };
     coinOverrides?: Record<string, string[]>;
   };
@@ -1069,13 +1088,13 @@ const DEV_DEFAULT = "http://localhost:8787";
 const CAROUSEL_INTERVAL_MS = 4500;
 const ENGINE_POLL_INTERVAL_MS = 3000;
 const CAPITAL_POLL_INTERVAL_MS = 15000;
-const ENGINE_BEHAVIOR_AS_OF = "22 Apr 2026";
+const ENGINE_BEHAVIOR_AS_OF = "5 May 2026";
 
 const PRIMARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Fixed Universe + Cadence",
     summary:
-      "Eight permanent AUD slots stay assigned to BTC, ETH, XRP, SOL, DOGE, ADA, LTC, and TRX. The harvester keeps the registry intact every 5 seconds with AUD 25 baseline units.",
+      "Eight permanent AUD slots stay assigned to BTC, ETH, XRP, SOL, DOGE, ADA, LTC, and TRX. The primary entry target is surfaced from runtime config and resets cleanly to the configured AUD target.",
     detail:
       "Market polls every 3 seconds; executor and manager both work every 2 seconds. Entry and exit quotes older than 9 seconds are treated as stale.",
   },
@@ -1096,7 +1115,7 @@ const PRIMARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Exit Discipline",
     summary:
-      "Jrd Primary exits stay green-first: the default release floor is 0.20% net or AUD 0.30, with 1 green confirmation tick before capital resets.",
+      "Jrd Primary normal harvest exits can stay green-first, while breached lock or trailing floors can run in protection mode when the backend disables the green requirement for floor exits.",
     detail:
       "If a parent collapses to -14.0% net the secondary trigger ladder bottoms out. A busy Jrd Secondary can delay a parent from finalizing back to WAITING_ENTRY.",
   },
@@ -2054,6 +2073,47 @@ function primaryDeployedUnitAud(slot: SlotRow | null | undefined) {
     if (Number.isFinite(n)) return n;
   }
   return null;
+}
+
+function primaryEntryTargetAudValue(slot: SlotRow | null | undefined) {
+  const candidates = [
+    slot?.primaryEntryTargetAud,
+    slot?.primary?.entry?.targetAud,
+    primaryReporting(slot)?.entryTargetAud,
+    slot?.candidateAudNeeded,
+    slot?.unitAud,
+  ];
+  for (const value of candidates) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+function primaryEntryRequestedAudValue(slot: SlotRow | null | undefined) {
+  const candidates = [
+    slot?.primaryEntryRequestedAud,
+    slot?.primary?.entry?.requestedAud,
+    primaryReporting(slot)?.entryRequestedAud,
+    slot?.liveEntryRequestedAud,
+    slot?.entryAud,
+  ];
+  for (const value of candidates) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+function primaryEntryFundingLabel(slot: SlotRow | null | undefined) {
+  const state = String(slot?.candidateFundingState || "").toUpperCase();
+  const needed = Number(slot?.candidateAudNeeded);
+  const available = Number(slot?.candidateAudAvailable);
+  if (state === "INSUFFICIENT" && Number.isFinite(needed) && Number.isFinite(available)) {
+    return `${moneyAud(available)} free / ${moneyAud(needed)} needed`;
+  }
+  if (state) return enumLabel(state);
+  return "Funding not checked yet";
 }
 
 function secondarySummaryData(slot: SlotRow | null | undefined) {
@@ -3094,20 +3154,22 @@ function primaryEntryProgressBlock(slot: SlotRow) {
   const progress = primaryEntryProgressModel(slot);
   const fillPct = progress.totalCount > 0 ? Math.max(8, (progress.readyCount / progress.totalCount) * 100) : 0;
   const toneClass = progress.remainingCount <= 0 ? "is-ready" : progress.blocked ? "is-blocked" : "is-active";
+  const targetAud = primaryEntryTargetAudValue(slot);
+  const fundingLabel = primaryEntryFundingLabel(slot);
 
   return (
     <div className={`entry-progress ${toneClass}`} aria-label="Primary entry progress">
       <div className="entry-progress-top">
         <span className="entry-progress-label">Entry progress</span>
         <span className="entry-progress-value">
-          {progress.readyCount}/{progress.totalCount} gates
+          {targetAud != null ? `${moneyAud(targetAud)} target` : `${progress.readyCount}/${progress.totalCount} gates`}
         </span>
       </div>
       <div className="entry-progress-bar" aria-hidden="true">
         <span style={{ width: `${fillPct}%` }} />
       </div>
       <div className="entry-progress-meta">
-        <span>{progress.referenceDone ? "Reference crossed" : "Reference pending"}</span>
+        <span>{progress.readyCount}/{progress.totalCount} gates | {fundingLabel}</span>
         <span>{primaryEntryCountdownLabel(slot)}</span>
       </div>
     </div>
@@ -3311,6 +3373,7 @@ type SecondaryRailItem = {
   stateLabel: string;
   counterLabel: string;
   toneClass: string;
+  plannedAud?: number | null;
   isActive: boolean;
   isPendingBuy: boolean;
   isPendingSell: boolean;
@@ -3383,6 +3446,16 @@ function secondaryRailCounterLabel(
   if (signal === "BOUNCE_SEEN" || signal === "TRACKING") return "Watching for buy";
   if (state === "CLOSED") return "Trade closed";
   return "Waiting for parent drawdown";
+}
+
+function secondaryRailPlannedAud(
+  parent: SlotRow,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined
+) {
+  const base = primaryEntryRequestedAudValue(parent) ?? primaryEntryTargetAudValue(parent) ?? parent.unitAud;
+  const sizePct = Number(subslotConfig?.sizePctOfParent);
+  if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(sizePct) || sizePct <= 0) return null;
+  return roundMoney(base * Math.min(1, Math.max(0, sizePct)));
 }
 
 function secondaryRailVisualCounts(items: SecondaryRailItem[]) {
@@ -3458,6 +3531,7 @@ function secondaryRailItems(
   }
 
   const items: SecondaryRailItem[] = [];
+  const plannedAud = secondaryRailPlannedAud(slot, subslotConfig);
 
   for (let index = 0; index < slotCapacity; index += 1) {
     const liveSubslot = assigned.get(index) ?? null;
@@ -3475,6 +3549,7 @@ function secondaryRailItems(
       label: `S${index + 1}`,
       stateLabel: secondaryRailItemStateLabel(subslot, slot, subslotConfig, index),
       counterLabel: secondaryRailCounterLabel(subslot, slot, subslotConfig, index),
+      plannedAud,
       toneClass: liveSubslot
         ? subslotToneClass(liveSubslot)
         : distancePct === 0
@@ -3535,6 +3610,9 @@ function primarySecondaryRail(
             <div className="secondary-rail-slot-label">{item.label}</div>
             <div className="secondary-rail-slot-state">{item.stateLabel}</div>
             <div className="secondary-rail-slot-counter">{item.counterLabel}</div>
+            {item.plannedAud != null ? (
+              <div className="secondary-rail-slot-planned">{moneyAud(item.plannedAud)} plan</div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -4264,7 +4342,7 @@ const POSITION_STAGE_ORDER: Array<{ key: PositionStageKey; title: string; note: 
   {
     key: "exit-waiting",
     title: "Exit Waiting",
-    note: "The Primary wants to exit, but the green sell gate is still blocking.",
+    note: "The Primary wants to exit; the sell gate is waiting for green confirmation or executable protection data.",
   },
   {
     key: "exiting",
@@ -4362,7 +4440,13 @@ function actionNeededSummary(slot: SlotRow) {
   const decision = primaryDecision(slot);
 
   if (stage === "exit-waiting") {
-    const parts = ["Green exit is still blocked."];
+    const gateState = String(decision?.exitGateState || "").toUpperCase();
+    const protectionMode = gateState === "WAIT_EXECUTABLE" || decision?.exitRequiredNetPct == null;
+    const parts = [
+      protectionMode
+        ? "Protection sell is armed and waiting for executable exit data."
+        : "Green exit is still blocked.",
+    ];
     if (
       decision?.exitRequiredNetPct != null &&
       Number.isFinite(decision.exitRequiredNetPct) &&
@@ -6187,6 +6271,8 @@ const SlotModal = React.memo(function SlotModal(props: {
 
             <div className="slot-modal-grid">
               <div><div className="slot-k">Capital Lane</div><div className="slot-v">{moneyAud(primaryCapitalLaneAud(slot))}</div></div>
+              <div><div className="slot-k">Entry Target</div><div className="slot-v">{moneyAud(primaryEntryTargetAudValue(slot))}</div></div>
+              <div><div className="slot-k">Requested Buy</div><div className="slot-v">{moneyAud(primaryEntryRequestedAudValue(slot))}</div></div>
               <div><div className="slot-k">Live Deployed</div><div className="slot-v">{moneyAud(primaryDeployedUnitAud(slot))}</div></div>
               <div><div className="slot-k">Cycles</div><div className="slot-v">{slot.cycles ?? 0}</div></div>
               <div><div className="slot-k">{String(slot.state || "").toUpperCase() === "WAITING_ENTRY" ? "Reference From Last Exit" : "Entry Mid"}</div><div className="slot-v">{effectiveEntryLabel(slot)}</div></div>
@@ -6311,6 +6397,8 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">EMA Gap</div><div className="slot-v">{pctNum(slot.candidateEmaGapPct)}</div></div>
               <div><div className="slot-k">Reversal Ticks</div><div className="slot-v">{slot.candidateReversalTicks != null ? slot.candidateReversalTicks : "-"}</div></div>
               <div><div className="slot-k">Score</div><div className="slot-v">{slot.candidateScore != null ? slot.candidateScore.toFixed(3) : "-"}</div></div>
+              <div><div className="slot-k">Funding</div><div className="slot-v">{primaryEntryFundingLabel(slot)}</div></div>
+              <div><div className="slot-k">Sizing Mode</div><div className="slot-v">{slot.candidateEntrySizingMode ?? "-"}</div></div>
               <div><div className="slot-k">Tracked Peak</div><div className="slot-v">{fmt(slot.candidatePeakMid)}</div></div>
               <div><div className="slot-k">Tracked Low</div><div className="slot-v">{fmt(slot.candidateLowMid)}</div></div>
               <div><div className="slot-k">Candidate Spread</div><div className="slot-v">{pctNum(slot.nowSpreadPct ?? slot.candidateSpreadPrevPct)}</div></div>
@@ -6488,6 +6576,10 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   const coinOverrideCoins = managerCoinOverrideCoins(holding?.coinOverrides);
   const primaryPerf = manager?.primaryPerf;
   const costAwareEntry = manager?.subslot?.costAwareEntry;
+  const lockFloorExitMode =
+    holding?.exitPolicy?.lockExitRequireGreen === false
+      ? "floor breach sells immediately"
+      : "floor breach waits for green gate";
 
   return (
     <div className="engine-bay">
@@ -6592,7 +6684,7 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
               </div>
             </div>
             <div className="engine-upgrade-v">
-              LVL4 {pctNum(holding?.lvl4Pct)} | bid trail {pctNum(holding?.lvl4TrailPct)} | exit on first breach
+              LVL4 {pctNum(holding?.lvl4Pct)} | bid trail {pctNum(holding?.lvl4TrailPct)} | {lockFloorExitMode}
             </div>
             <div className="engine-upgrade-sub">Levels 1-3 still defend their static lock floors before any additive trail takes over. LVL4 now layers a retained net floor over the open bid trail.</div>
           </div>

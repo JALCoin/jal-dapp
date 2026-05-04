@@ -10699,6 +10699,13 @@ button.home-route-band{
   color:rgba(231,255,247,.68);
 }
 
+.secondary-rail-slot-planned{
+  margin-top:6px;
+  font-size:.68rem;
+  font-weight:800;
+  color:rgba(17,241,167,.86);
+}
+
 .secondary-rail-summary{
   margin-top:10px;
   font-size:.78rem;
@@ -11023,6 +11030,10 @@ button.home-route-band{
 
 :root[data-theme="light"] .secondary-rail-slot-counter{
   color:rgba(31,54,51,.66);
+}
+
+:root[data-theme="light"] .secondary-rail-slot-planned{
+  color:rgba(12,127,90,.9);
 }
 
 :root[data-theme="light"] .execution-breakdown{
