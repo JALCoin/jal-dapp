@@ -411,9 +411,12 @@ type SlotRow = {
   subslotSignalState?: string | null;
   subslotSignalReason?: string | null;
   subslotEntryMode?: string | null;
+  subslotTriggerBasis?: string | null;
   subslotTriggerBandIndex?: number | null;
   subslotTriggerParentNetPct?: number | null;
   subslotEntryParentNetPct?: number | null;
+  subslotEntryParentGrossPct?: number | null;
+  subslotEntryParentTriggerPct?: number | null;
 
   regime?: string | null;
   regimeStrength?: number | null;
@@ -2303,9 +2306,12 @@ function getSubslots(slot: SlotRow): SubslotRow[] {
       subslotState: slot.subslotState,
       subslotIntegrityState: slot.subslotIntegrityState,
       subslotExcludedFromOccupancy: slot.subslotExcludedFromOccupancy,
+      subslotTriggerBasis: slot.subslotTriggerBasis,
       subslotTriggerBandIndex: slot.subslotTriggerBandIndex,
       subslotTriggerParentNetPct: slot.subslotTriggerParentNetPct,
       subslotEntryParentNetPct: slot.subslotEntryParentNetPct,
+      subslotEntryParentGrossPct: slot.subslotEntryParentGrossPct,
+      subslotEntryParentTriggerPct: slot.subslotEntryParentTriggerPct,
       subslotEntryMode: slot.subslotEntryMode,
       subslotSignalState: slot.subslotSignalState,
       subslotSignalReason: slot.subslotSignalReason,
@@ -2931,6 +2937,22 @@ function secondaryTriggerBasisLabel(
   subslotConfig?: ManagerStatus["subslot"] | null
 ) {
   return normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "NET" ? "net" : "gross";
+}
+
+function secondaryTriggerBasisTitleLabel(
+  subslot?: SubslotRow | null,
+  subslotConfig?: ManagerStatus["subslot"] | null
+) {
+  return normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "NET" ? "Net" : "Gross";
+}
+
+function secondaryParentAtOpenPct(
+  subslot?: SubslotRow | null,
+  subslotConfig?: ManagerStatus["subslot"] | null
+) {
+  return normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "NET"
+    ? subslot?.subslotEntryParentTriggerPct ?? subslot?.subslotEntryParentNetPct
+    : subslot?.subslotEntryParentTriggerPct ?? subslot?.subslotEntryParentGrossPct;
 }
 
 function configuredSubslotTriggerBands(
@@ -5367,7 +5389,9 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                     </div>
 
                     <div className="engine-subslot-item">
-                      <div className="engine-subslot-k">Trigger</div>
+                      <div className="engine-subslot-k">
+                        Trigger {secondaryTriggerBasisTitleLabel(carouselPrimary, props.subslotConfig)}
+                      </div>
                       <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotTriggerParentNetPct)}</div>
                     </div>
 
@@ -5379,8 +5403,10 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                     </div>
 
                     <div className="engine-subslot-item">
-                      <div className="engine-subslot-k">Parent @ Open</div>
-                      <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotEntryParentNetPct)}</div>
+                      <div className="engine-subslot-k">
+                        Parent {secondaryTriggerBasisTitleLabel(carouselPrimary, props.subslotConfig)} @ Open
+                      </div>
+                      <div className="engine-subslot-v">{pctNum(secondaryParentAtOpenPct(carouselPrimary, props.subslotConfig))}</div>
                     </div>
 
                     <div className="engine-subslot-item">
@@ -6491,9 +6517,12 @@ const SlotModal = React.memo(function SlotModal(props: {
 
                     <div className="slot-modal-grid secondary-grid">
                         <div><div className="slot-k">Trigger Band</div><div className="slot-v">{subslotTriggerBandLabel(subslot)}</div></div>
-                        <div><div className="slot-k">Trigger Level</div><div className="slot-v">{pctNum(subslot.subslotTriggerParentNetPct)}</div></div>
+                        <div><div className="slot-k">Trigger Basis</div><div className="slot-v">{secondaryTriggerBasisTitleLabel(subslot, props.subslotConfig)}</div></div>
+                        <div><div className="slot-k">Trigger {secondaryTriggerBasisTitleLabel(subslot, props.subslotConfig)} Level</div><div className="slot-v">{pctNum(subslot.subslotTriggerParentNetPct)}</div></div>
                         <div><div className="slot-k">Trigger / Exit</div><div className="slot-v">{subslotLiveCounterLabel(subslot, slot, props.subslotConfig)}</div></div>
+                        <div><div className="slot-k">Parent {secondaryTriggerBasisTitleLabel(subslot, props.subslotConfig)} @ Open</div><div className="slot-v">{pctNum(secondaryParentAtOpenPct(subslot, props.subslotConfig))}</div></div>
                         <div><div className="slot-k">Parent Net @ Open</div><div className="slot-v">{pctNum(subslot.subslotEntryParentNetPct)}</div></div>
+                        <div><div className="slot-k">Parent Gross @ Open</div><div className="slot-v">{pctNum(subslot.subslotEntryParentGrossPct)}</div></div>
                         <div><div className="slot-k">State</div><div className="slot-v">{subslot.subslotState ?? "-"}</div></div>
                         <div><div className="slot-k">Mode</div><div className="slot-v">{subslot.subslotEntryMode ?? "-"}</div></div>
                       <div><div className="slot-k">Signal</div><div className="slot-v">{subslot.subslotSignalState ?? "-"}</div></div>
