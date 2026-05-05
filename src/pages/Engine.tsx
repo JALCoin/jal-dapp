@@ -149,9 +149,12 @@ type SecondarySummary = {
 type SubslotRow = {
   subslotId?: string | null;
   subslotSequence?: number | null;
+  subslotTriggerBasis?: string | null;
   subslotTriggerBandIndex?: number | null;
   subslotTriggerParentNetPct?: number | null;
   subslotEntryParentNetPct?: number | null;
+  subslotEntryParentGrossPct?: number | null;
+  subslotEntryParentTriggerPct?: number | null;
   subslotState?: string | null;
   subslotIntegrityState?: string | null;
   subslotExcludedFromOccupancy?: boolean | null;
@@ -652,6 +655,9 @@ type ManagerStatus = WorkerStatus & {
     exitGreenConfirmTicks?: number;
     triggerParentNetPct?: number;
     triggerParentNetBandsPct?: number[];
+    triggerBasis?: string;
+    requireTriggerBand?: boolean;
+    triggerTouchBypassSpread?: boolean;
     coinTriggerBands?: Record<string, number[]>;
     takeProfitEnabled?: boolean;
     takeProfitNetPct?: number;
@@ -1495,6 +1501,21 @@ function primaryFillProofLabel(slot: SlotRow | null | undefined) {
     return `Pending exact fill | ${enumLabel(comparison.fillStatus)}`;
   }
   return "-";
+}
+
+function primaryHasExactFillProof(slot: SlotRow | null | undefined) {
+  const comparison = primaryComparison(slot);
+  if (comparison?.exactFillKnown === true) return true;
+  const fillStatus = String(slot?.liveEntryFillStatus ?? comparison?.fillStatus ?? "").trim().toUpperCase();
+  if (fillStatus === "CONFIRMED") return true;
+  return (
+    slot?.liveEntryActualAud != null &&
+    Number.isFinite(slot.liveEntryActualAud) &&
+    slot.liveEntryActualAud > 0 &&
+    slot?.liveEntryActualCoinQty != null &&
+    Number.isFinite(slot.liveEntryActualCoinQty) &&
+    slot.liveEntryActualCoinQty > 0
+  );
 }
 
 function primaryFeeFrictionLabel(slot: SlotRow | null | undefined) {
@@ -2897,6 +2918,21 @@ function subslotTriggerBandLabel(subslot: SubslotRow) {
   return "Legacy trigger";
 }
 
+function normalizedSecondaryTriggerBasis(
+  subslot?: SubslotRow | null,
+  subslotConfig?: ManagerStatus["subslot"] | null
+) {
+  const raw = String(subslot?.subslotTriggerBasis || subslotConfig?.triggerBasis || "GROSS").trim().toUpperCase();
+  return raw === "NET" || raw === "LIVE_NET" || raw === "EXECUTABLE_NET" ? "NET" : "GROSS";
+}
+
+function secondaryTriggerBasisLabel(
+  subslot?: SubslotRow | null,
+  subslotConfig?: ManagerStatus["subslot"] | null
+) {
+  return normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "NET" ? "net" : "gross";
+}
+
 function configuredSubslotTriggerBands(
   subslotConfig: ManagerStatus["subslot"] | null | undefined,
   coin?: string | null
@@ -2947,15 +2983,22 @@ function normalizedSubslotBandIndex(
   return null;
 }
 
-function subslotTriggerSummary(subslot: SubslotRow) {
+function subslotTriggerSummary(
+  subslot: SubslotRow,
+  subslotConfig?: ManagerStatus["subslot"] | null
+) {
   const parts: string[] = [];
   const band = subslotTriggerBandLabel(subslot);
   if (band !== "Legacy trigger" || subslot.subslotTriggerParentNetPct != null) parts.push(band);
   if (subslot.subslotTriggerParentNetPct != null && Number.isFinite(subslot.subslotTriggerParentNetPct)) {
-    parts.push(`trigger ${pctNum(subslot.subslotTriggerParentNetPct)}`);
+    parts.push(`${secondaryTriggerBasisLabel(subslot, subslotConfig)} trigger ${pctNum(subslot.subslotTriggerParentNetPct)}`);
   }
-  if (subslot.subslotEntryParentNetPct != null && Number.isFinite(subslot.subslotEntryParentNetPct)) {
-    parts.push(`opened ${pctNum(subslot.subslotEntryParentNetPct)}`);
+  const opened =
+    normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "NET"
+      ? subslot.subslotEntryParentTriggerPct ?? subslot.subslotEntryParentNetPct
+      : subslot.subslotEntryParentTriggerPct ?? subslot.subslotEntryParentGrossPct;
+  if (opened != null && Number.isFinite(opened)) {
+    parts.push(`opened ${pctNum(opened)}`);
   }
   return parts.length ? parts.join(" | ") : "Legacy trigger";
 }
@@ -2996,14 +3039,15 @@ function subslotLiveDistancePct(
   if (state === "ACTIVE" || state === "BUY_SUBMITTED") return 0;
 
   const triggerPct = configuredSubslotTriggerPct(subslot, subslotConfig, parent?.coin, fallbackBandIndex);
-  const parentNetPct = liveParentNetPct(parent);
+  const basis = normalizedSecondaryTriggerBasis(subslot, subslotConfig);
+  const parentTriggerPct = basis === "NET" ? liveParentNetPct(parent) : liveParentGrossPct(parent);
   const normalizedTriggerPct = Number(triggerPct);
-  if (!Number.isFinite(normalizedTriggerPct) || parentNetPct == null || !Number.isFinite(parentNetPct)) return null;
+  if (!Number.isFinite(normalizedTriggerPct) || parentTriggerPct == null || !Number.isFinite(parentTriggerPct)) return null;
 
   const remainingPct =
     normalizedTriggerPct < 0
-      ? Math.max(0, Number(parentNetPct) - normalizedTriggerPct)
-      : Math.max(0, normalizedTriggerPct - Number(parentNetPct));
+      ? Math.max(0, Number(parentTriggerPct) - normalizedTriggerPct)
+      : Math.max(0, normalizedTriggerPct - Number(parentTriggerPct));
 
   return Number(remainingPct.toFixed(3));
 }
@@ -3442,6 +3486,17 @@ function secondaryRailItemStateLabel(
   return bandLabel;
 }
 
+function secondaryRailEntryBlockLabel(
+  parent: SlotRow,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined
+) {
+  if (subslotConfig?.requirePrimaryExactFill !== true) return null;
+  if (primaryHasExactFillProof(parent)) return null;
+  const fillStatus = primaryComparison(parent)?.fillStatus ?? parent.liveEntryFillStatus;
+  const suffix = fillStatus ? ` (${enumLabel(fillStatus)})` : "";
+  return `Band reached | waiting exact primary fill${suffix}`;
+}
+
 function secondaryRailCounterLabel(
   subslot: SubslotRow | null | undefined,
   parent: SlotRow,
@@ -3473,12 +3528,14 @@ function secondaryRailCounterLabel(
   const distancePct = subslotLiveDistancePct(subslot, parent, subslotConfig, fallbackBandIndex);
   if (distancePct != null) {
     if (distancePct === 0) {
+      const blockLabel = secondaryRailEntryBlockLabel(parent, subslotConfig);
+      if (blockLabel) return blockLabel;
       if (signal === "REVERSAL_CONFIRMING") return "Band reached | buy confirming";
       if (signal === "BOUNCE_SEEN") return "Band reached | bounce seen";
       if (signal === "TRACKING") return "Band reached | monitoring buy";
       return "Band reached | buy eligible now";
     }
-    return `Parent needs ${pctNum(distancePct)} more drawdown`;
+    return `Parent ${secondaryTriggerBasisLabel(subslot, subslotConfig)} needs ${pctNum(distancePct)} more drawdown`;
   }
 
   if (signal === "ARMED") return "Waiting for parent band";
@@ -4160,11 +4217,18 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
   }
 
   if (subslot.subslotTriggerParentNetPct != null && Number.isFinite(subslot.subslotTriggerParentNetPct)) {
-    parts.push(`${subslotTriggerBandLabel(subslot)} fired at ${pctNum(subslot.subslotTriggerParentNetPct)} parent net.`);
+    parts.push(
+      `${subslotTriggerBandLabel(subslot)} fired at ${pctNum(subslot.subslotTriggerParentNetPct)} parent ${secondaryTriggerBasisLabel(subslot)}.`
+    );
   }
 
-  if (subslot.subslotEntryParentNetPct != null && Number.isFinite(subslot.subslotEntryParentNetPct)) {
-    parts.push(`Parent net at entry was ${pctNum(subslot.subslotEntryParentNetPct)}.`);
+  const entryBasis = normalizedSecondaryTriggerBasis(subslot);
+  const entryPct =
+    entryBasis === "NET"
+      ? subslot.subslotEntryParentTriggerPct ?? subslot.subslotEntryParentNetPct
+      : subslot.subslotEntryParentTriggerPct ?? subslot.subslotEntryParentGrossPct;
+  if (entryPct != null && Number.isFinite(entryPct)) {
+    parts.push(`Parent ${secondaryTriggerBasisLabel(subslot)} at entry was ${pctNum(entryPct)}.`);
   }
 
   if (liveDistancePct != null) {
@@ -5846,6 +5910,9 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
   const secondaryTriggerReuse = `${yesNo(subslot?.triggerBandReuse?.enabled)} | cooldown ${msToShortLabel(
     subslot?.triggerBandReuse?.cooldownMs
   )}`;
+  const secondaryTriggerBasis = `${String(subslot?.triggerBasis || "GROSS").toUpperCase()} | band required ${yesNo(
+    subslot?.requireTriggerBand
+  )} | spread bypass ${yesNo(subslot?.triggerTouchBypassSpread)}`;
   const secondaryEntryPacing = `${yesNo(subslot?.entryPacing?.enabled)} | ${msToShortLabel(
     subslot?.entryPacing?.pacingMs
   )} | bypass ${pctNum(subslot?.entryPacing?.bypassParentDeltaPct)}`;
@@ -5965,6 +6032,10 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
           <div>
             <div className="slot-k">Trigger Reuse</div>
             <div className="slot-v">{secondaryTriggerReuse}</div>
+          </div>
+          <div>
+            <div className="slot-k">Trigger Basis</div>
+            <div className="slot-v">{secondaryTriggerBasis}</div>
           </div>
           <div>
             <div className="slot-k">Entry Pacing</div>
@@ -6392,7 +6463,7 @@ const SlotModal = React.memo(function SlotModal(props: {
                 <>
                   <div><div className="slot-k">Current Secondary State</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
                     <div><div className="slot-k">Current Trigger Band</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerBandLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
-                    <div><div className="slot-k">Current Trigger Summary</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerSummary(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Current Trigger Summary</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotTriggerSummary(getPrimarySecondarySnapshot(slot) as SubslotRow, props.subslotConfig) : "-"}</div></div>
                     <div><div className="slot-k">Current Trigger / Exit</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotLiveCounterLabel(getPrimarySecondarySnapshot(slot) as SubslotRow, slot, props.subslotConfig) : "-"}</div></div>
                     <div><div className="slot-k">Current Live Now</div><div className="slot-v">{primarySubslotLiveNowLabel(slot)}</div></div>
                     <div><div className="slot-k">Current Updated</div><div className="slot-v">{primarySubslotHeartbeatLabel(slot, nowMs)}</div></div>
