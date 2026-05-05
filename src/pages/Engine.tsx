@@ -702,6 +702,7 @@ type ManagerStatus = WorkerStatus & {
       recoveryDeltaPct?: number;
       targetParentNetPct?: number;
     };
+    requirePrimaryExactFill?: boolean;
     costAwareEntry?: {
       enabled?: boolean;
       spreadMult?: number;
@@ -1018,6 +1019,11 @@ type PublicCapitalCoin = {
   rotationWalletUnrealizedNetPct?: number | null;
   rotationWalletProfitMinNetPct?: number | null;
   rotationTargetExecutorEligible?: boolean | null;
+  primaryTrackedAud?: number | null;
+  secondaryTrackedAud?: number | null;
+  trackedAud?: number | null;
+  untrackedAudApprox?: number | null;
+  exposureAttention?: boolean | null;
 };
 
 type PublicCapitalResponse = {
@@ -1028,6 +1034,12 @@ type PublicCapitalResponse = {
   walletAudValue?: number | null;
   movableAudEstimate?: number | null;
   walletSourceEnabled?: boolean | null;
+  exposure?: {
+    thresholdAud?: number | null;
+    attentionCount?: number | null;
+    attentionCoins?: string[] | null;
+    untrackedAudApprox?: number | null;
+  } | null;
   cacheMs?: number | null;
   stale?: boolean | null;
   generatedAt?: number | null;
@@ -2031,6 +2043,34 @@ function movableWalletCoins(capital: PublicCapitalResponse | null | undefined) {
         (coin.movableAudEstimate ?? 0) > 0 || coin.walletSourceReady === true || coin.rotationEligibleOut === true
     )
     .sort((a, b) => (b.movableAudEstimate ?? 0) - (a.movableAudEstimate ?? 0));
+}
+
+function capitalExposureAttentionRows(capital: PublicCapitalResponse | null | undefined) {
+  const list = Array.isArray(capital?.coins) ? capital.coins.slice() : [];
+  return list
+    .filter((coin) => coin.exposureAttention === true)
+    .sort((a, b) => Math.abs(b.untrackedAudApprox ?? 0) - Math.abs(a.untrackedAudApprox ?? 0));
+}
+
+function capitalExposureAttentionCount(capital: PublicCapitalResponse | null | undefined) {
+  const explicit = Number(capital?.exposure?.attentionCount);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return capitalExposureAttentionRows(capital).length;
+}
+
+function capitalCoinForSlot(
+  capital: PublicCapitalResponse | null | undefined,
+  slot: SlotRow | null | undefined
+) {
+  const coin = String(slot?.coin || "-").toUpperCase();
+  if (!coin || coin === "-") return null;
+  return (capital?.coins ?? []).find((row) => String(row.coin || "").toUpperCase() === coin) ?? null;
+}
+
+function exposureDeltaLabel(delta: number | null | undefined) {
+  if (delta == null || !Number.isFinite(delta)) return "balanced";
+  if (Math.abs(delta) < 0.01) return "balanced";
+  return delta > 0 ? `${moneyAud(delta)} untracked` : `${moneyAud(Math.abs(delta))} overtracked`;
 }
 
 function isHoldingFamilyState(state: SlotState | string | null | undefined) {
@@ -5383,10 +5423,13 @@ const OverviewTable = React.memo(function OverviewTable(props: {
   slots: SlotRow[];
   holding: ManagerStatus["holding"] | null | undefined;
   subslotConfig: ManagerStatus["subslot"] | null | undefined;
+  capital: PublicCapitalResponse | null;
   onOpenSlot: (id: string) => void;
   nowMs: number;
 }) {
   const actionSlots = props.slots.filter(slotNeedsAction);
+  const exposureRows = capitalExposureAttentionRows(props.capital);
+  const actionCount = actionSlots.length + exposureRows.length;
   const liveSlots = props.slots.filter((slot) => {
     const stage = positionStageForSlot(slot);
     return (
@@ -5414,8 +5457,8 @@ const OverviewTable = React.memo(function OverviewTable(props: {
       <div className="dashboard-metric-grid" aria-label="Dashboard headline metrics">
         <div className="dashboard-metric-card">
           <div className="dashboard-metric-k">Action Needed</div>
-          <div className="dashboard-metric-v">{actionSlots.length}</div>
-          <div className="dashboard-metric-sub">Entries, exits, or blocked reads that need the closest attention.</div>
+          <div className="dashboard-metric-v">{actionCount}</div>
+          <div className="dashboard-metric-sub">Entries, exits, blocked reads, or wallet drift needing attention.</div>
         </div>
 
         <div className="dashboard-metric-card">
@@ -5442,13 +5485,38 @@ const OverviewTable = React.memo(function OverviewTable(props: {
           <div className="dashboard-panel-top">
             <div>
               <div className="dashboard-panel-title">Action Needed</div>
-              <div className="dashboard-panel-note">Only the live items that are actively moving or blocked.</div>
+              <div className="dashboard-panel-note">Only the live items that are actively moving, blocked, or mismatched.</div>
             </div>
-            <div className="dashboard-panel-count">{actionSlots.length}</div>
+            <div className="dashboard-panel-count">{actionCount}</div>
           </div>
 
-          {actionSlots.length ? (
+          {actionCount ? (
             <div className="dashboard-list">
+              {exposureRows.map((coin) => {
+                const slot = props.slots.find((row) => String(row.coin || "").toUpperCase() === String(coin.coin || "").toUpperCase());
+                return (
+                  <button
+                    type="button"
+                    key={`exposure-${coin.coin || "coin"}`}
+                    className="dashboard-row is-exposure"
+                    onClick={() => {
+                      if (slot?.id) props.onOpenSlot(slot.id);
+                    }}
+                  >
+                    <div className="dashboard-row-top">
+                      <div className="dashboard-row-coin">{coin.coin ?? "-"}</div>
+                      <div className="dashboard-row-badge">Wallet Drift</div>
+                    </div>
+                    <div className="dashboard-row-copy">
+                      CoinSpot wallet is {exposureDeltaLabel(coin.untrackedAudApprox)} versus tracked primary and secondary exposure.
+                    </div>
+                    <div className="dashboard-row-meta">
+                      <span>Wallet {moneyAud(coin.audValue)}</span>
+                      <span>Tracked {moneyAud(coin.trackedAud)}</span>
+                    </div>
+                  </button>
+                );
+              })}
               {actionSlots.map((slot) => (
                 <button
                   type="button"
@@ -5501,6 +5569,9 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     <span>Live Net {pctNum(liveParentNetPct(slot))}</span>
                     <span>Live Gross {pctNum(liveParentGrossPct(slot))}</span>
                     <span>{primaryProtectionLabel(slot)}</span>
+                    {capitalCoinForSlot(props.capital, slot) ? (
+                      <span>Wallet {exposureDeltaLabel(capitalCoinForSlot(props.capital, slot)?.untrackedAudApprox)}</span>
+                    ) : null}
                   </div>
                   {primaryExitProgressBlock(slot, props.holding)}
                   {primarySecondaryRail(slot, props.subslotConfig)}
@@ -5778,6 +5849,8 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
   const secondaryEntryPacing = `${yesNo(subslot?.entryPacing?.enabled)} | ${msToShortLabel(
     subslot?.entryPacing?.pacingMs
   )} | bypass ${pctNum(subslot?.entryPacing?.bypassParentDeltaPct)}`;
+  const secondaryPrimaryFillGuard =
+    subslot?.requirePrimaryExactFill === false ? "balance proof allowed" : "exact fill required";
   const secondaryPerfReuse = `${yesNo(subslot?.perfReuse?.enabled)} | confirm -${
     subslot?.perfReuse?.confirmTickReduction ?? 0
   } | pace x${Number(subslot?.perfReuse?.pacingMult ?? 0).toFixed(2)}`;
@@ -5896,6 +5969,10 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
           <div>
             <div className="slot-k">Entry Pacing</div>
             <div className="slot-v">{secondaryEntryPacing}</div>
+          </div>
+          <div>
+            <div className="slot-k">Parent Fill Guard</div>
+            <div className="slot-v">{secondaryPrimaryFillGuard}</div>
           </div>
           <div>
             <div className="slot-k">Perf Reuse</div>
@@ -7009,6 +7086,8 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
             <div><div className="slot-k">AUD Balance</div><div className="slot-v">{moneyAud(props.capital?.audBalance)}</div></div>
             <div><div className="slot-k">Wallet Value</div><div className="slot-v">{moneyAud(props.capital?.walletAudValue)}</div></div>
             <div><div className="slot-k">Movable AUD</div><div className="slot-v">{moneyAud(props.capital?.movableAudEstimate)}</div></div>
+            <div><div className="slot-k">Wallet Drift</div><div className="slot-v">{capitalExposureAttentionCount(props.capital)} watched</div></div>
+            <div><div className="slot-k">Net Drift</div><div className="slot-v">{exposureDeltaLabel(props.capital?.exposure?.untrackedAudApprox)}</div></div>
             <div><div className="slot-k">Wallet Sources</div><div className="slot-v">{props.capital?.walletSourceEnabled ? "ENABLED" : "DISABLED"}</div></div>
             <div><div className="slot-k">Rotation Mode</div><div className="slot-v">{rotationModeLabel(props.capital)}</div></div>
             <div><div className="slot-k">Require Waiting Eligible</div><div className="slot-v">{yesNo(props.capital?.rotation?.requireWaitingEligible)}</div></div>
@@ -7034,6 +7113,8 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
                   <div><div className="slot-k">Coin</div><div className="slot-v">{coin.coin ?? "-"}</div></div>
                   <div><div className="slot-k">Source Type</div><div className="slot-v">{coin.rotationSourceType ?? "-"}</div></div>
                   <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
+                  <div><div className="slot-k">Tracked AUD</div><div className="slot-v">{moneyAud(coin.trackedAud)}</div></div>
+                  <div><div className="slot-k">Wallet Drift</div><div className={`slot-v ${coin.exposureAttention ? "is-warn" : ""}`}>{exposureDeltaLabel(coin.untrackedAudApprox)}</div></div>
                   <div><div className="slot-k">Treasury Ready</div><div className="slot-v">{yesNo(coin.walletSourceReady)}</div></div>
                   <div><div className="slot-k">Policy Ready</div><div className="slot-v">{yesNo(coin.rotationWalletReady)}</div></div>
                   <div><div className="slot-k">Available Coin</div><div className="slot-v">{fmt(coin.availableCoin)}</div></div>
@@ -7067,6 +7148,8 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
                   <div><div className="slot-k">Coin</div><div className="slot-v">{coin.coin ?? "-"}</div></div>
                   <div><div className="slot-k">Source Type</div><div className="slot-v">{coin.rotationSourceType ?? "-"}</div></div>
                   <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
+                  <div><div className="slot-k">Tracked AUD</div><div className="slot-v">{moneyAud(coin.trackedAud)}</div></div>
+                  <div><div className="slot-k">Wallet Drift</div><div className={`slot-v ${coin.exposureAttention ? "is-warn" : ""}`}>{exposureDeltaLabel(coin.untrackedAudApprox)}</div></div>
                   <div><div className="slot-k">Wallet Movable AUD</div><div className="slot-v">{moneyAud(coin.rotationWalletMovableAud ?? coin.movableAudEstimate)}</div></div>
                   <div><div className="slot-k">Treasury Ready</div><div className="slot-v">{yesNo(coin.walletSourceReady)}</div></div>
                   <div><div className="slot-k">Policy Ready</div><div className="slot-v">{yesNo(coin.rotationWalletReady)}</div></div>
@@ -7455,6 +7538,7 @@ export default function Engine() {
                   slots={filteredSlots}
                   holding={meta?.manager?.holding}
                   subslotConfig={meta?.manager?.subslot}
+                  capital={capital}
                   onOpenSlot={setSelectedSlotId}
                   nowMs={nowMs}
                 />

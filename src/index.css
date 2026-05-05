@@ -10872,6 +10872,15 @@ button.home-route-band{
   border-color:rgba(255,172,120,.22);
 }
 
+.dashboard-row.is-exposure{
+  border-color:rgba(244,200,106,.24);
+  box-shadow:inset 0 0 0 1px rgba(244,200,106,.06);
+}
+
+.slot-v.is-warn{
+  color:#ffe0a6;
+}
+
 .stage-card-v.is-blocked{
   color:#ffd3d3;
 }
