@@ -1,11 +1,17 @@
 // /api/market.ts (Vercel / serverless)
 // Curated watchlist for Home page (small + fast).
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+
 type MarketRow = {
   coin: string;
   market: string;
   bid: number;
   ask: number;
   updatedAt?: number;
+};
+
+type CoinSpotLatestResponse = {
+  prices?: Record<string, { bid?: number | string; ask?: number | string }>;
 };
 
 const PUB = "https://www.coinspot.com.au/pubapi/v2";
@@ -19,12 +25,16 @@ const WATCH: Array<{ coin: string; quote: "AUD" }> = [
   { coin: "USDT", quote: "AUD" },
 ];
 
-function toNum(v: any): number {
+function toNum(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : NaN;
 }
 
-export default async function handler(req: any, res: any) {
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "market endpoint error";
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") {
     res.statusCode = 405;
     res.setHeader("Allow", "GET");
@@ -39,7 +49,7 @@ export default async function handler(req: any, res: any) {
     });
 
     if (!r.ok) throw new Error(`CoinSpot latest failed: ${r.status}`);
-    const j = await r.json();
+    const j = (await r.json()) as CoinSpotLatestResponse;
 
     // IMPORTANT: CoinSpot keys are lowercase (btc, sol, xrp...)
     const prices = j?.prices ?? {};
@@ -70,9 +80,9 @@ export default async function handler(req: any, res: any) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Cache-Control", "public, s-maxage=3, stale-while-revalidate=10");
     res.end(JSON.stringify(out));
-  } catch (e: any) {
+  } catch (e: unknown) {
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.end(JSON.stringify({ error: e?.message ?? "market endpoint error" }));
+    res.end(JSON.stringify({ error: errorMessage(e) }));
   }
 }

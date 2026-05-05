@@ -20,7 +20,7 @@ import DonateButton from "./components/DonateButton";
 import Footer from "./components/Footer";
 import ThemeToggle from "./components/ThemeToggle";
 import RequireAuth from "./components/RequireAuth";
-import { useAuth } from "./context/AuthProvider";
+import { useAuth } from "./hooks/useAuth";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Disclaimer from "./pages/Disclaimer";

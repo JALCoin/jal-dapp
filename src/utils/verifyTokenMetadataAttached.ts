@@ -11,7 +11,7 @@ export async function verifyTokenMetadataAttached(
   name?: string;
   symbol?: string;
   uri?: string;
-  rawData?: any;
+  rawData?: unknown;
 }> {
   try {
     const umi = createUmi('https://mainnet.helius-rpc.com/?api-key=5d3bb893-4b85-45b5-bcef-9dc42e5ac6b2');

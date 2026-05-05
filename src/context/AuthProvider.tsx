@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -9,41 +7,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
-
-export type AccountType = "engineer" | "member";
-export type ProgressionTitle =
-  | "initiate"
-  | "observer"
-  | "participant"
-  | "builder_candidate"
-  | "builder";
-
-export type AuthProfile = {
-  id: string;
-  email: string;
-  display_name: string;
-  account_type: AccountType;
-  progression_title: ProgressionTitle;
-  active_gate: string;
-  member_mode_override: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-type AuthContextValue = {
-  session: Session | null;
-  user: User | null;
-  profile: AuthProfile | null;
-  loading: boolean;
-  isEngineer: boolean;
-  isEngineerAccount: boolean;
-  isTestingAsMember: boolean;
-  setTestingAsMember: (next: boolean) => Promise<void>;
-  refreshProfile: () => Promise<AuthProfile | null>;
-  signOut: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextValue | null>(null);
+import { AuthContext, type AuthContextValue, type AuthProfile } from "./AuthContext";
 
 const PROFILE_COLUMNS = `
   id,
@@ -288,14 +252,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider.");
-  }
-
-  return context;
 }

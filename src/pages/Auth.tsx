@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 import { isLikelyEmailAddress, resolveMagicLinkEmail } from "../lib/authIdentity";
 import { usePageMeta } from "../hooks/usePageMeta";
 

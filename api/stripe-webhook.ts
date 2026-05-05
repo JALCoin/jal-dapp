@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { buffer } from "micro";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const runtime = "nodejs";
 
@@ -11,7 +12,11 @@ export const config = {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-export default async function handler(req: any, res: any) {
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
   }
@@ -20,8 +25,8 @@ export default async function handler(req: any, res: any) {
 
   try {
     buf = await buffer(req);
-  } catch (err) {
-    console.error("Buffer error:", err);
+  } catch (error: unknown) {
+    console.error("Buffer error:", error);
     return res.status(500).send("Buffer error");
   }
 
@@ -39,9 +44,10 @@ export default async function handler(req: any, res: any) {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  } catch (err: any) {
-    console.error("Webhook verification failed:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+  } catch (error: unknown) {
+    const detail = errorMessage(error);
+    console.error("Webhook verification failed:", detail);
+    return res.status(400).send(`Webhook Error: ${detail}`);
   }
 
   try {
@@ -104,8 +110,8 @@ export default async function handler(req: any, res: any) {
     }
 
     return res.status(200).json({ received: true });
-  } catch (err) {
-    console.error("Webhook handler crash:", err);
+  } catch (error: unknown) {
+    console.error("Webhook handler crash:", error);
     return res.status(500).send("Handler error");
   }
 }

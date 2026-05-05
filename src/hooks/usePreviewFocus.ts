@@ -19,7 +19,9 @@ export function usePreviewFocus(
       root.setAttribute("aria-hidden", "true");
       try {
         (root as Elem).inert = true;
-      } catch {}
+      } catch {
+        // Some browsers expose inert as read-only on older DOM implementations.
+      }
       nodes.forEach((el) => {
         const prev = el.getAttribute("tabindex");
         if (prev !== null) el.setAttribute("data-prev-tabindex", prev);
@@ -32,7 +34,9 @@ export function usePreviewFocus(
       root.removeAttribute("aria-hidden");
       try {
         (root as Elem).inert = false;
-      } catch {}
+      } catch {
+        // Restoring tabindex below is enough when inert cannot be assigned.
+      }
       nodes.forEach((el) => {
         const prev = el.getAttribute("data-prev-tabindex");
         if (prev !== null) {

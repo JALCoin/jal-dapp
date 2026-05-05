@@ -1,24 +1,43 @@
 // src/components/CurrencyFinalizer.tsx
 import type { FC } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import TokenFinalizerModal from '../utils/TokenFinalizerModal';
+import SolanaWalletProvider from './SolanaWalletProvider';
 
 interface Props {
   className?: string;
 }
 
-const CurrencyFinalizer: FC<Props> = ({ className }) => {
+type ParsedTokenInfo = {
+  mint: string;
+  tokenAmount: {
+    uiAmountString: string;
+  };
+};
+
+type FinalizerToken = {
+  mint: string;
+  amount: string;
+  hasMetadata?: boolean;
+  name?: string;
+  symbol?: string;
+  image?: string;
+};
+
+const nullByte = String.fromCharCode(0);
+
+const CurrencyFinalizerInner: FC<Props> = ({ className }) => {
   const { publicKey } = useWallet();
   const connection = useMemo(() => new Connection('https://solana-proxy-production.up.railway.app', 'confirmed'), []);
-  const [tokens, setTokens] = useState<any[]>([]);
+  const [tokens, setTokens] = useState<FinalizerToken[]>([]);
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
   const [showFinalizer, setShowFinalizer] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
 
-  const fetchMetadataFromChain = async (mint: string) => {
+  const fetchMetadataFromChain = useCallback(async (mint: string): Promise<Partial<FinalizerToken>> => {
     try {
       const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
       const [metadataPDA] = await PublicKey.findProgramAddress(
@@ -35,24 +54,24 @@ const CurrencyFinalizer: FC<Props> = ({ className }) => {
 
       const uri = new TextDecoder()
         .decode(acc.data.slice(115, 315))
-        .replace(/\u0000/g, '')
+        .replaceAll(nullByte, '')
         .trim();
 
       const res = await fetch(uri.startsWith('http') ? uri : `https://ipfs.io/ipfs/${uri.replace('ipfs://', '')}`);
-      const data = await res.json();
+      const data = (await res.json()) as Partial<FinalizerToken>;
 
       return { ...data, hasMetadata: true };
     } catch {
       return { hasMetadata: false };
     }
-  };
+  }, [connection]);
 
-  const fetchTokens = async () => {
+  const fetchTokens = useCallback(async () => {
     if (!publicKey) return;
     const response = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID });
     const enriched = await Promise.all(
       response.value.map(async (acc) => {
-        const info = acc.account.data.parsed.info;
+        const info = acc.account.data.parsed.info as ParsedTokenInfo;
         const mint = info.mint;
         const meta = await fetchMetadataFromChain(mint);
         return {
@@ -63,11 +82,11 @@ const CurrencyFinalizer: FC<Props> = ({ className }) => {
       })
     );
     setTokens(enriched.filter((t) => !t.hasMetadata));
-  };
+  }, [connection, fetchMetadataFromChain, publicKey]);
 
   useEffect(() => {
-    fetchTokens();
-  }, [publicKey]);
+    void fetchTokens();
+  }, [fetchTokens]);
 
   const handleClick = (mint: string) => {
     setSelectedMint(mint);
@@ -77,7 +96,7 @@ const CurrencyFinalizer: FC<Props> = ({ className }) => {
   const handleSuccess = (mint: string) => {
     setJustUnlocked(mint);
     setShowFinalizer(false);
-    fetchTokens();
+    void fetchTokens();
   };
 
   return (
@@ -113,5 +132,11 @@ const CurrencyFinalizer: FC<Props> = ({ className }) => {
     </div>
   );
 };
+
+const CurrencyFinalizer: FC<Props> = (props) => (
+  <SolanaWalletProvider>
+    <CurrencyFinalizerInner {...props} />
+  </SolanaWalletProvider>
+);
 
 export default CurrencyFinalizer;
