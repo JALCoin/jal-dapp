@@ -139,6 +139,15 @@ type SecondaryTriggerAssessment = {
   netConfirmPct?: number | null;
   netConfirmOk?: boolean | null;
   hybridNetConfirmOk?: boolean | null;
+  hybridEntryCostRequired?: boolean | null;
+  hybridEntryCostKnown?: boolean | null;
+  hybridEntryCostOk?: boolean | null;
+  hybridParentEntryRate?: number | null;
+  hybridSecondaryEntryRate?: number | null;
+  hybridParentAllInEntryRate?: number | null;
+  hybridSecondaryAllInEntryRate?: number | null;
+  hybridEntryDiscountPct?: number | null;
+  hybridMinEntryDiscountPct?: number | null;
   hybridWouldPass?: boolean | null;
   hybridWouldBlock?: boolean | null;
   hybridWouldBlockReason?: string | null;
@@ -181,6 +190,15 @@ type SubslotRow = {
   subslotTriggerNetConfirmPct?: number | null;
   subslotTriggerNetConfirmOk?: boolean | null;
   subslotHybridNetConfirmOk?: boolean | null;
+  subslotHybridEntryCostRequired?: boolean | null;
+  subslotHybridEntryCostKnown?: boolean | null;
+  subslotHybridEntryCostOk?: boolean | null;
+  subslotHybridParentEntryRate?: number | null;
+  subslotHybridSecondaryEntryRate?: number | null;
+  subslotHybridParentAllInEntryRate?: number | null;
+  subslotHybridSecondaryAllInEntryRate?: number | null;
+  subslotHybridEntryDiscountPct?: number | null;
+  subslotHybridMinEntryDiscountPct?: number | null;
   subslotHybridWouldPass?: boolean | null;
   subslotHybridWouldBlock?: boolean | null;
   subslotHybridWouldBlockReason?: string | null;
@@ -458,6 +476,15 @@ type SlotRow = {
   subslotTriggerNetConfirmPct?: number | null;
   subslotTriggerNetConfirmOk?: boolean | null;
   subslotHybridNetConfirmOk?: boolean | null;
+  subslotHybridEntryCostRequired?: boolean | null;
+  subslotHybridEntryCostKnown?: boolean | null;
+  subslotHybridEntryCostOk?: boolean | null;
+  subslotHybridParentEntryRate?: number | null;
+  subslotHybridSecondaryEntryRate?: number | null;
+  subslotHybridParentAllInEntryRate?: number | null;
+  subslotHybridSecondaryAllInEntryRate?: number | null;
+  subslotHybridEntryDiscountPct?: number | null;
+  subslotHybridMinEntryDiscountPct?: number | null;
   subslotHybridWouldPass?: boolean | null;
   subslotHybridWouldBlock?: boolean | null;
   subslotHybridWouldBlockReason?: string | null;
@@ -709,6 +736,8 @@ type ManagerStatus = WorkerStatus & {
     triggerParentNetBandsPct?: number[];
     triggerParentNetConfirmPct?: number;
     triggerBasis?: string;
+    hybridRequireSecondaryCheaper?: boolean;
+    hybridMinEntryDiscountPct?: number;
     requireTriggerBand?: boolean;
     triggerTouchBypassSpread?: boolean;
     coinTriggerBands?: Record<string, number[]>;
@@ -1210,9 +1239,9 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Trigger And Cost Gate",
     summary:
-      "The secondary ladder can now report Gross, Net, or Hybrid trigger basis. Gross keeps using market-structure bands; Hybrid uses the gross band and then asks whether executable parent net is also red enough.",
+      "The secondary ladder can report Gross, Net, or Hybrid trigger basis. Hybrid uses the gross band, requires executable parent net confirmation, then checks that the secondary entry is actually cheaper than the parent basis.",
     detail:
-      "Trigger-touch mode can still skip signal confirmation, EMA gap, expected edge, and net-after-cost checks, but it does not skip live market, spread, wallet exposure, parent-collapse, band availability, or Hybrid net confirmation.",
+      "Trigger-touch mode can still skip signal confirmation, EMA gap, expected edge, and net-after-cost checks, but it does not skip live market, spread, wallet exposure, parent-collapse, band availability, Hybrid net confirmation, or the final cheaper-entry quote fence.",
   },
   {
     title: "Executable-Green Exits",
@@ -1904,6 +1933,8 @@ function reasonLabel(reason: string | null | undefined) {
     market_unresolved: "Market unavailable",
     no_market: "No market data",
     parent_net_confirm: "Parent executable net confirmation",
+    secondary_entry_cost: "Secondary entry is not cheaper",
+    secondary_entry_cost_quote: "Secondary quote is not cheaper",
     gross_band: "Gross band not reached",
     bidask_unresolved: "Bid/ask unavailable",
     live_bidask_required: "Live bid/ask required",
@@ -2370,6 +2401,15 @@ function getSubslots(slot: SlotRow): SubslotRow[] {
       subslotTriggerNetConfirmPct: slot.subslotTriggerNetConfirmPct,
       subslotTriggerNetConfirmOk: slot.subslotTriggerNetConfirmOk,
       subslotHybridNetConfirmOk: slot.subslotHybridNetConfirmOk,
+      subslotHybridEntryCostRequired: slot.subslotHybridEntryCostRequired,
+      subslotHybridEntryCostKnown: slot.subslotHybridEntryCostKnown,
+      subslotHybridEntryCostOk: slot.subslotHybridEntryCostOk,
+      subslotHybridParentEntryRate: slot.subslotHybridParentEntryRate,
+      subslotHybridSecondaryEntryRate: slot.subslotHybridSecondaryEntryRate,
+      subslotHybridParentAllInEntryRate: slot.subslotHybridParentAllInEntryRate,
+      subslotHybridSecondaryAllInEntryRate: slot.subslotHybridSecondaryAllInEntryRate,
+      subslotHybridEntryDiscountPct: slot.subslotHybridEntryDiscountPct,
+      subslotHybridMinEntryDiscountPct: slot.subslotHybridMinEntryDiscountPct,
       subslotHybridWouldPass: slot.subslotHybridWouldPass,
       subslotHybridWouldBlock: slot.subslotHybridWouldBlock,
       subslotHybridWouldBlockReason: slot.subslotHybridWouldBlockReason,
@@ -2856,7 +2896,9 @@ function subslotHasEntryQualityData(subslot: SubslotRow | null | undefined) {
       subslot?.subslotEntryQuoteUsed != null ||
       subslot?.subslotEntryQuoteAdjusted != null ||
       subslotEntryMarketAgeMs(subslot) != null ||
-      subslotEntryMarketMaxAgeMs(subslot) != null
+      subslotEntryMarketMaxAgeMs(subslot) != null ||
+      subslotTriggerAssessment(subslot)?.hybridEntryCostOk != null ||
+      subslotTriggerAssessment(subslot)?.hybridEntryDiscountPct != null
   );
 }
 
@@ -3081,6 +3123,18 @@ function subslotTriggerAssessment(
     netConfirmPct: subslot?.subslotTriggerNetConfirmPct ?? slot?.subslotTriggerNetConfirmPct ?? null,
     netConfirmOk: subslot?.subslotTriggerNetConfirmOk ?? slot?.subslotTriggerNetConfirmOk ?? null,
     hybridNetConfirmOk: subslot?.subslotHybridNetConfirmOk ?? slot?.subslotHybridNetConfirmOk ?? null,
+    hybridEntryCostRequired: subslot?.subslotHybridEntryCostRequired ?? slot?.subslotHybridEntryCostRequired ?? null,
+    hybridEntryCostKnown: subslot?.subslotHybridEntryCostKnown ?? slot?.subslotHybridEntryCostKnown ?? null,
+    hybridEntryCostOk: subslot?.subslotHybridEntryCostOk ?? slot?.subslotHybridEntryCostOk ?? null,
+    hybridParentEntryRate: subslot?.subslotHybridParentEntryRate ?? slot?.subslotHybridParentEntryRate ?? null,
+    hybridSecondaryEntryRate: subslot?.subslotHybridSecondaryEntryRate ?? slot?.subslotHybridSecondaryEntryRate ?? null,
+    hybridParentAllInEntryRate:
+      subslot?.subslotHybridParentAllInEntryRate ?? slot?.subslotHybridParentAllInEntryRate ?? null,
+    hybridSecondaryAllInEntryRate:
+      subslot?.subslotHybridSecondaryAllInEntryRate ?? slot?.subslotHybridSecondaryAllInEntryRate ?? null,
+    hybridEntryDiscountPct: subslot?.subslotHybridEntryDiscountPct ?? slot?.subslotHybridEntryDiscountPct ?? null,
+    hybridMinEntryDiscountPct:
+      subslot?.subslotHybridMinEntryDiscountPct ?? slot?.subslotHybridMinEntryDiscountPct ?? null,
     hybridWouldPass: subslot?.subslotHybridWouldPass ?? slot?.subslotHybridWouldPass ?? null,
     hybridWouldBlock: subslot?.subslotHybridWouldBlock ?? slot?.subslotHybridWouldBlock ?? null,
     hybridWouldBlockReason: subslot?.subslotHybridWouldBlockReason ?? slot?.subslotHybridWouldBlockReason ?? null,
@@ -3127,6 +3181,35 @@ function subslotHybridAwarenessLabel(subslot?: SubslotRow | null, slot?: SlotRow
     return `Hybrid would block${reason}`;
   }
   return "-";
+}
+
+function subslotHybridEntryCostLabel(subslot?: SubslotRow | null, slot?: SlotRow | null) {
+  const assessment = subslotTriggerAssessment(subslot, slot);
+  if (!assessment) return "-";
+  if (assessment.hybridEntryCostRequired === false) return "Not required";
+
+  const discount = assessment.hybridEntryDiscountPct;
+  const minDiscount = assessment.hybridMinEntryDiscountPct ?? 0;
+  const detail =
+    discount != null && Number.isFinite(discount)
+      ? ` (${pctNum(discount)} vs min ${pctNum(minDiscount)})`
+      : "";
+
+  if (assessment.hybridEntryCostOk === true) return `Secondary cheaper${detail}`;
+  if (assessment.hybridEntryCostOk === false) {
+    if (assessment.hybridEntryCostKnown === false) return "Entry cost unknown";
+    return `Secondary not cheaper${detail}`;
+  }
+  return "-";
+}
+
+function subslotHybridEntryRateLabel(subslot?: SubslotRow | null, slot?: SlotRow | null) {
+  const assessment = subslotTriggerAssessment(subslot, slot);
+  if (!assessment) return "-";
+  const parentRate = assessment.hybridParentEntryRate;
+  const secondaryRate = assessment.hybridSecondaryEntryRate;
+  if (parentRate == null && secondaryRate == null) return "-";
+  return `Parent ${fmt(parentRate)} | Secondary ${fmt(secondaryRate)}`;
 }
 
 function configuredSubslotTriggerBands(
@@ -3200,6 +3283,9 @@ function subslotTriggerSummary(
   }
   if (assessment?.netConfirmOk != null || assessment?.hybridNetConfirmOk != null) {
     parts.push(subslotNetConfirmStatusLabel(subslot));
+  }
+  if (assessment?.hybridEntryCostOk != null || assessment?.hybridEntryDiscountPct != null) {
+    parts.push(subslotHybridEntryCostLabel(subslot));
   }
   return parts.length ? parts.join(" | ") : "Legacy trigger";
 }
@@ -3698,6 +3784,9 @@ function secondaryRailEntryBlockLabel(
   if (liveBasis === "HYBRID" && assessment?.netConfirmOk === false) {
     return "Band reached | waiting executable net confirm";
   }
+  if (liveBasis === "HYBRID" && assessment?.hybridEntryCostOk === false) {
+    return "Band reached | waiting cheaper entry";
+  }
   if (liveBasis !== "HYBRID" && assessment?.hybridWouldBlock === true) {
     return "Band reached | hybrid would block";
   }
@@ -4124,6 +4213,8 @@ function subslotEntryQualityBlock(subslot: SubslotRow | null | undefined, varian
   if (!subslot || !subslotHasEntryQualityData(subslot)) return null;
 
   const metrics = [
+    { label: "Hybrid Cost", value: subslotHybridEntryCostLabel(subslot) },
+    { label: "Hybrid Rates", value: subslotHybridEntryRateLabel(subslot) },
     { label: "Quote Status", value: subslotEntryQuoteStatusLabel(subslot) },
     { label: "Quote Rate", value: fmt(subslotEntryQuoteRate(subslot)) },
     { label: "Abs Drift", value: pctNum(subslotEntryQuoteAbsoluteDriftPct(subslot)) },
@@ -4132,10 +4223,12 @@ function subslotEntryQualityBlock(subslot: SubslotRow | null | undefined, varian
   ];
 
   const compactMetrics = metrics.filter((metric) =>
-    ["Quote Status", "Abs Drift", "Market Age"].includes(metric.label)
+    ["Hybrid Cost", "Quote Status", "Abs Drift", "Market Age"].includes(metric.label)
   );
 
   const copyParts = [
+    subslotTriggerAssessment(subslot)?.hybridEntryCostOk === true ? "Hybrid confirmed the secondary entry was cheaper than the parent basis." : null,
+    subslotTriggerAssessment(subslot)?.hybridEntryCostOk === false ? "Hybrid blocked or flagged this entry because the secondary was not cheaper than the parent basis." : null,
     subslot?.subslotEntryQuoteUsed === true ? "Secondary buy used the shared live quote guard." : null,
     subslot?.subslotEntryQuoteAdjusted === true ? "Quote drift forced an adjusted entry rate." : null,
     subslotEntryQuoteAbsoluteDriftPct(subslot) != null
@@ -4466,7 +4559,7 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
 
   if (liveDistancePct != null) {
     if (liveDistancePct > 0) parts.push(`${pctNum(liveDistancePct)} remains before Jrd Secondary goes live.`);
-    else parts.push("Band trigger is met. Secondary still needs spread, hybrid net confirmation when enabled, pacing, and any non-touch signal or edge gates to align.");
+    else parts.push("Band trigger is met. Secondary still needs spread, hybrid net and cheaper-entry confirmation when enabled, pacing, and any non-touch signal or edge gates to align.");
   }
 
   // Signal Analysis
@@ -6164,6 +6257,9 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
     subslot?.triggerParentNetConfirmPct != null && Number.isFinite(subslot.triggerParentNetConfirmPct)
       ? `${pctNum(subslot.triggerParentNetConfirmPct)} executable net`
       : "0.00% executable net";
+  const secondaryHybridEntryCost = `${subslot?.hybridRequireSecondaryCheaper === false ? "OFF" : "ON"} | min cheaper ${pctNum(
+    subslot?.hybridMinEntryDiscountPct ?? 0
+  )}`;
   const secondaryEntryPacing = `${yesNo(subslot?.entryPacing?.enabled)} | ${msToShortLabel(
     subslot?.entryPacing?.pacingMs
   )} | bypass ${pctNum(subslot?.entryPacing?.bypassParentDeltaPct)}`;
@@ -6291,6 +6387,10 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
           <div>
             <div className="slot-k">Hybrid Net Confirm</div>
             <div className="slot-v">{secondaryNetConfirm}</div>
+          </div>
+          <div>
+            <div className="slot-k">Hybrid Entry Cost</div>
+            <div className="slot-v">{secondaryHybridEntryCost}</div>
           </div>
           <div>
             <div className="slot-k">Entry Pacing</div>
@@ -6717,6 +6817,8 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Current Basis</div><div className="slot-v">{secondaryTriggerBasisTitleLabel(getPrimarySecondarySnapshot(slot), props.subslotConfig)}</div></div>
               <div><div className="slot-k">Gross Band Status</div><div className="slot-v">{subslotGrossBandStatusLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
               <div><div className="slot-k">Executable Net Confirm</div><div className="slot-v">{subslotNetConfirmStatusLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
+              <div><div className="slot-k">Hybrid Entry Cost</div><div className="slot-v">{subslotHybridEntryCostLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
+              <div><div className="slot-k">Hybrid Entry Rates</div><div className="slot-v">{subslotHybridEntryRateLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
               <div><div className="slot-k">Spread Status</div><div className="slot-v">{subslotSpreadStatusLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
               <div><div className="slot-k">Hybrid Awareness</div><div className="slot-v">{subslotHybridAwarenessLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
               {getSecondaryRows(slot).length ? (
@@ -6756,6 +6858,8 @@ const SlotModal = React.memo(function SlotModal(props: {
                         <div><div className="slot-k">Trigger / Exit</div><div className="slot-v">{subslotLiveCounterLabel(subslot, slot, props.subslotConfig)}</div></div>
                         <div><div className="slot-k">Gross Band Status</div><div className="slot-v">{subslotGrossBandStatusLabel(subslot, slot)}</div></div>
                         <div><div className="slot-k">Net Confirmation</div><div className="slot-v">{subslotNetConfirmStatusLabel(subslot, slot)}</div></div>
+                        <div><div className="slot-k">Hybrid Entry Cost</div><div className="slot-v">{subslotHybridEntryCostLabel(subslot, slot)}</div></div>
+                        <div><div className="slot-k">Hybrid Entry Rates</div><div className="slot-v">{subslotHybridEntryRateLabel(subslot, slot)}</div></div>
                         <div><div className="slot-k">Spread Status</div><div className="slot-v">{subslotSpreadStatusLabel(subslot, slot)}</div></div>
                         <div><div className="slot-k">Hybrid Awareness</div><div className="slot-v">{subslotHybridAwarenessLabel(subslot, slot)}</div></div>
                         <div><div className="slot-k">Parent {secondaryTriggerBasisTitleLabel(subslot, props.subslotConfig)} @ Open</div><div className="slot-v">{pctNum(secondaryParentAtOpenPct(subslot, props.subslotConfig))}</div></div>
@@ -6990,7 +7094,11 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   const levelTrails = holding?.levelTrails;
   const coinOverrideCoins = managerCoinOverrideCoins(holding?.coinOverrides);
   const primaryPerf = manager?.primaryPerf;
-  const costAwareEntry = manager?.subslot?.costAwareEntry;
+  const summarySubslot = manager?.subslot;
+  const costAwareEntry = summarySubslot?.costAwareEntry;
+  const secondaryHybridEntryCost = `${summarySubslot?.hybridRequireSecondaryCheaper === false ? "OFF" : "ON"} | min cheaper ${pctNum(
+    summarySubslot?.hybridMinEntryDiscountPct ?? 0
+  )}`;
   const lockFloorExitMode =
     holding?.exitPolicy?.lockExitRequireGreen === false
       ? "floor breach sells immediately"
@@ -7156,6 +7264,14 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
             </div>
             <div className="engine-upgrade-sub">
               Spread multiplier {costAwareEntry?.spreadMult != null && Number.isFinite(costAwareEntry.spreadMult) ? `${costAwareEntry.spreadMult.toFixed(2)}x` : "-"}
+            </div>
+          </div>
+
+          <div className="engine-upgrade-item">
+            <div className="engine-upgrade-k">Hybrid Cheaper Entry</div>
+            <div className="engine-upgrade-v">{secondaryHybridEntryCost}</div>
+            <div className="engine-upgrade-sub">
+              Final CoinSpot buy quote must stay no worse than the parent-derived max submitted rate.
             </div>
           </div>
         </div>
