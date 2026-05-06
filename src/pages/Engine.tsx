@@ -127,6 +127,25 @@ type ExecutionComparison = {
   roundTripFeeBps?: number | null;
 };
 
+type SecondaryTriggerAssessment = {
+  basis?: string | null;
+  parentGrossPct?: number | null;
+  parentNetPct?: number | null;
+  parentTriggerPct?: number | null;
+  selectedBandIndex?: number | null;
+  selectedBandPct?: number | null;
+  grossBandOk?: boolean | null;
+  spreadOk?: boolean | null;
+  netConfirmPct?: number | null;
+  netConfirmOk?: boolean | null;
+  hybridNetConfirmOk?: boolean | null;
+  hybridWouldPass?: boolean | null;
+  hybridWouldBlock?: boolean | null;
+  hybridWouldBlockReason?: string | null;
+  openOk?: boolean | null;
+  blockReason?: string | null;
+};
+
 type PrimarySurface = {
   compareScope?: string | null;
   comparison?: ExecutionComparison | null;
@@ -143,6 +162,7 @@ type SecondarySummary = {
   liveNetPct?: number | null;
   totalNetGainAud?: number | null;
   cycles?: number | null;
+  triggerAssessment?: SecondaryTriggerAssessment | null;
   decision?: ExitDecision | null;
 };
 
@@ -152,6 +172,20 @@ type SubslotRow = {
   subslotTriggerBasis?: string | null;
   subslotTriggerBandIndex?: number | null;
   subslotTriggerParentNetPct?: number | null;
+  subslotTriggerBandPct?: number | null;
+  subslotTriggerParentGrossPct?: number | null;
+  subslotTriggerParentExecutableNetPct?: number | null;
+  subslotTriggerParentTriggerPct?: number | null;
+  subslotTriggerGrossBandOk?: boolean | null;
+  subslotTriggerSpreadOk?: boolean | null;
+  subslotTriggerNetConfirmPct?: number | null;
+  subslotTriggerNetConfirmOk?: boolean | null;
+  subslotHybridNetConfirmOk?: boolean | null;
+  subslotHybridWouldPass?: boolean | null;
+  subslotHybridWouldBlock?: boolean | null;
+  subslotHybridWouldBlockReason?: string | null;
+  subslotTriggerOpenOk?: boolean | null;
+  subslotTriggerBlockReason?: string | null;
   subslotEntryParentNetPct?: number | null;
   subslotEntryParentGrossPct?: number | null;
   subslotEntryParentTriggerPct?: number | null;
@@ -236,6 +270,7 @@ type SubslotRow = {
   subslotEffectiveTakeProfitNetPct?: number | null;
   subslotGreenStallTicks?: number | null;
   comparison?: ExecutionComparison | null;
+  triggerAssessment?: SecondaryTriggerAssessment | null;
   decision?: ExitDecision | null;
   reporting?: ReportingSummary | null;
 };
@@ -414,6 +449,20 @@ type SlotRow = {
   subslotTriggerBasis?: string | null;
   subslotTriggerBandIndex?: number | null;
   subslotTriggerParentNetPct?: number | null;
+  subslotTriggerBandPct?: number | null;
+  subslotTriggerParentGrossPct?: number | null;
+  subslotTriggerParentExecutableNetPct?: number | null;
+  subslotTriggerParentTriggerPct?: number | null;
+  subslotTriggerGrossBandOk?: boolean | null;
+  subslotTriggerSpreadOk?: boolean | null;
+  subslotTriggerNetConfirmPct?: number | null;
+  subslotTriggerNetConfirmOk?: boolean | null;
+  subslotHybridNetConfirmOk?: boolean | null;
+  subslotHybridWouldPass?: boolean | null;
+  subslotHybridWouldBlock?: boolean | null;
+  subslotHybridWouldBlockReason?: string | null;
+  subslotTriggerOpenOk?: boolean | null;
+  subslotTriggerBlockReason?: string | null;
   subslotEntryParentNetPct?: number | null;
   subslotEntryParentGrossPct?: number | null;
   subslotEntryParentTriggerPct?: number | null;
@@ -658,6 +707,7 @@ type ManagerStatus = WorkerStatus & {
     exitGreenConfirmTicks?: number;
     triggerParentNetPct?: number;
     triggerParentNetBandsPct?: number[];
+    triggerParentNetConfirmPct?: number;
     triggerBasis?: string;
     requireTriggerBand?: boolean;
     triggerTouchBypassSpread?: boolean;
@@ -1160,23 +1210,23 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Trigger And Cost Gate",
     summary:
-      "The secondary ladder still keys off negative parent-net trigger bands, but trigger-touch mode now lets fresh entries buy on the crossed threshold instead of waiting for the old confirmation stack.",
+      "The secondary ladder can now report Gross, Net, or Hybrid trigger basis. Gross keeps using market-structure bands; Hybrid uses the gross band and then asks whether executable parent net is also red enough.",
     detail:
-      "Reusable bands, cooldown, market availability, size, and parent-collapse safety still matter, but spread, net-after-cost, EMA-gap, and confirmation no longer block threshold-touch entries.",
+      "Trigger-touch mode can still skip signal confirmation, EMA gap, expected edge, and net-after-cost checks, but it does not skip live market, spread, wallet exposure, parent-collapse, band availability, or Hybrid net confirmation.",
   },
   {
-    title: "Recovery-First Exits",
+    title: "Executable-Green Exits",
     summary:
-      "Bearish regimes still use the recovery-style hold before they will harvest a secondary, so downtrends and consolidation-bear setups remain patient after entry.",
+      "Secondary exits are judged in executable terms. A trade can harvest once bid-side net and AUD profit clear the configured green threshold and confirmation requirement.",
     detail:
-      "Once recovery is confirmed, the exit layer can still harvest through executable take-profit, trailing, green-stall, band-aware targets, and parent-recovery exits while honoring executable green thresholds.",
+      "Take-profit, trailing, green-stall, band-aware targets, and parent-recovery exits all feed that green sell gate instead of relying on a stale recovery-style description.",
   },
   {
     title: "Directional Playbooks",
     summary:
-      "Constructive regimes now release faster: uptrend, consolidation-bull, chop, and unknown setups can take the first executable green instead of waiting for bearish recovery rules.",
+      "Regime profiles still shape entry size, spread ceilings, EMA floors, bounce requirements, and exit target behavior, while the final sell readiness remains executable-green.",
     detail:
-      "This means regime decides whether a secondary behaves like a recovery-hold harvest or a first-green release, while every exit still has to pass the same executable green test before the UI reports it as ready to leave.",
+      "That makes the dashboard distinction cleaner: structure chooses the setup, executable economics decide whether the wallet can safely enter or exit.",
   },
   {
     title: "Regime Engine",
@@ -1853,6 +1903,8 @@ function reasonLabel(reason: string | null | undefined) {
     spread_unresolved: "Spread unavailable",
     market_unresolved: "Market unavailable",
     no_market: "No market data",
+    parent_net_confirm: "Parent executable net confirmation",
+    gross_band: "Gross band not reached",
     bidask_unresolved: "Bid/ask unavailable",
     live_bidask_required: "Live bid/ask required",
     drawdown_not_ready: "Drawdown not ready",
@@ -2309,6 +2361,20 @@ function getSubslots(slot: SlotRow): SubslotRow[] {
       subslotTriggerBasis: slot.subslotTriggerBasis,
       subslotTriggerBandIndex: slot.subslotTriggerBandIndex,
       subslotTriggerParentNetPct: slot.subslotTriggerParentNetPct,
+      subslotTriggerBandPct: slot.subslotTriggerBandPct,
+      subslotTriggerParentGrossPct: slot.subslotTriggerParentGrossPct,
+      subslotTriggerParentExecutableNetPct: slot.subslotTriggerParentExecutableNetPct,
+      subslotTriggerParentTriggerPct: slot.subslotTriggerParentTriggerPct,
+      subslotTriggerGrossBandOk: slot.subslotTriggerGrossBandOk,
+      subslotTriggerSpreadOk: slot.subslotTriggerSpreadOk,
+      subslotTriggerNetConfirmPct: slot.subslotTriggerNetConfirmPct,
+      subslotTriggerNetConfirmOk: slot.subslotTriggerNetConfirmOk,
+      subslotHybridNetConfirmOk: slot.subslotHybridNetConfirmOk,
+      subslotHybridWouldPass: slot.subslotHybridWouldPass,
+      subslotHybridWouldBlock: slot.subslotHybridWouldBlock,
+      subslotHybridWouldBlockReason: slot.subslotHybridWouldBlockReason,
+      subslotTriggerOpenOk: slot.subslotTriggerOpenOk,
+      subslotTriggerBlockReason: slot.subslotTriggerBlockReason,
       subslotEntryParentNetPct: slot.subslotEntryParentNetPct,
       subslotEntryParentGrossPct: slot.subslotEntryParentGrossPct,
       subslotEntryParentTriggerPct: slot.subslotEntryParentTriggerPct,
@@ -2929,6 +2995,7 @@ function normalizedSecondaryTriggerBasis(
   subslotConfig?: ManagerStatus["subslot"] | null
 ) {
   const raw = String(subslot?.subslotTriggerBasis || subslotConfig?.triggerBasis || "GROSS").trim().toUpperCase();
+  if (raw === "HYBRID" || raw === "GROSS_AND_NET" || raw === "GROSS_NET") return "HYBRID";
   return raw === "NET" || raw === "LIVE_NET" || raw === "EXECUTABLE_NET" ? "NET" : "GROSS";
 }
 
@@ -2936,14 +3003,18 @@ function secondaryTriggerBasisLabel(
   subslot?: SubslotRow | null,
   subslotConfig?: ManagerStatus["subslot"] | null
 ) {
-  return normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "NET" ? "net" : "gross";
+  const basis = normalizedSecondaryTriggerBasis(subslot, subslotConfig);
+  if (basis === "HYBRID") return "hybrid";
+  return basis === "NET" ? "net" : "gross";
 }
 
 function secondaryTriggerBasisTitleLabel(
   subslot?: SubslotRow | null,
   subslotConfig?: ManagerStatus["subslot"] | null
 ) {
-  return normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "NET" ? "Net" : "Gross";
+  const basis = normalizedSecondaryTriggerBasis(subslot, subslotConfig);
+  if (basis === "HYBRID") return "Hybrid";
+  return basis === "NET" ? "Net" : "Gross";
 }
 
 function secondaryParentAtOpenPct(
@@ -2953,6 +3024,109 @@ function secondaryParentAtOpenPct(
   return normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "NET"
     ? subslot?.subslotEntryParentTriggerPct ?? subslot?.subslotEntryParentNetPct
     : subslot?.subslotEntryParentTriggerPct ?? subslot?.subslotEntryParentGrossPct;
+}
+
+function subslotTriggerAssessment(
+  subslot?: SubslotRow | null,
+  slot?: SlotRow | null
+): SecondaryTriggerAssessment | null {
+  const direct = subslot?.triggerAssessment;
+  const fromSlot = slot?.secondary?.triggerAssessment;
+  const source = direct ?? fromSlot ?? null;
+  const hasStructured =
+    !!source &&
+    Object.values(source).some((value) => value != null && value !== "");
+
+  if (hasStructured) return source;
+
+  const basis = String(subslot?.subslotTriggerBasis || slot?.subslotTriggerBasis || "").trim().toUpperCase();
+  const selectedBandPct =
+    subslot?.subslotTriggerBandPct ??
+    subslot?.subslotTriggerParentNetPct ??
+    slot?.subslotTriggerBandPct ??
+    slot?.subslotTriggerParentNetPct ??
+    null;
+  const hasLegacy =
+    !!basis ||
+    selectedBandPct != null ||
+    subslot?.subslotTriggerNetConfirmPct != null ||
+    slot?.subslotTriggerNetConfirmPct != null;
+
+  if (!hasLegacy) return null;
+
+  return {
+    basis: basis || null,
+    parentGrossPct:
+      subslot?.subslotTriggerParentGrossPct ??
+      subslot?.subslotEntryParentGrossPct ??
+      slot?.subslotTriggerParentGrossPct ??
+      slot?.subslotEntryParentGrossPct ??
+      null,
+    parentNetPct:
+      subslot?.subslotTriggerParentExecutableNetPct ??
+      subslot?.subslotEntryParentNetPct ??
+      slot?.subslotTriggerParentExecutableNetPct ??
+      slot?.subslotEntryParentNetPct ??
+      null,
+    parentTriggerPct:
+      subslot?.subslotTriggerParentTriggerPct ??
+      subslot?.subslotEntryParentTriggerPct ??
+      slot?.subslotTriggerParentTriggerPct ??
+      slot?.subslotEntryParentTriggerPct ??
+      null,
+    selectedBandIndex: subslot?.subslotTriggerBandIndex ?? slot?.subslotTriggerBandIndex ?? null,
+    selectedBandPct,
+    grossBandOk: subslot?.subslotTriggerGrossBandOk ?? slot?.subslotTriggerGrossBandOk ?? null,
+    spreadOk: subslot?.subslotTriggerSpreadOk ?? slot?.subslotTriggerSpreadOk ?? null,
+    netConfirmPct: subslot?.subslotTriggerNetConfirmPct ?? slot?.subslotTriggerNetConfirmPct ?? null,
+    netConfirmOk: subslot?.subslotTriggerNetConfirmOk ?? slot?.subslotTriggerNetConfirmOk ?? null,
+    hybridNetConfirmOk: subslot?.subslotHybridNetConfirmOk ?? slot?.subslotHybridNetConfirmOk ?? null,
+    hybridWouldPass: subslot?.subslotHybridWouldPass ?? slot?.subslotHybridWouldPass ?? null,
+    hybridWouldBlock: subslot?.subslotHybridWouldBlock ?? slot?.subslotHybridWouldBlock ?? null,
+    hybridWouldBlockReason: subslot?.subslotHybridWouldBlockReason ?? slot?.subslotHybridWouldBlockReason ?? null,
+    openOk: subslot?.subslotTriggerOpenOk ?? slot?.subslotTriggerOpenOk ?? null,
+    blockReason: subslot?.subslotTriggerBlockReason ?? slot?.subslotTriggerBlockReason ?? null,
+  };
+}
+
+function triggerAssessmentStatusLabel(ok: boolean | null | undefined, passLabel: string, failLabel: string) {
+  if (ok === true) return passLabel;
+  if (ok === false) return failLabel;
+  return "-";
+}
+
+function subslotGrossBandStatusLabel(subslot?: SubslotRow | null, slot?: SlotRow | null) {
+  const assessment = subslotTriggerAssessment(subslot, slot);
+  const bandPct = assessment?.selectedBandPct;
+  const bandLabel = bandPct != null && Number.isFinite(bandPct) ? ` at ${pctNum(bandPct)}` : "";
+  return triggerAssessmentStatusLabel(assessment?.grossBandOk, `Gross band hit${bandLabel}`, `Gross band waiting${bandLabel}`);
+}
+
+function subslotNetConfirmStatusLabel(subslot?: SubslotRow | null, slot?: SlotRow | null) {
+  const assessment = subslotTriggerAssessment(subslot, slot);
+  const threshold = assessment?.netConfirmPct;
+  const thresholdLabel = threshold != null && Number.isFinite(threshold) ? ` <= ${pctNum(threshold)}` : "";
+  return triggerAssessmentStatusLabel(
+    assessment?.netConfirmOk ?? assessment?.hybridNetConfirmOk,
+    `Executable net confirms${thresholdLabel}`,
+    `Executable net above confirm${thresholdLabel}`
+  );
+}
+
+function subslotSpreadStatusLabel(subslot?: SubslotRow | null, slot?: SlotRow | null) {
+  const assessment = subslotTriggerAssessment(subslot, slot);
+  return triggerAssessmentStatusLabel(assessment?.spreadOk, "Spread pass", "Spread blocked");
+}
+
+function subslotHybridAwarenessLabel(subslot?: SubslotRow | null, slot?: SlotRow | null) {
+  const assessment = subslotTriggerAssessment(subslot, slot);
+  if (!assessment) return "-";
+  if (assessment.hybridWouldPass === true) return "Hybrid would pass";
+  if (assessment.hybridWouldBlock === true) {
+    const reason = assessment.hybridWouldBlockReason ? `: ${reasonLabel(assessment.hybridWouldBlockReason)}` : "";
+    return `Hybrid would block${reason}`;
+  }
+  return "-";
 }
 
 function configuredSubslotTriggerBands(
@@ -2987,7 +3161,7 @@ function normalizedSubslotBandIndex(
   }
 
   const configuredBands = configuredSubslotTriggerBands(subslotConfig, coin);
-  const directTriggerPct = Number(subslot?.subslotTriggerParentNetPct);
+  const directTriggerPct = Number(subslot?.subslotTriggerBandPct ?? subslot?.subslotTriggerParentNetPct);
   if (configuredBands.length && Number.isFinite(directTriggerPct)) {
     const matchedIndex = configuredBands.findIndex((value) => Math.abs(value - directTriggerPct) <= 0.0005);
     if (matchedIndex >= 0) return matchedIndex;
@@ -3011,9 +3185,11 @@ function subslotTriggerSummary(
 ) {
   const parts: string[] = [];
   const band = subslotTriggerBandLabel(subslot);
-  if (band !== "Legacy trigger" || subslot.subslotTriggerParentNetPct != null) parts.push(band);
-  if (subslot.subslotTriggerParentNetPct != null && Number.isFinite(subslot.subslotTriggerParentNetPct)) {
-    parts.push(`${secondaryTriggerBasisLabel(subslot, subslotConfig)} trigger ${pctNum(subslot.subslotTriggerParentNetPct)}`);
+  const assessment = subslotTriggerAssessment(subslot);
+  const triggerPct = assessment?.selectedBandPct ?? subslot.subslotTriggerBandPct ?? subslot.subslotTriggerParentNetPct;
+  if (band !== "Legacy trigger" || triggerPct != null) parts.push(band);
+  if (triggerPct != null && Number.isFinite(triggerPct)) {
+    parts.push(`${secondaryTriggerBasisLabel(subslot, subslotConfig)} trigger ${pctNum(triggerPct)}`);
   }
   const opened =
     normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "NET"
@@ -3021,6 +3197,9 @@ function subslotTriggerSummary(
       : subslot.subslotEntryParentTriggerPct ?? subslot.subslotEntryParentGrossPct;
   if (opened != null && Number.isFinite(opened)) {
     parts.push(`opened ${pctNum(opened)}`);
+  }
+  if (assessment?.netConfirmOk != null || assessment?.hybridNetConfirmOk != null) {
+    parts.push(subslotNetConfirmStatusLabel(subslot));
   }
   return parts.length ? parts.join(" | ") : "Legacy trigger";
 }
@@ -3031,7 +3210,7 @@ function configuredSubslotTriggerPct(
   coin?: string | null,
   fallbackBandIndex?: number | null
 ) {
-  const directTriggerPct = Number(subslot?.subslotTriggerParentNetPct);
+  const directTriggerPct = Number(subslot?.subslotTriggerBandPct ?? subslot?.subslotTriggerParentNetPct);
   if (Number.isFinite(directTriggerPct)) return directTriggerPct;
 
   const configuredBands = configuredSubslotTriggerBands(subslotConfig, coin);
@@ -3083,6 +3262,7 @@ function subslotLiveCounterLabel(
   const state = String(subslot?.subslotState || "").toUpperCase();
   const signal = String(subslot?.subslotSignalState || "").toUpperCase();
   const isPlaceholder = !subslot?.subslotId;
+  const assessment = subslotTriggerAssessment(subslot, parent ?? null);
   if (state === "ACTIVE") return "Live now";
   if (state === "BUY_SUBMITTED") return "Entry pending";
   if (state === "SELL_SUBMITTED") return "Exit pending";
@@ -3090,6 +3270,7 @@ function subslotLiveCounterLabel(
   const distancePct = subslotLiveDistancePct(subslot, parent, subslotConfig, fallbackBandIndex);
   if (distancePct != null) {
     if (distancePct === 0) {
+      if (assessment?.hybridWouldBlock === true) return "Threshold met | hybrid would block";
       if (signal === "REVERSAL_CONFIRMING") return "Threshold met | confirming";
       if (signal === "BOUNCE_SEEN") return "Threshold met | bounce seen";
       if (signal === "TRACKING") return "Threshold met | watching";
@@ -3512,6 +3693,14 @@ function secondaryRailEntryBlockLabel(
   parent: SlotRow,
   subslotConfig: ManagerStatus["subslot"] | null | undefined
 ) {
+  const assessment = subslotTriggerAssessment(null, parent);
+  const liveBasis = String(subslotConfig?.triggerBasis || assessment?.basis || "GROSS").toUpperCase();
+  if (liveBasis === "HYBRID" && assessment?.netConfirmOk === false) {
+    return "Band reached | waiting executable net confirm";
+  }
+  if (liveBasis !== "HYBRID" && assessment?.hybridWouldBlock === true) {
+    return "Band reached | hybrid would block";
+  }
   if (subslotConfig?.requirePrimaryExactFill !== true) return null;
   if (primaryHasExactFillProof(parent)) return null;
   const fillStatus = primaryComparison(parent)?.fillStatus ?? parent.liveEntryFillStatus;
@@ -3557,7 +3746,11 @@ function secondaryRailCounterLabel(
       if (signal === "TRACKING") return "Band reached | monitoring buy";
       return "Band reached | buy eligible now";
     }
-    return `Parent ${secondaryTriggerBasisLabel(subslot, subslotConfig)} needs ${pctNum(distancePct)} more drawdown`;
+    const basisLabel =
+      normalizedSecondaryTriggerBasis(subslot, subslotConfig) === "HYBRID"
+        ? "gross band"
+        : secondaryTriggerBasisLabel(subslot, subslotConfig);
+    return `Parent ${basisLabel} needs ${pctNum(distancePct)} more drawdown`;
   }
 
   if (signal === "ARMED") return "Waiting for parent band";
@@ -4224,6 +4417,7 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
   const greenStallTicks = subslotGreenStallTicks(subslot);
   const quoteDriftPct = subslotEntryQuoteAbsoluteDriftPct(subslot);
   const quoteStatus = subslotEntryQuoteStatusLabel(subslot);
+  const triggerAssessment = subslotTriggerAssessment(subslot, parent);
 
   // Subslot State Analysis
   if (subState === "BUY_SUBMITTED") {
@@ -4238,9 +4432,10 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
     parts.push("Jrd Secondary is idle.");
   }
 
-  if (subslot.subslotTriggerParentNetPct != null && Number.isFinite(subslot.subslotTriggerParentNetPct)) {
+  const triggerBandPct = triggerAssessment?.selectedBandPct ?? subslot.subslotTriggerBandPct ?? subslot.subslotTriggerParentNetPct;
+  if (triggerBandPct != null && Number.isFinite(triggerBandPct)) {
     parts.push(
-      `${subslotTriggerBandLabel(subslot)} fired at ${pctNum(subslot.subslotTriggerParentNetPct)} parent ${secondaryTriggerBasisLabel(subslot)}.`
+      `${subslotTriggerBandLabel(subslot)} fired at ${pctNum(triggerBandPct)} parent ${secondaryTriggerBasisLabel(subslot)}.`
     );
   }
 
@@ -4253,9 +4448,25 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
     parts.push(`Parent ${secondaryTriggerBasisLabel(subslot)} at entry was ${pctNum(entryPct)}.`);
   }
 
+  if (triggerAssessment?.grossBandOk != null) {
+    parts.push(subslotGrossBandStatusLabel(subslot, parent) + ".");
+  }
+
+  if (triggerAssessment?.netConfirmOk != null || triggerAssessment?.hybridNetConfirmOk != null) {
+    parts.push(subslotNetConfirmStatusLabel(subslot, parent) + ".");
+  }
+
+  if (triggerAssessment?.spreadOk != null) {
+    parts.push(subslotSpreadStatusLabel(subslot, parent) + ".");
+  }
+
+  if (triggerAssessment?.hybridWouldBlock === true || triggerAssessment?.hybridWouldPass === true) {
+    parts.push(subslotHybridAwarenessLabel(subslot, parent) + ".");
+  }
+
   if (liveDistancePct != null) {
     if (liveDistancePct > 0) parts.push(`${pctNum(liveDistancePct)} remains before Jrd Secondary goes live.`);
-    else parts.push("Band trigger is met. Secondary still needs spread, confirmation, pacing, and edge gates to align.");
+    else parts.push("Band trigger is met. Secondary still needs spread, hybrid net confirmation when enabled, pacing, and any non-touch signal or edge gates to align.");
   }
 
   // Signal Analysis
@@ -4286,9 +4497,9 @@ function liveSubslotAnalysis(subslot: SubslotRow, parent: SlotRow, nowMs: number
   }
 
   if (subslot.subslotRecoveredConfirmed === false) {
-    parts.push("Recovery-first exit law is still active.");
+    parts.push("Executable-green exit gate is still waiting.");
   } else if (subslot.subslotRecoveredConfirmed === true) {
-    parts.push("Recovered green logic is active.");
+    parts.push("Executable-green exit tracking is active.");
   }
 
   if (gateState) {
@@ -5392,7 +5603,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                       <div className="engine-subslot-k">
                         Trigger {secondaryTriggerBasisTitleLabel(carouselPrimary, props.subslotConfig)}
                       </div>
-                      <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotTriggerParentNetPct)}</div>
+                      <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotTriggerBandPct ?? carouselPrimary.subslotTriggerParentNetPct)}</div>
                     </div>
 
                     <div className="engine-subslot-item">
@@ -5412,6 +5623,16 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                     <div className="engine-subslot-item">
                       <div className="engine-subslot-k">Signal</div>
                       <div className="engine-subslot-v">{carouselPrimary.subslotSignalState ?? "-"}</div>
+                    </div>
+
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Net Confirm</div>
+                      <div className="engine-subslot-v">{subslotNetConfirmStatusLabel(carouselPrimary, carouselSlot)}</div>
+                    </div>
+
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Hybrid</div>
+                      <div className="engine-subslot-v">{subslotHybridAwarenessLabel(carouselPrimary, carouselSlot)}</div>
                     </div>
 
                     <div className="engine-subslot-item">
@@ -5939,6 +6160,10 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
   const secondaryTriggerBasis = `${String(subslot?.triggerBasis || "GROSS").toUpperCase()} | band required ${yesNo(
     subslot?.requireTriggerBand
   )} | spread bypass ${yesNo(subslot?.triggerTouchBypassSpread)}`;
+  const secondaryNetConfirm =
+    subslot?.triggerParentNetConfirmPct != null && Number.isFinite(subslot.triggerParentNetConfirmPct)
+      ? `${pctNum(subslot.triggerParentNetConfirmPct)} executable net`
+      : "0.00% executable net";
   const secondaryEntryPacing = `${yesNo(subslot?.entryPacing?.enabled)} | ${msToShortLabel(
     subslot?.entryPacing?.pacingMs
   )} | bypass ${pctNum(subslot?.entryPacing?.bypassParentDeltaPct)}`;
@@ -5955,7 +6180,7 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
   ]
     .filter(Boolean)
     .join(" | ");
-  const secondaryRecovery = `recover ${pctNum(subslot?.recoveryFloorNetPct)} in ${subslot?.recoveryConfirmTicks ?? "-"} ticks | green confirm ${
+  const secondaryRecovery = `net floor ${pctNum(subslot?.minWinExitNetPct)} | green confirm ${
     subslot?.exitGreenConfirmTicks ?? "-"
   }`;
 
@@ -6064,6 +6289,10 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
             <div className="slot-v">{secondaryTriggerBasis}</div>
           </div>
           <div>
+            <div className="slot-k">Hybrid Net Confirm</div>
+            <div className="slot-v">{secondaryNetConfirm}</div>
+          </div>
+          <div>
             <div className="slot-k">Entry Pacing</div>
             <div className="slot-v">{secondaryEntryPacing}</div>
           </div>
@@ -6077,10 +6306,10 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
           </div>
           <div>
             <div className="slot-k">Exit Harvesting</div>
-            <div className="slot-v">{secondaryExitHarvest || "Recovery-first only"}</div>
+            <div className="slot-v">{secondaryExitHarvest || "Executable green only"}</div>
           </div>
           <div>
-            <div className="slot-k">Recovery / Green Gate</div>
+            <div className="slot-k">Executable Green Gate</div>
             <div className="slot-v">{secondaryRecovery}</div>
           </div>
         </div>
@@ -6485,6 +6714,11 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Open Secondary Trades</div><div className="slot-v">{getSubslotOpenCount(slot)}</div></div>
               <div><div className="slot-k">Closed Secondary Trades</div><div className="slot-v">{getClosedSubslotCount(slot)}</div></div>
               <div><div className="slot-k">Total Net Gain (AUD)</div><div className="slot-v">{moneyAud(secondaryTotalGainAud(slot))}</div></div>
+              <div><div className="slot-k">Current Basis</div><div className="slot-v">{secondaryTriggerBasisTitleLabel(getPrimarySecondarySnapshot(slot), props.subslotConfig)}</div></div>
+              <div><div className="slot-k">Gross Band Status</div><div className="slot-v">{subslotGrossBandStatusLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
+              <div><div className="slot-k">Executable Net Confirm</div><div className="slot-v">{subslotNetConfirmStatusLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
+              <div><div className="slot-k">Spread Status</div><div className="slot-v">{subslotSpreadStatusLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
+              <div><div className="slot-k">Hybrid Awareness</div><div className="slot-v">{subslotHybridAwarenessLabel(getPrimarySecondarySnapshot(slot), slot)}</div></div>
               {getSecondaryRows(slot).length ? (
                 <>
                   <div><div className="slot-k">Current Secondary State</div><div className={`slot-v slot-subslot ${primarySubslotToneClass(slot)}`}>{primarySubslotDecisionLabel(slot)}</div></div>
@@ -6518,8 +6752,12 @@ const SlotModal = React.memo(function SlotModal(props: {
                     <div className="slot-modal-grid secondary-grid">
                         <div><div className="slot-k">Trigger Band</div><div className="slot-v">{subslotTriggerBandLabel(subslot)}</div></div>
                         <div><div className="slot-k">Trigger Basis</div><div className="slot-v">{secondaryTriggerBasisTitleLabel(subslot, props.subslotConfig)}</div></div>
-                        <div><div className="slot-k">Trigger {secondaryTriggerBasisTitleLabel(subslot, props.subslotConfig)} Level</div><div className="slot-v">{pctNum(subslot.subslotTriggerParentNetPct)}</div></div>
+                        <div><div className="slot-k">Trigger {secondaryTriggerBasisTitleLabel(subslot, props.subslotConfig)} Level</div><div className="slot-v">{pctNum(subslot.subslotTriggerBandPct ?? subslot.subslotTriggerParentNetPct)}</div></div>
                         <div><div className="slot-k">Trigger / Exit</div><div className="slot-v">{subslotLiveCounterLabel(subslot, slot, props.subslotConfig)}</div></div>
+                        <div><div className="slot-k">Gross Band Status</div><div className="slot-v">{subslotGrossBandStatusLabel(subslot, slot)}</div></div>
+                        <div><div className="slot-k">Net Confirmation</div><div className="slot-v">{subslotNetConfirmStatusLabel(subslot, slot)}</div></div>
+                        <div><div className="slot-k">Spread Status</div><div className="slot-v">{subslotSpreadStatusLabel(subslot, slot)}</div></div>
+                        <div><div className="slot-k">Hybrid Awareness</div><div className="slot-v">{subslotHybridAwarenessLabel(subslot, slot)}</div></div>
                         <div><div className="slot-k">Parent {secondaryTriggerBasisTitleLabel(subslot, props.subslotConfig)} @ Open</div><div className="slot-v">{pctNum(secondaryParentAtOpenPct(subslot, props.subslotConfig))}</div></div>
                         <div><div className="slot-k">Parent Net @ Open</div><div className="slot-v">{pctNum(subslot.subslotEntryParentNetPct)}</div></div>
                         <div><div className="slot-k">Parent Gross @ Open</div><div className="slot-v">{pctNum(subslot.subslotEntryParentGrossPct)}</div></div>
