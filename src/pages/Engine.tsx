@@ -918,6 +918,46 @@ type ManagerStatus = WorkerStatus & {
   };
 };
 
+type ManagerStatusResponse = ManagerStatus & {
+  ok?: boolean;
+  ts?: number;
+  now?: number;
+  version?: string;
+};
+
+type PublicReadinessResponse = {
+  ok?: boolean;
+  ts?: number;
+  execution?: {
+    mode?: string;
+    liveTradingEnabled?: boolean;
+    liveExecutionAllowed?: boolean;
+    writeEnabled?: boolean;
+  };
+  operator?: {
+    tokenConfigured?: boolean;
+  };
+  coinspot?: {
+    readCreds?: boolean;
+    tradeCreds?: boolean;
+  };
+  fixedSlots?: {
+    expected?: string[];
+    missing?: string[];
+    presentCount?: number;
+    totalRows?: number;
+  };
+  workers?: {
+    harvesterEnabled?: boolean;
+    executorEnabled?: boolean;
+    managerEnabled?: boolean;
+    rotationEnabled?: boolean;
+    rotationExecutorEnabled?: boolean;
+    topupEnabled?: boolean;
+  };
+  blockers?: unknown[];
+};
+
 type RotationDashboardSummary = {
   policyEnabled?: boolean;
   policyRunning?: boolean;
@@ -1267,6 +1307,8 @@ type EngineData = {
   rowsAud: MarketRow[];
   snap: Snapshot | null;
   meta: PublicMetaResponse | null;
+  readiness: PublicReadinessResponse | null;
+  managerStatus: ManagerStatusResponse | null;
   capital: PublicCapitalResponse | null;
   slotRows: SlotRow[];
   events: SlotEvent[];
@@ -1298,7 +1340,6 @@ const DEV_DEFAULT = "http://localhost:8787";
 const CAROUSEL_INTERVAL_MS = 4500;
 const ENGINE_POLL_INTERVAL_MS = 3000;
 const CAPITAL_POLL_INTERVAL_MS = 15000;
-const ENGINE_BEHAVIOR_AS_OF = "5 May 2026";
 
 const PRIMARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
@@ -2985,9 +3026,26 @@ function exitOrderSummaryLabel(order: ExitOrderState | null | undefined) {
   if (!order) return "-";
   const state = String(order.state || order.lastAction || "").trim().toUpperCase();
   if (!state) return "-";
+  const hasBrokerId = String(order.id || "").trim().length > 0;
   const dryRun = order.dryRun === true || state.startsWith("WOULD_") ? "DRY-RUN " : "";
+  const brokerNote =
+    !dryRun && state === "OPEN" && !hasBrokerId
+      ? "PLANNED, NO BROKER ID"
+      : !dryRun && (state === "RECONCILING" || state === "SUBMITTED_NO_ID") && !hasBrokerId
+      ? "RECONCILING, NO BROKER ID"
+      : state.replaceAll("_", " ");
   const rate = order.rate != null && Number.isFinite(order.rate) ? ` @ ${fmt(order.rate)}` : "";
-  return `${dryRun}${state.replaceAll("_", " ")}${rate}`;
+  return `${dryRun}${brokerNote}${hasBrokerId && state === "OPEN" ? ` #${String(order.id).slice(0, 8)}` : ""}${rate}`;
+}
+
+function exitOrderModeLabel(order: ExitOrderState | null | undefined) {
+  if (!order) return "-";
+  const state = String(order.state || order.lastAction || "").trim().toUpperCase();
+  if (order.dryRun === true || state.startsWith("WOULD_")) return "DRY-RUN";
+  if (String(order.id || "").trim()) return "LIVE BROKER";
+  if (state === "PLACE_READY") return "LIVE READY";
+  if (state === "RECONCILING" || state === "SUBMITTED_NO_ID") return "LIVE RECONCILING";
+  return "LIVE PLAN";
 }
 
 function exitOrderTargetLabel(order: ExitOrderState | null | undefined) {
@@ -4575,13 +4633,14 @@ function exitOrderBlock(
 ) {
   if (!order) return null;
   const state = String(order.state || order.lastAction || "").trim().toUpperCase();
+  const hasBrokerId = String(order.id || "").trim().length > 0;
   if (!state && order.rate == null) return null;
   const metrics = [
     { label: "Order", value: exitOrderSummaryLabel(order) },
     { label: "Target", value: exitOrderTargetLabel(order) },
     { label: "Distance", value: exitOrderDistanceLabel(order) },
     { label: "Reprices", value: order.repriceCount != null ? `${order.repriceCount}` : "-" },
-    { label: "Mode", value: order.dryRun === true || state.startsWith("WOULD_") ? "DRY-RUN" : "LIVE" },
+    { label: "Mode", value: exitOrderModeLabel(order) },
     { label: "Last Error", value: order.lastError || "-" },
   ];
   const compactMetrics = metrics.filter((metric) =>
@@ -4591,6 +4650,12 @@ function exitOrderBlock(
     order.dryRun === true || state.startsWith("WOULD_")
       ? "Dry-run is observing only; no resting CoinSpot sell order has been placed by this manager."
       : null,
+    !order.dryRun && state === "OPEN" && !hasBrokerId
+      ? "Open state has no broker order id; treat this as a planned target, not confirmed CoinSpot exposure."
+      : null,
+    !order.dryRun && (state === "RECONCILING" || state === "SUBMITTED_NO_ID") && !hasBrokerId
+      ? "Broker id is missing, so the engine is reconciling before another resting sell can be trusted."
+      : null,
     order.blockReason ? `Block reason: ${reasonLabel(order.blockReason)}.` : null,
   ].filter(Boolean);
 
@@ -4598,7 +4663,7 @@ function exitOrderBlock(
     <div className="entry-progress execution-breakdown" aria-label={title}>
       <div className="entry-progress-top">
         <span className="entry-progress-label">{title}</span>
-        <span className="entry-progress-value">{order.dryRun === true || state.startsWith("WOULD_") ? "DRY-RUN" : state || "-"}</span>
+        <span className="entry-progress-value">{exitOrderModeLabel(order)} | {state || "-"}</span>
       </div>
       <div className="execution-breakdown-grid">
         {(variant === "compact" ? compactMetrics : metrics).map((metric) => (
@@ -5390,6 +5455,8 @@ function useEngineData(BASE: string): EngineData {
   const [rowsAud, setRowsAud] = useState<MarketRow[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [meta, setMeta] = useState<PublicMetaResponse | null>(null);
+  const [readiness, setReadiness] = useState<PublicReadinessResponse | null>(null);
+  const [managerStatus, setManagerStatus] = useState<ManagerStatusResponse | null>(null);
   const [capital, setCapital] = useState<PublicCapitalResponse | null>(null);
   const [slotRows, setSlotRows] = useState<SlotRow[]>([]);
   const [events, setEvents] = useState<SlotEvent[]>([]);
@@ -5434,6 +5501,14 @@ function useEngineData(BASE: string): EngineData {
     return await fetchJson<PublicMetaResponse>("/api/public/meta", signal);
   }, [fetchJson]);
 
+  const fetchReadiness = useCallback(async (signal?: AbortSignal) => {
+    return await fetchJson<PublicReadinessResponse>("/api/public/readiness", signal);
+  }, [fetchJson]);
+
+  const fetchManagerStatus = useCallback(async (signal?: AbortSignal) => {
+    return await fetchJson<ManagerStatusResponse>("/api/manager/status", signal);
+  }, [fetchJson]);
+
   const fetchPublicCapital = useCallback(async (signal?: AbortSignal) => {
     return await fetchJson<PublicCapitalResponse>("/api/public/capital", signal);
   }, [fetchJson]);
@@ -5460,6 +5535,8 @@ function useEngineData(BASE: string): EngineData {
         marketRowsAudRes,
         snapshotRes,
         metaRes,
+        readinessRes,
+        managerStatusRes,
         slotsRes,
         eventsRes,
       ] = await Promise.allSettled([
@@ -5467,6 +5544,8 @@ function useEngineData(BASE: string): EngineData {
         fetchMarketRowsAud(ctrl.signal),
         fetchSnap(ctrl.signal),
         fetchMeta(ctrl.signal),
+        fetchReadiness(ctrl.signal),
+        fetchManagerStatus(ctrl.signal),
         fetchPublicSlots(ctrl.signal),
         fetchPublicEvents(ctrl.signal),
       ]);
@@ -5505,6 +5584,20 @@ function useEngineData(BASE: string): EngineData {
         failures.push(`meta unavailable`);
       }
 
+      if (readinessRes.status === "fulfilled") {
+        setReadiness(readinessRes.value);
+        successCount += 1;
+      } else {
+        failures.push(`readiness unavailable`);
+      }
+
+      if (managerStatusRes.status === "fulfilled") {
+        setManagerStatus(managerStatusRes.value);
+        successCount += 1;
+      } else {
+        failures.push(`manager/status unavailable`);
+      }
+
       if (slotsRes.status === "fulfilled") {
         setSlotRows(slotsRes.value);
         successCount += 1;
@@ -5535,7 +5628,7 @@ function useEngineData(BASE: string): EngineData {
     } finally {
       ctrl.abort();
     }
-  }, [BASE, fetchMarketRowsAll, fetchMarketRowsAud, fetchSnap, fetchMeta, fetchPublicSlots, fetchPublicEvents]);
+  }, [BASE, fetchMarketRowsAll, fetchMarketRowsAud, fetchSnap, fetchMeta, fetchReadiness, fetchManagerStatus, fetchPublicSlots, fetchPublicEvents]);
 
   const pollCapital = useCallback(async () => {
     const ctrl = new AbortController();
@@ -5576,7 +5669,7 @@ function useEngineData(BASE: string): EngineData {
     };
   }, [pollCore, pollCapital]);
 
-  return { rowsAll, rowsAud, snap, meta, capital, slotRows, events, err, refresh };
+  return { rowsAll, rowsAud, snap, meta, readiness, managerStatus, capital, slotRows, events, err, refresh };
 }
 
 /* =========================
@@ -6585,6 +6678,8 @@ const EventsPanel = React.memo(function EventsPanel(props: {
 
 const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
   meta: PublicMetaResponse | null;
+  readiness: PublicReadinessResponse | null;
+  managerStatus: ManagerStatusResponse | null;
   fixedAllowlist: string[];
   executionMode: string;
 }) {
@@ -6595,6 +6690,15 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
   const manager = props.meta?.manager;
   const subslot = manager?.subslot;
   const quoteGuard = props.meta?.runtime?.quoteGuard;
+  const readinessLabel =
+    props.readiness?.ok === true
+      ? "READY"
+      : props.readiness?.ok === false
+      ? `BLOCKED ${Array.isArray(props.readiness?.blockers) ? props.readiness.blockers.length : 0}`
+      : "UNKNOWN";
+  const managerRuntimeLabel = `${props.managerStatus?.running === true ? "RUNNING" : "STOPPED"} | ${
+    props.managerStatus?.mode ?? manager?.mode ?? "-"
+  }`;
 
   const secondaryBaseSize =
     subslot?.sizePctOfParent != null && Number.isFinite(subslot.sizePctOfParent)
@@ -6629,6 +6733,10 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
       : subslot?.exitOrderManager?.requestedDryRun === false && subslot?.exitOrderManager?.liveMutationEnabled !== true
       ? "SAFE DRY-RUN"
       : "DRY-RUN";
+  const managerVersionLabel = String(props.managerStatus?.version || manager?.version || "-").replace(
+    /exit-order-manager-dry-run/gi,
+    exitOrderMode === "LIVE ORDERS" ? "exit-order-manager-live" : "exit-order-manager"
+  );
   const exitOrderManager = `${yesNo(subslot?.exitOrderManager?.enabled)} | ${exitOrderMode} | primary ${yesNo(
     subslot?.exitOrderManager?.primaryEnabled
   )} | secondary ${yesNo(subslot?.exitOrderManager?.secondaryEnabled)}`;
@@ -6657,7 +6765,7 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
       <div className="bay-head">
         <div className="bay-title">Trading Behavior Blueprint</div>
         <div className="bay-note">
-          Current fixed-slot machine profile rendered from the {ENGINE_BEHAVIOR_AS_OF} configuration snapshot.
+          Current fixed-slot machine profile rendered from live public meta, readiness, and manager status.
         </div>
       </div>
 
@@ -6673,8 +6781,8 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
 
         <div className="slot-modal-grid">
           <div>
-            <div className="slot-k">Config Snapshot</div>
-            <div className="slot-v">{ENGINE_BEHAVIOR_AS_OF}</div>
+            <div className="slot-k">Runtime Source</div>
+            <div className="slot-v">public meta + readiness + manager status</div>
           </div>
           <div>
             <div className="slot-k">Universe</div>
@@ -6688,6 +6796,21 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
             </div>
           </div>
           <div>
+            <div className="slot-k">Readiness</div>
+            <div className="slot-v">
+              {readinessLabel} | CoinSpot read {yesNo(props.readiness?.coinspot?.readCreds)} | trade{" "}
+              {yesNo(props.readiness?.coinspot?.tradeCreds)}
+            </div>
+          </div>
+          <div>
+            <div className="slot-k">Manager Runtime</div>
+            <div className="slot-v">{managerRuntimeLabel}</div>
+          </div>
+          <div>
+            <div className="slot-k">Manager Version</div>
+            <div className="slot-v">{managerVersionLabel}</div>
+          </div>
+          <div>
             <div className="slot-k">Cadence</div>
             <div className="slot-v">
               market {msToShortLabel(props.meta?.runtime?.marketFreshness?.pollMs as number | null | undefined)} | executor{" "}
@@ -6697,7 +6820,7 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
           </div>
           <div>
             <div className="slot-k">Entry Model</div>
-            <div className="slot-v">FULL_UNIT | min {moneyAud(10)} | 10 bps fee | ask/bid+fee</div>
+            <div className="slot-v">runtime meta | quote guard {quoteGuardLabel(quoteGuard)}</div>
           </div>
           <div>
             <div className="slot-k">Re-entry</div>
@@ -6736,7 +6859,7 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
           <div>
             <div className="engine-telemetry-title">Secondary Upgrades Live</div>
             <div className="engine-telemetry-note">
-              This block reflects the live secondary entry and exit upgrades now active on the backend, including reusable bands, pacing, quote-aware entry telemetry, and dry-run exit-order management.
+              This block reflects the live secondary entry and exit upgrades now active on the backend, including reusable bands, pacing, quote-aware entry telemetry, and {exitOrderMode.toLowerCase()} exit-order management.
             </div>
           </div>
         </div>
@@ -8048,7 +8171,7 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
 export default function Engine() {
   const BASE = useMemo(() => pickBase(), []);
 
-  const { rowsAll, rowsAud, snap, meta, capital, slotRows, events, err, refresh } = useEngineData(BASE);
+  const { rowsAll, rowsAud, snap, meta, readiness, managerStatus, capital, slotRows, events, err, refresh } = useEngineData(BASE);
 
   const [feed, setFeed] = useState<Feed>("aud");
   const [sortKey, setSortKey] = useState<SortKey>("coin");
@@ -8409,6 +8532,8 @@ export default function Engine() {
               {section === "behavior" ? (
                 <TradingBehaviorPanel
                   meta={meta}
+                  readiness={readiness}
+                  managerStatus={managerStatus}
                   fixedAllowlist={fixedAllowlist}
                   executionMode={executionMode}
                 />
