@@ -738,6 +738,12 @@ type ManagerStatus = WorkerStatus & {
     triggerBasis?: string;
     hybridRequireSecondaryCheaper?: boolean;
     hybridMinEntryDiscountPct?: number;
+    hybridPlacementFirstExit?: {
+      enabled?: boolean;
+      minNetPct?: number;
+      minProfitAud?: number;
+      appliesWhen?: string;
+    };
     requireTriggerBand?: boolean;
     triggerTouchBypassSpread?: boolean;
     coinTriggerBands?: Record<string, number[]>;
@@ -1246,9 +1252,9 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Executable-Green Exits",
     summary:
-      "Secondary exits are judged in executable terms. A trade can harvest once bid-side net and AUD profit clear the configured green threshold and confirmation requirement.",
+      "Secondary exits are judged from their own executable placement. In Hybrid, a secondary that is green while the parent is protected gets a placement-first sell check before the parent sell path.",
     detail:
-      "Take-profit, trailing, green-stall, band-aware targets, and parent-recovery exits all feed that green sell gate instead of relying on a stale recovery-style description.",
+      "The normal green threshold still exists for standalone harvesting. The placement-first path is narrower: it only applies to Hybrid secondaries, requires executable non-loss economics, and exists so a lower-position secondary can leave before the parent.",
   },
   {
     title: "Directional Playbooks",
@@ -6260,6 +6266,9 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
   const secondaryHybridEntryCost = `${subslot?.hybridRequireSecondaryCheaper === false ? "OFF" : "ON"} | min cheaper ${pctNum(
     subslot?.hybridMinEntryDiscountPct ?? 0
   )}`;
+  const secondaryHybridPlacementExit = `${yesNo(subslot?.hybridPlacementFirstExit?.enabled)} | min net ${pctNum(
+    subslot?.hybridPlacementFirstExit?.minNetPct ?? 0
+  )} | profit ${moneyAud(subslot?.hybridPlacementFirstExit?.minProfitAud ?? 0)}`;
   const secondaryEntryPacing = `${yesNo(subslot?.entryPacing?.enabled)} | ${msToShortLabel(
     subslot?.entryPacing?.pacingMs
   )} | bypass ${pctNum(subslot?.entryPacing?.bypassParentDeltaPct)}`;
@@ -6391,6 +6400,10 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
           <div>
             <div className="slot-k">Hybrid Entry Cost</div>
             <div className="slot-v">{secondaryHybridEntryCost}</div>
+          </div>
+          <div>
+            <div className="slot-k">Hybrid Placement Exit</div>
+            <div className="slot-v">{secondaryHybridPlacementExit}</div>
           </div>
           <div>
             <div className="slot-k">Entry Pacing</div>
@@ -7099,6 +7112,9 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   const secondaryHybridEntryCost = `${summarySubslot?.hybridRequireSecondaryCheaper === false ? "OFF" : "ON"} | min cheaper ${pctNum(
     summarySubslot?.hybridMinEntryDiscountPct ?? 0
   )}`;
+  const secondaryHybridPlacementExit = `${yesNo(summarySubslot?.hybridPlacementFirstExit?.enabled)} | min net ${pctNum(
+    summarySubslot?.hybridPlacementFirstExit?.minNetPct ?? 0
+  )} | profit ${moneyAud(summarySubslot?.hybridPlacementFirstExit?.minProfitAud ?? 0)}`;
   const lockFloorExitMode =
     holding?.exitPolicy?.lockExitRequireGreen === false
       ? "floor breach sells immediately"
@@ -7272,6 +7288,14 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
             <div className="engine-upgrade-v">{secondaryHybridEntryCost}</div>
             <div className="engine-upgrade-sub">
               Final CoinSpot buy quote must stay no worse than the parent-derived max submitted rate.
+            </div>
+          </div>
+
+          <div className="engine-upgrade-item">
+            <div className="engine-upgrade-k">Hybrid Placement Exit</div>
+            <div className="engine-upgrade-v">{secondaryHybridPlacementExit}</div>
+            <div className="engine-upgrade-sub">
+              A Hybrid secondary that is executable-green gets its sell check before a protected parent sell.
             </div>
           </div>
         </div>
