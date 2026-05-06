@@ -420,6 +420,13 @@ type SlotRow = {
   liveExactBackfillVersion?: string | null;
 
   liveExitOrderId?: string | null;
+  parentExecutableExitAud?: number | null;
+  parentExecutableExitProfitAud?: number | null;
+  parentExecutableExitNetPct?: number | null;
+  parentExitGateState?: string | null;
+  parentExitGateReason?: string | null;
+  parentExitRequiredNetPct?: number | null;
+  parentExitRequiredProfitAud?: number | null;
   parentExitOrderState?: string | null;
   parentExitOrderId?: string | null;
   parentExitOrderRate?: number | null;
@@ -4417,7 +4424,7 @@ function primaryGrossNetSummary(slot: SlotRow) {
   const feePct = primaryRoundTripFeePct(slot);
   const parts: string[] = [
     "Live Gross shows the same primary move before friction and fees.",
-    "Live Net is the executable primary exit after spread and fees.",
+    "Ledger Net is the primary P/L read; Executable Sell Net is the explicit exit-gate check.",
   ];
 
   const comparison = primaryComparison(slot);
@@ -5210,39 +5217,41 @@ const POSITION_STAGE_ORDER: Array<{ key: PositionStageKey; title: string; note: 
 ];
 
 function primaryExecutableExitNetPct(slot: SlotRow | null | undefined) {
-  const value = primaryDecision(slot)?.executableExitNetPct;
-  return value != null && Number.isFinite(value) ? value : null;
+  return finiteMetric(primaryDecision(slot)?.executableExitNetPct ?? slot?.parentExecutableExitNetPct);
 }
 
 function primaryExecutableExitProfitAud(slot: SlotRow | null | undefined) {
-  const value = primaryDecision(slot)?.executableExitProfitAud;
-  return value != null && Number.isFinite(value) ? value : null;
+  return finiteMetric(primaryDecision(slot)?.executableExitProfitAud ?? slot?.parentExecutableExitProfitAud);
+}
+
+function primaryExecutableExitLabel(slot: SlotRow | null | undefined) {
+  const netPct = primaryExecutableExitNetPct(slot);
+  const profitAud = primaryExecutableExitProfitAud(slot);
+  if (netPct == null && profitAud == null) return "-";
+  return `${pctNum(netPct)} | ${moneyAud(profitAud)}`;
+}
+
+function primaryExitGateState(slot: SlotRow | null | undefined) {
+  const raw = primaryDecision(slot)?.exitGateState ?? slot?.parentExitGateState;
+  return raw ? String(raw) : null;
+}
+
+function primaryExitGateReason(slot: SlotRow | null | undefined) {
+  const raw = primaryDecision(slot)?.exitGateReason ?? slot?.parentExitGateReason;
+  return raw ? String(raw) : null;
+}
+
+function primaryExitGateStateLabel(slot: SlotRow | null | undefined) {
+  const gateState = primaryExitGateState(slot);
+  return gateState ? enumLabel(gateState) : "-";
 }
 
 function primaryExitRequiredNetPct(slot: SlotRow | null | undefined) {
-  const value = primaryDecision(slot)?.exitRequiredNetPct;
-  return value != null && Number.isFinite(value) ? value : null;
+  return finiteMetric(primaryDecision(slot)?.exitRequiredNetPct ?? slot?.parentExitRequiredNetPct);
 }
 
 function primaryExitRequiredProfitAud(slot: SlotRow | null | undefined) {
-  const value = primaryDecision(slot)?.exitRequiredProfitAud;
-  return value != null && Number.isFinite(value) ? value : null;
-}
-
-function primaryFloorGapPct(slot: SlotRow | null | undefined) {
-  if (!slot) return null;
-  const liveNet = liveParentNetPct(slot);
-  const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
-  if (
-    liveNet == null ||
-    floorPct == null ||
-    !Number.isFinite(liveNet) ||
-    !Number.isFinite(floorPct) ||
-    Number(floorPct) <= 0
-  ) {
-    return null;
-  }
-  return Number(liveNet) - Number(floorPct);
+  return finiteMetric(primaryDecision(slot)?.exitRequiredProfitAud ?? slot?.parentExitRequiredProfitAud);
 }
 
 function positionStageForSlot(slot: SlotRow): PositionStageKey {
@@ -5295,39 +5304,43 @@ function slotNeedsAction(slot: SlotRow) {
 
 function actionNeededSummary(slot: SlotRow) {
   const stage = positionStageForSlot(slot);
-  const decision = primaryDecision(slot);
 
   if (stage === "exit-waiting") {
-    const gateState = String(decision?.exitGateState || "").toUpperCase();
-    const protectionMode = gateState === "WAIT_EXECUTABLE" || decision?.exitRequiredNetPct == null;
+    const gateState = String(primaryExitGateState(slot) || "").toUpperCase();
+    const requiredNetPct = primaryExitRequiredNetPct(slot);
+    const requiredProfitAud = primaryExitRequiredProfitAud(slot);
+    const executableNetPct = primaryExecutableExitNetPct(slot);
+    const executableProfitAud = primaryExecutableExitProfitAud(slot);
+    const gateReason = primaryExitGateReason(slot);
+    const protectionMode = gateState === "WAIT_EXECUTABLE" || requiredNetPct == null;
     const parts = [
       protectionMode
-        ? "Protection sell is armed and waiting for executable exit data."
+        ? "Protection sell is armed and waiting for the executable sell to clear net-gain protection."
         : "Green exit is still blocked.",
     ];
     if (
-      decision?.exitRequiredNetPct != null &&
-      Number.isFinite(decision.exitRequiredNetPct) &&
-      decision?.exitRequiredProfitAud != null &&
-      Number.isFinite(decision.exitRequiredProfitAud)
+      requiredNetPct != null &&
+      Number.isFinite(requiredNetPct) &&
+      requiredProfitAud != null &&
+      Number.isFinite(requiredProfitAud)
     ) {
       parts.push(
-        `Needs executable net above ${pctNum(decision.exitRequiredNetPct)} and executable profit above ${moneyAud(decision.exitRequiredProfitAud)}.`
+        `Needs executable net above ${pctNum(requiredNetPct)} and executable profit above ${moneyAud(requiredProfitAud)}.`
       );
-    } else if (decision?.exitRequiredNetPct != null && Number.isFinite(decision.exitRequiredNetPct)) {
-      parts.push(`Needs executable net above ${pctNum(decision.exitRequiredNetPct)}.`);
+    } else if (requiredNetPct != null && Number.isFinite(requiredNetPct)) {
+      parts.push(`Needs executable net above ${pctNum(requiredNetPct)}.`);
     }
     if (
-      decision?.executableExitNetPct != null &&
-      Number.isFinite(decision.executableExitNetPct) &&
-      decision?.executableExitProfitAud != null &&
-      Number.isFinite(decision.executableExitProfitAud)
+      executableNetPct != null &&
+      Number.isFinite(executableNetPct) &&
+      executableProfitAud != null &&
+      Number.isFinite(executableProfitAud)
     ) {
       parts.push(
-        `Current read is ${pctNum(decision.executableExitNetPct)} and ${moneyAud(decision.executableExitProfitAud)}.`
+        `Current executable sell is ${pctNum(executableNetPct)} and ${moneyAud(executableProfitAud)}.`
       );
     }
-    if (decision?.exitGateReason && !/needs\s*>?=/i.test(decision.exitGateReason)) parts.push(decision.exitGateReason);
+    if (gateReason && !/needs\s*>?=/i.test(gateReason)) parts.push(gateReason);
     return parts.join(" ");
   }
 
@@ -5372,7 +5385,6 @@ function positionCardToneClass(slot: SlotRow) {
 function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] {
   const stage = positionStageForSlot(slot);
   const decision = primaryDecision(slot);
-  const floorGap = primaryFloorGapPct(slot);
 
   if (stage === "waiting-setup") {
     return [
@@ -5403,17 +5415,33 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
 
   if (stage === "live-primary") {
     return [
-      { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
+      { label: "Ledger Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
       { label: "Live Gross", value: pctNum(liveParentGrossPct(slot)), toneClass: "is-tracking" },
+      ...(primaryExecutableExitNetPct(slot) != null
+        ? [{ label: "Exec Sell Net", value: pctNum(primaryExecutableExitNetPct(slot)), toneClass: "is-blocked" }]
+        : []),
       { label: "Protection", value: primaryProtectionLabel(slot) },
       { label: "Secondary Trades", value: secondaryTradesLabel(slot), toneClass: primarySubslotToneClass(slot) },
     ];
   }
 
   if (stage === "protected-primary") {
+    const liveNet = liveParentNetPct(slot);
+    const floorPct = decision?.exitFloorPct ?? primaryExitFloorPct(slot);
+    const floorGap =
+      liveNet != null &&
+      floorPct != null &&
+      Number.isFinite(liveNet) &&
+      Number.isFinite(floorPct) &&
+      Number(floorPct) > 0
+        ? Number(liveNet) - Number(floorPct)
+        : null;
     return [
-      { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
+      { label: "Ledger Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-holding" },
       { label: "Live Gross", value: pctNum(liveParentGrossPct(slot)), toneClass: "is-tracking" },
+      ...(primaryExecutableExitNetPct(slot) != null
+        ? [{ label: "Exec Sell Net", value: pctNum(primaryExecutableExitNetPct(slot)), toneClass: "is-blocked" }]
+        : []),
       { label: "Exit Floor", value: pctNum(decision?.exitFloorPct ?? primaryExitFloorPct(slot)) },
       {
         label: "Gap To Floor",
@@ -5425,7 +5453,7 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
   if (stage === "exit-waiting") {
     return [
       {
-        label: "Executable Net",
+        label: "Exec Sell Net",
         value: pctNum(primaryExecutableExitNetPct(slot)),
         toneClass: "is-blocked",
       },
@@ -5440,8 +5468,11 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
   }
 
   return [
-    { label: "Live Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-exiting" },
+    { label: "Ledger Net", value: pctNum(liveParentNetPct(slot)), toneClass: "is-exiting" },
     { label: "Live Gross", value: pctNum(liveParentGrossPct(slot)), toneClass: "is-tracking" },
+    ...(primaryExecutableExitNetPct(slot) != null
+      ? [{ label: "Exec Sell Net", value: pctNum(primaryExecutableExitNetPct(slot)), toneClass: "is-blocked" }]
+      : []),
     { label: "Expected Exit", value: moneyAud(slot.liveExitExpectedAud) },
     { label: "Fill Status", value: slot.liveExitFillStatus ?? "-" },
   ];
@@ -5978,7 +6009,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
             <div className="engine-telemetry-title">Position Spotlight</div>
             <div className="engine-telemetry-note">
               One slot at a time, explained in plain language before the deeper machine detail.
-            Live Net tracks the executable primary exit after spread and fees. Live Gross shows the same primary move before friction and fees.
+            Ledger Net tracks the primary P/L read. Executable Sell Net is shown separately when the exit gate has a live protection check.
             </div>
           </div>
 
@@ -6049,7 +6080,7 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
               </div>
 
               <div className="engine-carousel-metric">
-                <div className="engine-carousel-k">Live Net</div>
+                <div className="engine-carousel-k">Ledger Net</div>
                 <div className="engine-carousel-v">{pctNum(liveParentNetPct(carouselSlot))}</div>
               </div>
 
@@ -6406,7 +6437,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
             <div>
               <div className="dashboard-panel-title">Live Primaries</div>
               <div className="dashboard-panel-note">
-                What is already in motion, including protection and exit readiness. Live Net is the executable primary exit after spread and fees. Live Gross is the same primary move before friction and fees.
+                What is already in motion, including protection and exit readiness. Ledger Net is the primary P/L read; Executable Sell Net is the broker-sell readiness check used by exit gates.
               </div>
             </div>
             <div className="dashboard-panel-count">{liveSlots.length}</div>
@@ -6426,8 +6457,14 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     <div className="dashboard-row-badge">{positionStageMeta(positionStageForSlot(slot)).title}</div>
                   </div>
                   <div className="dashboard-row-stats">
-                    <span>Live Net {pctNum(liveParentNetPct(slot))}</span>
+                    <span>Ledger Net {pctNum(liveParentNetPct(slot))}</span>
                     <span>Live Gross {pctNum(liveParentGrossPct(slot))}</span>
+                    {primaryExecutableExitNetPct(slot) != null ? (
+                      <span>Exec Sell {pctNum(primaryExecutableExitNetPct(slot))}</span>
+                    ) : null}
+                    {primaryExitGateState(slot) ? (
+                      <span>Exit Gate {primaryExitGateStateLabel(slot)}</span>
+                    ) : null}
                     <span>{primaryProtectionLabel(slot)}</span>
                     {capitalCoinForSlot(props.capital, slot) ? (
                       <span>Wallet {exposureDeltaLabel(capitalCoinForSlot(props.capital, slot)?.untrackedAudApprox)}</span>
@@ -7167,8 +7204,12 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div className={`slot-v ${stateClassName(stateLabel(slot))}`}>{readerStatusLabel(slot)}</div>
             </div>
             <div className="slot-modal-strip-item">
-              <div className="slot-k">Live Net</div>
+              <div className="slot-k">Ledger Net</div>
               <div className="slot-v">{pctNum(liveParentNetPct(slot))}</div>
+            </div>
+            <div className="slot-modal-strip-item">
+              <div className="slot-k">Exec Sell Net</div>
+              <div className="slot-v">{pctNum(primaryExecutableExitNetPct(slot))}</div>
             </div>
             <div className="slot-modal-strip-item">
               <div className="slot-k">Live Gross</div>
@@ -7214,8 +7255,8 @@ const SlotModal = React.memo(function SlotModal(props: {
           <CollapsibleBlock title="Primary Position" defaultOpen>
           <div className="slot-section">Core Metrics</div>
           <div className="slot-v">
-            Live Net uses the current primary sell bid after round-trip fees. Live Gross tracks the same primary
-            move before friction and fees.
+            Ledger Net is the primary P/L read. Executable Sell Net is the explicit sell-readiness check used by
+            exit gates. Live Gross tracks the same primary move before friction and fees.
           </div>
           <div className="slot-v">{primaryComparisonScopeLabel(slot)}</div>
 
@@ -7287,7 +7328,10 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Submitted Rate</div><div className="slot-v">{fmt(slot.liveEntrySubmittedRate)}</div></div>
               <div><div className="slot-k">Actual Fill Rate</div><div className="slot-v">{fmt(slot.liveEntryActualRate)}</div></div>
               <div><div className="slot-k">Live Gross</div><div className="slot-v">{pctNum(liveParentGrossPct(slot))}</div></div>
-              <div><div className="slot-k">Live Net</div><div className="slot-v">{pctNum(liveParentNetPct(slot))}</div></div>
+              <div><div className="slot-k">Ledger Net</div><div className="slot-v">{pctNum(liveParentNetPct(slot))}</div></div>
+              <div><div className="slot-k">Executable Sell</div><div className="slot-v">{primaryExecutableExitLabel(slot)}</div></div>
+              <div><div className="slot-k">Exit Gate</div><div className="slot-v">{primaryExitGateStateLabel(slot)}</div></div>
+              <div><div className="slot-k">Exit Gate Reason</div><div className="slot-v">{primaryExitGateReason(slot) ?? "-"}</div></div>
               <div><div className="slot-k">Lifetime Net</div><div className="slot-v">{pctNum(primaryTotalGainPct(slot))}</div></div>
               <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "-"}</div></div>
               <div><div className="slot-k">Protection</div><div className="slot-v">{primaryProtectionLabel(slot)}</div></div>
