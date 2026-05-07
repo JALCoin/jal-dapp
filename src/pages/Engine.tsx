@@ -103,6 +103,8 @@ type ExitDecision = {
 type ExitOrderState = {
   state?: string | null;
   id?: string | null;
+  idMasked?: string | null;
+  hasBrokerId?: boolean | null;
   rate?: number | null;
   targetNetPct?: number | null;
   expectedAud?: number | null;
@@ -3033,7 +3035,8 @@ function exitOrderSummaryLabel(order: ExitOrderState | null | undefined) {
   if (!order) return "-";
   const state = String(order.state || order.lastAction || "").trim().toUpperCase();
   if (!state) return "-";
-  const hasBrokerId = String(order.id || "").trim().length > 0;
+  const displayId = String(order.idMasked || order.id || "").trim();
+  const hasBrokerId = order.hasBrokerId === true || displayId.length > 0;
   const dryRun = order.dryRun === true || state.startsWith("WOULD_") ? "DRY-RUN " : "";
   const brokerNote =
     !dryRun && state === "OPEN" && !hasBrokerId
@@ -3042,15 +3045,16 @@ function exitOrderSummaryLabel(order: ExitOrderState | null | undefined) {
       ? "RECONCILING, NO BROKER ID"
       : state.replaceAll("_", " ");
   const rate = order.rate != null && Number.isFinite(order.rate) ? ` @ ${fmt(order.rate)}` : "";
-  return `${dryRun}${brokerNote}${hasBrokerId && state === "OPEN" ? ` #${String(order.id).slice(0, 8)}` : ""}${rate}`;
+  return `${dryRun}${brokerNote}${hasBrokerId && state === "OPEN" ? ` #${displayId}` : ""}${rate}`;
 }
 
 function exitOrderModeLabel(order: ExitOrderState | null | undefined) {
   if (!order) return "-";
   const state = String(order.state || order.lastAction || "").trim().toUpperCase();
+  const hasBrokerId = order.hasBrokerId === true || String(order.idMasked || order.id || "").trim().length > 0;
   if (order.dryRun === true || state.startsWith("WOULD_")) return "DRY-RUN";
-  if (String(order.id || "").trim()) return "LIVE BROKER";
-  if (state === "PLACE_READY") return "LIVE READY";
+  if (hasBrokerId) return "LIVE BROKER";
+  if (state === "PLACE_READY") return "LIVE PLAN";
   if (state === "RECONCILING" || state === "SUBMITTED_NO_ID") return "LIVE RECONCILING";
   return "LIVE PLAN";
 }
@@ -3591,8 +3595,11 @@ function configuredSubslotTriggerBands(
     normalizedCoin && subslotConfig?.coinTriggerBands
       ? subslotConfig.coinTriggerBands[normalizedCoin]
       : null;
+  const grossNetSpread = normalizedSecondaryTriggerBasis(null, subslotConfig) === "GROSS_NET_SPREAD";
   const source = Array.isArray(coinBands) && coinBands.length
     ? coinBands
+    : grossNetSpread && Array.isArray(subslotConfig?.entryParentGrossBandsPct)
+    ? subslotConfig?.entryParentGrossBandsPct
     : subslotConfig?.triggerParentNetBandsPct;
 
   return Array.isArray(source)
@@ -4640,7 +4647,7 @@ function exitOrderBlock(
 ) {
   if (!order) return null;
   const state = String(order.state || order.lastAction || "").trim().toUpperCase();
-  const hasBrokerId = String(order.id || "").trim().length > 0;
+  const hasBrokerId = order.hasBrokerId === true || String(order.idMasked || order.id || "").trim().length > 0;
   if (!state && order.rate == null) return null;
   const metrics = [
     { label: "Order", value: exitOrderSummaryLabel(order) },
