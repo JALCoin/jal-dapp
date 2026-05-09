@@ -1408,7 +1408,7 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
     summary:
       "Primary locks and active secondaries now calculate first-class target sell orders from their own net-gain basis, with dry-run state shown before live order management is enabled.",
     detail:
-      "Existing executable trail and floor sells remain the fallback. A parent exit waits until every open secondary has resolved so secondary placement can leave before parent capital is reset.",
+      "When a Primary floor breach is blocked by its tracked resting sell order, the engine clears that order first and retries the guarded executable exit on the next tick. Secondary entry remains governed by its own gross/net/spread gates rather than being stopped just because a Primary exit trigger is active.",
   },
   {
     title: "Directional Playbooks",
@@ -2388,6 +2388,90 @@ function primaryExitOrderData(slot: SlotRow | null | undefined): ExitOrderState 
   };
 }
 
+function primaryTrackingState(slot: SlotRow | null | undefined) {
+  return String(slot?.trackingState || "").trim().toUpperCase();
+}
+
+function primaryExitOrderStateValue(slot: SlotRow | null | undefined) {
+  const order = primaryExitOrderData(slot);
+  return String(order?.state || order?.lastAction || "").trim().toUpperCase();
+}
+
+function primaryExitOrderReasonValue(slot: SlotRow | null | undefined) {
+  const order = primaryExitOrderData(slot);
+  return String(order?.blockReason || slot?.parentExitOrderBlockReason || "").trim().toLowerCase();
+}
+
+function isPrimaryExitOrderClearing(slot: SlotRow | null | undefined) {
+  const tracking = primaryTrackingState(slot);
+  const orderState = primaryExitOrderStateValue(slot);
+  const reason = primaryExitOrderReasonValue(slot);
+
+  return (
+    tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR_BLOCKED" ||
+    tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR" ||
+    tracking === "PARENT_EXIT_ORDER_CANCEL_SUBSLOT" ||
+    orderState === "CANCEL_REQUESTED" ||
+    orderState === "CANCELING" ||
+    orderState === "CANCELLING" ||
+    reason === "floor_exit_order_blocks_executable"
+  );
+}
+
+function isPrimaryFloorOrderClearing(slot: SlotRow | null | undefined) {
+  const tracking = primaryTrackingState(slot);
+  const reason = primaryExitOrderReasonValue(slot);
+  return (
+    tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR_BLOCKED" ||
+    tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR" ||
+    reason === "floor_exit_order_blocks_executable"
+  );
+}
+
+function primaryFloorBreached(slot: SlotRow | null | undefined) {
+  if (!slot) return false;
+  const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
+  const liveNet = liveParentNetPct(slot);
+  return (
+    isHoldingFamilyState(slot.state) &&
+    floorPct != null &&
+    Number.isFinite(floorPct) &&
+    liveNet != null &&
+    Number.isFinite(liveNet) &&
+    Number(liveNet) < Number(floorPct)
+  );
+}
+
+function primaryExitOrderClearingLabel(slot: SlotRow | null | undefined) {
+  if (!slot) return "Clearing tracked sell order";
+  if (primaryTrackingState(slot) === "PARENT_EXIT_ORDER_CANCEL_SUBSLOT") {
+    return "Clearing parent sell order while secondary resolves";
+  }
+  if (isPrimaryFloorOrderClearing(slot)) {
+    return "Canceling tracked sell order so the floor exit can retry next tick";
+  }
+  return "Clearing tracked sell order before retry";
+}
+
+function primaryLockPostureLabel(slot: SlotRow | null | undefined) {
+  if (!slot) return "-";
+  const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
+  const liveNet = liveParentNetPct(slot);
+  const levelLabel = slot.level ? `LVL${slot.level}` : "LVL";
+
+  if (!(floorPct != null && Number.isFinite(floorPct))) return "-";
+
+  if (isPrimaryExitOrderClearing(slot)) {
+    return `${levelLabel} floor held at ${pctNum(floorPct)} while the tracked order clears.`;
+  }
+
+  if (liveNet != null && Number.isFinite(liveNet) && Number(liveNet) < Number(floorPct)) {
+    return `${levelLabel} floor is breached; lock remains held while executable exit protection waits.`;
+  }
+
+  return `${levelLabel} floor held at ${pctNum(floorPct)}.`;
+}
+
 function primaryReporting(slot: SlotRow | null | undefined) {
   return slot?.reporting ?? null;
 }
@@ -2538,6 +2622,9 @@ function isTrackingFamilyState(state: string | null | undefined) {
     s === "BUY_SUBMITTED" ||
     s === "BUY_LOCK_SUBMITTED" ||
     s === "SELL_SUBMITTED" ||
+    s === "PARENT_EXIT_ORDER_CANCEL_FLOOR_BLOCKED" ||
+    s === "PARENT_EXIT_ORDER_CANCEL_FLOOR" ||
+    s === "PARENT_EXIT_ORDER_CANCEL_SUBSLOT" ||
     s === "SPREAD_BLOCKED" ||
     s === "NO_MARKET"
   );
@@ -2905,6 +2992,8 @@ function stateClassName(value: string | null | undefined) {
 function stateToneClass(slot: SlotRow) {
   const tracking = String(slot.trackingState || "").toUpperCase();
   const state = String(slot.state || "").toUpperCase();
+
+  if (isPrimaryExitOrderClearing(slot)) return "is-deploying";
 
   if (
     state === "HOLDING" ||
@@ -3760,6 +3849,7 @@ function readerStatusLabel(s: SlotRow) {
   const state = String(s.state || "").toUpperCase();
   const liveNet = liveParentNetPct(s);
 
+  if (isPrimaryExitOrderClearing(s)) return "Clearing Order";
   if (state === "WAITING_ENTRY") return "Waiting";
   if (state === "DEPLOYING") return "Entering";
   if (state === "EXITING") return "Exiting";
@@ -4066,7 +4156,8 @@ function primaryExitProgressBlock(
   const progress = primaryExitProgressModel(slot, holding);
   if (!progress.totalCount) return null;
 
-  const toneClass = progress.isTrailing ? "is-ready" : progress.isArmed ? "is-active" : "is-blocked";
+  const showLockPosture = isPrimaryExitOrderClearing(slot) || primaryFloorBreached(slot);
+  const toneClass = showLockPosture ? "is-blocked" : progress.isTrailing ? "is-ready" : progress.isArmed ? "is-active" : "is-blocked";
 
   return (
     <div className={`entry-progress exit-progress ${toneClass}`} aria-label="Primary exit progress">
@@ -4118,6 +4209,7 @@ function primaryExitProgressBlock(
           );
         })}
       </div>
+      {showLockPosture ? <div className="execution-breakdown-copy">{primaryLockPostureLabel(slot)}</div> : null}
     </div>
   );
 }
@@ -4670,6 +4762,9 @@ function exitOrderBlock(
     !order.dryRun && (state === "RECONCILING" || state === "SUBMITTED_NO_ID") && !hasBrokerId
       ? "Broker id is missing, so the engine is reconciling before another resting sell can be trusted."
       : null,
+    !order.dryRun && state.includes("CANCEL")
+      ? "Tracked order is being canceled before the next guarded exit attempt."
+      : null,
     order.blockReason ? `Block reason: ${reasonLabel(order.blockReason)}.` : null,
   ].filter(Boolean);
 
@@ -4716,6 +4811,7 @@ function primaryProtectionLabel(slot: SlotRow) {
 
   if (state === "EXITING") return "Sell resolving";
   if (state === "DEPLOYING") return "Awaiting entry proof";
+  if (isPrimaryExitOrderClearing(slot)) return primaryExitOrderClearingLabel(slot);
 
   if (state === "LVL4_TRAIL") {
     const parts = ["LVL4 armed", "exit on first breach"];
@@ -4777,6 +4873,7 @@ function nextActionLabel(s: SlotRow) {
   const state = String(s.state || "").toUpperCase();
   const tracking = String(s.trackingState || "").toUpperCase();
 
+  if (isPrimaryExitOrderClearing(s)) return primaryExitOrderClearingLabel(s);
   if (tracking === "PARENT_EXIT_WAIT_GREEN") return "Waiting for green exit";
   if (state === "EXITING") return "Confirming exit fill";
   if (state === "DEPLOYING") return "Confirming entry fill";
@@ -4795,6 +4892,7 @@ function nextActionLabel(s: SlotRow) {
   if (hasPendingSubslotBuys(s)) return "Managing secondary entry";
   if (secondaryLiveCount(s) > 0) return "Managing secondary trades";
   if (state === "LVL4_TRAIL" || state === "LVL1_LOCK" || state === "LVL2_LOCK" || state === "LVL3_LOCK") {
+    if (primaryFloorBreached(s)) return "Floor breached, waiting for guarded exit";
     return "Holding above exit floor";
   }
   if (state === "HOLDING") {
@@ -4822,7 +4920,9 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   const comparison = primaryComparison(s);
 
   // Parent State Analysis
-  if (state === "EXITING") {
+  if (isPrimaryExitOrderClearing(s)) {
+    parts.push(`${primaryExitOrderClearingLabel(s)}.`);
+  } else if (state === "EXITING") {
     parts.push("Jrd Primary exit is being resolved live.");
   } else if (state === "DEPLOYING") {
     parts.push("Jrd Primary entry is being confirmed live.");
@@ -4880,6 +4980,10 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
 
   if (trailMovement) {
     parts.push(trailMovement);
+  }
+
+  if (primaryFloorBreached(s)) {
+    parts.push(primaryLockPostureLabel(s));
   }
 
   // Spread and Drawdown
@@ -5123,6 +5227,7 @@ function derivePriorityScore(s: SlotRow) {
   const hasActive = subslots.some((subslot) => String(subslot.subslotState || "").toUpperCase() === "ACTIVE");
 
   if (String(s.state || "").toUpperCase() === "EXITING") return 100;
+  if (isPrimaryExitOrderClearing(s)) return 98;
   if (String(s.state || "").toUpperCase() === "DEPLOYING") return 95;
   if (hasPendingSell) return 90;
   if (hasPendingBuy) return 85;
@@ -5176,6 +5281,7 @@ type PositionStageKey =
   | "entering"
   | "live-primary"
   | "protected-primary"
+  | "clearing-exit-order"
   | "exit-waiting"
   | "exiting";
 
@@ -5212,6 +5318,11 @@ const POSITION_STAGE_ORDER: Array<{ key: PositionStageKey; title: string; note: 
     note: "Protection is armed and the Primary is being defended live.",
   },
   {
+    key: "clearing-exit-order",
+    title: "Clearing Exit Order",
+    note: "A tracked resting sell order is being canceled before the floor-protected exit retries.",
+  },
+  {
     key: "exit-waiting",
     title: "Exit Waiting",
     note: "The Primary wants to exit; the sell gate is waiting for green confirmation or executable protection data.",
@@ -5244,11 +5355,17 @@ function primaryExitGateState(slot: SlotRow | null | undefined) {
 }
 
 function primaryExitGateReason(slot: SlotRow | null | undefined) {
+  if (isPrimaryExitOrderClearing(slot)) {
+    return primaryExitOrderClearingLabel(slot);
+  }
   const raw = primaryDecision(slot)?.exitGateReason ?? slot?.parentExitGateReason;
   return raw ? String(raw) : null;
 }
 
 function primaryExitGateStateLabel(slot: SlotRow | null | undefined) {
+  if (isPrimaryExitOrderClearing(slot)) {
+    return isPrimaryFloorOrderClearing(slot) ? "Clearing Floor Order" : "Clearing Exit Order";
+  }
   const gateState = primaryExitGateState(slot);
   return gateState ? enumLabel(gateState) : "-";
 }
@@ -5267,6 +5384,7 @@ function positionStageForSlot(slot: SlotRow): PositionStageKey {
   const floorPct = primaryDecision(slot)?.exitFloorPct ?? primaryExitFloorPct(slot);
   const hasArmedFloor = floorPct != null && Number.isFinite(floorPct) && Number(floorPct) > 0;
 
+  if (isPrimaryExitOrderClearing(slot)) return "clearing-exit-order";
   if (tracking === "PARENT_EXIT_WAIT_GREEN") return "exit-waiting";
   if (state === "EXITING") return "exiting";
   if (
@@ -5301,6 +5419,7 @@ function slotNeedsAction(slot: SlotRow) {
   const stage = positionStageForSlot(slot);
   return (
     stage === "entering" ||
+    stage === "clearing-exit-order" ||
     stage === "exiting" ||
     tracking === "SPREAD_BLOCKED" ||
     tracking === "NO_MARKET" ||
@@ -5311,6 +5430,15 @@ function slotNeedsAction(slot: SlotRow) {
 
 function actionNeededSummary(slot: SlotRow) {
   const stage = positionStageForSlot(slot);
+
+  if (stage === "clearing-exit-order") {
+    const parts = [primaryExitOrderClearingLabel(slot)];
+    const order = primaryExitOrderData(slot);
+    const displayId = String(order?.idMasked || order?.id || "").trim();
+    if (displayId) parts.push(`Order #${displayId} is being cleared before the guarded exit retries.`);
+    parts.push(primaryLockPostureLabel(slot));
+    return parts.filter(Boolean).join(" ");
+  }
 
   if (stage === "exit-waiting") {
     const gateState = String(primaryExitGateState(slot) || "").toUpperCase();
@@ -5366,6 +5494,7 @@ function waitingPrimarySummary(slot: SlotRow) {
 
 function activePrimarySummary(slot: SlotRow) {
   const stage = positionStageForSlot(slot);
+  if (stage === "clearing-exit-order") return actionNeededSummary(slot);
   if (stage === "exit-waiting") return actionNeededSummary(slot);
   if (stage === "exiting") return "Primary sell is resolving live.";
   if (stage === "entering") return "Primary entry is confirming live.";
@@ -5376,12 +5505,15 @@ function activePrimarySummary(slot: SlotRow) {
 function positionStageSummary(slot: SlotRow) {
   const stage = positionStageForSlot(slot);
   if (stage === "waiting-setup" || stage === "reversal-confirming") return waitingPrimarySummary(slot);
-  if (stage === "entering" || stage === "exit-waiting" || stage === "exiting") return actionNeededSummary(slot);
+  if (stage === "entering" || stage === "clearing-exit-order" || stage === "exit-waiting" || stage === "exiting") {
+    return actionNeededSummary(slot);
+  }
   return activePrimarySummary(slot);
 }
 
 function positionCardToneClass(slot: SlotRow) {
   const stage = positionStageForSlot(slot);
+  if (stage === "clearing-exit-order") return "is-deploying";
   if (stage === "exit-waiting") return "is-blocked";
   if (stage === "exiting") return "is-exiting";
   if (stage === "entering" || stage === "reversal-confirming") return "is-deploying";
@@ -5454,6 +5586,15 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
         label: "Gap To Floor",
         value: floorGap == null ? "-" : floorGap >= 0 ? `${pctNum(floorGap)} above` : `${pctNum(Math.abs(floorGap))} below`,
       },
+    ];
+  }
+
+  if (stage === "clearing-exit-order") {
+    return [
+      { label: "Order State", value: exitOrderSummaryLabel(primaryExitOrderData(slot)), toneClass: "is-deploying" },
+      { label: "Exit Floor", value: pctNum(decision?.exitFloorPct ?? primaryExitFloorPct(slot)) },
+      { label: "Exec Sell Net", value: pctNum(primaryExecutableExitNetPct(slot)), toneClass: "is-blocked" },
+      { label: "Next Step", value: "Retry floor exit next tick", toneClass: "is-deploying" },
     ];
   }
 
@@ -6332,6 +6473,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
     const stage = positionStageForSlot(slot);
     return (
       stage === "entering" ||
+      stage === "clearing-exit-order" ||
       stage === "exit-waiting" ||
       stage === "live-primary" ||
       stage === "protected-primary"
@@ -6551,6 +6693,7 @@ const LedgerTable = React.memo(function LedgerTable(props: {
     entering: 0,
     "live-primary": 0,
     "protected-primary": 0,
+    "clearing-exit-order": 0,
     "exit-waiting": 0,
     exiting: 0,
   });
@@ -6588,6 +6731,10 @@ const LedgerTable = React.memo(function LedgerTable(props: {
         <div className="positions-summary-card">
           <div className="positions-summary-k">Protected Primary</div>
           <div className="positions-summary-v">{stageCounts["protected-primary"]}</div>
+        </div>
+        <div className="positions-summary-card">
+          <div className="positions-summary-k">Clearing Orders</div>
+          <div className="positions-summary-v">{stageCounts["clearing-exit-order"]}</div>
         </div>
         <div className="positions-summary-card">
           <div className="positions-summary-k">Exit Waiting</div>
@@ -7853,7 +8000,7 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
             <div className="engine-upgrade-k">Exit Order Manager</div>
             <div className="engine-upgrade-v">{exitOrderManager}</div>
             <div className="engine-upgrade-sub">
-              Primary locks and active secondaries publish target sell order state before live order mutation is enabled.
+              Primary locks and active secondaries publish target sell order state. If a Primary floor exit is blocked by its tracked resting sell, the order clears first and the guarded exit retries next tick.
             </div>
           </div>
         </div>
