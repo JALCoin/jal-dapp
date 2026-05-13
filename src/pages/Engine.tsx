@@ -131,6 +131,27 @@ type ReportingSummary = {
   cycles?: number | null;
 };
 
+type SecondaryReconciliationAttention = {
+  duplicateSellMismatchCount?: number | null;
+  hasDuplicateSellMismatch?: boolean | null;
+};
+
+type SecondaryWalletCoverage = {
+  openCount?: number | null;
+  liveCount?: number | null;
+  pendingSellCount?: number | null;
+  pendingBuyCount?: number | null;
+  closedCount?: number | null;
+  duplicateSellMismatchCount?: number | null;
+  trackedSecondaryCoinQty?: number | null;
+  walletCoinAvailable?: number | null;
+  walletCoinAfterPrimary?: number | null;
+  shortageCoin?: number | null;
+  shortageAud?: number | null;
+  status?: string | null;
+  attention?: boolean | null;
+};
+
 type ExecutionComparison = {
   compareScope?: string | null;
   fillStatus?: string | null;
@@ -200,6 +221,9 @@ type PrimarySurface = {
 type SecondarySummary = {
   liveCount?: number | null;
   openCount?: number | null;
+  closedCount?: number | null;
+  duplicateSellMismatchCount?: number | null;
+  reconciliationAttention?: SecondaryReconciliationAttention | null;
   liveNetPct?: number | null;
   totalNetGainAud?: number | null;
   cycles?: number | null;
@@ -1271,6 +1295,7 @@ type PublicCapitalCoin = {
   trackedAud?: number | null;
   untrackedAudApprox?: number | null;
   exposureAttention?: boolean | null;
+  secondaryWalletCoverage?: SecondaryWalletCoverage | null;
 };
 
 type PublicCapitalResponse = {
@@ -2316,7 +2341,11 @@ function capitalExposureAttentionRows(capital: PublicCapitalResponse | null | un
   const list = Array.isArray(capital?.coins) ? capital.coins.slice() : [];
   return list
     .filter((coin) => coin.exposureAttention === true)
-    .sort((a, b) => Math.abs(b.untrackedAudApprox ?? 0) - Math.abs(a.untrackedAudApprox ?? 0));
+    .sort((a, b) => {
+      const aSeverity = Math.max(Math.abs(a.untrackedAudApprox ?? 0), Math.abs(a.secondaryWalletCoverage?.shortageAud ?? 0));
+      const bSeverity = Math.max(Math.abs(b.untrackedAudApprox ?? 0), Math.abs(b.secondaryWalletCoverage?.shortageAud ?? 0));
+      return bSeverity - aSeverity;
+    });
 }
 
 function capitalExposureAttentionCount(capital: PublicCapitalResponse | null | undefined) {
@@ -2338,6 +2367,54 @@ function exposureDeltaLabel(delta: number | null | undefined) {
   if (delta == null || !Number.isFinite(delta)) return "balanced";
   if (Math.abs(delta) < 0.01) return "balanced";
   return delta > 0 ? `${moneyAud(delta)} untracked` : `${moneyAud(Math.abs(delta))} overtracked`;
+}
+
+function secondaryCoverageAttentionLabel(coverage: SecondaryWalletCoverage | null | undefined) {
+  if (!coverage || coverage.attention !== true) return null;
+  const status = String(coverage.status || "").toUpperCase();
+  const duplicateCount = Number(coverage.duplicateSellMismatchCount);
+  const shortageAud = Number(coverage.shortageAud);
+  const parts: string[] = [];
+
+  if (Number.isFinite(duplicateCount) && duplicateCount > 0) {
+    parts.push(`${duplicateCount} duplicate completed secondary sell${duplicateCount === 1 ? "" : "s"} need reconciliation`);
+  }
+
+  if (status === "SHORTAGE" || (Number.isFinite(shortageAud) && shortageAud > 0.01)) {
+    parts.push(`wallet coverage is short by ${moneyAud(shortageAud)}`);
+  }
+
+  if (!parts.length && status) parts.push(`secondary coverage status ${enumLabel(status)}`);
+  return parts.length ? parts.join("; ") : null;
+}
+
+function secondaryReconciliationAttentionCount(slot: SlotRow | null | undefined) {
+  const duplicateCount = Number(slot?.secondary?.duplicateSellMismatchCount);
+  if (Number.isFinite(duplicateCount) && duplicateCount > 0) return duplicateCount;
+  const fallback = Number(slot?.secondary?.reconciliationAttention?.duplicateSellMismatchCount);
+  return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
+}
+
+function slotHasSecondaryReconciliationAttention(slot: SlotRow | null | undefined) {
+  return (
+    secondaryReconciliationAttentionCount(slot) > 0 ||
+    slot?.secondary?.reconciliationAttention?.hasDuplicateSellMismatch === true
+  );
+}
+
+function secondaryReconciliationWarningLabel(
+  slot: SlotRow | null | undefined,
+  capitalCoin?: PublicCapitalCoin | null
+) {
+  const coverageLabel = secondaryCoverageAttentionLabel(capitalCoin?.secondaryWalletCoverage ?? null);
+  const duplicateCount = secondaryReconciliationAttentionCount(slot);
+  const parts: string[] = [];
+
+  if (duplicateCount > 0 && !coverageLabel?.toLowerCase().includes("duplicate")) {
+    parts.push(`${duplicateCount} duplicate secondary sell mismatch${duplicateCount === 1 ? "" : "es"}`);
+  }
+  if (coverageLabel) parts.push(coverageLabel);
+  return parts.length ? `Secondary reconciliation warning: ${parts.join("; ")}.` : null;
 }
 
 function isHoldingFamilyState(state: SlotState | string | null | undefined) {
@@ -2408,6 +2485,7 @@ function isPrimaryExitOrderClearing(slot: SlotRow | null | undefined) {
   const reason = primaryExitOrderReasonValue(slot);
 
   return (
+    tracking === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR_BLOCKED" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_SUBSLOT" ||
@@ -2422,8 +2500,10 @@ function isPrimaryFloorOrderClearing(slot: SlotRow | null | undefined) {
   const tracking = primaryTrackingState(slot);
   const reason = primaryExitOrderReasonValue(slot);
   return (
+    tracking === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR_BLOCKED" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR" ||
+    reason === "primary_floor_watch" ||
     reason === "floor_exit_order_blocks_executable"
   );
 }
@@ -2444,6 +2524,9 @@ function primaryFloorBreached(slot: SlotRow | null | undefined) {
 
 function primaryExitOrderClearingLabel(slot: SlotRow | null | undefined) {
   if (!slot) return "Clearing tracked sell order";
+  if (primaryTrackingState(slot) === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR") {
+    return "Canceling tracked sell order before floor-watch harvest";
+  }
   if (primaryTrackingState(slot) === "PARENT_EXIT_ORDER_CANCEL_SUBSLOT") {
     return "Clearing parent sell order while secondary resolves";
   }
@@ -2622,6 +2705,9 @@ function isTrackingFamilyState(state: string | null | undefined) {
     s === "BUY_SUBMITTED" ||
     s === "BUY_LOCK_SUBMITTED" ||
     s === "SELL_SUBMITTED" ||
+    s === "PARENT_EXIT_FLOOR_WATCH" ||
+    s === "PARENT_EXIT_WAIT_PROFIT_RECOVERY" ||
+    s === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR" ||
     s === "PARENT_EXIT_ORDER_CANCEL_FLOOR_BLOCKED" ||
     s === "PARENT_EXIT_ORDER_CANCEL_FLOOR" ||
     s === "PARENT_EXIT_ORDER_CANCEL_SUBSLOT" ||
@@ -3847,9 +3933,12 @@ function subslotLiveCounterLabel(
 
 function readerStatusLabel(s: SlotRow) {
   const state = String(s.state || "").toUpperCase();
+  const tracking = String(s.trackingState || "").toUpperCase();
   const liveNet = liveParentNetPct(s);
 
   if (isPrimaryExitOrderClearing(s)) return "Clearing Order";
+  if (tracking === "PARENT_EXIT_FLOOR_WATCH") return "Floor Watch";
+  if (tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY") return "Exit Waiting";
   if (state === "WAITING_ENTRY") return "Waiting";
   if (state === "DEPLOYING") return "Entering";
   if (state === "EXITING") return "Exiting";
@@ -4379,7 +4468,7 @@ function secondaryRailItems(
   const configuredBands = configuredSubslotTriggerBands(subslotConfig, slot.coin);
   const currentRows = getSecondaryRows(slot).filter((subslot) => {
     const state = String(subslot.subslotState || "").toUpperCase();
-    return state === "ACTIVE" || state === "BUY_SUBMITTED" || state === "SELL_SUBMITTED" || isSubslotBusy(subslot);
+    return state === "ACTIVE" || state === "BUY_SUBMITTED" || state === "SELL_SUBMITTED";
   });
 
   const assigned = new Map<number, SubslotRow>();
@@ -4464,11 +4553,13 @@ function secondaryRailSummary(
 
 function primarySecondaryRail(
   slot: SlotRow,
-  subslotConfig: ManagerStatus["subslot"] | null | undefined
+  subslotConfig: ManagerStatus["subslot"] | null | undefined,
+  capitalCoin?: PublicCapitalCoin | null
 ) {
   const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
   const items = secondaryRailItems(slot, subslotConfig);
   const counts = secondaryRailVisualCounts(items);
+  const reconciliationWarning = secondaryReconciliationWarningLabel(slot, capitalCoin);
   const railValue =
     counts.open > counts.active ? `${counts.open}/${slotCapacity} open` : `${counts.active}/${slotCapacity} live`;
 
@@ -4491,6 +4582,9 @@ function primarySecondaryRail(
         ))}
       </div>
       <div className="secondary-rail-summary">{secondaryRailSummary(slot, items, subslotConfig)}</div>
+      {reconciliationWarning ? (
+        <div className="secondary-rail-summary is-warn">{reconciliationWarning}</div>
+      ) : null}
     </div>
   );
 }
@@ -4812,6 +4906,12 @@ function primaryProtectionLabel(slot: SlotRow) {
   if (state === "EXITING") return "Sell resolving";
   if (state === "DEPLOYING") return "Awaiting entry proof";
   if (isPrimaryExitOrderClearing(slot)) return primaryExitOrderClearingLabel(slot);
+  if (primaryTrackingState(slot) === "PARENT_EXIT_FLOOR_WATCH") {
+    return "Floor watch | waiting for net-positive executable harvest";
+  }
+  if (primaryTrackingState(slot) === "PARENT_EXIT_WAIT_PROFIT_RECOVERY") {
+    return "Floor breached | waiting for net-positive executable recovery";
+  }
 
   if (state === "LVL4_TRAIL") {
     const parts = ["LVL4 armed", "exit on first breach"];
@@ -4874,6 +4974,8 @@ function nextActionLabel(s: SlotRow) {
   const tracking = String(s.trackingState || "").toUpperCase();
 
   if (isPrimaryExitOrderClearing(s)) return primaryExitOrderClearingLabel(s);
+  if (tracking === "PARENT_EXIT_FLOOR_WATCH") return "Floor watch: waiting for net-positive harvest";
+  if (tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY") return "Floor breached, waiting for net-positive recovery";
   if (tracking === "PARENT_EXIT_WAIT_GREEN") return "Waiting for green exit";
   if (state === "EXITING") return "Confirming exit fill";
   if (state === "DEPLOYING") return "Confirming entry fill";
@@ -4922,6 +5024,10 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   // Parent State Analysis
   if (isPrimaryExitOrderClearing(s)) {
     parts.push(`${primaryExitOrderClearingLabel(s)}.`);
+  } else if (tracking === "PARENT_EXIT_FLOOR_WATCH") {
+    parts.push("Jrd Primary is in floor watch and will only harvest if the executable sell remains net positive.");
+  } else if (tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY") {
+    parts.push("Jrd Primary floor is breached, but the executable sell is waiting for net-positive recovery.");
   } else if (state === "EXITING") {
     parts.push("Jrd Primary exit is being resolved live.");
   } else if (state === "DEPLOYING") {
@@ -5325,7 +5431,7 @@ const POSITION_STAGE_ORDER: Array<{ key: PositionStageKey; title: string; note: 
   {
     key: "exit-waiting",
     title: "Exit Waiting",
-    note: "The Primary wants to exit; the sell gate is waiting for green confirmation or executable protection data.",
+    note: "The Primary wants to exit; the sell gate is watching the floor, waiting for recovery, or confirming executable protection.",
   },
   {
     key: "exiting",
@@ -5364,8 +5470,14 @@ function primaryExitGateReason(slot: SlotRow | null | undefined) {
 
 function primaryExitGateStateLabel(slot: SlotRow | null | undefined) {
   if (isPrimaryExitOrderClearing(slot)) {
-    return isPrimaryFloorOrderClearing(slot) ? "Clearing Floor Order" : "Clearing Exit Order";
+    return primaryTrackingState(slot) === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR"
+      ? "Canceling Resting Order"
+      : isPrimaryFloorOrderClearing(slot)
+        ? "Clearing Floor Order"
+        : "Clearing Exit Order";
   }
+  if (primaryTrackingState(slot) === "PARENT_EXIT_FLOOR_WATCH") return "Watching Floor";
+  if (primaryTrackingState(slot) === "PARENT_EXIT_WAIT_PROFIT_RECOVERY") return "Waiting Recovery";
   const gateState = primaryExitGateState(slot);
   return gateState ? enumLabel(gateState) : "-";
 }
@@ -5385,7 +5497,11 @@ function positionStageForSlot(slot: SlotRow): PositionStageKey {
   const hasArmedFloor = floorPct != null && Number.isFinite(floorPct) && Number(floorPct) > 0;
 
   if (isPrimaryExitOrderClearing(slot)) return "clearing-exit-order";
-  if (tracking === "PARENT_EXIT_WAIT_GREEN") return "exit-waiting";
+  if (
+    tracking === "PARENT_EXIT_WAIT_GREEN" ||
+    tracking === "PARENT_EXIT_FLOOR_WATCH" ||
+    tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY"
+  ) return "exit-waiting";
   if (state === "EXITING") return "exiting";
   if (
     state === "DEPLOYING" ||
@@ -5418,8 +5534,10 @@ function slotNeedsAction(slot: SlotRow) {
   const tracking = String(slot.trackingState || "").toUpperCase();
   const stage = positionStageForSlot(slot);
   return (
+    slotHasSecondaryReconciliationAttention(slot) ||
     stage === "entering" ||
     stage === "clearing-exit-order" ||
+    stage === "exit-waiting" ||
     stage === "exiting" ||
     tracking === "SPREAD_BLOCKED" ||
     tracking === "NO_MARKET" ||
@@ -5441,15 +5559,24 @@ function actionNeededSummary(slot: SlotRow) {
   }
 
   if (stage === "exit-waiting") {
+    const tracking = primaryTrackingState(slot);
     const gateState = String(primaryExitGateState(slot) || "").toUpperCase();
     const requiredNetPct = primaryExitRequiredNetPct(slot);
     const requiredProfitAud = primaryExitRequiredProfitAud(slot);
     const executableNetPct = primaryExecutableExitNetPct(slot);
     const executableProfitAud = primaryExecutableExitProfitAud(slot);
     const gateReason = primaryExitGateReason(slot);
-    const protectionMode = gateState === "WAIT_EXECUTABLE" || requiredNetPct == null;
+    const protectionMode =
+      gateState === "WAIT_EXECUTABLE" ||
+      tracking === "PARENT_EXIT_FLOOR_WATCH" ||
+      tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY" ||
+      requiredNetPct == null;
     const parts = [
-      protectionMode
+      tracking === "PARENT_EXIT_FLOOR_WATCH"
+        ? "Primary is watching the floor zone; any tracked resting sell is cleared before a net-positive harvest attempt."
+        : tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY"
+          ? "Primary floor is breached; the lock remains held while executable sell waits for net-positive recovery."
+          : protectionMode
         ? "Protection sell is armed and waiting for the executable sell to clear net-gain protection."
         : "Green exit is still blocked.",
     ];
@@ -5481,6 +5608,9 @@ function actionNeededSummary(slot: SlotRow) {
 
   if (stage === "entering") return "Primary entry is confirming live.";
   if (stage === "exiting") return "Primary sell is confirming live.";
+  if (slotHasSecondaryReconciliationAttention(slot)) {
+    return secondaryReconciliationWarningLabel(slot) ?? "Secondary reconciliation needs attention.";
+  }
   if (hasPendingSubslotSells(slot)) return "Secondary exit is being managed.";
   if (hasPendingSubslotBuys(slot)) return "Secondary entry is being managed.";
   if (String(slot.trackingState || "").toUpperCase() === "SPREAD_BLOCKED") return "Spread is blocking the next Primary entry.";
@@ -5600,6 +5730,7 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
 
   if (stage === "exit-waiting") {
     return [
+      { label: "Floor State", value: primaryExitGateStateLabel(slot), toneClass: "is-blocked" },
       {
         label: "Exec Sell Net",
         value: pctNum(primaryExecutableExitNetPct(slot)),
@@ -6534,6 +6665,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
             <div className="dashboard-list">
               {exposureRows.map((coin) => {
                 const slot = props.slots.find((row) => String(row.coin || "").toUpperCase() === String(coin.coin || "").toUpperCase());
+                const coverageLabel = secondaryCoverageAttentionLabel(coin.secondaryWalletCoverage);
                 return (
                   <button
                     type="button"
@@ -6545,14 +6677,19 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                   >
                     <div className="dashboard-row-top">
                       <div className="dashboard-row-coin">{coin.coin ?? "-"}</div>
-                      <div className="dashboard-row-badge">Wallet Drift</div>
+                      <div className="dashboard-row-badge">{coverageLabel ? "Secondary Coverage" : "Wallet Drift"}</div>
                     </div>
                     <div className="dashboard-row-copy">
-                      CoinSpot wallet is {exposureDeltaLabel(coin.untrackedAudApprox)} versus tracked primary and secondary exposure.
+                      {coverageLabel
+                        ? `CoinSpot wallet coverage mismatch: ${coverageLabel}.`
+                        : `CoinSpot wallet is ${exposureDeltaLabel(coin.untrackedAudApprox)} versus tracked primary and secondary exposure.`}
                     </div>
                     <div className="dashboard-row-meta">
                       <span>Wallet {moneyAud(coin.audValue)}</span>
                       <span>Tracked {moneyAud(coin.trackedAud)}</span>
+                      {coin.secondaryWalletCoverage?.shortageAud ? (
+                        <span>Secondary short {moneyAud(coin.secondaryWalletCoverage.shortageAud)}</span>
+                      ) : null}
                     </div>
                   </button>
                 );
@@ -6594,7 +6731,10 @@ const OverviewTable = React.memo(function OverviewTable(props: {
 
           {liveSlots.length ? (
             <div className="dashboard-list">
-              {liveSlots.map((slot) => (
+              {liveSlots.map((slot) => {
+                const capitalCoin = capitalCoinForSlot(props.capital, slot);
+                const secondaryWarning = secondaryReconciliationWarningLabel(slot, capitalCoin);
+                return (
                 <button
                   type="button"
                   key={slot.id}
@@ -6615,17 +6755,20 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                       <span>Exit Gate {primaryExitGateStateLabel(slot)}</span>
                     ) : null}
                     <span>{primaryProtectionLabel(slot)}</span>
-                    {capitalCoinForSlot(props.capital, slot) ? (
-                      <span>Wallet {exposureDeltaLabel(capitalCoinForSlot(props.capital, slot)?.untrackedAudApprox)}</span>
+                    {capitalCoin ? (
+                      <span>Wallet {exposureDeltaLabel(capitalCoin.untrackedAudApprox)}</span>
                     ) : null}
+                    {secondaryWarning ? <span>Secondary mismatch</span> : null}
                   </div>
+                  {secondaryWarning ? <div className="dashboard-row-copy">{secondaryWarning}</div> : null}
                   {primaryExitProgressBlock(slot, props.holding)}
-                  {primarySecondaryRail(slot, props.subslotConfig)}
+                  {primarySecondaryRail(slot, props.subslotConfig, capitalCoin)}
                   <div className="dashboard-row-meta">
                     <span>{slotHeartbeatCardLabel(slot, props.nowMs)}</span>
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="dashboard-empty">No live Primaries right now.</div>
@@ -8298,6 +8441,7 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
                   <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
                   <div><div className="slot-k">Tracked AUD</div><div className="slot-v">{moneyAud(coin.trackedAud)}</div></div>
                   <div><div className="slot-k">Wallet Drift</div><div className={`slot-v ${coin.exposureAttention ? "is-warn" : ""}`}>{exposureDeltaLabel(coin.untrackedAudApprox)}</div></div>
+                  <div><div className="slot-k">Secondary Coverage</div><div className={`slot-v ${coin.secondaryWalletCoverage?.attention ? "is-warn" : ""}`}>{secondaryCoverageAttentionLabel(coin.secondaryWalletCoverage) ?? "OK"}</div></div>
                   <div><div className="slot-k">Treasury Ready</div><div className="slot-v">{yesNo(coin.walletSourceReady)}</div></div>
                   <div><div className="slot-k">Policy Ready</div><div className="slot-v">{yesNo(coin.rotationWalletReady)}</div></div>
                   <div><div className="slot-k">Available Coin</div><div className="slot-v">{fmt(coin.availableCoin)}</div></div>
@@ -8333,6 +8477,7 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
                   <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
                   <div><div className="slot-k">Tracked AUD</div><div className="slot-v">{moneyAud(coin.trackedAud)}</div></div>
                   <div><div className="slot-k">Wallet Drift</div><div className={`slot-v ${coin.exposureAttention ? "is-warn" : ""}`}>{exposureDeltaLabel(coin.untrackedAudApprox)}</div></div>
+                  <div><div className="slot-k">Secondary Coverage</div><div className={`slot-v ${coin.secondaryWalletCoverage?.attention ? "is-warn" : ""}`}>{secondaryCoverageAttentionLabel(coin.secondaryWalletCoverage) ?? "OK"}</div></div>
                   <div><div className="slot-k">Wallet Movable AUD</div><div className="slot-v">{moneyAud(coin.rotationWalletMovableAud ?? coin.movableAudEstimate)}</div></div>
                   <div><div className="slot-k">Treasury Ready</div><div className="slot-v">{yesNo(coin.walletSourceReady)}</div></div>
                   <div><div className="slot-k">Policy Ready</div><div className="slot-v">{yesNo(coin.rotationWalletReady)}</div></div>
