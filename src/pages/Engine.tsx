@@ -97,6 +97,8 @@ type ExitDecision = {
   exitBestExecutableProfitAud?: number | null;
   exitRequiredNetPct?: number | null;
   exitRequiredProfitAud?: number | null;
+  exitNoLossPeakGivebackPct?: number | null;
+  exitNoLossGivebackPct?: number | null;
   exitOrder?: ExitOrderState | null;
 };
 
@@ -453,6 +455,8 @@ type SlotRow = {
   parentExitGateReason?: string | null;
   parentExitRequiredNetPct?: number | null;
   parentExitRequiredProfitAud?: number | null;
+  parentExitNoLossPeakGivebackPct?: number | null;
+  parentExitNoLossGivebackPct?: number | null;
   parentExitOrderState?: string | null;
   parentExitOrderId?: string | null;
   parentExitOrderRate?: number | null;
@@ -854,10 +858,16 @@ type ManagerStatus = WorkerStatus & {
       volatility?: ManagerVolatilityTrailConfig;
     };
     exitPolicy?: {
+      primaryLockExitMode?: string;
       minWinExitNetPct?: number;
       minWinExitAud?: number;
       greenConfirmTicks?: number;
       lockExitRequireGreen?: boolean;
+      floorHarvestEnabled?: boolean;
+      floorExitArmBufferPct?: number;
+      floorExitPeakGivebackPct?: number;
+      floorExitMinNetPct?: number;
+      floorExitMinProfitAud?: number;
     };
     coinOverrides?: Record<string, string[]>;
   };
@@ -2481,6 +2491,23 @@ function primaryTrackingState(slot: SlotRow | null | undefined) {
   return String(slot?.trackingState || "").trim().toUpperCase();
 }
 
+function isPrimaryNoLossWatch(slot: SlotRow | null | undefined) {
+  const tracking = primaryTrackingState(slot);
+  const gate = String(primaryDecision(slot)?.exitGateState ?? slot?.parentExitGateState ?? "").trim().toUpperCase();
+  return tracking === "PARENT_EXIT_NO_LOSS_WATCH" || tracking === "PARENT_EXIT_FLOOR_WATCH" || gate === "PARENT_EXIT_NO_LOSS_WATCH";
+}
+
+function isPrimaryNoLossReady(slot: SlotRow | null | undefined) {
+  const tracking = primaryTrackingState(slot);
+  const gate = String(primaryDecision(slot)?.exitGateState ?? slot?.parentExitGateState ?? "").trim().toUpperCase();
+  return tracking === "PARENT_EXIT_NO_LOSS_READY" || gate === "PARENT_EXIT_NO_LOSS_READY";
+}
+
+function isPrimaryNoLossRecovery(slot: SlotRow | null | undefined) {
+  const tracking = primaryTrackingState(slot);
+  return tracking === "NO_LOSS_EXIT_MISSED_WAIT_RECOVERY" || tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY";
+}
+
 function primaryExitOrderStateValue(slot: SlotRow | null | undefined) {
   const order = primaryExitOrderData(slot);
   return String(order?.state || order?.lastAction || "").trim().toUpperCase();
@@ -2497,6 +2524,7 @@ function isPrimaryExitOrderClearing(slot: SlotRow | null | undefined) {
   const reason = primaryExitOrderReasonValue(slot);
 
   return (
+    tracking === "PARENT_EXIT_ORDER_CANCEL_NO_LOSS_WATCH" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR_BLOCKED" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR" ||
@@ -2512,9 +2540,11 @@ function isPrimaryFloorOrderClearing(slot: SlotRow | null | undefined) {
   const tracking = primaryTrackingState(slot);
   const reason = primaryExitOrderReasonValue(slot);
   return (
+    tracking === "PARENT_EXIT_ORDER_CANCEL_NO_LOSS_WATCH" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR_BLOCKED" ||
     tracking === "PARENT_EXIT_ORDER_CANCEL_FLOOR" ||
+    reason === "primary_no_loss_watch" ||
     reason === "primary_floor_watch" ||
     reason === "floor_exit_order_blocks_executable"
   );
@@ -2536,6 +2566,9 @@ function primaryFloorBreached(slot: SlotRow | null | undefined) {
 
 function primaryExitOrderClearingLabel(slot: SlotRow | null | undefined) {
   if (!slot) return "Clearing tracked sell order";
+  if (primaryTrackingState(slot) === "PARENT_EXIT_ORDER_CANCEL_NO_LOSS_WATCH") {
+    return "Canceling tracked sell order before no-loss exit retry";
+  }
   if (primaryTrackingState(slot) === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR") {
     return "Canceling tracked sell order before floor-watch harvest";
   }
@@ -2717,6 +2750,9 @@ function isTrackingFamilyState(state: string | null | undefined) {
     s === "BUY_SUBMITTED" ||
     s === "BUY_LOCK_SUBMITTED" ||
     s === "SELL_SUBMITTED" ||
+    s === "PARENT_EXIT_NO_LOSS_WATCH" ||
+    s === "NO_LOSS_EXIT_MISSED_WAIT_RECOVERY" ||
+    s === "PARENT_EXIT_ORDER_CANCEL_NO_LOSS_WATCH" ||
     s === "PARENT_EXIT_FLOOR_WATCH" ||
     s === "PARENT_EXIT_WAIT_PROFIT_RECOVERY" ||
     s === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR" ||
@@ -3949,6 +3985,8 @@ function readerStatusLabel(s: SlotRow) {
   const liveNet = liveParentNetPct(s);
 
   if (isPrimaryExitOrderClearing(s)) return "Clearing Order";
+  if (tracking === "PARENT_EXIT_NO_LOSS_WATCH") return "No-Loss Watch";
+  if (tracking === "NO_LOSS_EXIT_MISSED_WAIT_RECOVERY") return "Recovery Wait";
   if (tracking === "PARENT_EXIT_FLOOR_WATCH") return "Floor Watch";
   if (tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY") return "Exit Waiting";
   if (state === "WAITING_ENTRY") return "Waiting";
@@ -4938,6 +4976,17 @@ function primaryProtectionLabel(slot: SlotRow) {
   if (state === "EXITING") return "Sell resolving";
   if (state === "DEPLOYING") return "Awaiting entry proof";
   if (isPrimaryExitOrderClearing(slot)) return primaryExitOrderClearingLabel(slot);
+  if (isPrimaryNoLossReady(slot)) {
+    return "No-loss exit ready | executable sell remains net-positive";
+  }
+  if (isPrimaryNoLossWatch(slot)) {
+    const giveback = primaryNoLossGivebackPct(slot);
+    const peakGiveback = primaryNoLossPeakGivebackPct(slot);
+    return `No-loss watch | floor/giveback protection${giveback != null ? ` | giveback ${pctNum(giveback)}` : ""}${peakGiveback != null ? ` of ${pctNum(peakGiveback)}` : ""}`;
+  }
+  if (isPrimaryNoLossRecovery(slot)) {
+    return "Missed no-loss window | waiting for net-positive executable recovery";
+  }
   if (primaryTrackingState(slot) === "PARENT_EXIT_FLOOR_WATCH") {
     return "Floor watch | waiting for net-positive executable harvest";
   }
@@ -5006,6 +5055,8 @@ function nextActionLabel(s: SlotRow) {
   const tracking = String(s.trackingState || "").toUpperCase();
 
   if (isPrimaryExitOrderClearing(s)) return primaryExitOrderClearingLabel(s);
+  if (tracking === "PARENT_EXIT_NO_LOSS_WATCH") return "No-loss watch: waiting for net-positive harvest";
+  if (tracking === "NO_LOSS_EXIT_MISSED_WAIT_RECOVERY") return "Missed no-loss window, waiting for recovery";
   if (tracking === "PARENT_EXIT_FLOOR_WATCH") return "Floor watch: waiting for net-positive harvest";
   if (tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY") return "Floor breached, waiting for net-positive recovery";
   if (tracking === "PARENT_EXIT_WAIT_GREEN") return "Waiting for green exit";
@@ -5056,6 +5107,10 @@ function liveParentAnalysis(s: SlotRow, nowMs: number) {
   // Parent State Analysis
   if (isPrimaryExitOrderClearing(s)) {
     parts.push(`${primaryExitOrderClearingLabel(s)}.`);
+  } else if (tracking === "PARENT_EXIT_NO_LOSS_WATCH") {
+    parts.push("Jrd Primary is in no-loss watch and will only harvest while executable sell remains net positive.");
+  } else if (tracking === "NO_LOSS_EXIT_MISSED_WAIT_RECOVERY") {
+    parts.push("Jrd Primary missed the no-loss exit window and is waiting for net-positive executable recovery.");
   } else if (tracking === "PARENT_EXIT_FLOOR_WATCH") {
     parts.push("Jrd Primary is in floor watch and will only harvest if the executable sell remains net positive.");
   } else if (tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY") {
@@ -5487,6 +5542,14 @@ function primaryExecutableExitLabel(slot: SlotRow | null | undefined) {
   return `${pctNum(netPct)} | ${moneyAud(profitAud)}`;
 }
 
+function primaryNoLossGivebackPct(slot: SlotRow | null | undefined) {
+  return finiteMetric(primaryDecision(slot)?.exitNoLossGivebackPct ?? slot?.parentExitNoLossGivebackPct);
+}
+
+function primaryNoLossPeakGivebackPct(slot: SlotRow | null | undefined) {
+  return finiteMetric(primaryDecision(slot)?.exitNoLossPeakGivebackPct ?? slot?.parentExitNoLossPeakGivebackPct);
+}
+
 function primaryExitGateState(slot: SlotRow | null | undefined) {
   const raw = primaryDecision(slot)?.exitGateState ?? slot?.parentExitGateState;
   return raw ? String(raw) : null;
@@ -5502,12 +5565,17 @@ function primaryExitGateReason(slot: SlotRow | null | undefined) {
 
 function primaryExitGateStateLabel(slot: SlotRow | null | undefined) {
   if (isPrimaryExitOrderClearing(slot)) {
-    return primaryTrackingState(slot) === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR"
+    return primaryTrackingState(slot) === "PARENT_EXIT_ORDER_CANCEL_NO_LOSS_WATCH"
+      ? "Canceling Tracked Sell"
+      : primaryTrackingState(slot) === "PARENT_EXIT_ORDER_CANCEL_PRE_FLOOR"
       ? "Canceling Resting Order"
       : isPrimaryFloorOrderClearing(slot)
         ? "Clearing Floor Order"
         : "Clearing Exit Order";
   }
+  if (isPrimaryNoLossReady(slot)) return "Ready While Net-Positive";
+  if (isPrimaryNoLossWatch(slot)) return "No-Loss Watch";
+  if (isPrimaryNoLossRecovery(slot)) return "Missed Window Recovery";
   if (primaryTrackingState(slot) === "PARENT_EXIT_FLOOR_WATCH") return "Watching Floor";
   if (primaryTrackingState(slot) === "PARENT_EXIT_WAIT_PROFIT_RECOVERY") return "Waiting Recovery";
   const gateState = primaryExitGateState(slot);
@@ -5531,6 +5599,8 @@ function positionStageForSlot(slot: SlotRow): PositionStageKey {
   if (isPrimaryExitOrderClearing(slot)) return "clearing-exit-order";
   if (
     tracking === "PARENT_EXIT_WAIT_GREEN" ||
+    tracking === "PARENT_EXIT_NO_LOSS_WATCH" ||
+    tracking === "NO_LOSS_EXIT_MISSED_WAIT_RECOVERY" ||
     tracking === "PARENT_EXIT_FLOOR_WATCH" ||
     tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY"
   ) return "exit-waiting";
@@ -5600,11 +5670,17 @@ function actionNeededSummary(slot: SlotRow) {
     const gateReason = primaryExitGateReason(slot);
     const protectionMode =
       gateState === "WAIT_EXECUTABLE" ||
+      tracking === "PARENT_EXIT_NO_LOSS_WATCH" ||
+      tracking === "NO_LOSS_EXIT_MISSED_WAIT_RECOVERY" ||
       tracking === "PARENT_EXIT_FLOOR_WATCH" ||
       tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY" ||
       requiredNetPct == null;
     const parts = [
-      tracking === "PARENT_EXIT_FLOOR_WATCH"
+      tracking === "PARENT_EXIT_NO_LOSS_WATCH"
+        ? "Primary is in no-loss watch; any tracked resting sell is cleared before a net-positive harvest attempt."
+        : tracking === "NO_LOSS_EXIT_MISSED_WAIT_RECOVERY"
+          ? "Primary missed the no-loss exit window; the lock remains held while executable sell waits for net-positive recovery."
+          : tracking === "PARENT_EXIT_FLOOR_WATCH"
         ? "Primary is watching the floor zone; any tracked resting sell is cleared before a net-positive harvest attempt."
         : tracking === "PARENT_EXIT_WAIT_PROFIT_RECOVERY"
           ? "Primary floor is breached; the lock remains held while executable sell waits for net-positive recovery."
@@ -5775,6 +5851,7 @@ function positionMetricsForSlot(slot: SlotRow, nowMs: number): PositionMetric[] 
       },
       { label: "Required Net", value: pctNum(primaryExitRequiredNetPct(slot)) },
       { label: "Required AUD", value: moneyAud(primaryExitRequiredProfitAud(slot)) },
+      { label: "Giveback", value: pctNum(primaryNoLossGivebackPct(slot)) },
     ];
   }
 
@@ -8004,10 +8081,14 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   const exitOrderManager = `${yesNo(summarySubslot?.exitOrderManager?.enabled)} | ${exitOrderMode} | net-gain ${yesNo(
     summarySubslot?.exitOrderManager?.requireNetGain
   )}`;
+  const primaryLockExitMode = String(holding?.exitPolicy?.primaryLockExitMode || "NO_LOSS_PROTECTED").toUpperCase();
   const lockFloorExitMode =
-    holding?.exitPolicy?.lockExitRequireGreen === false
-      ? "floor breach sells immediately"
-      : "floor breach waits for green gate";
+    primaryLockExitMode === "NO_LOSS_PROTECTED"
+      ? "no-loss protected"
+      : "no-loss protected";
+  const noLossWatchConfig = `watch ${pctNum(holding?.exitPolicy?.floorExitArmBufferPct)} | giveback ${pctNum(
+    holding?.exitPolicy?.floorExitPeakGivebackPct
+  )}`;
 
   return (
     <div className="engine-bay">
@@ -8114,7 +8195,7 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
             <div className="engine-upgrade-v">
               LVL4 {pctNum(holding?.lvl4Pct)} | bid trail {pctNum(holding?.lvl4TrailPct)} | {lockFloorExitMode}
             </div>
-            <div className="engine-upgrade-sub">Levels 1-3 still defend their static lock floors before any additive trail takes over. LVL4 now layers a retained net floor over the open bid trail.</div>
+            <div className="engine-upgrade-sub">Levels 1-3 defend their static lock floors with no-loss watch. LVL4 layers a retained net floor over the open bid trail. {noLossWatchConfig}.</div>
           </div>
 
           <div className="engine-upgrade-item">
@@ -8184,7 +8265,7 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
             <div className="engine-upgrade-k">Exit Order Manager</div>
             <div className="engine-upgrade-v">{exitOrderManager}</div>
             <div className="engine-upgrade-sub">
-              Primary locks and active secondaries publish target sell order state. If a Primary floor exit is blocked by its tracked resting sell, the order clears first and the guarded exit retries next tick.
+              Primary locks and active secondaries publish target sell order state. If a Primary no-loss exit is blocked by its tracked resting sell, the order clears first and the guarded exit retries next tick.
             </div>
           </div>
         </div>
