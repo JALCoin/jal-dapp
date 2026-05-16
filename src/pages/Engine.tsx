@@ -827,6 +827,15 @@ type ManagerStatus = WorkerStatus & {
     mode?: string;
     dropPct?: number;
   };
+  capital?: {
+    entryCapitalMode?: string;
+    primaryTargetAud?: number | null;
+    primaryReentryRule?: string;
+    subslotEntrySizeMode?: string;
+    subslotEntryTargetAud?: number | null;
+    subslotSizePctOfParent?: number | null;
+    subslotEntryRule?: string;
+  };
   holding?: {
     lvl1Pct?: number;
     lvl2Pct?: number;
@@ -855,6 +864,9 @@ type ManagerStatus = WorkerStatus & {
   subslot?: {
     enabled?: boolean;
     maxPerSlot?: number;
+    entrySizeMode?: string;
+    entryTargetAud?: number | null;
+    entrySizeRule?: string;
     sizePctOfParent?: number;
     minAud?: number;
     maxForcedSizePct?: number;
@@ -4310,6 +4322,7 @@ type SecondaryRailItem = {
   counterLabel: string;
   toneClass: string;
   plannedAud?: number | null;
+  plannedLabel?: string | null;
   isActive: boolean;
   isPendingBuy: boolean;
   isPendingSell: boolean;
@@ -4415,10 +4428,27 @@ function secondaryRailPlannedAud(
   parent: SlotRow,
   subslotConfig: ManagerStatus["subslot"] | null | undefined
 ) {
+  const sizeMode = String(subslotConfig?.entrySizeMode || "").trim().toUpperCase();
+  if (sizeMode === "STATIC_AUD") {
+    const targetAud = Number(subslotConfig?.entryTargetAud);
+    return Number.isFinite(targetAud) && targetAud > 0 ? roundMoney(targetAud) : null;
+  }
+
   const base = primaryEntryRequestedAudValue(parent) ?? primaryEntryTargetAudValue(parent) ?? parent.unitAud;
   const sizePct = Number(subslotConfig?.sizePctOfParent);
   if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(sizePct) || sizePct <= 0) return null;
   return roundMoney(base * Math.min(1, Math.max(0, sizePct)));
+}
+
+function secondaryRailPlannedLabel(
+  plannedAud: number | null | undefined,
+  subslotConfig: ManagerStatus["subslot"] | null | undefined
+) {
+  if (plannedAud == null || !Number.isFinite(plannedAud)) return null;
+  const sizeMode = String(subslotConfig?.entrySizeMode || "").trim().toUpperCase();
+  return sizeMode === "STATIC_AUD"
+    ? `${moneyAud(plannedAud)} static secondary plan`
+    : `${moneyAud(plannedAud)} plan`;
 }
 
 function secondaryRailVisualCounts(items: SecondaryRailItem[]) {
@@ -4495,6 +4525,7 @@ function secondaryRailItems(
 
   const items: SecondaryRailItem[] = [];
   const plannedAud = secondaryRailPlannedAud(slot, subslotConfig);
+  const plannedLabel = secondaryRailPlannedLabel(plannedAud, subslotConfig);
 
   for (let index = 0; index < slotCapacity; index += 1) {
     const liveSubslot = assigned.get(index) ?? null;
@@ -4513,6 +4544,7 @@ function secondaryRailItems(
       stateLabel: secondaryRailItemStateLabel(subslot, slot, subslotConfig, index),
       counterLabel: secondaryRailCounterLabel(subslot, slot, subslotConfig, index),
       plannedAud,
+      plannedLabel,
       toneClass: liveSubslot
         ? subslotToneClass(liveSubslot)
         : distancePct === 0
@@ -4575,8 +4607,8 @@ function primarySecondaryRail(
             <div className="secondary-rail-slot-label">{item.label}</div>
             <div className="secondary-rail-slot-state">{item.stateLabel}</div>
             <div className="secondary-rail-slot-counter">{item.counterLabel}</div>
-            {item.plannedAud != null ? (
-              <div className="secondary-rail-slot-planned">{moneyAud(item.plannedAud)} plan</div>
+            {item.plannedLabel ? (
+              <div className="secondary-rail-slot-planned">{item.plannedLabel}</div>
             ) : null}
           </div>
         ))}
@@ -7023,6 +7055,7 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
   const gates = props.meta?.gates;
   const manager = props.meta?.manager;
   const subslot = manager?.subslot;
+  const capitalConfig = manager?.capital ?? props.managerStatus?.capital;
   const quoteGuard = props.meta?.runtime?.quoteGuard;
   const readinessLabel =
     props.readiness?.ok === true
@@ -7034,10 +7067,18 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
     props.managerStatus?.mode ?? manager?.mode ?? "-"
   }`;
 
+  const secondarySizeMode = String(
+    subslot?.entrySizeMode ?? capitalConfig?.subslotEntrySizeMode ?? "PCT_OF_PARENT"
+  ).toUpperCase();
   const secondaryBaseSize =
-    subslot?.sizePctOfParent != null && Number.isFinite(subslot.sizePctOfParent)
+    secondarySizeMode === "STATIC_AUD"
+      ? `${moneyAud(subslot?.entryTargetAud ?? capitalConfig?.subslotEntryTargetAud)} static`
+      : subslot?.sizePctOfParent != null && Number.isFinite(subslot.sizePctOfParent)
       ? `${(subslot.sizePctOfParent * 100).toFixed(0)}%`
       : "20%";
+  const primaryCapitalLabel = `${String(capitalConfig?.entryCapitalMode || "COMPOUNDING_REENTRY").toUpperCase()} | primary ${moneyAud(
+    capitalConfig?.primaryTargetAud
+  )}`;
   const secondaryForcedCap =
     subslot?.maxForcedSizePct != null && Number.isFinite(subslot.maxForcedSizePct)
       ? `${(subslot.maxForcedSizePct * 100).toFixed(0)}%`
@@ -7154,7 +7195,7 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
           </div>
           <div>
             <div className="slot-k">Entry Model</div>
-            <div className="slot-v">runtime meta | quote guard {quoteGuardLabel(quoteGuard)}</div>
+            <div className="slot-v">{primaryCapitalLabel} | quote guard {quoteGuardLabel(quoteGuard)}</div>
           </div>
           <div>
             <div className="slot-k">Re-entry</div>
@@ -7165,7 +7206,7 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
           <div>
             <div className="slot-k">Jrd Secondary</div>
             <div className="slot-v">
-              {subslot?.enabled === false ? "OFF" : "ON"} | up to {subslot?.maxPerSlot ?? 8} cycles | base {secondaryBaseSize}
+              {subslot?.enabled === false ? "OFF" : "ON"} | {secondarySizeMode} | {secondaryBaseSize}
             </div>
           </div>
           <div>
