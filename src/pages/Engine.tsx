@@ -728,6 +728,10 @@ type SlotRow = {
   candidateEntrySizingMode?: string | null;
   candidateAudNeeded?: number | null;
   candidateAudAvailable?: number | null;
+  candidateAllocationState?: string | null;
+  candidateAllocationBlockedReason?: string | null;
+  candidatePrimarySpendableAud?: number | null;
+  candidateSecondaryReserveAud?: number | null;
 
   entryDrawdownPct?: number | null;
   entryBouncePct?: number | null;
@@ -833,12 +837,15 @@ type ManagerStatus = WorkerStatus & {
   };
   capital?: {
     entryCapitalMode?: string;
+    entryCapitalAllocationMode?: string;
     primaryTargetAud?: number | null;
     primaryReentryRule?: string;
     subslotEntrySizeMode?: string;
     subslotEntryTargetAud?: number | null;
     subslotSizePctOfParent?: number | null;
     subslotEntryRule?: string;
+    pairUnitAud?: number | null;
+    pairBufferAud?: number | null;
   };
   holding?: {
     lvl1Pct?: number;
@@ -1320,6 +1327,32 @@ type PublicCapitalCoin = {
   secondaryWalletCoverage?: SecondaryWalletCoverage | null;
 };
 
+type EntryAllocation = {
+  mode?: string | null;
+  enabled?: boolean | null;
+  audAvailable?: number | null;
+  primaryTargetAud?: number | null;
+  secondaryTargetAud?: number | null;
+  pairUnitAud?: number | null;
+  pairBufferAud?: number | null;
+  fundedPairCount?: number | null;
+  primaryCommittedCount?: number | null;
+  secondaryCommittedCount?: number | null;
+  primaryCommittedAud?: number | null;
+  secondaryCommittedAud?: number | null;
+  primarySpendableAud?: number | null;
+  secondaryReservedAud?: number | null;
+  secondarySpendableAud?: number | null;
+  primarySlotsAvailable?: number | null;
+  secondarySlotsAvailable?: number | null;
+  capitalBaseAud?: number | null;
+  nextPrimaryAllowed?: boolean | null;
+  nextSecondaryAllowed?: boolean | null;
+  blockReason?: string | null;
+  primaryBlockReason?: string | null;
+  secondaryBlockReason?: string | null;
+};
+
 type PublicCapitalResponse = {
   ok?: boolean;
   ts?: number;
@@ -1328,6 +1361,7 @@ type PublicCapitalResponse = {
   walletAudValue?: number | null;
   movableAudEstimate?: number | null;
   walletSourceEnabled?: boolean | null;
+  entryAllocation?: EntryAllocation | null;
   exposure?: {
     thresholdAud?: number | null;
     attentionCount?: number | null;
@@ -2653,6 +2687,13 @@ function primaryEntryRequestedAudValue(slot: SlotRow | null | undefined) {
 }
 
 function primaryEntryFundingLabel(slot: SlotRow | null | undefined) {
+  const allocationState = String(slot?.candidateAllocationState || "").toUpperCase();
+  const allocationBlocked = String(slot?.candidateAllocationBlockedReason || "").trim();
+  if (allocationState === "PRIMARY_ALLOWED") return "Primary allowed";
+  if (allocationState === "SECONDARY_RESERVE_HELD") return "Secondary reserve held";
+  if (allocationBlocked) return `Blocked: ${allocationBlocked}`;
+  if (allocationState === "PAIR_FLOOR_NOT_FUNDED") return "Blocked: pair_floor_not_funded";
+
   const state = String(slot?.candidateFundingState || "").toUpperCase();
   const needed = Number(slot?.candidateAudNeeded);
   const available = Number(slot?.candidateAudAvailable);
@@ -2661,6 +2702,34 @@ function primaryEntryFundingLabel(slot: SlotRow | null | undefined) {
   }
   if (state) return enumLabel(state);
   return "Funding not checked yet";
+}
+
+function entryAllocationModeLabel(allocation: EntryAllocation | null | undefined) {
+  if (!allocation) return "Not published";
+  const mode = String(allocation.mode || "RAW_AUD").toUpperCase();
+  return allocation.enabled ? mode : `${mode} inactive`;
+}
+
+function entryAllocationAllowedLabel(value: boolean | null | undefined) {
+  if (value === true) return "YES";
+  if (value === false) return "NO";
+  return "-";
+}
+
+function pairAwareAvailableAud(capital: PublicCapitalResponse | null | undefined) {
+  const allocation = capital?.entryAllocation;
+  if (allocation?.enabled === true) return allocation.primarySpendableAud;
+  return capital?.audAvailable;
+}
+
+function pairAwareCapitalSubline(capital: PublicCapitalResponse | null | undefined) {
+  const allocation = capital?.entryAllocation;
+  if (allocation?.enabled === true) {
+    return `Raw ${moneyAud(capital?.audAvailable)} | Pair ${moneyAud(allocation.pairUnitAud)} | Reserve ${moneyAud(
+      allocation.secondaryReservedAud
+    )}`;
+  }
+  return `Wallet ${moneyAud(capital?.walletAudValue)} | Movable ${moneyAud(capital?.movableAudEstimate)}`;
 }
 
 function secondarySummaryData(slot: SlotRow | null | undefined) {
@@ -6193,6 +6262,7 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
   audAvailable: number | null | undefined;
   walletAudValue: number | null | undefined;
   movableAudEstimate: number | null | undefined;
+  entryAllocation: EntryAllocation | null | undefined;
   rotationMode: string;
   nextSweepLabel: string;
   currentWindow: number | null | undefined;
@@ -6219,11 +6289,17 @@ const CaptureGrid = React.memo(function CaptureGrid(props: {
 
       <div className="engine-capture card machine-surface panel-frame">
         <div className="cap-k">Available Capital</div>
-        <div className="cap-v">{moneyAud(props.audAvailable)}</div>
+        <div className="cap-v">{moneyAud(pairAwareAvailableAud({
+          audAvailable: props.audAvailable,
+          entryAllocation: props.entryAllocation,
+        }))}</div>
         <div className="cap-sub">
-          <span>Wallet {moneyAud(props.walletAudValue)}</span>
-          <span>|</span>
-          <span>Movable {moneyAud(props.movableAudEstimate)}</span>
+          <span>{pairAwareCapitalSubline({
+            audAvailable: props.audAvailable,
+            walletAudValue: props.walletAudValue,
+            movableAudEstimate: props.movableAudEstimate,
+            entryAllocation: props.entryAllocation,
+          })}</span>
           <span>|</span>
           <span>{props.rotationMode}</span>
         </div>
@@ -8498,6 +8574,51 @@ const RotationPolicyPanel = React.memo(function RotationPolicyPanel(props: {
   );
 });
 
+const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
+  allocation: EntryAllocation | null | undefined;
+}) {
+  const allocation = props.allocation ?? null;
+  const primarySlotsAllowed =
+    allocation?.primarySlotsAvailable != null && Number.isFinite(allocation.primarySlotsAvailable)
+      ? allocation.primarySlotsAvailable
+      : allocation?.primarySpendableAud != null &&
+        allocation?.primaryTargetAud != null &&
+        Number.isFinite(allocation.primarySpendableAud) &&
+        Number.isFinite(allocation.primaryTargetAud) &&
+        allocation.primaryTargetAud > 0
+      ? Math.floor(allocation.primarySpendableAud / allocation.primaryTargetAud)
+      : null;
+
+  return (
+    <div className="capital-allocation-surface">
+      <div className="slot-section">Entry Allocation</div>
+      <div className="engine-telemetry-note">
+        {entryAllocationModeLabel(allocation)} | Next primary {entryAllocationAllowedLabel(allocation?.nextPrimaryAllowed)} | Next secondary {entryAllocationAllowedLabel(allocation?.nextSecondaryAllowed)}
+      </div>
+
+      <div className="secondary-summary capital-summary">
+        <div className="secondary-grid capital-summary-grid">
+          <div><div className="slot-k">Pair Mode</div><div className="slot-v">{entryAllocationModeLabel(allocation)}</div></div>
+          <div><div className="slot-k">Pair Unit</div><div className="slot-v">{moneyAud(allocation?.pairUnitAud)}</div></div>
+          <div><div className="slot-k">Funded Pairs</div><div className="slot-v">{allocation?.fundedPairCount ?? "-"}</div></div>
+          <div><div className="slot-k">Primary Target</div><div className="slot-v">{moneyAud(allocation?.primaryTargetAud)}</div></div>
+          <div><div className="slot-k">Secondary Target</div><div className="slot-v">{moneyAud(allocation?.secondaryTargetAud)}</div></div>
+          <div><div className="slot-k">Primary Slots Allowed</div><div className="slot-v">{primarySlotsAllowed ?? "-"}</div></div>
+          <div><div className="slot-k">Primary Spendable</div><div className="slot-v">{moneyAud(allocation?.primarySpendableAud)}</div></div>
+          <div><div className="slot-k">Secondary Reserved</div><div className="slot-v">{moneyAud(allocation?.secondaryReservedAud)}</div></div>
+          <div><div className="slot-k">Secondary Spendable</div><div className="slot-v">{moneyAud(allocation?.secondarySpendableAud)}</div></div>
+          <div><div className="slot-k">Primary Committed</div><div className="slot-v">{moneyAud(allocation?.primaryCommittedAud)}</div></div>
+          <div><div className="slot-k">Secondary Committed</div><div className="slot-v">{moneyAud(allocation?.secondaryCommittedAud)}</div></div>
+          <div><div className="slot-k">Capital Basis</div><div className="slot-v">{moneyAud(allocation?.capitalBaseAud)}</div></div>
+          <div><div className="slot-k">Next Primary</div><div className="slot-v">{entryAllocationAllowedLabel(allocation?.nextPrimaryAllowed)}</div></div>
+          <div><div className="slot-k">Next Secondary</div><div className="slot-v">{entryAllocationAllowedLabel(allocation?.nextSecondaryAllowed)}</div></div>
+          <div><div className="slot-k">Blocked</div><div className="slot-v">{reasonLabel(allocation?.blockReason ?? allocation?.primaryBlockReason ?? allocation?.secondaryBlockReason)}</div></div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
   capital: PublicCapitalResponse | null;
   nowMs: number;
@@ -8543,6 +8664,8 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
             <div><div className="slot-k">Wallet Profit Floor</div><div className="slot-v">{pctNum(props.capital?.rotation?.walletMinSourceNetPct)}</div></div>
           </div>
         </div>
+
+        <EntryAllocationPanel allocation={props.capital?.entryAllocation} />
 
         {props.capital?.refreshError ? (
           <div className="ledger-empty">Refresh error: {props.capital.refreshError}</div>
@@ -8886,6 +9009,7 @@ export default function Engine() {
                 audAvailable={capital?.audAvailable}
                 walletAudValue={capital?.walletAudValue}
                 movableAudEstimate={capital?.movableAudEstimate}
+                entryAllocation={capital?.entryAllocation}
                 rotationMode={rotationModeLabel(capital)}
                 nextSweepLabel={nextSweepLabel}
                 currentWindow={meta?.cadence?.currentWindow}
