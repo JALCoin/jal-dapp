@@ -4511,6 +4511,53 @@ a.button[aria-disabled="true"]{
   box-shadow:var(--glow-green);
 }
 
+.shop-action-interest{
+  border-color:rgba(17,241,167,.28);
+  background:
+    linear-gradient(180deg, rgba(17,241,167,.12), rgba(17,241,167,.045));
+  color:#dffdf3;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.035),
+    0 0 12px rgba(17,241,167,.06);
+}
+
+.shop-action-interest:hover{
+  border-color:rgba(17,241,167,.48);
+  box-shadow:0 0 18px rgba(17,241,167,.16);
+}
+
+.shop-action-private{
+  border-color:rgba(244,200,106,.42);
+  background:
+    linear-gradient(180deg, rgba(244,200,106,.2), rgba(244,200,106,.07));
+  color:#fff0c8;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.035),
+    0 0 14px rgba(244,200,106,.1);
+}
+
+.shop-action-private:hover{
+  border-color:rgba(244,200,106,.64);
+  box-shadow:0 0 22px rgba(244,200,106,.2);
+}
+
+.shop-action-buy{
+  border-color:rgba(17,241,167,.64);
+  background:
+    linear-gradient(180deg, rgba(17,241,167,.3), rgba(17,241,167,.12));
+  color:#effff9;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    0 0 24px rgba(17,241,167,.2);
+}
+
+.shop-action-buy:hover{
+  border-color:rgba(17,241,167,.82);
+  box-shadow:
+    0 0 14px rgba(17,241,167,.24),
+    0 0 34px rgba(17,241,167,.18);
+}
+
 .shop-card-secondary,
 .shop-secondary-actions{
   display:flex;

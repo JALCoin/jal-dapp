@@ -20,9 +20,9 @@ const CATEGORY_FILTERS: { value: CategoryFilter; label: string }[] = [
 ];
 
 function getStatusLabel(p: Product) {
-  if (p.status === "active") return "Available";
+  if (p.status === "active") return "Buy Release";
   if (p.status === "coming_soon" && p.category === "private") return "Private Enquiry";
-  if (p.status === "coming_soon") return "Concept Release";
+  if (p.status === "coming_soon") return "Interest Open";
   return "-";
 }
 
@@ -64,13 +64,22 @@ function getSecondaryLinks(p: Product) {
 function displayShopLinkLabel(label: string) {
   const normalized = label.trim().toLowerCase();
 
-  if (normalized === "claim") return "Enquire Now";
-  if (normalized === "buy now") return "Enquire Now";
-  if (normalized === "pre-order via email") return "Enquire Now";
-  if (normalized === "pre-order") return "Enquire Now";
-  if (normalized === "request access") return "Enquire Now";
+  if (normalized === "claim") return "Buy Release";
+  if (normalized === "buy now") return "Buy Release";
+  if (normalized === "checkout") return "Buy Release";
+  if (normalized === "pre-order via email") return "Register Interest";
+  if (normalized === "pre-order") return "Register Interest";
+  if (normalized === "request access") return "Register Interest";
 
   return label;
+}
+
+function getActionClass(label: string) {
+  const normalized = displayShopLinkLabel(label).trim().toLowerCase();
+
+  if (normalized === "buy release") return "shop-action-buy";
+  if (normalized === "enquire now") return "shop-action-private";
+  return "shop-action-interest";
 }
 
 function useProductReviewSummary(productId: string, enabled = true) {
@@ -207,7 +216,7 @@ function ProductModal({
 
             {p.tags?.length ? (
               <div className="product-tags shop-modal-tags" aria-label="Product tags">
-                {p.tags.map((t) => (
+                {p.tags.slice(0, 2).map((t) => (
                   <span className="tag" key={t}>
                     {t}
                   </span>
@@ -218,7 +227,7 @@ function ProductModal({
             <div className="shop-modal-actions" aria-label="Product links">
               {primaryLink ? (
                 <a
-                  className="shop-primary-action"
+                  className={`shop-primary-action ${getActionClass(primaryLink.label)}`}
                   href={primaryLink.href}
                   target="_blank"
                   rel="noreferrer"
@@ -377,7 +386,7 @@ function ProductCard({
 
         {p.tags?.length ? (
           <div className="product-tags shop-card-tags" aria-label="Product tags">
-            {p.tags.slice(0, 4).map((t) => (
+            {p.tags.slice(0, 2).map((t) => (
               <span className="tag" key={t}>
                 {t}
               </span>
@@ -393,7 +402,7 @@ function ProductCard({
       >
         {primaryLink ? (
           <a
-            className="shop-card-primary"
+            className={`shop-card-primary ${getActionClass(primaryLink.label)}`}
             href={primaryLink.href}
             target="_blank"
             rel="noreferrer"
@@ -419,7 +428,7 @@ function ProductCard({
 export default function Shop() {
   usePageMeta(
     "Shop Physical Releases",
-    "Browse planned physical JALSOL releases through the public Jeremy Aaron Lugg store, including supplier-sourced apparel concepts and private future enquiries."
+    "Browse planned physical JALSOL releases through the public Jeremy Aaron Lugg store, including interest-open concepts and private future enquiries."
   );
 
   const [sort, setSort] = useState<SortMode>("featured");
@@ -485,9 +494,8 @@ export default function Shop() {
                 <p className="shop-section-kicker">Current Releases</p>
                 <h2 className="shop-section-title">Founder Releases</h2>
                 <p className="shop-section-copy">
-                  Concept products are interest-only until supplier samples, pricing, and product
-                  photos are confirmed. Stripe checkout will be added only to fixed-price items that
-                  are ready to fulfil.
+                  Interest is open for planned releases. Purchase buttons appear only when a
+                  fixed-price item is ready to fulfil.
                 </p>
               </div>
             </div>

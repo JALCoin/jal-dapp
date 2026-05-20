@@ -7,19 +7,19 @@ export type ProductCategory = "apparel" | "accessories" | "desk" | "private";
 export type ProductTag =
   | "New"
   | "Limited"
-  | "Handmade"
   | "One-of-One"
   | "Digital"
   | "Physical"
   | "Bundle"
   | "Premium"
-  | "Preorder"
   | "Support"
   | "Concept"
-  | "Supplier Sourced"
-  | "Register Interest"
   | "Quote Only"
-  | "Stripe Ready";
+  | "Entry Item"
+  | "Accessory"
+  | "Apparel"
+  | "Desk"
+  | "Private";
 
 export type ProductLink = {
   label: string;
@@ -83,10 +83,10 @@ export const PRODUCTS: Product[] = [
     kind: "physical",
     status: "coming_soon",
     priceNote: "Target: $35-$55 AUD",
-    availability: "Supplier sample planned",
+    availability: "Interest open",
     category: "accessories",
     summary: "Low-risk first release candidate.",
-    tags: ["Concept", "Supplier Sourced", "Register Interest", "Stripe Ready"],
+    tags: ["Concept", "Accessory"],
     image: BRAND_PLACEHOLDER,
     links: [
       {
@@ -101,10 +101,10 @@ export const PRODUCTS: Product[] = [
     kind: "physical",
     status: "coming_soon",
     priceNote: "Target: $45-$70 AUD",
-    availability: "Supplier sample planned",
+    availability: "Interest open",
     category: "apparel",
     summary: "Simple apparel test before larger runs.",
-    tags: ["Concept", "Supplier Sourced", "Register Interest"],
+    tags: ["Concept", "Apparel"],
     image: BRAND_PLACEHOLDER,
     links: [
       {
@@ -119,10 +119,10 @@ export const PRODUCTS: Product[] = [
     kind: "physical",
     status: "coming_soon",
     priceNote: "Target: $120-$160 AUD",
-    availability: "Sample required before checkout",
+    availability: "Interest open",
     category: "apparel",
     summary: "Flagship apparel concept for a future limited run.",
-    tags: ["Concept", "Supplier Sourced", "Premium", "Register Interest"],
+    tags: ["Concept", "Premium"],
     image: BRAND_PLACEHOLDER,
     links: [
       {
@@ -137,10 +137,10 @@ export const PRODUCTS: Product[] = [
     kind: "physical",
     status: "coming_soon",
     priceNote: "Target: $12-$18 AUD",
-    availability: "Stripe-ready candidate",
+    availability: "First release planned",
     category: "accessories",
     summary: "Small entry item for testing demand.",
-    tags: ["Concept", "Supplier Sourced", "Stripe Ready"],
+    tags: ["Concept", "Entry Item"],
     image: BRAND_PLACEHOLDER,
     links: [
       {
@@ -155,10 +155,10 @@ export const PRODUCTS: Product[] = [
     kind: "physical",
     status: "coming_soon",
     priceNote: "Target: $35-$65 AUD",
-    availability: "Supplier sample planned",
+    availability: "Interest open",
     category: "desk",
     summary: "Creator desk object for a practical first batch.",
-    tags: ["Concept", "Supplier Sourced", "Register Interest"],
+    tags: ["Concept", "Desk"],
     image: BRAND_PLACEHOLDER,
     links: [
       {
@@ -173,10 +173,10 @@ export const PRODUCTS: Product[] = [
     kind: "physical",
     status: "coming_soon",
     priceNote: "Quote only",
-    availability: "Private future enquiry",
+    availability: "Private quote",
     category: "private",
     summary: "Future quote-only jewellery concept.",
-    tags: ["Concept", "One-of-One", "Premium", "Quote Only"],
+    tags: ["Private", "Quote Only"],
     image: BRAND_PLACEHOLDER,
     links: [
       {
