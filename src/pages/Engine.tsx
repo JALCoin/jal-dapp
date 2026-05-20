@@ -846,6 +846,9 @@ type ManagerStatus = WorkerStatus & {
     subslotEntryRule?: string;
     pairUnitAud?: number | null;
     pairBufferAud?: number | null;
+    primaryPoolAud?: number | null;
+    secondaryPoolAud?: number | null;
+    secondaryMaxPerPrimary?: number | null;
   };
   holding?: {
     lvl1Pct?: number;
@@ -1351,6 +1354,33 @@ type EntryAllocation = {
   blockReason?: string | null;
   primaryBlockReason?: string | null;
   secondaryBlockReason?: string | null;
+  primaryPoolAud?: number | null;
+  primaryPoolRemainingAud?: number | null;
+  primarySlotsMax?: number | null;
+  primarySlotsCommitted?: number | null;
+  secondaryPoolAud?: number | null;
+  secondaryPoolRemainingAud?: number | null;
+  secondaryMaxPerPrimary?: number | null;
+  firstSecondaryDeficitCount?: number | null;
+  activeFirstSecondaryReserveAud?: number | null;
+  prospectivePrimaryReserveAud?: number | null;
+  secondaryRailSlotsTotal?: number | null;
+  secondaryRailSlotsAvailable?: number | null;
+  secondaryCapacityAud?: number | null;
+  secondaryRails?: {
+    slotId?: string | null;
+    coin?: string | null;
+    primaryActive?: boolean | null;
+    primaryCommittedAud?: number | null;
+    secondaryUsedCount?: number | null;
+    secondaryCommittedAud?: number | null;
+    secondaryMaxPerPrimary?: number | null;
+    secondarySlotsAvailable?: number | null;
+    secondaryCapacityAud?: number | null;
+    secondarySpendableAud?: number | null;
+    nextSecondaryAllowed?: boolean | null;
+    blockedReason?: string | null;
+  }[] | null;
 };
 
 type PublicCapitalResponse = {
@@ -2716,6 +2746,10 @@ function entryAllocationAllowedLabel(value: boolean | null | undefined) {
   return "-";
 }
 
+function isRailPoolAllocation(allocation: EntryAllocation | null | undefined) {
+  return allocation?.enabled === true && String(allocation.mode || "").toUpperCase() === "RAIL_POOL";
+}
+
 function pairAwareAvailableAud(capital: PublicCapitalResponse | null | undefined) {
   const allocation = capital?.entryAllocation;
   if (allocation?.enabled === true) return allocation.primarySpendableAud;
@@ -2724,6 +2758,11 @@ function pairAwareAvailableAud(capital: PublicCapitalResponse | null | undefined
 
 function pairAwareCapitalSubline(capital: PublicCapitalResponse | null | undefined) {
   const allocation = capital?.entryAllocation;
+  if (isRailPoolAllocation(allocation)) {
+    return `Primary ${moneyAud(allocation?.primarySpendableAud)} free / ${moneyAud(
+      allocation?.primaryPoolAud
+    )} pool | Secondary ${moneyAud(allocation?.secondarySpendableAud)} rail`;
+  }
   if (allocation?.enabled === true) {
     return `Raw ${moneyAud(capital?.audAvailable)} | Pair ${moneyAud(allocation.pairUnitAud)} | Reserve ${moneyAud(
       allocation.secondaryReservedAud
@@ -8578,6 +8617,7 @@ const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
   allocation: EntryAllocation | null | undefined;
 }) {
   const allocation = props.allocation ?? null;
+  const railPool = isRailPoolAllocation(allocation);
   const primarySlotsAllowed =
     allocation?.primarySlotsAvailable != null && Number.isFinite(allocation.primarySlotsAvailable)
       ? allocation.primarySlotsAvailable
@@ -8588,6 +8628,24 @@ const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
         allocation.primaryTargetAud > 0
       ? Math.floor(allocation.primarySpendableAud / allocation.primaryTargetAud)
       : null;
+  const primaryPoolUsedAud =
+    railPool &&
+    allocation?.primaryPoolAud != null &&
+    allocation?.primaryPoolRemainingAud != null &&
+    Number.isFinite(allocation.primaryPoolAud) &&
+    Number.isFinite(allocation.primaryPoolRemainingAud)
+      ? Math.max(0, allocation.primaryPoolAud - allocation.primaryPoolRemainingAud)
+      : allocation?.primaryCommittedAud;
+  const secondaryPoolUsedAud =
+    railPool &&
+    allocation?.secondaryPoolAud != null &&
+    allocation?.secondaryPoolRemainingAud != null &&
+    Number.isFinite(allocation.secondaryPoolAud) &&
+    Number.isFinite(allocation.secondaryPoolRemainingAud)
+      ? Math.max(0, allocation.secondaryPoolAud - allocation.secondaryPoolRemainingAud)
+      : allocation?.secondaryCommittedAud;
+  const secondaryRailUsed = allocation?.secondaryCommittedCount ?? 0;
+  const secondaryRailTotal = allocation?.secondaryRailSlotsTotal ?? null;
 
   return (
     <div className="capital-allocation-surface">
@@ -8597,23 +8655,43 @@ const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
       </div>
 
       <div className="secondary-summary capital-summary">
-        <div className="secondary-grid capital-summary-grid">
-          <div><div className="slot-k">Pair Mode</div><div className="slot-v">{entryAllocationModeLabel(allocation)}</div></div>
-          <div><div className="slot-k">Pair Unit</div><div className="slot-v">{moneyAud(allocation?.pairUnitAud)}</div></div>
-          <div><div className="slot-k">Funded Pairs</div><div className="slot-v">{allocation?.fundedPairCount ?? "-"}</div></div>
-          <div><div className="slot-k">Primary Target</div><div className="slot-v">{moneyAud(allocation?.primaryTargetAud)}</div></div>
-          <div><div className="slot-k">Secondary Target</div><div className="slot-v">{moneyAud(allocation?.secondaryTargetAud)}</div></div>
-          <div><div className="slot-k">Primary Slots Allowed</div><div className="slot-v">{primarySlotsAllowed ?? "-"}</div></div>
-          <div><div className="slot-k">Primary Spendable</div><div className="slot-v">{moneyAud(allocation?.primarySpendableAud)}</div></div>
-          <div><div className="slot-k">Secondary Reserved</div><div className="slot-v">{moneyAud(allocation?.secondaryReservedAud)}</div></div>
-          <div><div className="slot-k">Secondary Spendable</div><div className="slot-v">{moneyAud(allocation?.secondarySpendableAud)}</div></div>
-          <div><div className="slot-k">Primary Committed</div><div className="slot-v">{moneyAud(allocation?.primaryCommittedAud)}</div></div>
-          <div><div className="slot-k">Secondary Committed</div><div className="slot-v">{moneyAud(allocation?.secondaryCommittedAud)}</div></div>
-          <div><div className="slot-k">Capital Basis</div><div className="slot-v">{moneyAud(allocation?.capitalBaseAud)}</div></div>
-          <div><div className="slot-k">Next Primary</div><div className="slot-v">{entryAllocationAllowedLabel(allocation?.nextPrimaryAllowed)}</div></div>
-          <div><div className="slot-k">Next Secondary</div><div className="slot-v">{entryAllocationAllowedLabel(allocation?.nextSecondaryAllowed)}</div></div>
-          <div><div className="slot-k">Blocked</div><div className="slot-v">{reasonLabel(allocation?.blockReason ?? allocation?.primaryBlockReason ?? allocation?.secondaryBlockReason)}</div></div>
-        </div>
+        {railPool ? (
+          <div className="secondary-grid capital-summary-grid">
+            <div><div className="slot-k">Allocation Mode</div><div className="slot-v">{entryAllocationModeLabel(allocation)}</div></div>
+            <div><div className="slot-k">Primary Pool</div><div className="slot-v">{moneyAud(primaryPoolUsedAud)} / {moneyAud(allocation?.primaryPoolAud)} used</div></div>
+            <div><div className="slot-k">Primary Spendable</div><div className="slot-v">{moneyAud(allocation?.primarySpendableAud)}</div></div>
+            <div><div className="slot-k">Primary Slots</div><div className="slot-v">{allocation?.primarySlotsCommitted ?? allocation?.primaryCommittedCount ?? 0} / {allocation?.primarySlotsMax ?? "-"}</div></div>
+            <div><div className="slot-k">Secondary Pool</div><div className="slot-v">{moneyAud(secondaryPoolUsedAud)} / {moneyAud(allocation?.secondaryPoolAud)} used</div></div>
+            <div><div className="slot-k">Secondary Spendable</div><div className="slot-v">{moneyAud(allocation?.secondarySpendableAud)}</div></div>
+            <div><div className="slot-k">Protected Reserve</div><div className="slot-v">{moneyAud(allocation?.secondaryReservedAud)}</div></div>
+            <div><div className="slot-k">Secondary Rail Slots</div><div className="slot-v">{secondaryRailUsed} / {secondaryRailTotal ?? "-"} used</div></div>
+            <div><div className="slot-k">Secondary Max / Primary</div><div className="slot-v">{allocation?.secondaryMaxPerPrimary ?? "-"}</div></div>
+            <div><div className="slot-k">First Secondary Pending</div><div className="slot-v">{allocation?.firstSecondaryDeficitCount ?? 0}</div></div>
+            <div><div className="slot-k">Secondary Slots Available</div><div className="slot-v">{allocation?.secondarySlotsAvailable ?? "-"}</div></div>
+            <div><div className="slot-k">Capital Basis</div><div className="slot-v">{moneyAud(allocation?.capitalBaseAud)}</div></div>
+            <div><div className="slot-k">Next Primary</div><div className="slot-v">{entryAllocationAllowedLabel(allocation?.nextPrimaryAllowed)}</div></div>
+            <div><div className="slot-k">Next Secondary</div><div className="slot-v">{entryAllocationAllowedLabel(allocation?.nextSecondaryAllowed)}</div></div>
+            <div><div className="slot-k">Blocked</div><div className="slot-v">{reasonLabel(allocation?.blockReason ?? allocation?.primaryBlockReason ?? allocation?.secondaryBlockReason)}</div></div>
+          </div>
+        ) : (
+          <div className="secondary-grid capital-summary-grid">
+            <div><div className="slot-k">Pair Mode</div><div className="slot-v">{entryAllocationModeLabel(allocation)}</div></div>
+            <div><div className="slot-k">Pair Unit</div><div className="slot-v">{moneyAud(allocation?.pairUnitAud)}</div></div>
+            <div><div className="slot-k">Funded Pairs</div><div className="slot-v">{allocation?.fundedPairCount ?? "-"}</div></div>
+            <div><div className="slot-k">Primary Target</div><div className="slot-v">{moneyAud(allocation?.primaryTargetAud)}</div></div>
+            <div><div className="slot-k">Secondary Target</div><div className="slot-v">{moneyAud(allocation?.secondaryTargetAud)}</div></div>
+            <div><div className="slot-k">Primary Slots Allowed</div><div className="slot-v">{primarySlotsAllowed ?? "-"}</div></div>
+            <div><div className="slot-k">Primary Spendable</div><div className="slot-v">{moneyAud(allocation?.primarySpendableAud)}</div></div>
+            <div><div className="slot-k">Secondary Reserved</div><div className="slot-v">{moneyAud(allocation?.secondaryReservedAud)}</div></div>
+            <div><div className="slot-k">Secondary Spendable</div><div className="slot-v">{moneyAud(allocation?.secondarySpendableAud)}</div></div>
+            <div><div className="slot-k">Primary Committed</div><div className="slot-v">{moneyAud(allocation?.primaryCommittedAud)}</div></div>
+            <div><div className="slot-k">Secondary Committed</div><div className="slot-v">{moneyAud(allocation?.secondaryCommittedAud)}</div></div>
+            <div><div className="slot-k">Capital Basis</div><div className="slot-v">{moneyAud(allocation?.capitalBaseAud)}</div></div>
+            <div><div className="slot-k">Next Primary</div><div className="slot-v">{entryAllocationAllowedLabel(allocation?.nextPrimaryAllowed)}</div></div>
+            <div><div className="slot-k">Next Secondary</div><div className="slot-v">{entryAllocationAllowedLabel(allocation?.nextSecondaryAllowed)}</div></div>
+            <div><div className="slot-k">Blocked</div><div className="slot-v">{reasonLabel(allocation?.blockReason ?? allocation?.primaryBlockReason ?? allocation?.secondaryBlockReason)}</div></div>
+          </div>
+        )}
       </div>
     </div>
   );
