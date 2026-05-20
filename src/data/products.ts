@@ -2,7 +2,7 @@
 
 export type ProductKind = "physical" | "digital";
 export type ProductStatus = "active" | "coming_soon" | "archived";
-export type ProductCategory = "apparel" | "jewellery" | "private";
+export type ProductCategory = "apparel" | "accessories" | "desk" | "private";
 
 export type ProductTag =
   | "New"
@@ -14,7 +14,12 @@ export type ProductTag =
   | "Bundle"
   | "Premium"
   | "Preorder"
-  | "Support";
+  | "Support"
+  | "Concept"
+  | "Supplier Sourced"
+  | "Register Interest"
+  | "Quote Only"
+  | "Stripe Ready";
 
 export type ProductLink = {
   label: string;
@@ -37,6 +42,7 @@ export type Product = {
 };
 
 const EMAIL = "358jal@gmail.com";
+const BRAND_PLACEHOLDER = "/JALSOL1.gif";
 
 function mailto(subject: string, bodyLines?: string[]) {
   const s = encodeURIComponent(subject);
@@ -44,14 +50,15 @@ function mailto(subject: string, bodyLines?: string[]) {
   return `mailto:${EMAIL}?subject=${s}${bodyLines?.length ? `&body=${body}` : ""}`;
 }
 
-function enquiryMailto(subject: string) {
+function interestMailto(subject: string) {
   return mailto(subject, [
     "Name:",
     "Phone (optional):",
     "Shipping suburb/postcode:",
     "",
-    "Enquiry:",
-    "- Qty:",
+    "Interest:",
+    "- Product:",
+    "- Preferred size / colour:",
     "- Notes:",
     "",
     "Preferred contact method: email / sms",
@@ -71,20 +78,92 @@ function quoteMailto(subject: string, bodyLines?: string[]) {
 
 export const PRODUCTS: Product[] = [
   {
-    id: "hoodie-embroidered-xxl",
-    title: "JALSOL Embroidered Hoodie (XXL)",
+    id: "jalsol-logo-cap",
+    title: "JALSOL Logo Cap",
     kind: "physical",
-    status: "active",
-    priceNote: "$130.00 AUD",
-    availability: "Limited run enquiry",
-    category: "apparel",
-    summary: "Premium heavyweight embroidered release.",
-    tags: ["Limited", "Handmade", "Premium"],
-    image: "/shop/hoodie-xxl.jpg",
+    status: "coming_soon",
+    priceNote: "Target: $35-$55 AUD",
+    availability: "Supplier sample planned",
+    category: "accessories",
+    summary: "Low-risk first release candidate.",
+    tags: ["Concept", "Supplier Sourced", "Register Interest", "Stripe Ready"],
+    image: BRAND_PLACEHOLDER,
     links: [
       {
-        label: "Enquire Now",
-        href: enquiryMailto("Enquiry - JALSOL Embroidered Hoodie (XXL) - $130.00 AUD"),
+        label: "Register Interest",
+        href: interestMailto("Interest - JALSOL Logo Cap"),
+      },
+    ],
+  },
+  {
+    id: "jalsol-oversized-tee",
+    title: "JALSOL Oversized Tee",
+    kind: "physical",
+    status: "coming_soon",
+    priceNote: "Target: $45-$70 AUD",
+    availability: "Supplier sample planned",
+    category: "apparel",
+    summary: "Simple apparel test before larger runs.",
+    tags: ["Concept", "Supplier Sourced", "Register Interest"],
+    image: BRAND_PLACEHOLDER,
+    links: [
+      {
+        label: "Register Interest",
+        href: interestMailto("Interest - JALSOL Oversized Tee"),
+      },
+    ],
+  },
+  {
+    id: "jalsol-embroidered-hoodie",
+    title: "JALSOL Embroidered Hoodie",
+    kind: "physical",
+    status: "coming_soon",
+    priceNote: "Target: $120-$160 AUD",
+    availability: "Sample required before checkout",
+    category: "apparel",
+    summary: "Flagship apparel concept for a future limited run.",
+    tags: ["Concept", "Supplier Sourced", "Premium", "Register Interest"],
+    image: BRAND_PLACEHOLDER,
+    links: [
+      {
+        label: "Register Interest",
+        href: interestMailto("Interest - JALSOL Embroidered Hoodie"),
+      },
+    ],
+  },
+  {
+    id: "jalsol-sticker-pack",
+    title: "JALSOL Sticker Pack",
+    kind: "physical",
+    status: "coming_soon",
+    priceNote: "Target: $12-$18 AUD",
+    availability: "Stripe-ready candidate",
+    category: "accessories",
+    summary: "Small entry item for testing demand.",
+    tags: ["Concept", "Supplier Sourced", "Stripe Ready"],
+    image: BRAND_PLACEHOLDER,
+    links: [
+      {
+        label: "Register Interest",
+        href: interestMailto("Interest - JALSOL Sticker Pack"),
+      },
+    ],
+  },
+  {
+    id: "jalsol-desk-mat",
+    title: "JALSOL Desk Mat",
+    kind: "physical",
+    status: "coming_soon",
+    priceNote: "Target: $35-$65 AUD",
+    availability: "Supplier sample planned",
+    category: "desk",
+    summary: "Creator desk object for a practical first batch.",
+    tags: ["Concept", "Supplier Sourced", "Register Interest"],
+    image: BRAND_PLACEHOLDER,
+    links: [
+      {
+        label: "Register Interest",
+        href: interestMailto("Interest - JALSOL Desk Mat"),
       },
     ],
   },
@@ -93,12 +172,12 @@ export const PRODUCTS: Product[] = [
     title: "JALSOL Gold Cuff - Private Order",
     kind: "physical",
     status: "coming_soon",
-    priceNote: "Private order",
-    availability: "Made individually",
+    priceNote: "Quote only",
+    availability: "Private future enquiry",
     category: "private",
-    summary: "Private commission gold cuff.",
-    tags: ["One-of-One", "Handmade", "Premium"],
-    image: "/shop/solid-gold-cuff.jpg",
+    summary: "Future quote-only jewellery concept.",
+    tags: ["Concept", "One-of-One", "Premium", "Quote Only"],
+    image: BRAND_PLACEHOLDER,
     links: [
       {
         label: "Enquire Now",

@@ -14,13 +14,15 @@ type CategoryFilter = "all" | ProductCategory;
 const CATEGORY_FILTERS: { value: CategoryFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "apparel", label: "Apparel" },
+  { value: "accessories", label: "Accessories" },
+  { value: "desk", label: "Desk" },
   { value: "private", label: "Private Orders" },
 ];
 
 function getStatusLabel(p: Product) {
   if (p.status === "active") return "Available";
-  if (p.status === "coming_soon" && p.category === "private") return "Private Order";
-  if (p.status === "coming_soon") return "Coming Soon";
+  if (p.status === "coming_soon" && p.category === "private") return "Private Enquiry";
+  if (p.status === "coming_soon") return "Concept Release";
   return "-";
 }
 
@@ -417,7 +419,7 @@ function ProductCard({
 export default function Shop() {
   usePageMeta(
     "Shop Physical Releases",
-    "Browse physical JALSOL releases through the public Jeremy Aaron Lugg store, including founder-brand merch and made-to-order objects."
+    "Browse planned physical JALSOL releases through the public Jeremy Aaron Lugg store, including supplier-sourced apparel concepts and private future enquiries."
   );
 
   const [sort, setSort] = useState<SortMode>("featured");
@@ -464,7 +466,7 @@ export default function Shop() {
               <h1 className="home-title shop-title">Physical JALSOL Releases</h1>
 
               <p className="home-lead shop-lead">
-                Curated founder releases, apparel, and handcrafted commissions.
+                Planned apparel, private commissions, and founder-brand objects.
               </p>
             </div>
 
@@ -483,7 +485,9 @@ export default function Shop() {
                 <p className="shop-section-kicker">Current Releases</p>
                 <h2 className="shop-section-title">Founder Releases</h2>
                 <p className="shop-section-copy">
-                  Limited physical pieces tied directly to the JALSOL identity.
+                  Concept products are interest-only until supplier samples, pricing, and product
+                  photos are confirmed. Stripe checkout will be added only to fixed-price items that
+                  are ready to fulfil.
                 </p>
               </div>
             </div>
