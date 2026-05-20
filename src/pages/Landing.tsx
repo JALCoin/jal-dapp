@@ -5,6 +5,12 @@ import DonateButton from "../components/DonateButton";
 import ThemeToggle from "../components/ThemeToggle";
 import { usePageMeta } from "../hooks/usePageMeta";
 import type { ThemeMode } from "../hooks/useTheme";
+import {
+  LEGAL_ABN,
+  LEGAL_CONTACT_EMAIL,
+  LEGAL_CONTACT_MAILTO,
+  LEGAL_OPERATOR_NAME,
+} from "../lib/legal";
 
 type LandingMode = "entry" | "nav";
 type LandingProps = {
@@ -213,6 +219,12 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
               <img className="center-logo" src={brandLogoSrc} alt="Jeremy Aaron Lugg" />
               <div className="center-logo-hint">ENTER SITE</div>
             </button>
+
+            <address className="landing-public-id" aria-label="Public business details">
+              <span>{LEGAL_OPERATOR_NAME}</span>
+              <a href={LEGAL_CONTACT_MAILTO}>{LEGAL_CONTACT_EMAIL}</a>
+              <span>ABN {LEGAL_ABN}</span>
+            </address>
           </>
         )}
 

@@ -2,17 +2,25 @@ import ProductStars from "../components/ProductStars";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import DonateButton from "../components/DonateButton";
-import { getActiveProducts, type Product } from "../data/products";
+import { getActiveProducts, type Product, type ProductCategory } from "../data/products";
 import ReviewList from "../components/ReviewList";
 import ReviewFormModal from "../components/ReviewFormModal";
 import { getReviewsByProductId, type ProductReview } from "../lib/reviews";
 import { usePageMeta } from "../hooks/usePageMeta";
 
 type SortMode = "featured" | "title-asc" | "title-desc";
+type CategoryFilter = "all" | ProductCategory;
 
-function getStatusLabel(status: Product["status"]) {
-  if (status === "active") return "Live";
-  if (status === "coming_soon") return "Soon";
+const CATEGORY_FILTERS: { value: CategoryFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "apparel", label: "Apparel" },
+  { value: "private", label: "Private Orders" },
+];
+
+function getStatusLabel(p: Product) {
+  if (p.status === "active") return "Available";
+  if (p.status === "coming_soon" && p.category === "private") return "Private Order";
+  if (p.status === "coming_soon") return "Coming Soon";
   return "-";
 }
 
@@ -20,6 +28,9 @@ function getPrimaryLink(p: Product) {
   if (!p.links?.length) return null;
 
   const priority = [
+    "enquire now",
+    "enquire",
+    "inquire",
     "claim",
     "buy now",
     "checkout",
@@ -29,8 +40,6 @@ function getPrimaryLink(p: Product) {
     "shop now",
     "order now",
     "request access",
-    "enquire",
-    "inquire",
     "view",
   ];
 
@@ -53,8 +62,11 @@ function getSecondaryLinks(p: Product) {
 function displayShopLinkLabel(label: string) {
   const normalized = label.trim().toLowerCase();
 
-  if (normalized === "claim") return "BUY NOW";
-  if (normalized === "request access") return "Pre-order via Email";
+  if (normalized === "claim") return "Enquire Now";
+  if (normalized === "buy now") return "Enquire Now";
+  if (normalized === "pre-order via email") return "Enquire Now";
+  if (normalized === "pre-order") return "Enquire Now";
+  if (normalized === "request access") return "Enquire Now";
 
   return label;
 }
@@ -132,7 +144,7 @@ function ProductModal({
     return () => document.body.removeAttribute("data-modal-open");
   }, []);
 
-  const badge = getStatusLabel(p.status);
+  const badge = getStatusLabel(p);
   const primaryLink = getPrimaryLink(p);
   const secondaryLinks = getSecondaryLinks(p);
 
@@ -177,12 +189,16 @@ function ProductModal({
 
             <h2 className="product-modal-title shop-modal-title">{p.title}</h2>
 
-            {!p.isSupport ? (
+            {!p.isSupport && reviewCount > 0 ? (
               <ProductStars rating={averageRating} count={reviewCount} />
             ) : null}
 
             {p.priceNote ? (
               <div className="product-modal-price shop-modal-price">{p.priceNote}</div>
+            ) : null}
+
+            {p.availability ? (
+              <p className="shop-card-availability shop-modal-availability">{p.availability}</p>
             ) : null}
 
             <p className="product-modal-summary shop-modal-summary">{p.summary}</p>
@@ -241,8 +257,10 @@ function ProductModal({
 
                 {loading ? (
                   <p className="shop-review-empty">Loading reviews...</p>
-                ) : (
+                ) : reviews.length > 0 ? (
                   <ReviewList reviews={reviews} />
+                ) : (
+                  <p className="shop-review-empty">Order feedback will appear here once available.</p>
                 )}
               </div>
             ) : null}
@@ -281,7 +299,7 @@ function ProductCard({
   showRating?: boolean;
   refreshToken: number;
 }) {
-  const badge = getStatusLabel(p.status);
+  const badge = getStatusLabel(p);
   const primaryLink = getPrimaryLink(p);
   const secondaryLinks = getSecondaryLinks(p);
 
@@ -343,11 +361,15 @@ function ProductCard({
           <h3 className="product-title shop-card-title">{p.title}</h3>
         </div>
 
-        {showRating ? (
+        {showRating && reviewCount > 0 ? (
           <ProductStars rating={averageRating} count={reviewCount} />
         ) : null}
 
         {p.priceNote ? <div className="product-price shop-card-price">{p.priceNote}</div> : null}
+
+        {p.availability ? (
+          <p className="shop-card-availability">{p.availability}</p>
+        ) : null}
 
         <p className="product-summary shop-card-summary">{p.summary}</p>
 
@@ -399,12 +421,14 @@ export default function Shop() {
   );
 
   const [sort, setSort] = useState<SortMode>("featured");
+  const [category, setCategory] = useState<CategoryFilter>("all");
   const [active, setActive] = useState<Product | null>(null);
   const [reviewRefreshToken, setReviewRefreshToken] = useState(0);
 
   const storeProducts = useMemo(() => {
     const all = getActiveProducts().filter((p) => p.kind === "physical" && p.isSupport !== true);
-    const filtered = [...all];
+    const filtered =
+      category === "all" ? [...all] : all.filter((p) => p.category === category);
 
     switch (sort) {
       case "title-asc":
@@ -428,7 +452,7 @@ export default function Shop() {
     }
 
     return filtered;
-  }, [sort]);
+  }, [category, sort]);
 
   return (
     <main className="home-shell shop-shell" aria-label="Shop">
@@ -440,14 +464,7 @@ export default function Shop() {
               <h1 className="home-title shop-title">Physical JALSOL Releases</h1>
 
               <p className="home-lead shop-lead">
-                A cleaner founder-brand storefront built around physical releases only. No digital
-                access products are sold through the public shop.
-              </p>
-
-              <p className="shop-section-copy">
-                The store is designed to feel simple, tangible, and accountable: fewer releases,
-                clearer presentation, and direct connection to the public Jeremy Aaron Lugg
-                business domain.
+                Curated founder releases, apparel, and handcrafted commissions.
               </p>
             </div>
 
@@ -464,17 +481,27 @@ export default function Shop() {
             <div className="shop-section-head">
               <div>
                 <p className="shop-section-kicker">Current Releases</p>
-                <h2 className="shop-section-title">Browse The Store</h2>
+                <h2 className="shop-section-title">Founder Releases</h2>
                 <p className="shop-section-copy">
-                  Wearables and made-to-order physical commissions tied directly to the public
-                  founder brand and business identity behind JALSOL.
+                  Limited physical pieces tied directly to the JALSOL identity.
                 </p>
               </div>
             </div>
 
             <div className="shop-toolbar" aria-label="Shop controls">
-              <div className="shop-filter-group">
-                <span className="chip chip-btn shop-filter-btn is-active">Physical merch only</span>
+              <div className="shop-filter-group" aria-label="Product categories">
+                {CATEGORY_FILTERS.map((filter) => (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    className={`chip chip-btn shop-filter-btn ${
+                      category === filter.value ? "is-active" : ""
+                    }`}
+                    onClick={() => setCategory(filter.value)}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
               </div>
 
               <div className="shop-toolbar-right">

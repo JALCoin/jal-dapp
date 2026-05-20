@@ -4,7 +4,6 @@ import {
   LEGAL_ABN,
   LEGAL_CONTACT_EMAIL,
   LEGAL_CONTACT_MAILTO,
-  LEGAL_OPERATOR_NAME,
 } from "../lib/legal";
 
 export default function Footer() {
@@ -44,17 +43,6 @@ export default function Footer() {
               TikTok
             </a>
           </div>
-
-          <div className="jal-footer-identity">
-            <span>Legal operator: {LEGAL_OPERATOR_NAME}</span>
-            <span>Official public business domain</span>
-          </div>
-        </div>
-
-        <div className="jal-footer-meta">
-          <a href={ABN_LOOKUP_URL} target="_blank" rel="noreferrer">
-            Verify ABN {LEGAL_ABN}
-          </a>
         </div>
       </div>
     </footer>

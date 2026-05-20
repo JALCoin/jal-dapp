@@ -1,4 +1,4 @@
-const STRIPE_DONATE_URL = "https://donate.stripe.com/cNi3cu4d284b3yfaII0x20c";
+const STRIPE_DONATE_URL = "https://buy.stripe.com/bJe28qdNCfwD3yf1880x20d";
 
 type DonateButtonProps = {
   className?: string;
