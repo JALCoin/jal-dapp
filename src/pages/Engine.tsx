@@ -49,7 +49,7 @@ type Feed = "all" | "aud" | "watch" | "engine";
 type SortKey = "coin" | "spread" | "mid";
 type SortDir = "asc" | "desc";
 type ViewMode = "simple" | "advanced";
-type Section = "focus" | "behavior" | "slots" | "capital" | "market" | "events" | "about";
+type Section = "focus" | "rails" | "slots" | "market" | "events" | "diagnostics" | "spotlight" | "books";
 
 type SlotState =
   | "WAITING_ENTRY"
@@ -1422,6 +1422,78 @@ type PublicCapitalResponse = {
 type PublicEventsResponse = { ok: boolean; ts: number; rows: SlotEvent[] };
 type PublicSlotsResponse = { ok: boolean; ts: number; rows: SlotRow[] };
 
+type BooksSummary = {
+  ok?: boolean;
+  ts?: number;
+  error?: string;
+  enabled?: boolean;
+  fy?: string;
+  taxReservePct?: number | null;
+  tradingFloatTargetAud?: number | null;
+  importYears?: string[];
+  importStatus?: {
+    importedTradeCount?: number | null;
+    filteredTradeCount?: number | null;
+    manualEntryCount?: number | null;
+    fyManualEntryCount?: number | null;
+  };
+  tradeCounts?: {
+    buy?: number | null;
+    sell?: number | null;
+    audMarket?: number | null;
+    cryptoCross?: number | null;
+  };
+  tradeTotals?: {
+    buyTotalAud?: number | null;
+    sellTotalAud?: number | null;
+    feeAud?: number | null;
+    gstAud?: number | null;
+    realizedEstimateAud?: number | null;
+  };
+  ownerTotals?: {
+    ownerCapitalInAud?: number | null;
+    ownerDrawingAud?: number | null;
+    taxReserveAdjustmentAud?: number | null;
+    taxPaymentAud?: number | null;
+    noteCount?: number | null;
+  };
+  reserve?: {
+    estimatedTaxReserveAud?: number | null;
+    availableOwnerDrawingEstimateAud?: number | null;
+    note?: string | null;
+  };
+  warnings?: Array<{
+    code?: string;
+    asset?: string;
+    missingQty?: number | null;
+    transactionAt?: string | null;
+    note?: string | null;
+  }>;
+  warningCount?: number | null;
+  method?: {
+    inventory?: string | null;
+    treatment?: string | null;
+    disclaimer?: string | null;
+  };
+};
+
+type BooksImportResponse = {
+  ok?: boolean;
+  error?: string;
+  inserted?: number;
+  duplicate?: number;
+  totalStored?: number;
+  parsed?: {
+    validRows?: number;
+    buys?: number;
+    sells?: number;
+    audMarket?: number;
+    cryptoCross?: number;
+    financialYears?: string[];
+  };
+  warnings?: string[];
+};
+
 type EngineData = {
   rowsAll: MarketRow[];
   rowsAud: MarketRow[];
@@ -1450,6 +1522,8 @@ type BehaviorCoinProfile = {
   secondary: string;
   safeguards: string;
 };
+
+import { supabase } from "../lib/supabase";
 
 /* =========================
    Constants
@@ -2746,8 +2820,40 @@ function entryAllocationAllowedLabel(value: boolean | null | undefined) {
   return "-";
 }
 
+function entryAllocationGateLabel(value: boolean | null | undefined, blockedReason?: string | null) {
+  if (value === true) return "Allowed";
+  if (value === false) return blockedReason ? `Blocked: ${reasonLabel(blockedReason)}` : "Blocked";
+  return "Not published";
+}
+
 function isRailPoolAllocation(allocation: EntryAllocation | null | undefined) {
   return allocation?.enabled === true && String(allocation.mode || "").toUpperCase() === "RAIL_POOL";
+}
+
+function compactAgeLabel(msSince: number | null | undefined) {
+  if (msSince == null || !Number.isFinite(msSince)) return "-";
+  if (msSince < 60000) return msToShortLabel(msSince);
+  return ageLabel(msSince);
+}
+
+function writeGateLabel(meta: PublicMetaResponse | null | undefined) {
+  if (meta?.gates?.writeEnabled === true) return "Enabled";
+  if (meta?.gates?.writeEnabled === false) return "Disabled";
+  return "Unknown";
+}
+
+function allocationBlockReason(allocation: EntryAllocation | null | undefined) {
+  return allocation?.blockReason ?? allocation?.primaryBlockReason ?? allocation?.secondaryBlockReason ?? null;
+}
+
+function countLabel(n: number | null | undefined, fallback = "-") {
+  if (n == null || !Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.floor(Number(n))).toLocaleString();
+}
+
+function multipliedCount(a: number | null | undefined, b: number | null | undefined) {
+  if (a == null || b == null || !Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return Math.max(0, Math.floor(Number(a) * Number(b)));
 }
 
 function pairAwareAvailableAud(capital: PublicCapitalResponse | null | undefined) {
@@ -6199,9 +6305,188 @@ function useEngineData(BASE: string): EngineData {
   return { rowsAll, rowsAud, snap, meta, readiness, managerStatus, capital, slotRows, events, err, refresh };
 }
 
+function currentAustralianFyLabel() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const start = month >= 7 ? year : year - 1;
+  return `${start}-${String((start + 1) % 100).padStart(2, "0")}`;
+}
+
+async function engineBooksFetch<T>(action: string, options: { fy?: string; method?: "GET" | "POST"; body?: unknown } = {}) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Engineer sign-in required for Books.");
+
+  const params = new URLSearchParams({ action });
+  if (options.fy) params.set("fy", options.fy);
+
+  const response = await fetch(`/api/engine-books?${params.toString()}`, {
+    method: options.method || "GET",
+    headers: {
+      authorization: `Bearer ${token}`,
+      ...(options.method === "POST" ? { "content-type": "application/json" } : {}),
+    },
+    body: options.method === "POST" ? JSON.stringify(options.body || {}) : undefined,
+  });
+
+  if (!response.ok) {
+    let detail = `${action} HTTP ${response.status}`;
+    try {
+      const json = (await response.json()) as { error?: string };
+      if (json?.error) detail = json.error;
+    } catch (_) {}
+    throw new Error(detail);
+  }
+
+  return (await response.json()) as T;
+}
+
+function useBooksData() {
+  const [fy, setFy] = useState(() => currentAustralianFyLabel());
+  const [summary, setSummary] = useState<BooksSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<BooksImportResponse | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const next = await engineBooksFetch<BooksSummary>("summary", { fy });
+      setSummary(next);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : String(error));
+      setSummary(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [fy]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const importHistory = useCallback(
+    async (text: string) => {
+      setImporting(true);
+      setErr(null);
+      setImportResult(null);
+      try {
+        const result = await engineBooksFetch<BooksImportResponse>("import", {
+          method: "POST",
+          body: { text },
+        });
+        setImportResult(result);
+        await refresh();
+      } catch (error) {
+        setErr(error instanceof Error ? error.message : String(error));
+      } finally {
+        setImporting(false);
+      }
+    },
+    [refresh]
+  );
+
+  const addEntry = useCallback(
+    async (entry: { type: string; amountAud?: string; note?: string }) => {
+      setErr(null);
+      await engineBooksFetch("entry", {
+        method: "POST",
+        body: entry,
+      });
+      await refresh();
+    },
+    [refresh]
+  );
+
+  const downloadExport = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error("Engineer sign-in required for Books export.");
+    const params = new URLSearchParams({ action: "export", fy });
+    const response = await fetch(`/api/engine-books?${params.toString()}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error(`export HTTP ${response.status}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `jalsol-books-${fy}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, [fy]);
+
+  return {
+    fy,
+    setFy,
+    summary,
+    loading,
+    err,
+    refresh,
+    importing,
+    importHistory,
+    importResult,
+    addEntry,
+    downloadExport,
+  };
+}
+
 /* =========================
    Presentational Components
 ========================= */
+
+const EngineHealthStrip = React.memo(function EngineHealthStrip(props: {
+  snap: Snapshot | null;
+  meta: PublicMetaResponse | null;
+  capital: PublicCapitalResponse | null;
+  executionMode: string;
+  snapshotAgeMs: number | null;
+  snapshotFresh: boolean;
+  err: string | null;
+}) {
+  const serviceOk = props.snap?.ok === true && !props.err;
+  const capitalOk = props.capital != null && !props.capital.refreshError;
+  const writeGate = writeGateLabel(props.meta);
+  const lastPoll = compactAgeLabel(props.snapshotAgeMs);
+
+  return (
+    <div className="engine-health-strip" aria-label="Engine health">
+      <div className={`engine-health-pill ${serviceOk ? "ok" : "warn"}`}>
+        <span>Service</span>
+        <strong>{serviceOk ? "Online" : "Backend Waiting"}</strong>
+      </div>
+      <div className={`engine-health-pill ${props.snapshotFresh ? "ok" : "warn"}`}>
+        <span>Snapshot</span>
+        <strong>{props.snapshotFresh ? "Fresh" : props.snapshotAgeMs == null ? "Waiting" : "Stale"}</strong>
+      </div>
+      <div className="engine-health-pill">
+        <span>Execution</span>
+        <strong>{props.executionMode || "SIM"}</strong>
+      </div>
+      <div className={`engine-health-pill ${writeGate === "Enabled" ? "ok" : writeGate === "Disabled" ? "warn" : ""}`}>
+        <span>Write Gate</span>
+        <strong>{writeGate}</strong>
+      </div>
+      <div className={`engine-health-pill ${capitalOk ? "ok" : "warn"}`}>
+        <span>Capital</span>
+        <strong>{capitalOk ? "Published" : "Endpoint Unavailable"}</strong>
+      </div>
+      <div className="engine-health-pill">
+        <span>Last Poll</span>
+        <strong>{lastPoll}</strong>
+      </div>
+    </div>
+  );
+});
 
 const EngineHero = React.memo(function EngineHero(props: {
   snap: Snapshot | null;
@@ -6268,7 +6553,11 @@ const EngineHero = React.memo(function EngineHero(props: {
       <aside className="engine-hero-right" aria-label="Engine HUD">
         <div className="engine-hero-status" aria-label="Engine indicators">
           <span className={`indicator status ${snap?.ok ? "ok" : "warn"}`}>
-            STATUS <span>{snap?.ok ? "ONLINE" : "WAITING"}</span>
+            Service <span>{snap?.ok ? "Online" : "Backend Waiting"}</span>
+          </span>
+
+          <span className={`indicator status ${snap?.ok ? "ok" : "warn"}`}>
+            Snapshot <span>{formatSnapshotLabel(snap, nowMs)}</span>
           </span>
 
           <span className="indicator metric">
@@ -6384,91 +6673,73 @@ const ControlsBar = React.memo(function ControlsBar(props: {
   setView: React.Dispatch<React.SetStateAction<ViewMode>>;
   feed: Feed;
   setFeed: React.Dispatch<React.SetStateAction<Feed>>;
+  sortKey: SortKey;
+  sortDir: SortDir;
   setSortKey: React.Dispatch<React.SetStateAction<SortKey>>;
   setSortDir: React.Dispatch<React.SetStateAction<SortDir>>;
   query: string;
   setQuery: React.Dispatch<React.SetStateAction<string>>;
   refresh: () => Promise<void>;
+  lastRefreshLabel: string;
 }) {
+  const sortValue = `${props.sortKey}:${props.sortDir}`;
+
   return (
     <div className="engine-controls-wrap" aria-label="Controls">
       <div className="engine-controls">
-        <button
-          type="button"
-          className={`button ghost ${props.view === "advanced" ? "active" : ""}`}
-          onClick={() => props.setView((v) => (v === "simple" ? "advanced" : "simple"))}
-        >
-          View: {props.view === "simple" ? "Simple" : "Advanced"}
-        </button>
+        <div className="engine-control-group" aria-label="View mode">
+          <span className="engine-control-label">View</span>
+          <div className="engine-segmented">
+            <button
+              type="button"
+              className={props.view === "simple" ? "active" : ""}
+              onClick={() => props.setView("simple")}
+            >
+              Simple
+            </button>
+            <button
+              type="button"
+              className={props.view === "advanced" ? "active" : ""}
+              onClick={() => props.setView("advanced")}
+            >
+              Advanced
+            </button>
+          </div>
+        </div>
 
-        <button
-          type="button"
-          className={`button ghost ${props.feed === "all" ? "active" : ""}`}
-          onClick={() => props.setFeed("all")}
-        >
-          Feed: All
-        </button>
+        <div className="engine-control-group" aria-label="Feed filter">
+          <span className="engine-control-label">Feed</span>
+          <div className="engine-segmented">
+            {(["aud", "engine", "watch", "all"] as Feed[]).map((nextFeed) => (
+              <button
+                key={nextFeed}
+                type="button"
+                className={props.feed === nextFeed ? "active" : ""}
+                onClick={() => props.setFeed(nextFeed)}
+              >
+                {nextFeed === "aud" ? "AUD" : nextFeed === "all" ? "All" : nextFeed === "engine" ? "Engine" : "Watch"}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        <button
-          type="button"
-          className={`button ghost ${props.feed === "aud" ? "active" : ""}`}
-          onClick={() => props.setFeed("aud")}
-        >
-          Feed: AUD
-        </button>
-
-        <button
-          type="button"
-          className={`button ghost ${props.feed === "engine" ? "active" : ""}`}
-          onClick={() => props.setFeed("engine")}
-        >
-          Feed: Engine
-        </button>
-
-        <button
-          type="button"
-          className={`button ghost ${props.feed === "watch" ? "active" : ""}`}
-          onClick={() => props.setFeed("watch")}
-        >
-          Feed: Watch
-        </button>
-
-        <button
-          type="button"
-          className="button ghost"
-          onClick={() => {
-            props.setSortKey("coin");
-            props.setSortDir("asc");
-          }}
-        >
-          Sort: A-Z
-        </button>
-
-        <button
-          type="button"
-          className="button ghost"
-          onClick={() => {
-            props.setSortKey("spread");
-            props.setSortDir("asc");
-          }}
-        >
-          Sort: Spread
-        </button>
-
-        <button
-          type="button"
-          className="button ghost"
-          onClick={() => {
-            props.setSortKey("mid");
-            props.setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-          }}
-        >
-          Sort: Price
-        </button>
-
-        <button type="button" className="button ghost" onClick={() => void props.refresh()}>
-          Refresh
-        </button>
+        <label className="engine-control-group engine-control-select">
+          <span className="engine-control-label">Sort</span>
+          <select
+            className="engine-select"
+            value={sortValue}
+            onChange={(event) => {
+              const [nextKey, nextDir] = event.target.value.split(":") as [SortKey, SortDir];
+              props.setSortKey(nextKey);
+              props.setSortDir(nextDir);
+            }}
+          >
+            <option value="coin:asc">A-Z</option>
+            <option value="spread:asc">Spread</option>
+            <option value="mid:desc">Price High</option>
+            <option value="mid:asc">Price Low</option>
+          </select>
+        </label>
 
         <input
           className="engine-filter"
@@ -6477,6 +6748,10 @@ const ControlsBar = React.memo(function ControlsBar(props: {
           placeholder="Filter coins / states / regime..."
           aria-label="Filter"
         />
+
+        <button type="button" className="button ghost engine-refresh-button" onClick={() => void props.refresh()}>
+          Refresh <span>{props.lastRefreshLabel}</span>
+        </button>
       </div>
     </div>
   );
@@ -8613,6 +8888,122 @@ const RotationPolicyPanel = React.memo(function RotationPolicyPanel(props: {
   );
 });
 
+const CapitalRailsPanel = React.memo(function CapitalRailsPanel(props: {
+  capital: PublicCapitalResponse | null;
+}) {
+  const allocation = props.capital?.entryAllocation ?? null;
+  const railPool = isRailPoolAllocation(allocation);
+  const primaryPoolUsedAud =
+    allocation?.primaryPoolAud != null &&
+    allocation?.primaryPoolRemainingAud != null &&
+    Number.isFinite(allocation.primaryPoolAud) &&
+    Number.isFinite(allocation.primaryPoolRemainingAud)
+      ? Math.max(0, allocation.primaryPoolAud - allocation.primaryPoolRemainingAud)
+      : allocation?.primaryCommittedAud;
+  const secondaryCommittedAud =
+    allocation?.secondaryPoolAud != null &&
+    allocation?.secondaryPoolRemainingAud != null &&
+    Number.isFinite(allocation.secondaryPoolAud) &&
+    Number.isFinite(allocation.secondaryPoolRemainingAud)
+      ? Math.max(0, allocation.secondaryPoolAud - allocation.secondaryPoolRemainingAud)
+      : allocation?.secondaryCommittedAud;
+  const primaryCommittedSlots = allocation?.primarySlotsCommitted ?? allocation?.primaryCommittedCount ?? null;
+  const primarySlotsMax = allocation?.primarySlotsMax ?? null;
+  const secondaryRailUsed = allocation?.secondaryCommittedCount ?? null;
+  const secondaryRailTotal = allocation?.secondaryRailSlotsTotal ?? null;
+  const totalSecondaryRailCapacity = multipliedCount(primarySlotsMax, allocation?.secondaryMaxPerPrimary);
+  const availableAud = allocation?.audAvailable ?? props.capital?.audAvailable ?? null;
+  const blockedReason = allocationBlockReason(allocation);
+
+  if (!props.capital) {
+    return (
+      <section className="engine-rail-panel" aria-label="Capital rails">
+        <div className="engine-rail-head">
+          <div>
+            <div className="slot-section">Current Rail Settings</div>
+            <div className="engine-telemetry-note">Published by engine service.</div>
+          </div>
+        </div>
+        <div className="ledger-empty">Capital endpoint unavailable.</div>
+      </section>
+    );
+  }
+
+  if (!allocation) {
+    return (
+      <section className="engine-rail-panel" aria-label="Capital rails">
+        <div className="engine-rail-head">
+          <div>
+            <div className="slot-section">Current Rail Settings</div>
+            <div className="engine-telemetry-note">Published by engine service.</div>
+          </div>
+        </div>
+        <div className="ledger-empty">Configured allocation not published by engine service.</div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="engine-rail-panel" aria-label="Capital rails">
+      <div className="engine-rail-head">
+        <div>
+          <div className="slot-section">Current Rail Settings</div>
+          <div className="engine-telemetry-note">
+            {entryAllocationModeLabel(allocation)} | Published by engine service | {railPool ? "Rail pool allocator" : "Legacy allocation mode"}
+          </div>
+        </div>
+        <div className={`engine-rail-state ${allocation.enabled ? "ok" : "warn"}`}>
+          {allocation.enabled ? "Configured" : "Inactive"}
+        </div>
+      </div>
+
+      <div className="engine-rail-columns">
+        <div className="engine-rail-group engine-rail-group--structure">
+          <div className="engine-rail-group-title">Rail Structure</div>
+          <div className="engine-rail-metrics">
+            <div><span>Primary Rails</span><strong>{countLabel(primarySlotsMax, "Not published")}</strong></div>
+            <div><span>Secondary / Primary</span><strong>{countLabel(allocation.secondaryMaxPerPrimary, "Not published")}</strong></div>
+            <div><span>Total Secondary Capacity</span><strong>{countLabel(totalSecondaryRailCapacity, "Not published")}</strong></div>
+            <div><span>Unlocked Now</span><strong>{countLabel(secondaryRailUsed)} used / {countLabel(secondaryRailTotal)} unlocked</strong></div>
+          </div>
+        </div>
+
+        <div className="engine-rail-group">
+          <div className="engine-rail-group-title">Primary Rail</div>
+          <div className="engine-rail-metrics">
+            <div><span>Target</span><strong>{moneyAud(allocation.primaryTargetAud)}</strong></div>
+            <div><span>Pool Used</span><strong>{moneyAud(primaryPoolUsedAud)} / {moneyAud(allocation.primaryPoolAud)}</strong></div>
+            <div><span>Spendable</span><strong>{moneyAud(allocation.primarySpendableAud)}</strong></div>
+            <div><span>Committed Rails</span><strong>{countLabel(primaryCommittedSlots)} / {countLabel(primarySlotsMax)}</strong></div>
+          </div>
+        </div>
+
+        <div className="engine-rail-group">
+          <div className="engine-rail-group-title">Secondary Rail</div>
+          <div className="engine-rail-metrics">
+            <div><span>Target</span><strong>{moneyAud(allocation.secondaryTargetAud)}</strong></div>
+            <div><span>Available AUD</span><strong>{moneyAud(availableAud)}</strong></div>
+            <div><span>Committed AUD</span><strong>{moneyAud(secondaryCommittedAud)}</strong></div>
+            <div><span>Reserved Now</span><strong>{moneyAud(allocation.secondaryReservedAud)}</strong></div>
+            <div><span>Spendable Now</span><strong>{moneyAud(allocation.secondarySpendableAud)}</strong></div>
+            <div><span>Unlocked Available</span><strong>{countLabel(allocation.secondaryRailSlotsAvailable ?? allocation.secondarySlotsAvailable)}</strong></div>
+          </div>
+        </div>
+
+        <div className="engine-rail-group engine-rail-group--gate">
+          <div className="engine-rail-group-title">Allocation Gate</div>
+          <div className="engine-rail-metrics">
+            <div><span>Next Primary</span><strong>{entryAllocationGateLabel(allocation.nextPrimaryAllowed, allocation.primaryBlockReason)}</strong></div>
+            <div><span>Next Secondary</span><strong>{entryAllocationGateLabel(allocation.nextSecondaryAllowed, allocation.secondaryBlockReason)}</strong></div>
+            <div><span>Blocked Reason</span><strong>{blockedReason ? reasonLabel(blockedReason) : "None published"}</strong></div>
+            <div><span>Capital Basis</span><strong>{moneyAud(allocation.capitalBaseAud)}</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+});
+
 const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
   allocation: EntryAllocation | null | undefined;
 }) {
@@ -8636,7 +9027,7 @@ const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
     Number.isFinite(allocation.primaryPoolRemainingAud)
       ? Math.max(0, allocation.primaryPoolAud - allocation.primaryPoolRemainingAud)
       : allocation?.primaryCommittedAud;
-  const secondaryPoolUsedAud =
+  const secondaryCommittedAud =
     railPool &&
     allocation?.secondaryPoolAud != null &&
     allocation?.secondaryPoolRemainingAud != null &&
@@ -8646,6 +9037,7 @@ const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
       : allocation?.secondaryCommittedAud;
   const secondaryRailUsed = allocation?.secondaryCommittedCount ?? 0;
   const secondaryRailTotal = allocation?.secondaryRailSlotsTotal ?? null;
+  const totalSecondaryRailCapacity = multipliedCount(allocation?.primarySlotsMax, allocation?.secondaryMaxPerPrimary);
 
   return (
     <div className="capital-allocation-surface">
@@ -8661,10 +9053,12 @@ const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
             <div><div className="slot-k">Primary Pool</div><div className="slot-v">{moneyAud(primaryPoolUsedAud)} / {moneyAud(allocation?.primaryPoolAud)} used</div></div>
             <div><div className="slot-k">Primary Spendable</div><div className="slot-v">{moneyAud(allocation?.primarySpendableAud)}</div></div>
             <div><div className="slot-k">Primary Slots</div><div className="slot-v">{allocation?.primarySlotsCommitted ?? allocation?.primaryCommittedCount ?? 0} / {allocation?.primarySlotsMax ?? "-"}</div></div>
-            <div><div className="slot-k">Secondary Pool</div><div className="slot-v">{moneyAud(secondaryPoolUsedAud)} / {moneyAud(allocation?.secondaryPoolAud)} used</div></div>
+            <div><div className="slot-k">Rail Structure</div><div className="slot-v">{countLabel(allocation?.primarySlotsMax, "Not published")} x {countLabel(allocation?.secondaryMaxPerPrimary, "Not published")}</div></div>
+            <div><div className="slot-k">Total Secondary Capacity</div><div className="slot-v">{countLabel(totalSecondaryRailCapacity, "Not published")}</div></div>
+            <div><div className="slot-k">Secondary Committed</div><div className="slot-v">{moneyAud(secondaryCommittedAud)}</div></div>
             <div><div className="slot-k">Secondary Spendable</div><div className="slot-v">{moneyAud(allocation?.secondarySpendableAud)}</div></div>
             <div><div className="slot-k">Protected Reserve</div><div className="slot-v">{moneyAud(allocation?.secondaryReservedAud)}</div></div>
-            <div><div className="slot-k">Secondary Rail Slots</div><div className="slot-v">{secondaryRailUsed} / {secondaryRailTotal ?? "-"} used</div></div>
+            <div><div className="slot-k">Unlocked Secondary Rails</div><div className="slot-v">{countLabel(secondaryRailUsed)} / {countLabel(secondaryRailTotal)} used</div></div>
             <div><div className="slot-k">Secondary Max / Primary</div><div className="slot-v">{allocation?.secondaryMaxPerPrimary ?? "-"}</div></div>
             <div><div className="slot-k">First Secondary Pending</div><div className="slot-v">{allocation?.firstSecondaryDeficitCount ?? 0}</div></div>
             <div><div className="slot-k">Secondary Slots Available</div><div className="slot-v">{allocation?.secondarySlotsAvailable ?? "-"}</div></div>
@@ -8830,6 +9224,228 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
     </div>
   );
 });
+
+const BooksPanel = React.memo(function BooksPanel(props: {
+  books: ReturnType<typeof useBooksData>;
+  capital: PublicCapitalResponse | null;
+}) {
+  const { books, capital } = props;
+  const [historyText, setHistoryText] = useState("");
+  const [entryType, setEntryType] = useState("OWNER_CAPITAL_IN");
+  const [entryAmount, setEntryAmount] = useState("");
+  const [entryNote, setEntryNote] = useState("");
+  const [entrySaving, setEntrySaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const summary = books.summary;
+  const importYears = summary?.importYears?.length ? summary.importYears : ["2023-24", "2024-25", "2025-26"];
+  const reserveAud = summary?.reserve?.estimatedTaxReserveAud ?? null;
+  const floatAud = summary?.tradingFloatTargetAud ?? 0;
+  const audAvailable = capital?.audAvailable ?? null;
+  const availableDrawing =
+    audAvailable == null || reserveAud == null
+      ? null
+      : Math.max(0, Number(audAvailable) - Number(floatAud || 0) - Number(reserveAud || 0));
+
+  const submitEntry = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setEntrySaving(true);
+    try {
+      await books.addEntry({
+        type: entryType,
+        amountAud: entryType === "BOOKS_NOTE" ? "0" : entryAmount,
+        note: entryNote,
+      });
+      setEntryAmount("");
+      setEntryNote("");
+    } catch (_) {
+      await books.refresh();
+    } finally {
+      setEntrySaving(false);
+    }
+  };
+
+  const runExport = async () => {
+    setExporting(true);
+    try {
+      await books.downloadExport();
+    } catch (_) {
+      await books.refresh();
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <div className="books-panel card machine-surface panel-frame" aria-label="Books">
+      <div className="engine-telemetry-head">
+        <div>
+          <div className="engine-telemetry-title">Books</div>
+          <div className="engine-telemetry-note">
+            Private tax-prep records for CoinSpot history, owner capital, drawings, and accountant export.
+          </div>
+        </div>
+        <div className="books-actions">
+          <label className="books-fy">
+            <span>FY</span>
+            <select value={books.fy} onChange={(event) => books.setFy(event.target.value)}>
+              {importYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+              {!importYears.includes(books.fy) ? <option value={books.fy}>{books.fy}</option> : null}
+            </select>
+          </label>
+          <button type="button" className="button ghost" onClick={() => void books.refresh()} disabled={books.loading}>
+            Refresh
+          </button>
+          <button type="button" className="button ghost" onClick={() => void runExport()} disabled={exporting}>
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      {books.err ? (
+        <div className="engine-log" role="status">
+          <div className="engine-log-title">Books unavailable</div>
+          <pre>{books.err}</pre>
+        </div>
+      ) : null}
+
+      <div className="books-grid">
+        <div className="books-card">
+          <div className="slot-k">Imported Trades</div>
+          <div className="books-value">{summary?.importStatus?.importedTradeCount ?? "-"}</div>
+          <div className="books-sub">
+            FY rows {summary?.importStatus?.filteredTradeCount ?? "-"} | Manual {summary?.importStatus?.fyManualEntryCount ?? "-"}
+          </div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Buy / Sell Totals</div>
+          <div className="books-value">{moneyAud(summary?.tradeTotals?.sellTotalAud)}</div>
+          <div className="books-sub">
+            Buys {moneyAud(summary?.tradeTotals?.buyTotalAud)} | Sells {moneyAud(summary?.tradeTotals?.sellTotalAud)}
+          </div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Realised Estimate</div>
+          <div className="books-value">{moneyAud(summary?.tradeTotals?.realizedEstimateAud)}</div>
+          <div className="books-sub">FIFO tax-prep estimate only</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Fees / GST</div>
+          <div className="books-value">{moneyAud(summary?.tradeTotals?.feeAud)}</div>
+          <div className="books-sub">GST {moneyAud(summary?.tradeTotals?.gstAud)}</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Owner Capital</div>
+          <div className="books-value">{moneyAud(summary?.ownerTotals?.ownerCapitalInAud)}</div>
+          <div className="books-sub">Drawings {moneyAud(summary?.ownerTotals?.ownerDrawingAud)}</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Tax Reserve</div>
+          <div className="books-value">{moneyAud(reserveAud)}</div>
+          <div className="books-sub">Planning rate {summary?.taxReservePct ?? "-"}%</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Retained Float</div>
+          <div className="books-value">{moneyAud(floatAud)}</div>
+          <div className="books-sub">Configured bookkeeping target</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Available Drawing Estimate</div>
+          <div className="books-value">{availableDrawing == null ? "-" : moneyAud(availableDrawing)}</div>
+          <div className="books-sub">Uses current AUD minus reserve and float</div>
+        </div>
+      </div>
+
+      <div className="books-grid books-grid--two">
+        <section className="books-card books-card--form">
+          <div className="engine-telemetry-title">Import CoinSpot History</div>
+          <div className="engine-telemetry-note">
+            Paste the copied CoinSpot trade-history table. Duplicates are ignored by row hash.
+          </div>
+          <textarea
+            className="books-textarea"
+            value={historyText}
+            onChange={(event) => setHistoryText(event.target.value)}
+            placeholder="Paste CoinSpot trade history text here..."
+          />
+          <button
+            type="button"
+            className="button gold"
+            disabled={books.importing || !historyText.trim()}
+            onClick={() => void books.importHistory(historyText)}
+          >
+            {books.importing ? "Importing..." : "Import History"}
+          </button>
+          {books.importResult ? (
+            <div className="books-sub">
+              Inserted {books.importResult.inserted ?? 0} | Duplicates {books.importResult.duplicate ?? 0} | Stored{" "}
+              {books.importResult.totalStored ?? "-"}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="books-card books-card--form">
+          <div className="engine-telemetry-title">Owner Ledger Entry</div>
+          <div className="engine-telemetry-note">
+            Record capital introduced, drawings, tax reserve adjustments, tax payments, or notes.
+          </div>
+          <form className="books-entry-form" onSubmit={submitEntry}>
+            <select value={entryType} onChange={(event) => setEntryType(event.target.value)}>
+              <option value="OWNER_CAPITAL_IN">Owner Capital In</option>
+              <option value="OWNER_DRAWING">Owner Drawing</option>
+              <option value="TAX_RESERVE_ADJUSTMENT">Tax Reserve Adjustment</option>
+              <option value="TAX_PAYMENT">Tax Payment</option>
+              <option value="BOOKS_NOTE">Books Note</option>
+            </select>
+            {entryType !== "BOOKS_NOTE" ? (
+              <input
+                value={entryAmount}
+                onChange={(event) => setEntryAmount(event.target.value)}
+                placeholder="Amount AUD"
+                inputMode="decimal"
+              />
+            ) : null}
+            <textarea
+              className="books-note"
+              value={entryNote}
+              onChange={(event) => setEntryNote(event.target.value)}
+              placeholder="Note"
+            />
+            <button type="submit" className="button ghost" disabled={entrySaving || (entryType !== "BOOKS_NOTE" && !entryAmount.trim())}>
+              {entrySaving ? "Saving..." : "Add Entry"}
+            </button>
+          </form>
+        </section>
+      </div>
+
+      <div className="books-warning-panel">
+        <div className="engine-telemetry-title">Reconciliation Warnings</div>
+        <div className="engine-telemetry-note">
+          {summary?.method?.disclaimer || "Bookkeeping estimate only. Review before lodgement."}
+        </div>
+        {summary?.warnings?.length ? (
+          <div className="books-warning-list">
+            {summary.warnings.slice(0, 8).map((warning, index) => (
+              <div key={`${warning.code}-${warning.asset}-${index}`} className="books-warning-row">
+                <strong>{warning.code || "WARNING"}</strong>
+                <span>
+                  {warning.asset ? `${warning.asset}: ` : ""}
+                  {warning.note || "Review this transaction."}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="ledger-empty">No reconciliation warnings for the selected financial year.</div>
+        )}
+      </div>
+    </div>
+  );
+});
 /* =========================
    Main Component
 ========================= */
@@ -8850,7 +9466,8 @@ export default function Engine() {
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [carouselPaused, setCarouselPaused] = useState(false);
+  const [carouselPaused, setCarouselPaused] = useState(true);
+  const books = useBooksData();
   const fixedAllowlist = useMemo(() => meta?.fixedSlots?.allowlist ?? [], [meta?.fixedSlots?.allowlist]);
   const engineCoinSet = useMemo(
     () => new Set(fixedAllowlist.map((c) => String(c).toUpperCase())),
@@ -9067,7 +9684,17 @@ export default function Engine() {
 
           <div className="engine-foreground">
             <div className="engine-zone" data-zone="engine">
-                            <EngineHero
+              <EngineHealthStrip
+                snap={snap}
+                meta={meta}
+                capital={capital}
+                executionMode={executionMode}
+                snapshotAgeMs={snapshotAgeMs}
+                snapshotFresh={snapshotFresh}
+                err={err}
+              />
+
+              <EngineHero
                 snap={snap}
                 meta={meta}
                 architecture={architecture}
@@ -9101,20 +9728,26 @@ export default function Engine() {
                 activeSubslots={overviewCounts.activeSubslots}
               />
 
+              <CapitalRailsPanel capital={capital} />
+
               <ControlsBar
                 view={view}
                 setView={setView}
                 feed={feed}
                 setFeed={setFeed}
+                sortKey={sortKey}
+                sortDir={sortDir}
                 setSortKey={setSortKey}
                 setSortDir={setSortDir}
                 query={query}
                 setQuery={setQuery}
                 refresh={refresh}
+                lastRefreshLabel={compactAgeLabel(snapshotAgeMs)}
               />
 
               {err ? (
                 <div className="engine-log" role="status" aria-label="Errors">
+                  <div className="engine-log-title">Backend unavailable</div>
                   <pre>{err}</pre>
                 </div>
               ) : null}
@@ -9138,10 +9771,10 @@ export default function Engine() {
 
                 <button
                   type="button"
-                  className={`engine-section-tab ${section === "behavior" ? "active" : ""}`}
-                  onClick={() => setSection("behavior")}
+                  className={`engine-section-tab ${section === "rails" ? "active" : ""}`}
+                  onClick={() => setSection("rails")}
                 >
-                  Behavior
+                  Rails
                 </button>
 
                 <button
@@ -9150,14 +9783,6 @@ export default function Engine() {
                   onClick={() => setSection("slots")}
                 >
                   Positions
-                </button>
-
-                <button
-                  type="button"
-                  className={`engine-section-tab ${section === "capital" ? "active" : ""}`}
-                  onClick={() => setSection("capital")}
-                >
-                  Capital
                 </button>
 
                 <button
@@ -9178,10 +9803,26 @@ export default function Engine() {
 
                 <button
                   type="button"
-                  className={`engine-section-tab ${section === "about" ? "active" : ""}`}
-                  onClick={() => setSection("about")}
+                  className={`engine-section-tab ${section === "books" ? "active" : ""}`}
+                  onClick={() => setSection("books")}
                 >
-                  Advanced
+                  Books
+                </button>
+
+                <button
+                  type="button"
+                  className={`engine-section-tab ${section === "diagnostics" ? "active" : ""}`}
+                  onClick={() => setSection("diagnostics")}
+                >
+                  Diagnostics
+                </button>
+
+                <button
+                  type="button"
+                  className={`engine-section-tab ${section === "spotlight" ? "active" : ""}`}
+                  onClick={() => setSection("spotlight")}
+                >
+                  Spotlight
                 </button>
               </div>
 
@@ -9196,16 +9837,6 @@ export default function Engine() {
                 />
               ) : null}
 
-              {section === "behavior" ? (
-                <TradingBehaviorPanel
-                  meta={meta}
-                  readiness={readiness}
-                  managerStatus={managerStatus}
-                  fixedAllowlist={fixedAllowlist}
-                  executionMode={executionMode}
-                />
-              ) : null}
-
               {section === "slots" ? (
                 <LedgerTable
                   slots={filteredSlots}
@@ -9216,7 +9847,7 @@ export default function Engine() {
                 />
               ) : null}
 
-              {section === "capital" ? (
+              {section === "rails" ? (
                 <div className="engine-section-grid engine-section-grid--capital" aria-label="Capital and system">
                   <SummaryPanel
                     meta={meta}
@@ -9245,29 +9876,40 @@ export default function Engine() {
                 <EventsPanel events={events} eventsOpen={eventsOpen} setEventsOpen={setEventsOpen} />
               ) : null}
 
-              {section === "about" ? (
-                <AboutPanel aboutOpen={aboutOpen} setAboutOpen={setAboutOpen} />
+              {section === "books" ? <BooksPanel books={books} capital={capital} /> : null}
+
+              {section === "diagnostics" ? (
+                view === "advanced" ? (
+                  <div className="engine-diagnostics-stack">
+                    <TradingBehaviorPanel
+                      meta={meta}
+                      readiness={readiness}
+                      managerStatus={managerStatus}
+                      fixedAllowlist={fixedAllowlist}
+                      executionMode={executionMode}
+                    />
+                    <AboutPanel aboutOpen={aboutOpen} setAboutOpen={setAboutOpen} />
+                  </div>
+                ) : (
+                  <div className="dashboard-empty">
+                    Diagnostics are hidden in Simple view. Switch to Advanced view when you need the deeper engine proof.
+                  </div>
+                )
               ) : null}
-            </div>
 
-            <div className="engine-divider" aria-hidden="true">
-              <div className="engine-divider-line" />
-              <div className="engine-divider-label">Position Spotlight</div>
-              <div className="engine-divider-line" />
-            </div>
-
-            <div className="engine-zone" data-zone="status">
-              <CarouselPanel
-                slots={prioritizedSlots}
-                holding={meta?.manager?.holding}
-                subslotConfig={meta?.manager?.subslot}
-                currentIndex={carouselIndex}
-                setCurrentIndex={setCarouselIndex}
-                onOpenSlot={setSelectedSlotId}
-                paused={carouselPaused}
-                setPaused={setCarouselPaused}
-                nowMs={nowMs}
-              />
+              {section === "spotlight" ? (
+                <CarouselPanel
+                  slots={prioritizedSlots}
+                  holding={meta?.manager?.holding}
+                  subslotConfig={meta?.manager?.subslot}
+                  currentIndex={carouselIndex}
+                  setCurrentIndex={setCarouselIndex}
+                  onOpenSlot={setSelectedSlotId}
+                  paused={carouselPaused}
+                  setPaused={setCarouselPaused}
+                  nowMs={nowMs}
+                />
+              ) : null}
             </div>
           </div>
         </section>

@@ -12,17 +12,18 @@ export default function Footer() {
       <div className="jal-footer-inner">
         <div className="jal-footer-business">
           <div className="jal-footer-kicker">Jeremy Aaron Lugg</div>
-          <div className="jal-footer-role">Founder / Operator</div>
+          <div className="jal-footer-role-stack" aria-label="Founder identity">
+            <span>Founder - JALSOL</span>
+            <span>Perth, Australia</span>
+          </div>
           <p className="jal-footer-summary">
-            Public business domain for crypto-market aligned products, founder identity, and
-            physical JALSOL releases.
+            Building JALSOL across systems, physical releases, and public infrastructure.
           </p>
           <div className="jal-footer-contact">
             <a href={LEGAL_CONTACT_MAILTO}>{LEGAL_CONTACT_EMAIL}</a>
             <a href={ABN_LOOKUP_URL} target="_blank" rel="noreferrer">
               ABN {LEGAL_ABN}
             </a>
-            <span>Western Australia</span>
           </div>
         </div>
 

@@ -8,8 +8,6 @@ export type ReviewRow = {
   title: string | null;
   body: string | null;
   created_at: string;
-  order_email: string | null;
-  order_id: string | null;
   verified_purchase: boolean;
 };
 
@@ -46,7 +44,7 @@ export async function getReviewsByProductId(productId: string): Promise<ProductR
   const { data: reviews, error: reviewsError } = await supabase
     .from("product_reviews")
     .select(
-      "id, product_id, display_name, rating, title, body, created_at, order_email, order_id, verified_purchase"
+      "id, product_id, display_name, rating, title, body, created_at, verified_purchase"
     )
     .eq("product_id", cleanProductId)
     .order("created_at", { ascending: false });
@@ -108,7 +106,7 @@ export async function createReview(input: CreateReviewInput): Promise<ProductRev
       },
     ])
     .select(
-      "id, product_id, display_name, rating, title, body, created_at, order_email, order_id, verified_purchase"
+      "id, product_id, display_name, rating, title, body, created_at, verified_purchase"
     )
     .single();
 

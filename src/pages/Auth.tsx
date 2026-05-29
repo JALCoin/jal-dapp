@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
-import { isLikelyEmailAddress, resolveMagicLinkEmail } from "../lib/authIdentity";
 import { usePageMeta } from "../hooks/usePageMeta";
+
+function isLikelyEmailAddress(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 function buildRedirectUrl(nextPath: string) {
   const callbackUrl = new URL("/auth/callback", window.location.origin);
@@ -25,7 +28,7 @@ export default function Auth() {
     const params = new URLSearchParams(location.search);
     return params.get("next") || "/app/home";
   }, [location.search]);
-  const isEngineerAccessRequest = nextPath.startsWith("/app/engine");
+  const isEngineerAccessRequest = nextPath.startsWith("/app/engine/dashboard");
 
   const [signUpDisplayName, setSignUpDisplayName] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
@@ -82,7 +85,7 @@ export default function Auth() {
     const cleanDisplayName = signUpDisplayName.trim();
 
     if (!cleanIdentity) {
-      setModeError(mode, shouldCreateUser ? "Email is required to create an account." : "Email or handle is required.");
+      setModeError(mode, shouldCreateUser ? "Email is required to create an account." : "Email is required.");
       return;
     }
 
@@ -95,12 +98,10 @@ export default function Auth() {
     clearFeedback(mode);
 
     try {
-      const resolvedEmail = shouldCreateUser
-        ? cleanIdentity.toLowerCase()
-        : await resolveMagicLinkEmail(cleanIdentity);
+      const resolvedEmail = cleanIdentity.toLowerCase();
 
-      if (shouldCreateUser && !isLikelyEmailAddress(resolvedEmail)) {
-        setModeError(mode, "Use a real email when creating an account.");
+      if (!isLikelyEmailAddress(resolvedEmail)) {
+        setModeError(mode, shouldCreateUser ? "Use a real email when creating an account." : "Use the email tied to your account.");
         return;
       }
 
@@ -244,26 +245,26 @@ export default function Auth() {
                   <div className="jal-bay-title">Sign In</div>
                   <p className="jal-auth-card-copy">
                     {isEngineerAccessRequest
-                      ? "Use the email already tied to your engineer profile, or the handle already linked to that account."
-                      : "For returning members. Use the email already tied to your profile, or your chosen handle if it has already been set up."}
+                      ? "Use the email already tied to your engineer profile."
+                      : "For returning members. Use the email already tied to your profile."}
                   </p>
                 </div>
                 <div className="jal-bay-note">{isEngineerAccessRequest ? "Engineer sign-in" : "Returning account"}</div>
               </div>
 
               <label className="jal-field">
-                <span className="jal-field-label">Email Or Handle</span>
+                <span className="jal-field-label">Email</span>
                 <input
                   className="jal-input"
-                  type="text"
+                  type="email"
                   value={signInIdentity}
                   onChange={(event) => setSignInIdentity(event.target.value)}
-                  placeholder="you@domain.com or your chosen handle"
-                  autoComplete="username"
+                  placeholder="you@domain.com"
+                  autoComplete="email"
                 />
                 <span className="jal-auth-input-note">
-                  Sign-in can use either your email or a previously saved handle linked to that
-                  profile.
+                  Sign-in uses email only so the access request never exposes another account email
+                  from a public handle lookup.
                 </span>
               </label>
 

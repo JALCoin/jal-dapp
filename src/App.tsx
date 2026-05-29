@@ -4,6 +4,7 @@ import {
   BrowserRouter,
   Routes,
   Route,
+  Link,
   NavLink,
   Navigate,
   useLocation,
@@ -213,7 +214,7 @@ function AccountAccessPanel({
       <p className="sidebar-account-copy">
         {session
           ? `Signed in as ${identity}.`
-          : "No password needed. Use your email or chosen handle to request a magic sign-in link."}
+          : "No password needed. Use your email to request a magic sign-in link."}
       </p>
 
       {session ? (
@@ -332,7 +333,7 @@ function SidebarView({
             <SidebarSection
               title="Operator"
               onClose={onClose}
-              items={[{ to: "/app/engine", label: "JAL Engine" }]}
+              items={[{ to: "/app/engine/dashboard", label: "Operator Dashboard" }]}
             />
           ) : null}
 
@@ -550,8 +551,8 @@ function ComplianceNoticePage() {
         <section className="card machine-surface panel-frame">
           <h1 className="home-title">Current Public-Site Settings</h1>
           <p className="home-lead">
-            Some interactive features remain unavailable while registrations and legal settings are
-            reviewed.
+            JALSOL is currently a founder site, physical-release storefront, and public business
+            domain. Private systems remain staged while legal settings are reviewed.
           </p>
           <p className="home-lead">
             The public site currently focuses on founder identity, business clarity, legal
@@ -575,6 +576,137 @@ function ComplianceNoticePage() {
             <a className="chip" href="/terms">
               Terms
             </a>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function EngineOverviewPage() {
+  const { isEngineerAccount } = useAuth();
+
+  usePageMeta(
+    "See The Engine",
+    "A public explanation of the JAL Engine as Jeremy Aaron Lugg's private systems layer, with the operator dashboard kept behind engineer access."
+  );
+
+  return (
+    <main className="home-shell" aria-label="See The Engine">
+      <div className="home-wrap">
+        <section className="card machine-surface panel-frame engine-public-hero">
+          <div className="home-kicker">JAL ENGINE | PUBLIC OVERVIEW</div>
+          <h1 className="home-title">See The Engine</h1>
+          <p className="home-lead">
+            JAL Engine is the private systems layer behind Jeremy Aaron Lugg&apos;s build. The public
+            view explains the architecture, direction, and operating boundary without exposing the
+            private operator dashboard.
+          </p>
+          <p className="home-console-sublead">
+            Read this as infrastructure context: a founder-built engine, not a public exchange,
+            brokerage, custody product, copy-trading service, or invitation to mirror trades.
+          </p>
+          <div className="home-links">
+            <Link className="chip" to="/app/home">
+              Follow The Build
+            </Link>
+            <Link className="chip" to="/app/shop">
+              Support Growth
+            </Link>
+            <Link className="chip" to="/app/legal">
+              Legal + Business
+            </Link>
+            <Link className="chip" to="/app/engine/dashboard">
+              {isEngineerAccount ? "Operator Dashboard" : "Operator Sign-In"}
+            </Link>
+          </div>
+        </section>
+
+        <section
+          className="card machine-surface panel-frame engine-static-showcase"
+          aria-label="Static JAL Engine mockup"
+        >
+          <div className="engine-static-copy">
+            <div className="home-kicker">STATIC ENGINE VIEW</div>
+            <h2 className="home-modules-title">A visual signal, not a live feed</h2>
+            <p className="home-modules-lead">
+              This mockup shows the shape of the private operator system without exposing live
+              market data, wallet data, trade status, or backend telemetry.
+            </p>
+          </div>
+
+          <div className="engine-static-shell" aria-hidden="true">
+            <div className="engine-static-topline">
+              <span>$JAL~ENGINE</span>
+              <strong>STATIC MOCKUP</strong>
+            </div>
+
+            <div className="engine-static-board">
+              <div className="engine-static-screen">
+                <div className="engine-static-screen-kicker">OPERATOR SYSTEM</div>
+                <div className="engine-static-screen-title">8-coin rail architecture</div>
+                <div className="engine-static-screen-lines">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+
+              <div className="engine-static-tiles">
+                <span>Primary rail</span>
+                <span>Secondary rail</span>
+                <span>Capital guard</span>
+                <span>Exit logic</span>
+              </div>
+            </div>
+
+            <div className="engine-static-boundary">
+              <span>No live market feed</span>
+              <span>No wallet feed</span>
+              <span>No trade telemetry</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="card machine-surface panel-frame home-roadmap-window">
+          <div className="home-roadmap-head">
+            <div>
+              <div className="home-kicker">ENGINE ROLE</div>
+              <h2 className="home-modules-title">What the engine represents</h2>
+              <p className="home-modules-lead">
+                The engine is shown as proof of systems thinking and build direction. It is kept
+                separate from the public storefront and legal business surface.
+              </p>
+            </div>
+          </div>
+
+          <div className="home-roadmap-grid home-roadmap-grid--three" role="list">
+            <article className="home-roadmap-card" role="listitem">
+              <div className="home-roadmap-level">SYSTEMS</div>
+              <div className="home-roadmap-title">Private operator tooling</div>
+              <p className="home-roadmap-desc">
+                A private dashboard for Jeremy Aaron Lugg&apos;s own fixed-universe monitoring and
+                automation work.
+              </p>
+            </article>
+
+            <article className="home-roadmap-card" role="listitem">
+              <div className="home-roadmap-level">BOUNDARY</div>
+              <div className="home-roadmap-title">Public explanation only</div>
+              <p className="home-roadmap-desc">
+                Visitors can understand the direction without being invited into financial-service
+                style activity.
+              </p>
+            </article>
+
+            <article className="home-roadmap-card" role="listitem">
+              <div className="home-roadmap-level">BUILD</div>
+              <div className="home-roadmap-title">Infrastructure signal</div>
+              <p className="home-roadmap-desc">
+                The engine supports the broader JALSOL identity: practical systems, physical
+                releases, and real-world projects.
+              </p>
+            </article>
           </div>
         </section>
       </div>
@@ -620,12 +752,16 @@ function SitewideNoticeBar() {
 
   return (
     <div ref={noticeRef} role="status" aria-live="polite" className="sitewide-notice-bar">
-      Founder site for Jeremy Aaron Lugg. Some interactive features remain unavailable while legal
-      settings are reviewed. Visit{" "}
+      <span className="sitewide-notice-full">
+        Founder site, physical releases and public business domain. Private systems remain staged
+        while legal settings are reviewed. Visit{" "}
+      </span>
+      <span className="sitewide-notice-short">Founder site. Private systems staged. </span>
       <a href="/app/compliance" className="sitewide-notice-link">
-        current public-site settings
+        <span className="sitewide-notice-full">current public-site settings</span>
+        <span className="sitewide-notice-short">Settings</span>
       </a>{" "}
-      for the latest public status.
+      <span className="sitewide-notice-full">for the latest public status.</span>
     </div>
   );
 }
@@ -785,8 +921,9 @@ function AppShell({
         <Route path="token" element={<Navigate to="/app/compliance" replace />} />
         <Route path="raydium" element={<Navigate to="/app/compliance" replace />} />
 
+        <Route path="engine" element={<EngineOverviewPage />} />
         <Route
-          path="engine"
+          path="engine/dashboard"
           element={
             <RequireAuth>
               <RequireEngineerAccount>
@@ -795,8 +932,8 @@ function AppShell({
             </RequireAuth>
           }
         />
-        <Route path="engine/settings" element={<Navigate to="/app/compliance" replace />} />
-        <Route path="engine/logs" element={<Navigate to="/app/compliance" replace />} />
+        <Route path="engine/settings" element={<Navigate to="/app/engine/dashboard" replace />} />
+        <Route path="engine/logs" element={<Navigate to="/app/engine/dashboard" replace />} />
 
         <Route path="inventory" element={<Navigate to="/app/compliance" replace />} />
         <Route path="inventory/purchase" element={<Navigate to="/app/compliance" replace />} />

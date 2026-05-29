@@ -27,6 +27,59 @@ type NavTo =
   | "/app/legal"
   | "/app/shop";
 
+type NavItem = {
+  id: string;
+  label: string;
+  to: NavTo;
+  contextTitle: string;
+  contextBody: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    id: "about",
+    label: "ABOUT",
+    to: "/app/about",
+    contextTitle: "Understand JAL",
+    contextBody: "Jeremy Aaron Lugg's story, background, and direction.",
+  },
+  {
+    id: "home",
+    label: "HOME",
+    to: "/app/home",
+    contextTitle: "Follow The Build",
+    contextBody: "Current public status, project path, and orientation.",
+  },
+  {
+    id: "engine",
+    label: "$JAL~ENGINE",
+    to: "/app/engine",
+    contextTitle: "See The Engine",
+    contextBody: "Public systems explanation. Operator dashboard remains private.",
+  },
+  {
+    id: "shop",
+    label: "SHOP",
+    to: "/app/shop",
+    contextTitle: "Support Growth",
+    contextBody: "Planned physical releases, interest registration, and enquiries.",
+  },
+  {
+    id: "settings",
+    label: "SITE SETTINGS",
+    to: "/app/compliance",
+    contextTitle: "Current Boundaries",
+    contextBody: "What is public, staged, or under review.",
+  },
+  {
+    id: "legal",
+    label: "LEGAL+BUSINESS",
+    to: "/app/legal",
+    contextTitle: "Trust Layer",
+    contextBody: "ABN, terms, privacy, disclaimer, and public business details.",
+  },
+];
+
 function NavOverlay({
   onSelect,
   onClose,
@@ -36,6 +89,24 @@ function NavOverlay({
   onClose: () => void;
   disabled: boolean;
 }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const handleSelect = (item: NavItem) => {
+    if (disabled) return;
+
+    const tapToExpand =
+      typeof window !== "undefined" &&
+      (window.matchMedia("(max-width: 640px)").matches ||
+        window.matchMedia("(hover: none), (pointer: coarse)").matches);
+
+    if (tapToExpand && expandedId !== item.id) {
+      setExpandedId(item.id);
+      return;
+    }
+
+    onSelect(item.to);
+  };
+
   return (
     <>
       <button
@@ -63,59 +134,36 @@ function NavOverlay({
         </div>
 
         <div className="nav-overlay-body">
-          <button
-            type="button"
-            className="nav-pill"
-            onClick={() => onSelect("/app/about")}
-            disabled={disabled}
-          >
-            ABOUT
-          </button>
+          <div className="nav-intro" aria-label="JALSOL orientation">
+            <div className="nav-intro-title">WELCOME TO JALSOL</div>
+            <p className="nav-intro-copy">
+              Follow Jeremy Aaron Lugg&apos;s journey from tradesman -&gt; systems builder -&gt; JAL
+              Engine -&gt; releases -&gt; real-world projects.
+            </p>
+          </div>
 
-          <button
-            type="button"
-            className="nav-pill"
-            onClick={() => onSelect("/app/home")}
-            disabled={disabled}
-          >
-            HOME
-          </button>
+          {NAV_ITEMS.map((item) => {
+            const contextId = `nav-context-${item.id}`;
+            const expanded = expandedId === item.id;
 
-          <button
-            type="button"
-            className="nav-pill"
-            onClick={() => onSelect("/app/engine")}
-            disabled={disabled}
-          >
-            $JAL~ENGINE
-          </button>
-
-          <button
-            type="button"
-            className="nav-pill"
-            onClick={() => onSelect("/app/shop")}
-            disabled={disabled}
-          >
-            SHOP
-          </button>
-
-          <button
-            type="button"
-            className="nav-pill"
-            onClick={() => onSelect("/app/compliance")}
-            disabled={disabled}
-          >
-            SITE SETTINGS
-          </button>
-
-          <button
-            type="button"
-            className="nav-pill"
-            onClick={() => onSelect("/app/legal")}
-            disabled={disabled}
-          >
-            LEGAL+BUSINESS
-          </button>
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`nav-pill ${expanded ? "is-expanded" : ""}`}
+                data-nav-id={item.id}
+                onClick={() => handleSelect(item)}
+                disabled={disabled}
+                aria-describedby={contextId}
+                aria-expanded={expanded}
+              >
+                <span className="nav-pill-label">{item.label}</span>
+                <span id={contextId} className="nav-pill-context">
+                  <strong>{item.contextTitle}</strong> - {item.contextBody}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
     </>
@@ -219,6 +267,11 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
               <img className="center-logo" src={brandLogoSrc} alt="Jeremy Aaron Lugg" />
               <div className="center-logo-hint">ENTER SITE</div>
             </button>
+
+            <div className="landing-orientation" aria-label="Site orientation">
+              <p>Founder-led systems, releases and infrastructure in development.</p>
+              <p>Follow the build -&gt; Understand JAL -&gt; Join the process</p>
+            </div>
 
             <address className="landing-public-id" aria-label="Public business details">
               <span>{LEGAL_OPERATOR_NAME}</span>

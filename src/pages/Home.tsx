@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import DonateButton from "../components/DonateButton";
 import { usePageMeta } from "../hooks/usePageMeta";
 
 function fmtTime(d: Date) {
@@ -11,43 +12,37 @@ function fmtTime(d: Date) {
 
 type HomePillar = {
   id: string;
-  title: string;
-  subtitle: string;
-  desc: string;
-  note: string;
-  tone?: "green" | "gold" | "cyan";
-  route: string;
-};
-
-type BoundaryItem = {
-  title: string;
-  desc: string;
-};
-
-type LegalGroup = {
-  title: string;
-  desc: string;
-  points: string[];
-};
-
-type RouteBand = {
-  id: string;
   kicker: string;
   title: string;
   desc: string;
-  tone?: "green" | "gold" | "cyan";
-  previewTitle: string;
-  previewDesc: string;
-  previewImage?: string;
-  tags: string[];
   note: string;
+  tone?: "green" | "gold" | "cyan";
   route: string;
+};
+
+type BuildStatusItem = {
+  label: string;
+  value: string;
+  desc: string;
+};
+
+type BuildUpdate = {
+  tag: string;
+  title: string;
+  desc: string;
+  route?: string;
+};
+
+type BuildPhase = {
+  stage: string;
+  title: string;
+  items: string[];
 };
 
 export default function Home() {
   usePageMeta(
-    "Jeremy Aaron Lugg",
-    "Founder-led business domain for Jeremy Aaron Lugg, bringing together public business identity, crypto-market aware positioning, and physical JALSOL releases."
+    "Follow The Build",
+    "Follow Jeremy Aaron Lugg's JALSOL build across founder identity, systems direction, legal clarity, and physical releases."
   );
 
   const navigate = useNavigate();
@@ -80,148 +75,124 @@ export default function Home() {
       window.scrollTo({ top: 0, behavior: "auto" });
       navigate(route);
       document.body.style.pointerEvents = "";
-    }, 1200);
+    }, 650);
   }
 
   const networkLabel = "PUBLIC DOMAIN";
+
+  const buildStatus = useMemo<BuildStatusItem[]>(
+    () => [
+      {
+        label: "Identity",
+        value: "JALSOL Live",
+        desc: "Founder domain, public story, ABN visibility, and contact pathways are active.",
+      },
+      {
+        label: "Releases",
+        value: "Interest Open",
+        desc: "Physical product concepts are staged for interest before fixed-price checkout.",
+      },
+      {
+        label: "Engine",
+        value: "Static Overview",
+        desc: "The public route explains the system. Home only shows static mockup signals, not live feeds.",
+      },
+      {
+        label: "Boundary",
+        value: "Transparent",
+        desc: "Legal pages separate current public activity from future private systems.",
+      },
+    ],
+    []
+  );
 
   const homePillars = useMemo<HomePillar[]>(
     () => [
       {
         id: "founder",
+        kicker: "UNDERSTAND JAL",
         title: "Founder",
-        subtitle: "Jeremy Aaron Lugg and the JALSOL direction",
-        desc: "Start with the person, background, and mindset shaping the business before you move into products, legal pages, or market-facing material.",
-        note: "Identity and story",
+        desc: "Start with Jeremy Aaron Lugg, the path behind the work, and the direction shaping JALSOL.",
+        note: "About Jeremy",
         tone: "gold",
         route: "/app/about",
       },
       {
-        id: "legal",
-        title: "Business",
-        subtitle: "Legal, business, and public-site details",
-        desc: "Review the public documents, business identity, and current site settings that make the domain feel accountable and professionally grounded.",
-        note: "Verify the public details",
+        id: "engine",
+        kicker: "SEE THE ENGINE",
+        title: "$JAL~ENGINE",
+        desc: "Read the public systems explanation without exposing private operator data or live market feeds.",
+        note: "Static overview",
         tone: "green",
-        route: "/app/legal",
+        route: "/app/engine",
       },
       {
         id: "shop",
+        kicker: "SUPPORT GROWTH",
         title: "Store",
-        subtitle: "Physical releases and branded objects",
-        desc: "Browse a cleaner commercial layer focused on physical JALSOL releases presented as a founder-brand storefront rather than a crowded product catalogue.",
+        desc: "Browse planned physical releases, register interest, and follow the founder-brand product direction.",
         note: "Physical releases",
         tone: "cyan",
         route: "/app/shop",
       },
-    ],
-    []
-  );
-
-  const boundaryItems = useMemo<BoundaryItem[]>(
-    () => [
-      {
-        title: "Founder-led and attributable",
-        desc: "The site is built around a named operator, visible business details, and a public-facing identity rather than an anonymous project shell.",
-      },
-      {
-        title: "Crypto-aware without reading like hype",
-        desc: "Cryptocurrency remains part of the market context and direction of the brand, but it does not overwhelm the business identity or replace substance.",
-      },
-      {
-        title: "Public offer stays understandable",
-        desc: "Visitors can quickly see what the site is for now: founder identity, legal visibility, public contact points, and physical releases.",
-      },
-      {
-        title: "Trust signals remain visible",
-        desc: "ABN details, legal pages, and official business contact points stay easy to verify so the site feels more like a real business domain than a landing page experiment.",
-      },
-    ],
-    []
-  );
-
-  const legalGroups = useMemo<LegalGroup[]>(
-    () => [
-      {
-        title: "What this site represents",
-        desc: "The public version is designed to represent Jeremy Aaron Lugg as a real operator with a real business domain.",
-        points: [
-          "A founder-led public business domain",
-          "A named operator with visible ABN and contact details",
-          "A brand environment where physical releases and market-aware positioning can live together",
-        ],
-      },
-      {
-        title: "How crypto fits",
-        desc: "Crypto belongs here as market context and technical direction, not as empty theatre.",
-        points: [
-          "It informs the tone, audience, and long-term direction of the site",
-          "It supports the identity of the brand without needing to dominate every message",
-          "It stays secondary to clarity, trust, and a coherent public offer",
-        ],
-      },
-      {
-        title: "Why the public site feels safer and clearer",
-        desc: "The site works better when visitors can understand the operator, the offer, and the current boundaries without friction.",
-        points: [
-          "The operator is named clearly",
-          "The legal pages are public and readable",
-          "The public commercial layer is limited to physical merch and supportable business activity",
-        ],
-      },
-      {
-        title: "What remains under review",
-        desc: "Some interactive features are still held back while legal settings are reviewed, and that boundary remains visible through the sitewide notice and legal pages.",
-        points: [
-          "Interactive routes that go beyond the current public business surface",
-          "Any future financial-services style functionality or regulated market claims",
-          "Any expansion that changes the present legal or commercial reading of the site",
-        ],
-      },
-    ],
-    []
-  );
-
-  const routeBands = useMemo<RouteBand[]>(
-    () => [
-      {
-        id: "founder",
-        kicker: "FOUNDER PROFILE",
-        title: "About Jeremy",
-        desc: "The personal and professional background behind JALSOL, including the practical work, systems thinking, and market interest shaping the direction of the site.",
-        tone: "gold",
-        previewTitle: "Founder-led identity",
-        previewDesc: "A clearer story about the operator, the path behind the work, and why the site exists.",
-        previewImage: "/JALSOL1.gif",
-        tags: ["Founder", "Identity", "Background", "Direction"],
-        note: "Start here if you want the human context",
-        route: "/app/about",
-      },
       {
         id: "legal",
-        kicker: "BUSINESS CLARITY",
-        title: "Legal Hub",
-        desc: "Use the document hub to verify the operator, read the public legal pages, and understand how the business-facing side of the site is currently presented.",
-        tone: "green",
-        previewTitle: "Public business details",
-        previewDesc: "Legal pages, ABN visibility, contact points, and the current public-site settings in one place.",
-        previewImage: "/JALSOL1.gif",
-        tags: ["ABN", "Legal", "Privacy", "Terms"],
-        note: "Use this to verify the business-facing details",
+        kicker: "TRUST LAYER",
+        title: "Business",
+        desc: "Verify the ABN, public legal documents, privacy terms, and current public-site boundaries.",
+        note: "Legal + Business",
+        tone: "gold",
         route: "/app/legal",
       },
+    ],
+    []
+  );
+
+  const buildUpdates = useMemo<BuildUpdate[]>(
+    () => [
       {
-        id: "shop",
-        kicker: "PHYSICAL STORE",
-        title: "Shop",
-        desc: "The storefront works as a clean founder-brand merch surface for apparel, collectibles, and physical branded items sold through Jeremy Aaron Lugg's public site.",
-        tone: "cyan",
-        previewTitle: "Physical releases",
-        previewDesc: "A simpler commerce layer built around physical products, clearer presentation, and a more premium brand signal.",
-        previewImage: "/JALSOL1.gif",
-        tags: ["Physical merch", "Collectibles", "Apparel", "Brand objects"],
-        note: "Best public label: founder-brand storefront",
+        tag: "DOMAIN",
+        title: "Visitor orientation upgraded",
+        desc: "Landing, nav, support, and legal sequencing now guide people through the JALSOL story before deeper routes.",
+        route: "/app/nav",
+      },
+      {
+        tag: "ENGINE",
+        title: "Engine split clarified",
+        desc: "The public Engine page is an overview, while the private operator dashboard remains gated behind engineer access.",
+        route: "/app/engine",
+      },
+      {
+        tag: "SHOP",
+        title: "Shop simplified",
+        desc: "Physical releases now read as planned concepts and private enquiries instead of a checkout-heavy catalogue.",
         route: "/app/shop",
+      },
+      {
+        tag: "BACKEND",
+        title: "Allocator work continues",
+        desc: "The engine service has been tuned around primary and secondary rail capital priorities outside the public site.",
+      },
+    ],
+    []
+  );
+
+  const buildPhases = useMemo<BuildPhase[]>(
+    () => [
+      {
+        stage: "NOW",
+        title: "Public foundation",
+        items: ["Founder identity", "Legal trust layer", "Interest-first shop", "Static Engine overview"],
+      },
+      {
+        stage: "NEXT",
+        title: "Proof and polish",
+        items: ["Product mockups", "Clearer update rhythm", "Analytics checkpoints", "Supplier-ready release paths"],
+      },
+      {
+        stage: "LATER",
+        title: "Release layer",
+        items: ["Confirmed products", "Stripe checkout only when ready", "Better imagery", "Deeper infrastructure story"],
       },
     ],
     []
@@ -247,7 +218,7 @@ export default function Home() {
           </div>
 
           <div className="terminal-right">
-            <span className="terminal-auth is-ro">COMMAND HOME</span>
+            <span className="terminal-auth is-ro">FOLLOW THE BUILD</span>
           </div>
         </section>
 
@@ -264,19 +235,13 @@ export default function Home() {
               <div className="home-kicker">JEREMY AARON LUGG | FOUNDER SITE</div>
 
               <h1 className="home-title">
-                A founder-led business domain built around crypto markets, product thinking, and
-                physical releases.
+                Follow Jeremy Aaron Lugg's JALSOL build across founder identity, systems, and physical releases.
               </h1>
 
               <p className="home-lead">
-                <strong>Built and operated by Jeremy Aaron Lugg under ABN 35 780 648 234.</strong>{" "}
-                JALSOL brings together founder identity, business clarity, market-aware branding,
-                and a growing catalogue of physical releases.
-              </p>
-
-              <p className="home-console-sublead">
-                This site is designed to feel personal and accountable: one operator, one public
-                identity, one place to understand the business, the story, and the current offer.
+                <strong>Built and operated under ABN 35 780 648 234.</strong> This is the public
+                orientation point for the JALSOL story, the private systems layer, and planned
+                physical releases.
               </p>
 
               <div className="jal-links">
@@ -292,10 +257,10 @@ export default function Home() {
                 <button
                   type="button"
                   className="button ghost"
-                  onClick={() => beginRoute("/app/legal", "legal")}
+                  onClick={() => beginRoute("/app/engine", "engine")}
                   disabled={loading}
                 >
-                  Legal + Business
+                  See Engine
                 </button>
 
                 <button
@@ -304,28 +269,43 @@ export default function Home() {
                   onClick={() => beginRoute("/app/shop", "shop")}
                   disabled={loading}
                 >
-                  Browse Merch
+                  Register Interest
                 </button>
+
+                <DonateButton className="home-donate-action" />
               </div>
             </div>
 
             <aside className="home-console-side" aria-label="Project definition">
               <div className="home-console-side-card home-identity-card">
-                <div className="home-console-side-kicker">CURRENT STRUCTURE</div>
-                <div className="home-console-side-title">What lives inside the public site</div>
+                <div className="home-console-side-kicker">JOIN THE PROCESS</div>
+                <div className="home-console-side-title">Choose a direction</div>
                 <ul className="home-identity-points">
-                  <li>Founder identity and business details</li>
-                  <li>Public legal and business documents</li>
-                  <li>Physical JALSOL releases</li>
+                  <li>Understand the founder path</li>
+                  <li>See the static Engine overview</li>
+                  <li>Register interest in physical releases</li>
+                  <li>Donate as voluntary support</li>
                 </ul>
               </div>
 
-              <div className="home-console-side-card home-vision-card">
-                <div className="home-console-side-kicker">SITE SIGNAL</div>
-                <div className="home-console-side-title">How the brand should read</div>
+              <div className="home-console-side-card home-static-engine-card">
+                <div className="home-console-side-kicker">STATIC ENGINE MOCKUP</div>
+                <div className="home-console-side-title">$JAL~ENGINE signal</div>
+                <div className="home-static-engine-mockup" aria-hidden="true">
+                  <div className="home-static-engine-bar">
+                    <span>PRIVATE SYSTEM</span>
+                    <strong>GATED</strong>
+                  </div>
+                  <div className="home-static-engine-grid">
+                    <span>8-coin map</span>
+                    <span>rail logic</span>
+                    <span>capital paths</span>
+                    <span>operator only</span>
+                  </div>
+                </div>
                 <p className="home-identity-desc">
-                  Founder-led, market-aware, and professionally grounded. Personal enough to carry
-                  your identity, but structured enough to read like a real business domain.
+                  Static visual only. No live market feed, wallet feed, or private dashboard data is
+                  shown on the public Home page.
                 </p>
               </div>
             </aside>
@@ -333,33 +313,124 @@ export default function Home() {
         </section>
 
         <section
-          className="card machine-surface panel-frame home-roadmap-window"
-          aria-label="Current public pillars"
+          className="card machine-surface panel-frame home-roadmap-window home-build-status-window"
+          aria-label="Current build status"
         >
           <div className="home-roadmap-head">
             <div>
-              <div className="home-kicker">CURRENT PUBLIC PILLARS</div>
-              <h2 className="home-modules-title">Three clearer ways to understand the site</h2>
+              <div className="home-kicker">CURRENT BUILD STATUS</div>
+              <h2 className="home-modules-title">Where the public build stands now</h2>
               <p className="home-modules-lead">
-                The homepage should lead with identity, business clarity, and a coherent
-                commercial layer so the site feels complete before a visitor ever reaches the legal
-                pages.
+                A quick orientation layer before the deeper pages: what is public, what is staged,
+                and where visitors can join the process without confusion.
               </p>
             </div>
           </div>
 
-          <div className="home-roadmap-grid home-roadmap-grid--three" role="list" aria-label="Public pillars">
+          <div className="home-roadmap-grid" role="list" aria-label="Build status list">
+            {buildStatus.map((item) => (
+              <article key={item.label} className="home-roadmap-card" role="listitem">
+                <div className="home-roadmap-level">{item.label}</div>
+                <div className="home-roadmap-title">{item.value}</div>
+                <p className="home-roadmap-desc">{item.desc}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section
+          className="card machine-surface panel-frame home-roadmap-window"
+          aria-label="Latest build updates"
+        >
+          <div className="home-roadmap-head">
+            <div>
+              <div className="home-kicker">LATEST BUILD UPDATES</div>
+              <h2 className="home-modules-title">Recent progress visitors can understand quickly</h2>
+              <p className="home-modules-lead">
+                This section gives the site a sense of movement without exposing private operator
+                systems or live Engine data.
+              </p>
+            </div>
+          </div>
+
+          <div className="home-roadmap-grid" role="list" aria-label="Latest build update list">
+            {buildUpdates.map((update) => (
+              <button
+                key={update.title}
+                type="button"
+                className="home-roadmap-card"
+                onClick={() => update.route && beginRoute(update.route, update.tag.toLowerCase())}
+                disabled={!update.route || loading}
+                role="listitem"
+                aria-label={update.route ? `Open ${update.title}` : update.title}
+              >
+                <div className="home-roadmap-level">{update.tag}</div>
+                <div className="home-roadmap-title">{update.title}</div>
+                <p className="home-roadmap-desc">{update.desc}</p>
+                {update.route ? <div className="home-roadmap-open">Open</div> : null}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section
+          className="card machine-surface panel-frame home-roadmap-window"
+          aria-label="Now next later"
+        >
+          <div className="home-roadmap-head">
+            <div>
+              <div className="home-kicker">NOW / NEXT / LATER</div>
+              <h2 className="home-modules-title">The build path in one scan</h2>
+              <p className="home-modules-lead">
+                Keep the flow simple: public foundation first, proof and polish second, release
+                infrastructure after suppliers and fulfilment are clearer.
+              </p>
+            </div>
+          </div>
+
+          <div className="home-roadmap-grid home-roadmap-grid--three" role="list" aria-label="Build path">
+            {buildPhases.map((phase) => (
+              <article key={phase.stage} className="home-roadmap-card home-phase-card" role="listitem">
+                <div className="home-roadmap-level">{phase.stage}</div>
+                <div className="home-roadmap-title">{phase.title}</div>
+                <ul className="home-phase-list">
+                  {phase.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section
+          className="card machine-surface panel-frame home-roadmap-window"
+          aria-label="Public directions"
+        >
+          <div className="home-roadmap-head">
+            <div>
+              <div className="home-kicker">PUBLIC DIRECTIONS</div>
+              <h2 className="home-modules-title">Choose the part of JALSOL you want to follow</h2>
+              <p className="home-modules-lead">
+                Four simple routes replace the old city-map feeling: founder, static Engine
+                overview, shop interest, and legal trust proof.
+              </p>
+            </div>
+          </div>
+
+          <div className="home-roadmap-grid" role="list" aria-label="Public directions list">
             {homePillars.map((pillar) => (
               <button
                 key={pillar.id}
                 type="button"
-                className={`home-roadmap-card tone-${pillar.tone ?? "cyan"}`}
+                className={`home-roadmap-card tone-${pillar.tone ?? "cyan"} ${activeRoute === pillar.id ? "active" : ""}`}
                 onClick={() => beginRoute(pillar.route, pillar.id)}
                 role="listitem"
                 aria-label={`Open ${pillar.title}`}
+                disabled={loading}
               >
-                <div className="home-roadmap-level">{pillar.title.toUpperCase()}</div>
-                <div className="home-roadmap-title">{pillar.subtitle}</div>
+                <div className="home-roadmap-level">{pillar.kicker}</div>
+                <div className="home-roadmap-title">{pillar.title}</div>
                 <p className="home-roadmap-desc">{pillar.desc}</p>
                 <div className="home-roadmap-open">{pillar.note}</div>
               </button>
@@ -368,138 +439,13 @@ export default function Home() {
         </section>
 
         <section
-          className="card machine-surface panel-frame home-roadmap-window"
-          aria-label="Operating boundaries"
+          className="card machine-surface panel-frame home-trust-strip"
+          aria-label="Public trust summary"
         >
-          <div className="home-roadmap-head">
-            <div>
-              <div className="home-kicker">OPERATING BOUNDARIES</div>
-              <h2 className="home-modules-title">What keeps the public version professional</h2>
-              <p className="home-modules-lead">
-                These are the principles that make the public site feel more like a strong
-                founder-business domain and less like an unfinished crypto landing page.
-              </p>
-            </div>
-          </div>
-
-          <div className="home-roadmap-grid" role="list" aria-label="Operating boundaries list">
-            {boundaryItems.map((item) => (
-              <article key={item.title} className="home-roadmap-card" role="listitem">
-                <div className="home-roadmap-level">BOUNDARY</div>
-                <div className="home-roadmap-title">{item.title}</div>
-                <p className="home-roadmap-desc">{item.desc}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section
-          className="card machine-surface panel-frame home-roadmap-window home-legal-window"
-          aria-label="Legal boundary summary"
-        >
-          <details className="home-legal-details">
-            <summary className="home-legal-summary">
-              <div className="home-legal-summary-copy">
-                <div className="home-legal-summary-kicker">PUBLIC SITE SUMMARY</div>
-                <h2 className="home-modules-title">Open the plain-language explanation for how the site is meant to read</h2>
-                <p className="home-modules-lead">
-                  This dropdown explains the current public setup in practical terms. It is not
-                  legal advice, not a licence, and not a promise about future features.
-                </p>
-              </div>
-
-              <div className="home-legal-summary-note">Open summary</div>
-            </summary>
-
-            <div className="home-legal-grid">
-              {legalGroups.map((group) => (
-                <article key={group.title} className="home-legal-card">
-                  <div className="home-legal-title">{group.title}</div>
-                  <p className="home-roadmap-desc">{group.desc}</p>
-                  <ul className="home-legal-list">
-                    {group.points.map((point) => (
-                      <li key={point}>{point}</li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
-            </div>
-
-            <p className="home-legal-note">
-              If the site later expands into new interactive or regulated activity, the public
-              positioning and legal framing should be reviewed together before launch.
-            </p>
-          </details>
-        </section>
-
-        <div className="home-flow-divider" aria-hidden="true" />
-
-        <section
-          className="card machine-surface panel-frame home-route-window"
-          aria-label="Primary public surfaces"
-        >
-          <div className="home-modules-head">
-            <div>
-              <div className="home-kicker">PRIMARY PUBLIC SURFACES</div>
-              <h2 className="home-modules-title">Where each part of the public site should live</h2>
-              <p className="home-modules-lead">
-                These are the three routes worth leading with right now: founder profile, legal and
-                business clarity, and the physical storefront.
-              </p>
-            </div>
-          </div>
-
-          <div className="home-route-stack" role="list" aria-label="Primary route list">
-            {routeBands.map((band) => {
-              const bandTone = band.tone ? `tone-${band.tone}` : "";
-              const activeClass = activeRoute === band.id ? "active" : "";
-
-              return (
-                <button
-                  key={band.id}
-                  type="button"
-                  className={`home-route-band ${bandTone} ${activeClass}`}
-                  onClick={() => beginRoute(band.route, band.id)}
-                  role="listitem"
-                  aria-label={`Open ${band.title}`}
-                >
-                  <div className="home-route-main">
-                    <div className="home-route-kicker">{band.kicker}</div>
-                    <div className="home-route-title">{band.title}</div>
-                    <p className="home-route-desc">{band.desc}</p>
-                    <div className="home-route-tags">
-                      {band.tags.map((tag) => (
-                        <span key={tag} className="home-route-tag">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="home-route-note">{band.note}</div>
-                  </div>
-
-                  <div
-                    className="home-route-preview has-image"
-                    aria-hidden="true"
-                    style={
-                      band.previewImage
-                        ? {
-                            ["--preview-image" as string]: `url("${band.previewImage}")`,
-                          }
-                        : undefined
-                    }
-                  >
-                    <div className="home-route-preview-overlay">
-                      <div className="home-route-preview-kicker">Preview</div>
-                      <div className="home-route-preview-title">{band.previewTitle}</div>
-                      <p className="home-route-preview-desc">{band.previewDesc}</p>
-                    </div>
-                  </div>
-
-                  <div className="home-route-open">Open</div>
-                </button>
-              );
-            })}
-          </div>
+          <span>ABN visible</span>
+          <span>Legal pages public</span>
+          <span>Physical releases only</span>
+          <span>Private systems staged</span>
         </section>
       </div>
 
