@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const DEFAULT_ENGINE_SERVICE = "https://jal-engine-service-production.up.railway.app";
 
-type BooksAction = "summary" | "trades" | "export" | "import" | "entry";
+type BooksAction = "summary" | "trades" | "export" | "import" | "sync" | "entry";
 
 function env(name: string) {
   return String(process.env[name] || "").trim();
@@ -73,6 +73,7 @@ function targetFor(action: BooksAction, fy: string) {
   if (action === "trades") return { method: "GET", path: `/api/operator/books/trades${query}` };
   if (action === "export") return { method: "GET", path: `/api/operator/books/export.csv${query}` };
   if (action === "import") return { method: "POST", path: "/api/operator/books/import/coinspot-history" };
+  if (action === "sync") return { method: "POST", path: "/api/operator/books/sync/coinspot-readonly" };
   return { method: "POST", path: "/api/operator/books/entry" };
 }
 
@@ -91,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!operatorToken) return json(res, 500, { ok: false, error: "ENGINE_OPERATOR_TOKEN_MISSING" });
 
   const action = String(req.query.action || "summary") as BooksAction;
-  if (!["summary", "trades", "export", "import", "entry"].includes(action)) {
+  if (!["summary", "trades", "export", "import", "sync", "entry"].includes(action)) {
     return json(res, 400, { ok: false, error: "INVALID_BOOKS_ACTION" });
   }
 

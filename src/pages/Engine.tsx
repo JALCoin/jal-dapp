@@ -1436,6 +1436,30 @@ type BooksSummary = {
     filteredTradeCount?: number | null;
     manualEntryCount?: number | null;
     fyManualEntryCount?: number | null;
+    apiEntryCount?: number | null;
+    fyApiEntryCount?: number | null;
+  };
+  apiSync?: {
+    at?: string | null;
+    mode?: string | null;
+    financialYears?: string[];
+    insertedTrades?: number | null;
+    duplicateTrades?: number | null;
+    insertedEntries?: number | null;
+    duplicateEntries?: number | null;
+    insertedWarnings?: number | null;
+    duplicateWarnings?: number | null;
+    audAvailable?: number | null;
+    balancesAsOf?: string | null;
+    errors?: Array<{ source?: string; message?: string }>;
+    counts?: {
+      fetchedTrades?: number | null;
+      deposits?: number | null;
+      withdrawals?: number | null;
+      transferWarnings?: number | null;
+      requests?: number | null;
+      maxWindowHits?: number | null;
+    };
   };
   tradeCounts?: {
     buy?: number | null;
@@ -1465,6 +1489,8 @@ type BooksSummary = {
   warnings?: Array<{
     code?: string;
     asset?: string;
+    amount?: number | null;
+    direction?: string | null;
     missingQty?: number | null;
     transactionAt?: string | null;
     note?: string | null;
@@ -1492,6 +1518,32 @@ type BooksImportResponse = {
     financialYears?: string[];
   };
   warnings?: string[];
+};
+
+type BooksSyncResponse = {
+  ok?: boolean;
+  error?: string;
+  at?: string;
+  mode?: string;
+  financialYears?: string[];
+  insertedTrades?: number;
+  duplicateTrades?: number;
+  totalStoredTrades?: number;
+  insertedEntries?: number;
+  duplicateEntries?: number;
+  totalStoredEntries?: number;
+  insertedWarnings?: number;
+  duplicateWarnings?: number;
+  totalStoredWarnings?: number;
+  counts?: {
+    fetchedTrades?: number;
+    deposits?: number;
+    withdrawals?: number;
+    transferWarnings?: number;
+    requests?: number;
+    maxWindowHits?: number;
+  };
+  errors?: Array<{ source?: string; message?: string }>;
 };
 
 type EngineData = {
@@ -6351,6 +6403,8 @@ function useBooksData() {
   const [err, setErr] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<BooksImportResponse | null>(null);
+  const [syncing, setSyncing] = useState<"selected_fy" | "all_since_start" | null>(null);
+  const [syncResult, setSyncResult] = useState<BooksSyncResponse | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -6403,6 +6457,27 @@ function useBooksData() {
     [refresh]
   );
 
+  const syncReadOnly = useCallback(
+    async (mode: "selected_fy" | "all_since_start") => {
+      setSyncing(mode);
+      setErr(null);
+      setSyncResult(null);
+      try {
+        const result = await engineBooksFetch<BooksSyncResponse>("sync", {
+          method: "POST",
+          body: { fy, mode },
+        });
+        setSyncResult(result);
+        await refresh();
+      } catch (error) {
+        setErr(error instanceof Error ? error.message : String(error));
+      } finally {
+        setSyncing(null);
+      }
+    },
+    [fy, refresh]
+  );
+
   const downloadExport = useCallback(async () => {
     const {
       data: { session },
@@ -6435,6 +6510,9 @@ function useBooksData() {
     importing,
     importHistory,
     importResult,
+    syncing,
+    syncReadOnly,
+    syncResult,
     addEntry,
     downloadExport,
   };
@@ -9300,6 +9378,22 @@ const BooksPanel = React.memo(function BooksPanel(props: {
           <button type="button" className="button ghost" onClick={() => void books.refresh()} disabled={books.loading}>
             Refresh
           </button>
+          <button
+            type="button"
+            className="button ghost"
+            onClick={() => void books.syncReadOnly("selected_fy")}
+            disabled={Boolean(books.syncing)}
+          >
+            {books.syncing === "selected_fy" ? "Syncing..." : "Sync Selected FY"}
+          </button>
+          <button
+            type="button"
+            className="button ghost"
+            onClick={() => void books.syncReadOnly("all_since_start")}
+            disabled={Boolean(books.syncing)}
+          >
+            {books.syncing === "all_since_start" ? "Syncing..." : "Sync Since 2023-24"}
+          </button>
           <button type="button" className="button ghost" onClick={() => void runExport()} disabled={exporting}>
             Export CSV
           </button>
@@ -9313,12 +9407,37 @@ const BooksPanel = React.memo(function BooksPanel(props: {
         </div>
       ) : null}
 
+      {books.syncResult || summary?.apiSync ? (
+        <div className="books-sync-status">
+          <div className="slot-k">CoinSpot Read Only Sync</div>
+          <div className="books-sub">
+            Last sync {summary?.apiSync?.at ? summary.apiSync.at : books.syncResult?.at || "-"} | Mode{" "}
+            {summary?.apiSync?.mode || books.syncResult?.mode || "-"} | Years{" "}
+            {(summary?.apiSync?.financialYears || books.syncResult?.financialYears || []).join(", ") || "-"}
+          </div>
+          <div className="books-sub">
+            Inserted trades {summary?.apiSync?.insertedTrades ?? books.syncResult?.insertedTrades ?? 0} | Duplicate
+            trades {summary?.apiSync?.duplicateTrades ?? books.syncResult?.duplicateTrades ?? 0} | Entries{" "}
+            {summary?.apiSync?.insertedEntries ?? books.syncResult?.insertedEntries ?? 0} | Warnings{" "}
+            {summary?.apiSync?.insertedWarnings ?? books.syncResult?.insertedWarnings ?? 0}
+          </div>
+          {(summary?.apiSync?.errors?.length || books.syncResult?.errors?.length) ? (
+            <div className="books-sub books-sub--warn">
+              Sync warnings: {(summary?.apiSync?.errors || books.syncResult?.errors || [])
+                .map((row) => `${row.source || "source"} ${row.message || "unavailable"}`)
+                .join(" | ")}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="books-grid">
         <div className="books-card">
           <div className="slot-k">Imported Trades</div>
           <div className="books-value">{summary?.importStatus?.importedTradeCount ?? "-"}</div>
           <div className="books-sub">
-            FY rows {summary?.importStatus?.filteredTradeCount ?? "-"} | Manual {summary?.importStatus?.fyManualEntryCount ?? "-"}
+            FY rows {summary?.importStatus?.filteredTradeCount ?? "-"} | Entries {summary?.importStatus?.fyManualEntryCount ?? "-"} | API{" "}
+            {summary?.importStatus?.fyApiEntryCount ?? "-"}
           </div>
         </div>
         <div className="books-card">
