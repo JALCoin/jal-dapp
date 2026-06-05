@@ -599,8 +599,8 @@ function EngineOverviewPage() {
           <h1 className="home-title">See The Engine</h1>
           <p className="home-lead">
             JAL Engine is the private systems layer behind Jeremy Aaron Lugg&apos;s build. The public
-            view explains the architecture, direction, and operating boundary without exposing the
-            private operator dashboard.
+            view explains the architecture, rail logic, Books layer, and operating boundary without
+            exposing the private operator dashboard.
           </p>
           <p className="home-console-sublead">
             Read this as infrastructure context: a founder-built engine, not a public exchange,
@@ -631,7 +631,7 @@ function EngineOverviewPage() {
             <h2 className="home-modules-title">A visual signal, not a live feed</h2>
             <p className="home-modules-lead">
               This mockup shows the shape of the private operator system without exposing live
-              market data, wallet data, trade status, or backend telemetry.
+              market data, wallet data, trade status, Books records, or backend telemetry.
             </p>
           </div>
 
@@ -644,7 +644,7 @@ function EngineOverviewPage() {
             <div className="engine-static-board">
               <div className="engine-static-screen">
                 <div className="engine-static-screen-kicker">OPERATOR SYSTEM</div>
-                <div className="engine-static-screen-title">8-coin rail architecture</div>
+                <div className="engine-static-screen-title">Rails + Books architecture</div>
                 <div className="engine-static-screen-lines">
                   <span />
                   <span />
@@ -653,16 +653,17 @@ function EngineOverviewPage() {
               </div>
 
               <div className="engine-static-tiles">
-                <span>Primary rail</span>
-                <span>Secondary rail</span>
-                <span>Capital guard</span>
-                <span>Exit logic</span>
+                <span>Primary rails</span>
+                <span>Secondary rails</span>
+                <span>Books ledger</span>
+                <span>Operator gate</span>
               </div>
             </div>
 
             <div className="engine-static-boundary">
               <span>No live market feed</span>
               <span>No wallet feed</span>
+              <span>No Books data</span>
               <span>No trade telemetry</span>
             </div>
           </div>
@@ -685,8 +686,8 @@ function EngineOverviewPage() {
               <div className="home-roadmap-level">SYSTEMS</div>
               <div className="home-roadmap-title">Private operator tooling</div>
               <p className="home-roadmap-desc">
-                A private dashboard for Jeremy Aaron Lugg&apos;s own fixed-universe monitoring and
-                automation work.
+                A private dashboard for Jeremy Aaron Lugg&apos;s own fixed-universe monitoring, rail
+                allocation, Books, and automation work.
               </p>
             </article>
 
@@ -694,8 +695,8 @@ function EngineOverviewPage() {
               <div className="home-roadmap-level">BOUNDARY</div>
               <div className="home-roadmap-title">Public explanation only</div>
               <p className="home-roadmap-desc">
-                Visitors can understand the direction without being invited into financial-service
-                style activity.
+                Visitors can understand the direction without seeing live feeds, account records, or
+                financial-service style activity.
               </p>
             </article>
 
@@ -703,8 +704,8 @@ function EngineOverviewPage() {
               <div className="home-roadmap-level">BUILD</div>
               <div className="home-roadmap-title">Infrastructure signal</div>
               <p className="home-roadmap-desc">
-                The engine supports the broader JALSOL identity: practical systems, physical
-                releases, and real-world projects.
+                The engine supports the broader JALSOL identity: practical systems, records,
+                physical releases, and real-world projects.
               </p>
             </article>
           </div>

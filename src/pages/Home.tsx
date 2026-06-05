@@ -88,14 +88,19 @@ export default function Home() {
         desc: "Founder domain, public story, ABN visibility, and contact pathways are active.",
       },
       {
+        label: "Engine",
+        value: "Static Public View",
+        desc: "Public pages show architecture only. Live rails, wallet state, and operator controls stay private.",
+      },
+      {
+        label: "Books",
+        value: "Private Sync",
+        desc: "CoinSpot history, read-only sync records, owner entries, and exports sit inside the gated dashboard.",
+      },
+      {
         label: "Releases",
         value: "Interest Open",
         desc: "Physical product concepts are staged for interest before fixed-price checkout.",
-      },
-      {
-        label: "Engine",
-        value: "Static Overview",
-        desc: "The public route explains the system. Home only shows static mockup signals, not live feeds.",
       },
       {
         label: "Boundary",
@@ -159,7 +164,7 @@ export default function Home() {
       {
         tag: "ENGINE",
         title: "Engine split clarified",
-        desc: "The public Engine page is an overview, while the private operator dashboard remains gated behind engineer access.",
+        desc: "The public Engine page stays static while rails, live state, and Books remain gated behind engineer access.",
         route: "/app/engine",
       },
       {
@@ -169,9 +174,9 @@ export default function Home() {
         route: "/app/shop",
       },
       {
-        tag: "BACKEND",
-        title: "Allocator work continues",
-        desc: "The engine service has been tuned around primary and secondary rail capital priorities outside the public site.",
+        tag: "BOOKS",
+        title: "Private records added",
+        desc: "Books now supports CoinSpot history, read-only sync records, owner entries, and accountant exports.",
       },
     ],
     []
@@ -182,12 +187,12 @@ export default function Home() {
       {
         stage: "NOW",
         title: "Public foundation",
-        items: ["Founder identity", "Legal trust layer", "Interest-first shop", "Static Engine overview"],
+        items: ["Founder identity", "Legal trust layer", "Static Engine overview", "Private Books sync"],
       },
       {
         stage: "NEXT",
         title: "Proof and polish",
-        items: ["Product mockups", "Clearer update rhythm", "Analytics checkpoints", "Supplier-ready release paths"],
+        items: ["Product mockups", "Bookkeeping export polish", "Clearer update rhythm", "Analytics checkpoints"],
       },
       {
         stage: "LATER",
@@ -297,15 +302,15 @@ export default function Home() {
                     <strong>GATED</strong>
                   </div>
                   <div className="home-static-engine-grid">
-                    <span>8-coin map</span>
-                    <span>rail logic</span>
-                    <span>capital paths</span>
+                    <span>8-coin rails</span>
+                    <span>64 secondary rails</span>
+                    <span>books sync</span>
                     <span>operator only</span>
                   </div>
                 </div>
                 <p className="home-identity-desc">
-                  Static visual only. No live market feed, wallet feed, or private dashboard data is
-                  shown on the public Home page.
+                  Static visual only. No live market feed, wallet feed, trade telemetry, or Books
+                  data is shown on the public Home page.
                 </p>
               </div>
             </aside>
@@ -321,13 +326,13 @@ export default function Home() {
               <div className="home-kicker">CURRENT BUILD STATUS</div>
               <h2 className="home-modules-title">Where the public build stands now</h2>
               <p className="home-modules-lead">
-                A quick orientation layer before the deeper pages: what is public, what is staged,
-                and where visitors can join the process without confusion.
+                A quick orientation layer before the deeper pages: what is public, what is private,
+                what is staged, and where visitors can join the process without confusion.
               </p>
             </div>
           </div>
 
-          <div className="home-roadmap-grid" role="list" aria-label="Build status list">
+          <div className="home-roadmap-grid home-roadmap-grid--status" role="list" aria-label="Build status list">
             {buildStatus.map((item) => (
               <article key={item.label} className="home-roadmap-card" role="listitem">
                 <div className="home-roadmap-level">{item.label}</div>

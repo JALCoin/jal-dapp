@@ -9670,6 +9670,10 @@ a.button[aria-disabled="true"]{
   gap:14px;
 }
 
+.home-roadmap-grid--status{
+  grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+}
+
 .home-roadmap-grid--three{
   grid-template-columns:repeat(3, minmax(0, 1fr));
 }
