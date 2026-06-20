@@ -49,7 +49,7 @@ type Feed = "all" | "aud" | "watch" | "engine";
 type SortKey = "coin" | "spread" | "mid";
 type SortDir = "asc" | "desc";
 type ViewMode = "simple" | "advanced";
-type Section = "focus" | "rails" | "slots" | "market" | "events" | "diagnostics" | "spotlight" | "books";
+type Section = "focus" | "rails" | "slots" | "market" | "events" | "diagnostics" | "spotlight" | "books" | "bank";
 
 type SlotState =
   | "WAITING_ENTRY"
@@ -1544,6 +1544,138 @@ type BooksSyncResponse = {
     maxWindowHits?: number;
   };
   errors?: Array<{ source?: string; message?: string }>;
+};
+
+type LenderProjectionInputs = {
+  loanAmountAud?: number;
+  annualRatePct?: number;
+  termMonths?: number;
+  operatingExpensesAud?: number;
+  taxReservePct?: number;
+  baseRevenueAud?: number;
+  adverseRevenueAud?: number;
+  negativeMonthAud?: number;
+  openingCashAud?: number;
+  assumptionNotice?: string;
+};
+
+type LenderMonthlyActual = {
+  month?: string;
+  label?: string;
+  buyCount?: number;
+  sellCount?: number;
+  buyTotalAud?: number;
+  sellTotalAud?: number;
+  feeAud?: number;
+  gstAud?: number;
+  realizedTradingProfitAud?: number;
+  taxReserveProvisionAud?: number;
+  ownerCapitalInAud?: number;
+  ownerDrawingAud?: number;
+};
+
+type LenderScenarioRow = {
+  month?: number;
+  realisedTradingRevenueAud?: number;
+  operatingExpensesAud?: number;
+  loanInterestAud?: number;
+  loanPrincipalAud?: number;
+  debtServiceAud?: number;
+  taxProvisionAud?: number;
+  netCashflowAud?: number;
+  endingCashAud?: number;
+  cumulativeRetainedEarningsAud?: number;
+};
+
+type LenderScenario = {
+  key?: string;
+  label?: string;
+  rows?: LenderScenarioRow[];
+  totals?: {
+    realisedTradingRevenueAud?: number;
+    operatingExpensesAud?: number;
+    debtServiceAud?: number;
+    taxProvisionAud?: number;
+    netOperatingCashflowAud?: number;
+    endingCashAud?: number;
+    cumulativeRetainedEarningsAud?: number;
+    dscr?: number;
+    dscrClassification?: string;
+  };
+};
+
+type EvidenceItemStatus = "missing" | "provided" | "not_applicable";
+
+type EvidenceMonth = {
+  month?: string;
+  label?: string;
+  providedCount?: number;
+  requiredCount?: number;
+  missingCount?: number;
+  complete?: boolean;
+  items?: Array<{
+    key?: string;
+    label?: string;
+    status?: EvidenceItemStatus;
+    note?: string | null;
+    updatedAt?: string | null;
+  }>;
+};
+
+type LenderReport = {
+  ok?: boolean;
+  error?: string;
+  generatedAt?: string;
+  businessName?: string;
+  businessStructure?: string;
+  systemName?: string;
+  period?: {
+    fy?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+  };
+  sourceStatus?: {
+    verifiedActualsSource?: string;
+    projectionSource?: string;
+    importedTradeCount?: number;
+    filteredTradeCount?: number;
+    manualEntryCount?: number;
+    verifiedTradeHistoryAvailable?: boolean;
+    noPerformanceClaims?: boolean;
+  };
+  verifiedActuals?: {
+    annual?: Record<string, number>;
+    monthly?: LenderMonthlyActual[];
+    warningCount?: number;
+  };
+  projectionInputs?: LenderProjectionInputs;
+  cashflowScenarios?: LenderScenario[];
+  dscr?: {
+    scenarios?: Record<string, { netOperatingCashflowAud?: number; totalDebtServiceAud?: number; dscr?: number; classification?: string }>;
+  };
+  stressTests?: Array<{
+    key?: string;
+    label?: string;
+    monthlyRevenueBasis?: string;
+    dscr?: number;
+    dscrClassification?: string;
+    endingCashAud?: number;
+    repaymentsServiceableFromOperations?: boolean;
+    cashBufferPositiveAfter12Months?: boolean;
+  }>;
+  evidence?: {
+    months?: EvidenceMonth[];
+    totals?: {
+      provided?: number;
+      missing?: number;
+      required?: number;
+      completeMonths?: number;
+      completenessPct?: number;
+    };
+  };
+  assumptions?: Array<{ key?: string; value?: string | number; treatment?: string }>;
+  warnings?: Array<{ code?: string; note?: string }>;
+  redaction?: { secretsIncluded?: boolean; note?: string };
 };
 
 type EngineData = {
@@ -6183,7 +6315,11 @@ function useEngineData(BASE: string): EngineData {
   }, [fetchJson]);
 
   const fetchMeta = useCallback(async (signal?: AbortSignal) => {
-    return await fetchJson<PublicMetaResponse>("/api/public/meta", signal);
+    try {
+      return await engineDiagnosticsFetch<PublicMetaResponse>("meta", signal);
+    } catch {
+      return await fetchJson<PublicMetaResponse>("/api/public/meta", signal);
+    }
   }, [fetchJson]);
 
   const fetchReadiness = useCallback(async (signal?: AbortSignal) => {
@@ -6365,7 +6501,29 @@ function currentAustralianFyLabel() {
   return `${start}-${String((start + 1) % 100).padStart(2, "0")}`;
 }
 
-async function engineBooksFetch<T>(action: string, options: { fy?: string; method?: "GET" | "POST"; body?: unknown } = {}) {
+async function engineDiagnosticsFetch<T>(action: string, signal?: AbortSignal) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Engineer sign-in required for diagnostics.");
+
+  const params = new URLSearchParams({ action, ts: String(Date.now()) });
+  const response = await fetch(`/api/engine-diagnostics?${params.toString()}`, {
+    method: "GET",
+    headers: { authorization: `Bearer ${token}` },
+    signal,
+    cache: "no-store",
+  });
+
+  if (!response.ok) throw new Error(`diagnostics ${action} HTTP ${response.status}`);
+  return (await response.json()) as T;
+}
+
+async function engineBooksFetch<T>(
+  action: string,
+  options: { fy?: string; method?: "GET" | "POST"; body?: unknown; query?: Record<string, string | number | null | undefined> } = {}
+) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -6374,6 +6532,9 @@ async function engineBooksFetch<T>(action: string, options: { fy?: string; metho
 
   const params = new URLSearchParams({ action });
   if (options.fy) params.set("fy", options.fy);
+  for (const [key, value] of Object.entries(options.query || {})) {
+    if (value != null && String(value).trim()) params.set(key, String(value));
+  }
 
   const response = await fetch(`/api/engine-books?${params.toString()}`, {
     method: options.method || "GET",
@@ -6389,7 +6550,9 @@ async function engineBooksFetch<T>(action: string, options: { fy?: string; metho
     try {
       const json = (await response.json()) as { error?: string };
       if (json?.error) detail = json.error;
-    } catch (_) {}
+    } catch {
+      detail = `${action} HTTP ${response.status}`;
+    }
     throw new Error(detail);
   }
 
@@ -9336,7 +9499,7 @@ const BooksPanel = React.memo(function BooksPanel(props: {
       });
       setEntryAmount("");
       setEntryNote("");
-    } catch (_) {
+    } catch {
       await books.refresh();
     } finally {
       setEntrySaving(false);
@@ -9347,7 +9510,7 @@ const BooksPanel = React.memo(function BooksPanel(props: {
     setExporting(true);
     try {
       await books.downloadExport();
-    } catch (_) {
+    } catch {
       await books.refresh();
     } finally {
       setExporting(false);
@@ -9562,6 +9725,375 @@ const BooksPanel = React.memo(function BooksPanel(props: {
           <div className="ledger-empty">No reconciliation warnings for the selected financial year.</div>
         )}
       </div>
+    </div>
+  );
+});
+
+const LENDER_INPUT_FIELDS = [
+  { key: "loanAmountAud", label: "Loan Amount", hint: "Pilot facility" },
+  { key: "annualRatePct", label: "Annual Rate", hint: "Percent p.a." },
+  { key: "termMonths", label: "Term", hint: "Months" },
+  { key: "operatingExpensesAud", label: "Operating Costs", hint: "Monthly AUD" },
+  { key: "taxReservePct", label: "Tax Reserve", hint: "Percent" },
+  { key: "baseRevenueAud", label: "Base Revenue", hint: "Monthly AUD" },
+  { key: "adverseRevenueAud", label: "Adverse Revenue", hint: "Monthly AUD" },
+  { key: "negativeMonthAud", label: "Negative Month", hint: "Stress AUD" },
+  { key: "openingCashAud", label: "Opening Cash", hint: "AUD" },
+] as const;
+
+const DEFAULT_LENDER_INPUT_STATE: Record<(typeof LENDER_INPUT_FIELDS)[number]["key"], string> = {
+  loanAmountAud: "20000",
+  annualRatePct: "12",
+  termMonths: "60",
+  operatingExpensesAud: "410",
+  taxReservePct: "30",
+  baseRevenueAud: "1500",
+  adverseRevenueAud: "750",
+  negativeMonthAud: "-500",
+  openingCashAud: "20000",
+};
+
+function dscrLabel(value: number | null | undefined) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "-";
+  return `${n.toFixed(2)}x`;
+}
+
+function evidenceStatusLabel(value: string | null | undefined) {
+  if (value === "provided") return "Provided";
+  if (value === "not_applicable") return "Not Applicable";
+  return "Missing";
+}
+
+const BankReportsPanel = React.memo(function BankReportsPanel(props: {
+  books: ReturnType<typeof useBooksData>;
+}) {
+  const { books } = props;
+  const [inputs, setInputs] = useState(DEFAULT_LENDER_INPUT_STATE);
+  const [report, setReport] = useState<LenderReport | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [evidenceMonth, setEvidenceMonth] = useState("");
+  const [evidenceSaving, setEvidenceSaving] = useState<string | null>(null);
+
+  const fetchReport = useCallback(async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const next = await engineBooksFetch<LenderReport>("lender-report", { fy: books.fy, query: inputs });
+      setReport(next);
+      const preferredMonth =
+        next.evidence?.months?.find((month) => !month.complete)?.month ||
+        next.evidence?.months?.[0]?.month ||
+        "";
+      setEvidenceMonth((current) => current || preferredMonth);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : String(error));
+      setReport(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [books.fy, inputs]);
+
+  useEffect(() => {
+    void fetchReport();
+  }, [fetchReport]);
+
+  const updateInput = (key: keyof typeof DEFAULT_LENDER_INPUT_STATE, value: string) => {
+    setInputs((current) => ({ ...current, [key]: value }));
+  };
+
+  const downloadLenderCsv = async () => {
+    setExporting(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("Engineer sign-in required for lender export.");
+      const params = new URLSearchParams({ action: "lender-report-csv", fy: books.fy });
+      for (const [key, value] of Object.entries(inputs)) {
+        if (String(value).trim()) params.set(key, value);
+      }
+      const response = await fetch(`/api/engine-books?${params.toString()}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(`lender export HTTP ${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `jeremy-aaron-lugg-lender-report-${books.fy}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : String(error));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const updateEvidence = async (item: string, status: EvidenceItemStatus) => {
+    if (!evidenceMonth) return;
+    setEvidenceSaving(item);
+    setErr(null);
+    try {
+      await engineBooksFetch("evidence", {
+        method: "POST",
+        body: { fy: books.fy, month: evidenceMonth, item, status },
+      });
+      await fetchReport();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : String(error));
+    } finally {
+      setEvidenceSaving(null);
+    }
+  };
+
+  const actualAnnual = report?.verifiedActuals?.annual || {};
+  const baseDscr = report?.dscr?.scenarios?.base;
+  const evidenceMonths = report?.evidence?.months || [];
+  const selectedEvidenceMonth = evidenceMonths.find((month) => month.month === evidenceMonth) || evidenceMonths[0] || null;
+  const scenarioRows = report?.cashflowScenarios || [];
+
+  return (
+    <div className="books-panel bank-panel card machine-surface panel-frame" aria-label="Bank reports">
+      <div className="engine-telemetry-head">
+        <div>
+          <div className="engine-telemetry-title">Bank Reports</div>
+          <div className="engine-telemetry-note">
+            Lender-facing records for Jeremy Aaron Lugg. Verified actuals come from Books; projections are editable assumptions.
+          </div>
+        </div>
+        <div className="books-actions">
+          <label className="books-fy">
+            <span>FY</span>
+            <select value={books.fy} onChange={(event) => books.setFy(event.target.value)}>
+              {(books.summary?.importYears?.length ? books.summary.importYears : ["2023-24", "2024-25", "2025-26"]).map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="button ghost" onClick={() => void fetchReport()} disabled={loading}>
+            {loading ? "Refreshing..." : "Refresh Report"}
+          </button>
+          <button type="button" className="button gold" onClick={() => void downloadLenderCsv()} disabled={exporting || !report}>
+            {exporting ? "Exporting..." : "Export Bank CSV"}
+          </button>
+        </div>
+      </div>
+
+      {err ? (
+        <div className="engine-log" role="status">
+          <div className="engine-log-title">Bank report unavailable</div>
+          <pre>{err}</pre>
+        </div>
+      ) : null}
+
+      <div className="books-warning-panel bank-context-panel">
+        <div className="engine-telemetry-title">Commercial Lending Context</div>
+        <div className="engine-telemetry-note">
+          This report separates realised closed-trade evidence from planning assumptions. It does not treat open crypto value,
+          strategy settings, or runtime readiness as loan-servicing cashflow.
+        </div>
+      </div>
+
+      <div className="books-grid">
+        <div className="books-card">
+          <div className="slot-k">Verified History</div>
+          <div className="books-value">{report?.sourceStatus?.verifiedTradeHistoryAvailable ? "Available" : "Not Yet"}</div>
+          <div className="books-sub">
+            FY trades {report?.sourceStatus?.filteredTradeCount ?? 0} | Source {report?.sourceStatus?.verifiedActualsSource || "Books"}
+          </div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Realised Actual</div>
+          <div className="books-value">{moneyAud(actualAnnual.realizedTradingProfitAud)}</div>
+          <div className="books-sub">Closed-trade FIFO estimate, not unrealised portfolio value</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Base DSCR</div>
+          <div className="books-value">{dscrLabel(baseDscr?.dscr)}</div>
+          <div className="books-sub">{baseDscr?.classification || "Projection required"} | target case only</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Evidence Complete</div>
+          <div className="books-value">{report?.evidence?.totals?.completeMonths ?? 0}/12</div>
+          <div className="books-sub">
+            {report?.evidence?.totals?.missing ?? 0} checklist items missing | {fmt(report?.evidence?.totals?.completenessPct)}%
+          </div>
+        </div>
+      </div>
+
+      <section className="books-card books-card--form">
+        <div className="engine-telemetry-title">Projection Inputs</div>
+        <div className="engine-telemetry-note">
+          These values default to the current memo. They remain assumptions until supported by trading records, invoices, and bank statements.
+        </div>
+        <div className="bank-input-grid">
+          {LENDER_INPUT_FIELDS.map((field) => (
+            <label key={field.key} className="bank-input">
+              <span>{field.label}</span>
+              <input
+                value={inputs[field.key]}
+                onChange={(event) => updateInput(field.key, event.target.value)}
+                inputMode="decimal"
+              />
+              <small>{field.hint}</small>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      {report?.warnings?.length ? (
+        <div className="books-warning-panel">
+          <div className="engine-telemetry-title">Lender Warnings</div>
+          <div className="books-warning-list">
+            {report.warnings.map((warning, index) => (
+              <div key={`${warning.code}-${index}`} className="books-warning-row">
+                <strong>{warning.code || "WARNING"}</strong>
+                <span>{warning.note || "Review required before submission."}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="books-grid books-grid--two">
+        <section className="books-card">
+          <div className="engine-telemetry-title">DSCR Summary</div>
+          <div className="bank-table-scroll">
+            <table className="bank-table">
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Net Operating Cashflow</th>
+                  <th>Debt Service</th>
+                  <th>DSCR</th>
+                  <th>Assessment</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(report?.dscr?.scenarios || {}).map(([key, row]) => (
+                  <tr key={key}>
+                    <td>{enumLabel(key)}</td>
+                    <td>{moneyAud(row.netOperatingCashflowAud)}</td>
+                    <td>{moneyAud(row.totalDebtServiceAud)}</td>
+                    <td>{dscrLabel(row.dscr)}</td>
+                    <td>{row.classification || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="books-card">
+          <div className="engine-telemetry-title">Stress Tests</div>
+          <div className="bank-stress-list">
+            {(report?.stressTests || []).map((stress) => (
+              <div key={stress.key || stress.label} className="bank-stress-row">
+                <strong>{stress.label}</strong>
+                <span>
+                  {stress.monthlyRevenueBasis} | DSCR {dscrLabel(stress.dscr)} ({stress.dscrClassification || "-"}) | cash{" "}
+                  {moneyAud(stress.endingCashAud)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <section className="books-card">
+        <div className="engine-telemetry-title">12-Month Cashflow Scenarios</div>
+        <div className="bank-scenario-stack">
+          {scenarioRows.map((scenario) => (
+            <div key={scenario.key || scenario.label} className="bank-scenario">
+              <div className="bank-scenario-head">
+                <strong>{scenario.label}</strong>
+                <span>
+                  DSCR {dscrLabel(scenario.totals?.dscr)} | ending cash {moneyAud(scenario.totals?.endingCashAud)}
+                </span>
+              </div>
+              <div className="bank-table-scroll">
+                <table className="bank-table">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Revenue</th>
+                      <th>Expenses</th>
+                      <th>Interest</th>
+                      <th>Principal</th>
+                      <th>Tax Reserve</th>
+                      <th>Net Cashflow</th>
+                      <th>Ending Cash</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(scenario.rows || []).map((row) => (
+                      <tr key={`${scenario.key}-${row.month}`}>
+                        <td>{row.month}</td>
+                        <td>{moneyAud(row.realisedTradingRevenueAud)}</td>
+                        <td>{moneyAud(row.operatingExpensesAud)}</td>
+                        <td>{moneyAud(row.loanInterestAud)}</td>
+                        <td>{moneyAud(row.loanPrincipalAud)}</td>
+                        <td>{moneyAud(row.taxProvisionAud)}</td>
+                        <td>{moneyAud(row.netCashflowAud)}</td>
+                        <td>{moneyAud(row.endingCashAud)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="books-card books-card--form">
+        <div className="engine-telemetry-title">Monthly Evidence Checklist</div>
+        <div className="engine-telemetry-note">
+          Track documents that will matter more to future borrowing capacity than source code alone.
+        </div>
+        <label className="books-fy bank-month-select">
+          <span>Month</span>
+          <select value={selectedEvidenceMonth?.month || ""} onChange={(event) => setEvidenceMonth(event.target.value)}>
+            {evidenceMonths.map((month) => (
+              <option key={month.month} value={month.month}>
+                {month.label} ({month.providedCount}/{month.requiredCount})
+              </option>
+            ))}
+          </select>
+        </label>
+        {selectedEvidenceMonth ? (
+          <div className="bank-evidence-list">
+            {(selectedEvidenceMonth.items || []).map((item) => (
+              <div key={item.key} className="bank-evidence-row">
+                <div>
+                  <strong>{item.label}</strong>
+                  <span>{item.note || "No note recorded."}</span>
+                </div>
+                <select
+                  value={item.status || "missing"}
+                  disabled={evidenceSaving === item.key}
+                  onChange={(event) => void updateEvidence(String(item.key || ""), event.target.value as EvidenceItemStatus)}
+                >
+                  <option value="missing">{evidenceStatusLabel("missing")}</option>
+                  <option value="provided">{evidenceStatusLabel("provided")}</option>
+                  <option value="not_applicable">{evidenceStatusLabel("not_applicable")}</option>
+                </select>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="ledger-empty">Evidence checklist is unavailable for this financial year.</div>
+        )}
+      </section>
     </div>
   );
 });
@@ -9930,6 +10462,14 @@ export default function Engine() {
 
                 <button
                   type="button"
+                  className={`engine-section-tab ${section === "bank" ? "active" : ""}`}
+                  onClick={() => setSection("bank")}
+                >
+                  Bank
+                </button>
+
+                <button
+                  type="button"
                   className={`engine-section-tab ${section === "diagnostics" ? "active" : ""}`}
                   onClick={() => setSection("diagnostics")}
                 >
@@ -9996,6 +10536,8 @@ export default function Engine() {
               ) : null}
 
               {section === "books" ? <BooksPanel books={books} capital={capital} /> : null}
+
+              {section === "bank" ? <BankReportsPanel books={books} /> : null}
 
               {section === "diagnostics" ? (
                 view === "advanced" ? (

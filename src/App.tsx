@@ -603,8 +603,10 @@ function EngineOverviewPage() {
             exposing the private operator dashboard.
           </p>
           <p className="home-console-sublead">
-            Read this as infrastructure context: a founder-built engine, not a public exchange,
-            brokerage, custody product, copy-trading service, or invitation to mirror trades.
+            Jeremy Aaron Lugg operates as a registered sole trader and uses proprietary software to
+            support his own cryptocurrency trading activity. Read this as infrastructure context:
+            not a public exchange, brokerage, custody product, copy-trading service, or invitation
+            to mirror trades.
           </p>
           <div className="home-links">
             <Link className="chip" to="/app/home">
@@ -687,7 +689,7 @@ function EngineOverviewPage() {
               <div className="home-roadmap-title">Private operator tooling</div>
               <p className="home-roadmap-desc">
                 A private dashboard for Jeremy Aaron Lugg&apos;s own fixed-universe monitoring, rail
-                allocation, Books, and automation work.
+                allocation, Books, lender evidence, and automation work.
               </p>
             </article>
 
@@ -695,17 +697,17 @@ function EngineOverviewPage() {
               <div className="home-roadmap-level">BOUNDARY</div>
               <div className="home-roadmap-title">Public explanation only</div>
               <p className="home-roadmap-desc">
-                Visitors can understand the direction without seeing live feeds, account records, or
-                financial-service style activity.
+                Visitors can understand the direction without seeing live feeds, account records,
+                lender reports, or financial-service style activity.
               </p>
             </article>
 
             <article className="home-roadmap-card" role="listitem">
-              <div className="home-roadmap-level">BUILD</div>
-              <div className="home-roadmap-title">Infrastructure signal</div>
+              <div className="home-roadmap-level">RECORDS</div>
+              <div className="home-roadmap-title">Cashflow evidence boundary</div>
               <p className="home-roadmap-desc">
-                The engine supports the broader JALSOL identity: practical systems, records,
-                physical releases, and real-world projects.
+                The software controls process and recordkeeping. Business cashflow still depends on
+                realised closed-trade outcomes, tax provisioning, expenses, and cash reserves.
               </p>
             </article>
           </div>

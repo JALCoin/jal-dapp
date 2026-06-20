@@ -7844,9 +7844,165 @@ a.button[aria-disabled="true"]{
   color:rgba(231,255,247,.72);
 }
 
+.bank-panel{
+  align-content:start;
+}
+
+.bank-context-panel{
+  margin:0;
+}
+
+.bank-input-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+}
+
+.bank-input{
+  display:grid;
+  gap:6px;
+  min-width:0;
+}
+
+.bank-input span,
+.bank-input small{
+  font-family:var(--mono-font);
+  text-transform:uppercase;
+  letter-spacing:.1em;
+}
+
+.bank-input span{
+  font-size:.7rem;
+  color:rgba(231,255,247,.66);
+}
+
+.bank-input small{
+  font-size:.62rem;
+  color:rgba(231,255,247,.42);
+}
+
+.bank-input input,
+.bank-evidence-row select,
+.bank-month-select select{
+  min-width:0;
+  min-height:40px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.22);
+  color:var(--text);
+  border-radius:14px;
+  padding:0 12px;
+  outline:none;
+}
+
+.bank-table-scroll{
+  width:100%;
+  overflow-x:auto;
+  margin-top:12px;
+}
+
+.bank-table{
+  width:100%;
+  min-width:720px;
+  border-collapse:collapse;
+  font-size:.78rem;
+}
+
+.bank-table th,
+.bank-table td{
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  text-align:left;
+  vertical-align:top;
+}
+
+.bank-table th{
+  font-family:var(--mono-font);
+  font-size:.66rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.54);
+}
+
+.bank-table td{
+  color:rgba(231,255,247,.76);
+  font-variant-numeric:tabular-nums;
+}
+
+.bank-stress-list,
+.bank-scenario-stack,
+.bank-evidence-list{
+  display:grid;
+  gap:10px;
+  margin-top:12px;
+}
+
+.bank-stress-row,
+.bank-scenario,
+.bank-evidence-row{
+  min-width:0;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.16);
+  border-radius:14px;
+}
+
+.bank-stress-row{
+  display:grid;
+  gap:5px;
+  padding:12px;
+}
+
+.bank-stress-row strong,
+.bank-scenario-head strong,
+.bank-evidence-row strong{
+  color:rgba(237,255,248,.92);
+}
+
+.bank-stress-row span,
+.bank-scenario-head span,
+.bank-evidence-row span{
+  color:rgba(231,255,247,.62);
+  line-height:1.45;
+}
+
+.bank-scenario{
+  padding:12px;
+}
+
+.bank-scenario-head{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.bank-evidence-row{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) minmax(150px, 190px);
+  gap:12px;
+  align-items:center;
+  padding:12px;
+}
+
+.bank-evidence-row > div{
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+
+.bank-month-select{
+  width:max-content;
+  max-width:100%;
+  border-radius:14px;
+}
+
 @media (max-width: 900px){
   .books-grid,
   .books-grid--two{
+    grid-template-columns:1fr;
+  }
+
+  .bank-input-grid{
     grid-template-columns:1fr;
   }
 
@@ -7855,6 +8011,10 @@ a.button[aria-disabled="true"]{
   }
 
   .books-warning-row{
+    grid-template-columns:1fr;
+  }
+
+  .bank-evidence-row{
     grid-template-columns:1fr;
   }
 }

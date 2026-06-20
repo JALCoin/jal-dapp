@@ -2,7 +2,40 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const DEFAULT_ENGINE_SERVICE = "https://jal-engine-service-production.up.railway.app";
 
-type BooksAction = "summary" | "trades" | "export" | "import" | "sync" | "entry";
+type BooksAction =
+  | "summary"
+  | "trades"
+  | "export"
+  | "lender-report"
+  | "lender-report-csv"
+  | "evidence"
+  | "import"
+  | "sync"
+  | "entry";
+
+const VALID_BOOKS_ACTIONS: BooksAction[] = [
+  "summary",
+  "trades",
+  "export",
+  "lender-report",
+  "lender-report-csv",
+  "evidence",
+  "import",
+  "sync",
+  "entry",
+];
+
+const LENDER_QUERY_KEYS = [
+  "loanAmountAud",
+  "annualRatePct",
+  "termMonths",
+  "operatingExpensesAud",
+  "taxReservePct",
+  "baseRevenueAud",
+  "adverseRevenueAud",
+  "negativeMonthAud",
+  "openingCashAud",
+];
 
 function env(name: string) {
   return String(process.env[name] || "").trim();
@@ -67,11 +100,23 @@ async function requireEngineer(req: VercelRequest) {
   return { ok: true, code: 200, error: null };
 }
 
-function targetFor(action: BooksAction, fy: string) {
-  const query = fy ? `?fy=${encodeURIComponent(fy)}` : "";
+function targetFor(action: BooksAction, fy: string, req: VercelRequest) {
+  const params = new URLSearchParams();
+  if (fy) params.set("fy", fy);
+  if (action === "lender-report" || action === "lender-report-csv") {
+    for (const key of LENDER_QUERY_KEYS) {
+      const raw = req.query[key];
+      const value = Array.isArray(raw) ? raw[0] : raw;
+      if (value != null && String(value).trim()) params.set(key, String(value));
+    }
+  }
+  const query = params.toString() ? `?${params.toString()}` : "";
   if (action === "summary") return { method: "GET", path: `/api/operator/books/summary${query}` };
   if (action === "trades") return { method: "GET", path: `/api/operator/books/trades${query}` };
   if (action === "export") return { method: "GET", path: `/api/operator/books/export.csv${query}` };
+  if (action === "lender-report") return { method: "GET", path: `/api/operator/books/lender-report${query}` };
+  if (action === "lender-report-csv") return { method: "GET", path: `/api/operator/books/lender-report.csv${query}` };
+  if (action === "evidence") return { method: req.method === "POST" ? "POST" : "GET", path: `/api/operator/books/evidence${query}` };
   if (action === "import") return { method: "POST", path: "/api/operator/books/import/coinspot-history" };
   if (action === "sync") return { method: "POST", path: "/api/operator/books/sync/coinspot-readonly" };
   return { method: "POST", path: "/api/operator/books/entry" };
@@ -92,21 +137,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!operatorToken) return json(res, 500, { ok: false, error: "ENGINE_OPERATOR_TOKEN_MISSING" });
 
   const action = String(req.query.action || "summary") as BooksAction;
-  if (!["summary", "trades", "export", "import", "sync", "entry"].includes(action)) {
+  if (!VALID_BOOKS_ACTIONS.includes(action)) {
     return json(res, 400, { ok: false, error: "INVALID_BOOKS_ACTION" });
   }
 
   const fy = String(req.query.fy || "").trim();
-  const target = targetFor(action, fy);
+  const target = targetFor(action, fy, req);
   if (req.method === "GET" && target.method !== "GET") return json(res, 405, { ok: false, error: "METHOD_NOT_ALLOWED" });
   if (req.method === "POST" && target.method !== "POST") return json(res, 405, { ok: false, error: "METHOD_NOT_ALLOWED" });
 
   const base = (env("ENGINE_SERVICE_URL") || DEFAULT_ENGINE_SERVICE).replace(/\/+$/, "");
   const body = target.method === "POST" ? JSON.stringify(await readJson(req)) : undefined;
+  const csvAction = action === "export" || action === "lender-report-csv";
   const upstream = await fetch(`${base}${target.path}`, {
     method: target.method,
     headers: {
-      accept: action === "export" ? "text/csv" : "application/json",
+      accept: csvAction ? "text/csv" : "application/json",
       "content-type": "application/json",
       "x-operator-token": operatorToken,
     },
@@ -116,9 +162,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const text = await upstream.text();
   res.statusCode = upstream.status;
 
-  if (action === "export" && upstream.ok) {
+  if (csvAction && upstream.ok) {
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="jalsol-books-${fy || "current"}.csv"`);
+    const filename =
+      action === "lender-report-csv"
+        ? `jeremy-aaron-lugg-lender-report-${fy || "current"}.csv`
+        : `jalsol-books-${fy || "current"}.csv`;
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.end(text);
     return;
   }
