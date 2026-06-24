@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import CampaignBanner from "../components/CampaignBanner";
 import DonateButton from "../components/DonateButton";
+import JalCoinPanel, { JalCoinActions } from "../components/JalCoinPanel";
 import { usePageMeta } from "../hooks/usePageMeta";
 
 function fmtTime(d: Date) {
@@ -42,7 +44,7 @@ type BuildPhase = {
 export default function Home() {
   usePageMeta(
     "Follow The Build",
-    "Follow Jeremy Aaron Lugg's JALSOL build across founder identity, systems direction, legal clarity, and physical releases."
+    "Follow Jeremy Aaron Lugg's JALSOL build across founder identity, systems direction, JAL Coin, legal clarity, and physical releases."
   );
 
   const navigate = useNavigate();
@@ -98,6 +100,11 @@ export default function Home() {
         desc: "CoinSpot history, read-only sync records, owner entries, and exports sit inside the gated dashboard.",
       },
       {
+        label: "JAL Coin",
+        value: "Public Pool",
+        desc: "Official mint, Raydium pool, authority wallet, and Solscan links are surfaced for verification.",
+      },
+      {
         label: "Releases",
         value: "Interest Open",
         desc: "Physical product concepts are staged for interest before fixed-price checkout.",
@@ -130,6 +137,15 @@ export default function Home() {
         note: "Static overview",
         tone: "green",
         route: "/app/engine",
+      },
+      {
+        id: "jalsol",
+        kicker: "JAL COIN",
+        title: "JAL/SOL",
+        desc: "Open the official JAL Coin hub with Raydium, liquidity wallet, verification links, and locked gate structure.",
+        note: "Coin hub",
+        tone: "gold",
+        route: "/app/jal-sol",
       },
       {
         id: "shop",
@@ -227,6 +243,11 @@ export default function Home() {
           </div>
         </section>
 
+        <CampaignBanner
+          className="home-campaign-banner"
+          primaryAction={<JalCoinActions compact />}
+        />
+
         <section
           className="card machine-surface panel-frame home-console-hero jal-command-surface"
           aria-label="Jeremy Aaron Lugg site overview"
@@ -316,6 +337,8 @@ export default function Home() {
             </aside>
           </div>
         </section>
+
+        <JalCoinPanel />
 
         <section
           className="card machine-surface panel-frame home-roadmap-window home-build-status-window"
@@ -449,6 +472,7 @@ export default function Home() {
         >
           <span>ABN visible</span>
           <span>Legal pages public</span>
+          <span>JAL Coin links verified</span>
           <span>Physical releases only</span>
           <span>Private systems staged</span>
         </section>

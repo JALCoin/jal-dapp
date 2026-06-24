@@ -1,7 +1,9 @@
 // src/pages/Landing.tsx
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import CampaignBanner from "../components/CampaignBanner";
 import DonateButton from "../components/DonateButton";
+import { JalCoinActions } from "../components/JalCoinPanel";
 import ThemeToggle from "../components/ThemeToggle";
 import { usePageMeta } from "../hooks/usePageMeta";
 import type { ThemeMode } from "../hooks/useTheme";
@@ -21,6 +23,7 @@ type LandingProps = {
 
 type NavTo =
   | "/app/home"
+  | "/app/jal-sol"
   | "/app/compliance"
   | "/app/engine"
   | "/app/about"
@@ -56,6 +59,13 @@ const NAV_ITEMS: NavItem[] = [
     to: "/app/engine",
     contextTitle: "See The Engine",
     contextBody: "Public systems explanation. Operator dashboard remains private.",
+  },
+  {
+    id: "jalsol",
+    label: "JAL/SOL",
+    to: "/app/jal-sol",
+    contextTitle: "JAL Coin",
+    contextBody: "Official token links, liquidity wallet, and locked gate structure.",
   },
   {
     id: "shop",
@@ -138,9 +148,15 @@ function NavOverlay({
             <div className="nav-intro-title">WELCOME TO JALSOL</div>
             <p className="nav-intro-copy">
               Follow Jeremy Aaron Lugg&apos;s journey from tradesman -&gt; systems builder -&gt; JAL
-              Engine -&gt; releases -&gt; real-world projects.
+              Engine -&gt; JAL Coin -&gt; releases -&gt; real-world projects.
             </p>
           </div>
+
+          <CampaignBanner
+            className="nav-campaign-banner"
+            variant="compact"
+            primaryAction={<JalCoinActions compact />}
+          />
 
           {NAV_ITEMS.map((item) => {
             const contextId = `nav-context-${item.id}`;
@@ -272,6 +288,12 @@ export default function Landing({ mode, theme, onToggleTheme }: LandingProps) {
               <p>Founder-led systems, releases and infrastructure in development.</p>
               <p>Follow the build -&gt; Understand JAL -&gt; Join the process</p>
             </div>
+
+            <CampaignBanner
+              className="landing-promo-banner"
+              variant="strip"
+              showDonate={false}
+            />
 
             <address className="landing-public-id" aria-label="Public business details">
               <span>{LEGAL_OPERATOR_NAME}</span>

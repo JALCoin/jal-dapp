@@ -1,6 +1,5 @@
 import { useEffect, useId, useState } from "react";
-
-const STRIPE_DONATE_URL = "https://buy.stripe.com/bJe28qdNCfwD3yf1880x20d";
+import { DONATE_URL } from "../lib/donate";
 
 type DonateButtonProps = {
   className?: string;
@@ -74,12 +73,12 @@ export default function DonateButton({
             <div className="donate-modal-actions">
               <a
                 className="button gold"
-                href={STRIPE_DONATE_URL}
+                href={DONATE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setOpen(false)}
               >
-                Continue To Stripe
+                Continue To Checkout
               </a>
               <button type="button" className="button ghost" onClick={() => setOpen(false)}>
                 Cancel

@@ -14,6 +14,7 @@ import {
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Engine from "./pages/Engine";
+import JalSolPage, { JalSolLockedGate } from "./pages/JalSol";
 import ShopPage from "./pages/Shop";
 import AuthPage from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
@@ -326,7 +327,10 @@ function SidebarView({
           <SidebarSection
             title="Overview"
             onClose={onClose}
-            items={[{ to: "/app/home", label: "Home" }]}
+            items={[
+              { to: "/app/home", label: "Home" },
+              { to: "/app/jal-sol", label: "JAL/SOL" },
+            ]}
           />
 
           {isEngineerAccount ? (
@@ -915,11 +919,11 @@ function AppShell({
         <Route path="shop" element={<ShopPage />} />
         <Route path="track" element={<TrackPage />} />
 
-        <Route path="jal-sol" element={<Navigate to="/app/compliance" replace />} />
-        <Route path="jal-sol/observe" element={<Navigate to="/app/compliance" replace />} />
-        <Route path="jal-sol/enter" element={<Navigate to="/app/compliance" replace />} />
-        <Route path="jal-sol/build" element={<Navigate to="/app/compliance" replace />} />
-        <Route path="jal-sol/success" element={<Navigate to="/app/compliance" replace />} />
+        <Route path="jal-sol" element={<JalSolPage />} />
+        <Route path="jal-sol/observe" element={<JalSolLockedGate gate="observe" />} />
+        <Route path="jal-sol/enter" element={<JalSolLockedGate gate="enter" />} />
+        <Route path="jal-sol/build" element={<JalSolLockedGate gate="build" />} />
+        <Route path="jal-sol/success" element={<JalSolLockedGate gate="success" />} />
 
         <Route path="token" element={<Navigate to="/app/compliance" replace />} />
         <Route path="raydium" element={<Navigate to="/app/compliance" replace />} />
