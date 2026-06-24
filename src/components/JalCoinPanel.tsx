@@ -6,45 +6,6 @@ type JalCoinActionsProps = {
   compact?: boolean;
 };
 
-type VerificationRow = {
-  id: string;
-  label: string;
-  value: string;
-  note: string;
-  href: string;
-};
-
-const VERIFICATION_ROWS: VerificationRow[] = [
-  {
-    id: "mint",
-    label: "Official Mint",
-    value: JAL_COIN.mintAddress,
-    note: "The public SPL token mint for JAL Coin.",
-    href: JAL_COIN.solscanMintUrl,
-  },
-  {
-    id: "pool",
-    label: "Raydium Pool",
-    value: JAL_COIN.raydiumPoolAddress,
-    note: "The public JAL / SOL liquidity pool account.",
-    href: JAL_COIN.solscanPoolUrl,
-  },
-  {
-    id: "authority",
-    label: "Liquidity Wallet",
-    value: JAL_COIN.mintAuthorityAddress,
-    note: "Official public wallet for voluntary JAL liquidity support.",
-    href: JAL_COIN.solscanAuthorityUrl,
-  },
-  {
-    id: "reserve",
-    label: "Reserve Account",
-    value: JAL_COIN.reserveTokenAccount,
-    note: "Token account owned by the authority wallet.",
-    href: JAL_COIN.solscanReserveUrl,
-  },
-];
-
 export function JalCoinActions({ className = "", compact = false }: JalCoinActionsProps) {
   const [copied, setCopied] = useState(false);
   const classes = ["jal-coin-actions", compact ? "jal-coin-actions--compact" : "", className]
@@ -114,26 +75,22 @@ export default function JalCoinPanel() {
     >
       <div className="jal-coin-panel-copy">
         <div className="home-kicker">JAL COIN | PUBLIC LINKS</div>
-        <h2 className="home-modules-title">Buy $JAL on Raydium or copy the liquidity wallet.</h2>
+        <h2 className="home-modules-title">Explore JAL Coin, verify the proof, then choose your path.</h2>
         <p className="home-modules-lead">
-          JAL Coin is part of the JALSOL build on Solana. Use the official links below, compare the
-          mint and wallet addresses before acting, and only interact with crypto tools you
-          understand.
+          JAL Coin is part of the JALSOL build on Solana. Use the official links below, compare
+          addresses before acting, and only use crypto tools you understand.
         </p>
 
         <JalCoinActions className="jal-coin-panel-actions" />
 
         <div className="jal-coin-liquidity-guide" aria-label="How to support JAL liquidity">
-          <div className="jal-coin-guide-title">Liquidity support</div>
+          <div className="jal-coin-guide-title">Support the build</div>
           <ol>
-            <li>Use the buy button to open JAL Coin on Raydium.</li>
-            <li>Choose SOL on Raydium if you want to buy using SOL.</li>
-            <li>Copy the liquidity wallet if you want to send voluntary liquidity support.</li>
+            {JAL_COIN.supportBoundaryCopy.bullets.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
           </ol>
-          <p>
-            Liquidity support sent to the wallet is a voluntary contribution controlled by the
-            operator, not a direct Raydium LP deposit or entitlement to LP tokens.
-          </p>
+          <p>{JAL_COIN.supportBoundaryCopy.lead}</p>
         </div>
 
         <div className="jal-coin-risk-note" role="note">
@@ -152,28 +109,32 @@ export default function JalCoinPanel() {
         </div>
 
         <div className="jal-coin-address-list">
-          {VERIFICATION_ROWS.map((row) => (
-            <div className="jal-coin-address-row" key={row.id}>
+          {JAL_COIN.verificationItems.map((row) => (
+            <div className={`jal-coin-address-row tone-${row.tone}`} key={row.id}>
               <div className="jal-coin-address-main">
                 <div className="jal-coin-address-label">{row.label}</div>
-                <div className="jal-coin-address-value">{shortAddress(row.value)}</div>
+                <div className="jal-coin-address-value">
+                  {row.copyable ? shortAddress(row.value) : row.value}
+                </div>
                 <p className="jal-coin-address-note">{row.note}</p>
               </div>
               <div className="jal-coin-address-actions">
-                <button
-                  type="button"
-                  className="jal-coin-copy-button"
-                  onClick={() => copyAddress(row.id, row.value)}
-                >
-                  {copiedId === row.id ? "Copied" : "Copy"}
-                </button>
+                {row.copyable ? (
+                  <button
+                    type="button"
+                    className="jal-coin-copy-button"
+                    onClick={() => copyAddress(row.id, row.value)}
+                  >
+                    {copiedId === row.id ? "Copied" : "Copy"}
+                  </button>
+                ) : null}
                 <a
                   className="jal-coin-explorer-link"
                   href={row.href}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Solscan
+                  {row.hrefLabel}
                 </a>
               </div>
             </div>

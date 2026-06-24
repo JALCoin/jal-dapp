@@ -914,6 +914,7 @@ function AppShell({
         <Route path="home" element={<Home />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="legal" element={<LegalHubPage />} />
+        <Route path="disclaimer" element={<Disclaimer />} />
         <Route path="compliance" element={<ComplianceNoticePage />} />
 
         <Route path="shop" element={<ShopPage />} />

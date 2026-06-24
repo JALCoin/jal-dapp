@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import JalCoinPanel, { JalCoinActions } from "../components/JalCoinPanel";
+import { JalCoinActions } from "../components/JalCoinPanel";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { JAL_COIN, shortAddress } from "../lib/jalCoin";
 
@@ -11,9 +11,10 @@ type RouteTo =
   | "/app/jal-sol/enter"
   | "/app/jal-sol/build"
   | "/app/shop"
-  | "/app/legal";
+  | "/app/legal"
+  | "/app/disclaimer";
 
-type GateCard = {
+type BuilderCard = {
   id: "observe" | "enter" | "build";
   eyebrow: string;
   title: string;
@@ -23,39 +24,33 @@ type GateCard = {
   style: "observe" | "enter" | "build";
 };
 
-type LockedGateKind = GateCard["id"] | "success";
+type LockedGateKind = BuilderCard["id"] | "success";
 
-const GATES: GateCard[] = [
+const BUILDER_PATH: BuilderCard[] = [
   {
     id: "observe",
-    eyebrow: "Gate 01",
+    eyebrow: "Phase 01",
     title: "Observe",
-    summary:
-      "The old awareness layer covered wallets, custody, exchange paths, and on-chain responsibility.",
-    currentUse:
-      "Now held as private educational content while the public site focuses on verified JAL Coin links.",
+    summary: "Learn wallets, custody basics, exchange paths, and on-chain responsibility.",
+    currentUse: "Held private while the public hub focuses on verified JAL Coin links.",
     route: "/app/jal-sol/observe",
     style: "observe",
   },
   {
     id: "enter",
-    eyebrow: "Gate 02",
+    eyebrow: "Phase 02",
     title: "Enter",
-    summary:
-      "The old participation layer covered payment truth, wallet control, signing, and first movement.",
-    currentUse:
-      "Now locked so visitors are not pushed into an unfinished participation flow.",
+    summary: "A future guided path for checking tools before anyone leaves the JALSOL site.",
+    currentUse: "Locked so visitors are not pushed into an unfinished participation flow.",
     route: "/app/jal-sol/enter",
     style: "enter",
   },
   {
     id: "build",
-    eyebrow: "Gate 03",
+    eyebrow: "Phase 03",
     title: "Build",
-    summary:
-      "The old builder layer covered token creation, identity, utility, and ownership structure.",
-    currentUse:
-      "Now staged privately until the public context and legal boundaries are ready.",
+    summary: "A staged builder layer for identity, utility, and future public modules.",
+    currentUse: "Staged privately until the public context and legal boundaries are ready.",
     route: "/app/jal-sol/build",
     style: "build",
   },
@@ -63,22 +58,22 @@ const GATES: GateCard[] = [
 
 const LOCKED_GATE_META: Record<LockedGateKind, { eyebrow: string; title: string; body: string }> = {
   observe: {
-    eyebrow: "Gate 01 | Observe",
+    eyebrow: "Phase 01 | Observe",
     title: "Observe content is locked.",
     body:
-      "The old Observe modules remain private. The public page now only exposes official JAL Coin links and verification points.",
+      "The Observe modules remain private. The public page now only exposes official JAL Coin links and verification points.",
   },
   enter: {
-    eyebrow: "Gate 02 | Enter",
+    eyebrow: "Phase 02 | Enter",
     title: "Enter content is locked.",
     body:
-      "The old entry flow remains private. Visitors are not being moved through payment, wallet-signing, or participation gates here.",
+      "The entry flow remains private. Visitors are not being moved through payment, wallet-signing, or participation steps here.",
   },
   build: {
-    eyebrow: "Gate 03 | Build",
+    eyebrow: "Phase 03 | Build",
     title: "Build content is locked.",
     body:
-      "The old builder modules remain private. Token creation, utility, and expansion content are not public in this release.",
+      "The builder modules remain private. Token creation, utility, and expansion content are not public in this release.",
   },
   success: {
     eyebrow: "JAL/SOL | Success",
@@ -87,6 +82,24 @@ const LOCKED_GATE_META: Record<LockedGateKind, { eyebrow: string; title: string;
       "The old success route is retained only for route continuity. It no longer grants public progression or access.",
   },
 };
+
+const EXPLORER_POINTS = [
+  {
+    label: "Verify",
+    value: "Proof Board",
+    copy: "Check official addresses before you act.",
+  },
+  {
+    label: "Practice",
+    value: "Swap Path",
+    copy: "Understand the Raydium steps before leaving JALSOL.",
+  },
+  {
+    label: "Support",
+    value: "Voluntary",
+    copy: "Use the public wallet only if you choose to support the build.",
+  },
+];
 
 function useDelayedNavigate() {
   const navigate = useNavigate();
@@ -121,14 +134,14 @@ export function JalSolLockedGate({ gate }: { gate: LockedGateKind }) {
 
   usePageMeta(
     `${meta.eyebrow} Locked`,
-    "Locked JAL/SOL gate content. The public route is retained while detailed content stays private."
+    "Locked JAL/SOL path content. The public route is retained while detailed content stays private."
   );
 
   return (
     <main className="home-shell jal-shell jal-ground-page" aria-label={meta.eyebrow}>
       <div className="home-wrap">
-        <section className="card machine-surface panel-frame jal-window">
-          <section className="jal-hero jal-world-hero jal-world-hub-minimal" aria-label="Locked gate">
+        <section className="card machine-surface panel-frame jal-window jal-explorer-window">
+          <section className="jal-hero jal-world-hero jal-world-hub-minimal" aria-label="Locked path">
             <div className="jal-hero-center jal-world-hub-center">
               <p className="jal-world-pretitle">{meta.eyebrow}</p>
               <h1 className="home-title jal-world-hub-title">{meta.title}</h1>
@@ -139,7 +152,7 @@ export function JalSolLockedGate({ gate }: { gate: LockedGateKind }) {
               </p>
               <div className="jal-links">
                 <Link className="button gold" to="/app/jal-sol">
-                  Return To JAL/SOL
+                  Back To JAL/SOL
                 </Link>
                 <Link className="button ghost" to="/app/legal">
                   Legal + Business
@@ -155,11 +168,28 @@ export function JalSolLockedGate({ gate }: { gate: LockedGateKind }) {
 
 export default function JalSolPage() {
   const { beginRoute, loading } = useDelayedNavigate();
+  const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
 
   usePageMeta(
     "JAL/SOL",
-    "Official JAL Coin public hub with Raydium buy route, liquidity support wallet, Solscan verification, and locked historical gate structure."
+    "Official JAL Coin public hub with a proof board, Raydium practice path, liquidity support wallet, and locked builder path."
   );
+
+  useEffect(() => {
+    if (!copiedItemId) return;
+
+    const timer = window.setTimeout(() => setCopiedItemId(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copiedItemId]);
+
+  async function copyValue(id: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedItemId(id);
+    } catch {
+      setCopiedItemId(null);
+    }
+  }
 
   return (
     <main
@@ -167,57 +197,156 @@ export default function JalSolPage() {
       aria-label="JAL/SOL"
     >
       <div className="home-wrap">
-        <section className="card machine-surface panel-frame jal-window">
-          <section className="jal-hero jal-world-hero jal-world-hub-minimal" aria-label="JAL/SOL hero">
+        <section className="card machine-surface panel-frame jal-window jal-explorer-window">
+          <section className="jal-hero jal-world-hero jal-world-hub-minimal jal-explorer-hero" aria-label="Explore JAL Coin">
             <div className="jal-hero-center jal-world-hub-center">
-              <p className="jal-world-pretitle">Official JAL Coin hub</p>
-              <h1 className="home-title jal-world-hub-title">JAL/SOL</h1>
+              <p className="jal-world-pretitle">Explorer + Proof Board</p>
+              <h1 className="home-title jal-world-hub-title">Explore JAL Coin</h1>
               <p className="jal-world-hub-subtitle">JAL Coin on Solana</p>
               <p className="home-lead">
-                Use this page to find the official JAL Coin mint, Raydium route, and liquidity
-                support wallet. Historical JAL/SOL gate content is present only as a locked
-                structure.
+                A simple public map for checking official links, practicing the Raydium path, and
+                choosing whether to support the JALSOL build.
               </p>
               <div className="jal-links">
                 <JalCoinActions />
+                <a className="button ghost" href="#jal-proof-board">
+                  View Proof Board
+                </a>
+                <Link className="button ghost" to="/app/legal">
+                  Read Legal Context
+                </Link>
               </div>
             </div>
-          </section>
 
-          <section className="jal-bay jal-bay-wide" aria-label="JAL Coin public summary">
-            <div className="jal-bay-head">
-              <div className="jal-bay-title">Public JAL Coin Details</div>
-              <div className="jal-bay-note">Verify before acting</div>
-            </div>
-
-            <div className="jal-bullets">
-              <article className="jal-bullet">
-                <div className="jal-bullet-k">Mint</div>
-                <div className="jal-bullet-v">{shortAddress(JAL_COIN.mintAddress)}</div>
-              </article>
-              <article className="jal-bullet">
-                <div className="jal-bullet-k">Raydium Pool</div>
-                <div className="jal-bullet-v">{shortAddress(JAL_COIN.raydiumPoolAddress)}</div>
-              </article>
-              <article className="jal-bullet">
-                <div className="jal-bullet-k">Liquidity Wallet</div>
-                <div className="jal-bullet-v">{shortAddress(JAL_COIN.liquiditySupportWallet)}</div>
-              </article>
-              <article className="jal-bullet">
-                <div className="jal-bullet-k">Freeze Authority</div>
-                <div className="jal-bullet-v">{JAL_COIN.freezeAuthorityStatus}</div>
-              </article>
+            <div className="jal-explorer-points" aria-label="JAL/SOL explorer points">
+              {EXPLORER_POINTS.map((point) => (
+                <article className="jal-explorer-point" key={point.label}>
+                  <div className="jal-explorer-point-label">{point.label}</div>
+                  <div className="jal-explorer-point-value">{point.value}</div>
+                  <p>{point.copy}</p>
+                </article>
+              ))}
             </div>
           </section>
 
-          <section className="jal-bay jal-bay-wide" aria-label="Locked JAL/SOL gates">
+          <section id="jal-proof-board" className="jal-bay jal-bay-wide jal-proof-board" aria-label="Proof Board">
             <div className="jal-bay-head">
-              <div className="jal-bay-title">Locked Gate Structure</div>
-              <div className="jal-bay-note">Restored for continuity, content not public</div>
+              <div>
+                <div className="jal-bay-title">Proof Board</div>
+                <div className="jal-bay-note">Verify before you act</div>
+              </div>
+              <div className="jal-proof-timestamp">Last checked: {JAL_COIN.lastVerifiedOn}</div>
+            </div>
+
+            <div className="jal-proof-grid">
+              {JAL_COIN.verificationItems.map((item) => (
+                <article className={`jal-proof-card tone-${item.tone}`} key={item.id}>
+                  <div className="jal-proof-card-top">
+                    <span>{item.label}</span>
+                    <span className="jal-proof-state">Verified</span>
+                  </div>
+                  <div className="jal-proof-value">
+                    {item.copyable ? shortAddress(item.value) : item.value}
+                  </div>
+                  <p>{item.note}</p>
+                  <div className="jal-proof-actions">
+                    {item.copyable ? (
+                      <button
+                        type="button"
+                        className="jal-coin-copy-button"
+                        onClick={() => copyValue(item.id, item.value)}
+                      >
+                        {copiedItemId === item.id ? "Copied" : "Copy"}
+                      </button>
+                    ) : null}
+                    <a
+                      className="jal-coin-explorer-link"
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {item.hrefLabel}
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="jal-bay jal-bay-wide jal-swap-practice" aria-label="Swap Practice">
+            <div className="jal-bay-head">
+              <div>
+                <div className="jal-bay-title">Swap Practice</div>
+                <div className="jal-bay-note">Practice the path first</div>
+              </div>
+              <div className="jal-proof-timestamp">No wallet connection here</div>
+            </div>
+
+            <div className="jal-practice-steps">
+              {JAL_COIN.swapPracticeSteps.map((step, index) => (
+                <article className="jal-practice-step" key={step.id}>
+                  <div className="jal-practice-number">{String(index + 1).padStart(2, "0")}</div>
+                  <h2>{step.title}</h2>
+                  <p>{step.body}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="jal-practice-footer">
+              <p>Crypto is optional and volatile. Raydium opens outside JALSOL.</p>
+              <a
+                className="button gold jal-coin-action"
+                href={JAL_COIN.raydiumSwapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Buy $JAL On Raydium
+              </a>
+            </div>
+          </section>
+
+          <section className="jal-bay jal-bay-wide jal-support-build" aria-label="Support The Build">
+            <div className="jal-support-copy">
+              <div className="home-kicker">SUPPORT THE BUILD</div>
+              <h2 className="home-modules-title">{JAL_COIN.supportBoundaryCopy.title}</h2>
+              <p className="home-modules-lead">{JAL_COIN.supportBoundaryCopy.lead}</p>
+              <ul className="jal-support-list">
+                {JAL_COIN.supportBoundaryCopy.bullets.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <div className="jal-links">
+                <JalCoinActions />
+                <Link className="button ghost" to="/app/disclaimer">
+                  Read Legal Context
+                </Link>
+              </div>
+            </div>
+
+            <div className="jal-support-terminal" aria-label="Liquidity support wallet">
+              <div className="jal-terminal-kicker">Official Wallet</div>
+              <div className="jal-terminal-address">{shortAddress(JAL_COIN.liquiditySupportWallet)}</div>
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => copyValue("support-wallet", JAL_COIN.liquiditySupportWallet)}
+              >
+                {copiedItemId === "support-wallet" ? "Wallet Copied" : "Copy Liquidity Wallet"}
+              </button>
+            </div>
+          </section>
+
+          <section className="jal-bay jal-bay-wide jal-builder-path" aria-label="Builder Path Coming Later">
+            <div className="jal-bay-head">
+              <div>
+                <div className="jal-bay-title">Builder Path: Coming Later</div>
+                <div className="jal-bay-note">Advanced content remains locked</div>
+              </div>
+              <div className="jal-proof-timestamp">Readiness Arcade: coming later</div>
             </div>
 
             <div className="jal-gate-grid">
-              {GATES.map((gate) => (
+              {BUILDER_PATH.map((gate) => (
                 <article key={gate.id} className={`jal-gate-card jal-gate-card--${gate.style}`}>
                   <div className="jal-gate-top">
                     <span className="jal-gate-eyebrow">{gate.eyebrow}</span>
@@ -233,7 +362,7 @@ export default function JalSolPage() {
                       onClick={() => beginRoute(gate.route)}
                       disabled={loading}
                     >
-                      View Locked Gate
+                      View Coming Later
                     </button>
                   </div>
                 </article>
@@ -241,8 +370,6 @@ export default function JalSolPage() {
             </div>
           </section>
         </section>
-
-        <JalCoinPanel />
       </div>
 
       {loading && (

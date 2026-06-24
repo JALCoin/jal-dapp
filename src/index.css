@@ -4275,6 +4275,314 @@ a.button[aria-disabled="true"]{
   }
 }
 
+/* ---------- EXPLORER + PROOF BOARD ---------- */
+
+.jal-explorer-window{
+  gap:clamp(18px, 2.2vw, 26px);
+}
+
+.jal-explorer-hero{
+  overflow:hidden;
+  margin-bottom:0;
+  padding-bottom:clamp(40px, 5vw, 62px);
+}
+
+.jal-explorer-points{
+  position:relative;
+  z-index:1;
+  width:min(100%, 980px);
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+  margin-top:18px;
+}
+
+.jal-explorer-point{
+  min-height:118px;
+  display:grid;
+  align-content:start;
+  gap:8px;
+  padding:16px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(420px 120px at 50% 0%, rgba(17,241,167,.08), transparent 64%),
+    linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.016));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.jal-explorer-point-label,
+.jal-proof-card-top,
+.jal-practice-number,
+.jal-terminal-kicker{
+  color:rgba(244,200,106,.88);
+  font-family:var(--mono-font);
+  font-size:.7rem;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+
+.jal-explorer-point-value{
+  color:rgba(231,255,247,.95);
+  font-size:1.04rem;
+  font-weight:800;
+}
+
+.jal-explorer-point p{
+  margin:0;
+  color:rgba(185,205,220,.82);
+  line-height:1.55;
+  font-size:.9rem;
+}
+
+.jal-proof-board,
+.jal-swap-practice,
+.jal-support-build,
+.jal-builder-path{
+  overflow:hidden;
+}
+
+.jal-proof-timestamp{
+  display:inline-flex;
+  align-items:center;
+  min-height:34px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(17,241,167,.16);
+  background:rgba(17,241,167,.055);
+  color:rgba(231,255,247,.78);
+  font-family:var(--mono-font);
+  font-size:.7rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.jal-proof-grid{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:12px;
+}
+
+.jal-proof-card{
+  min-width:0;
+  min-height:218px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:16px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(520px 160px at 50% 0%, rgba(255,255,255,.04), transparent 64%),
+    linear-gradient(180deg, rgba(255,255,255,.038), rgba(0,0,0,.20));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 14px 28px rgba(0,0,0,.18);
+}
+
+.jal-proof-card.tone-green{
+  border-color:rgba(17,241,167,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035), 0 0 18px rgba(17,241,167,.055);
+}
+
+.jal-proof-card.tone-gold{
+  border-color:rgba(244,200,106,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035), 0 0 18px rgba(244,200,106,.055);
+}
+
+.jal-proof-card.tone-cyan{
+  border-color:rgba(0,240,255,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035), 0 0 18px rgba(0,240,255,.055);
+}
+
+.jal-proof-card-top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.jal-proof-state{
+  color:rgba(17,241,167,.9);
+}
+
+.jal-proof-value{
+  min-height:34px;
+  display:flex;
+  align-items:center;
+  color:rgba(231,255,247,.96);
+  font-family:var(--mono-font);
+  font-size:1rem;
+  letter-spacing:.04em;
+  word-break:break-word;
+}
+
+.jal-proof-card p,
+.jal-practice-step p,
+.jal-practice-footer p{
+  margin:0;
+  color:rgba(185,205,220,.82);
+  line-height:1.58;
+  font-size:.9rem;
+}
+
+.jal-proof-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:auto;
+}
+
+.jal-practice-steps{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:12px;
+}
+
+.jal-practice-step{
+  position:relative;
+  min-height:210px;
+  display:grid;
+  align-content:start;
+  gap:12px;
+  padding:18px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.10);
+  background:
+    linear-gradient(180deg, rgba(17,241,167,.055), rgba(255,255,255,.012)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,.025) 0,
+      rgba(255,255,255,.025) 1px,
+      transparent 1px,
+      transparent 10px
+    );
+}
+
+.jal-practice-step::after{
+  content:"";
+  position:absolute;
+  top:30px;
+  right:-13px;
+  width:14px;
+  height:1px;
+  background:linear-gradient(90deg, rgba(17,241,167,.18), rgba(244,200,106,.22));
+}
+
+.jal-practice-step:last-child::after{
+  display:none;
+}
+
+.jal-practice-step h2{
+  margin:0;
+  color:rgba(231,255,247,.96);
+  font-size:1.12rem;
+  line-height:1.2;
+}
+
+.jal-practice-footer{
+  position:relative;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-top:16px;
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid rgba(244,200,106,.16);
+  background:rgba(244,200,106,.045);
+}
+
+.jal-support-build{
+  display:grid;
+  grid-template-columns:minmax(0, 1.15fr) minmax(280px, .85fr);
+  gap:18px;
+  align-items:stretch;
+}
+
+.jal-support-copy,
+.jal-support-terminal{
+  position:relative;
+  z-index:1;
+}
+
+.jal-support-list{
+  display:grid;
+  gap:10px;
+  margin:16px 0 0;
+  padding:0;
+  list-style:none;
+}
+
+.jal-support-list li{
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.025);
+  color:rgba(231,255,247,.82);
+  line-height:1.5;
+}
+
+.jal-support-terminal{
+  min-height:100%;
+  display:grid;
+  align-content:center;
+  justify-items:start;
+  gap:14px;
+  padding:20px;
+  border-radius:20px;
+  border:1px solid rgba(17,241,167,.18);
+  background:
+    radial-gradient(520px 180px at 50% 0%, rgba(17,241,167,.10), transparent 64%),
+    linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.34));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+.jal-terminal-address{
+  color:rgba(231,255,247,.96);
+  font-family:var(--mono-font);
+  font-size:clamp(1.2rem, 3vw, 1.8rem);
+  letter-spacing:.08em;
+}
+
+:root[data-theme="light"] .jal-explorer-point,
+:root[data-theme="light"] .jal-proof-card,
+:root[data-theme="light"] .jal-practice-step,
+:root[data-theme="light"] .jal-support-list li,
+:root[data-theme="light"] .jal-support-terminal{
+  border-color:rgba(77,58,29,.12);
+  background:
+    radial-gradient(520px 160px at 50% 0%, rgba(244,200,106,.10), transparent 64%),
+    linear-gradient(180deg, rgba(255,255,255,.82), rgba(246,238,226,.62));
+  color:rgba(28,24,19,.88);
+}
+
+:root[data-theme="light"] .jal-explorer-point p,
+:root[data-theme="light"] .jal-proof-card p,
+:root[data-theme="light"] .jal-practice-step p,
+:root[data-theme="light"] .jal-practice-footer p,
+:root[data-theme="light"] .jal-support-list li{
+  color:rgba(52,43,31,.74);
+}
+
+:root[data-theme="light"] .jal-explorer-point-value,
+:root[data-theme="light"] .jal-proof-value,
+:root[data-theme="light"] .jal-practice-step h2,
+:root[data-theme="light"] .jal-terminal-address{
+  color:rgba(28,24,19,.92);
+}
+
+:root[data-theme="light"] .jal-proof-timestamp{
+  border-color:rgba(17,145,106,.18);
+  background:rgba(17,145,106,.08);
+  color:rgba(42,62,54,.82);
+}
+
 /* ---------- GATES AS PATH CHOICE ---------- */
 
 .jal-gate-grid{
@@ -4473,6 +4781,16 @@ a.button[aria-disabled="true"]{
 /* ---------- RESPONSIVE ---------- */
 
 @media (max-width:1180px){
+  .jal-explorer-points,
+  .jal-proof-grid,
+  .jal-practice-steps{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+
+  .jal-support-build{
+    grid-template-columns:1fr;
+  }
+
   .jal-gate-grid{
     grid-template-columns:1fr;
     perspective:none;
@@ -4502,6 +4820,39 @@ a.button[aria-disabled="true"]{
   .jal-ground-page::before{
     opacity:.10;
     filter:blur(22px) saturate(1.02);
+  }
+
+  .jal-explorer-points,
+  .jal-proof-grid,
+  .jal-practice-steps{
+    grid-template-columns:1fr;
+  }
+
+  .jal-explorer-point,
+  .jal-proof-card,
+  .jal-practice-step{
+    min-height:0;
+  }
+
+  .jal-practice-step::after{
+    display:none;
+  }
+
+  .jal-practice-footer{
+    align-items:stretch;
+  }
+
+  .jal-practice-footer .button{
+    width:100%;
+    justify-content:center;
+  }
+
+  .jal-support-terminal{
+    justify-items:stretch;
+  }
+
+  .jal-terminal-address{
+    font-size:1.1rem;
   }
 
   .jal-hero{

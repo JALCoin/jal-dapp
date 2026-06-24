@@ -65,7 +65,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "JAL/SOL",
     to: "/app/jal-sol",
     contextTitle: "JAL Coin",
-    contextBody: "Official token links, liquidity wallet, and locked gate structure.",
+    contextBody: "Explorer, proof board, Raydium practice path, and support wallet.",
   },
   {
     id: "shop",
