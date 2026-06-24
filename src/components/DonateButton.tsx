@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { DONATE_URL } from "../lib/donate";
 
 type DonateButtonProps = {
@@ -14,6 +15,54 @@ export default function DonateButton({
   const titleId = useId();
   const descId = useId();
   const classes = ["chip", "donate-button", className].filter(Boolean).join(" ");
+  const modal = (
+    <div className="donate-modal-layer" role="presentation" onMouseDown={() => setOpen(false)}>
+      <div
+        className="donate-modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="donate-modal-close"
+          aria-label="Close donation context"
+          onClick={() => setOpen(false)}
+        >
+          X
+        </button>
+
+        <div className="donate-modal-kicker">Join The Process</div>
+        <h2 id={titleId} className="donate-modal-title">
+          Voluntary JALSOL Support
+        </h2>
+        <p id={descId} className="donate-modal-copy">
+          Join the process. Voluntary support for Jeremy Aaron Lugg&apos;s ongoing JALSOL build.
+        </p>
+        <p className="donate-modal-boundary">
+          Not a product purchase, investment, token sale, equity offer, tax-deductible gift, or
+          promise of future benefit.
+        </p>
+
+        <div className="donate-modal-actions">
+          <a
+            className="button gold"
+            href={DONATE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+          >
+            Continue To Checkout
+          </a>
+          <button type="button" className="button ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -24,6 +73,18 @@ export default function DonateButton({
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previous = document.body.getAttribute("data-modal-open");
+    document.body.setAttribute("data-modal-open", "true");
+
+    return () => {
+      if (previous === null) document.body.removeAttribute("data-modal-open");
+      else document.body.setAttribute("data-modal-open", previous);
+    };
   }, [open]);
 
   return (
@@ -39,54 +100,7 @@ export default function DonateButton({
         {label}
       </button>
 
-      {open ? (
-        <div className="donate-modal-layer" role="presentation" onMouseDown={() => setOpen(false)}>
-          <div
-            className="donate-modal-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            aria-describedby={descId}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="donate-modal-close"
-              aria-label="Close donation context"
-              onClick={() => setOpen(false)}
-            >
-              X
-            </button>
-
-            <div className="donate-modal-kicker">Join The Process</div>
-            <h2 id={titleId} className="donate-modal-title">
-              Voluntary JALSOL Support
-            </h2>
-            <p id={descId} className="donate-modal-copy">
-              Join the process. Voluntary support for Jeremy Aaron Lugg&apos;s ongoing JALSOL build.
-            </p>
-            <p className="donate-modal-boundary">
-              Not a product purchase, investment, token sale, equity offer, tax-deductible gift, or
-              promise of future benefit.
-            </p>
-
-            <div className="donate-modal-actions">
-              <a
-                className="button gold"
-                href={DONATE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setOpen(false)}
-              >
-                Continue To Checkout
-              </a>
-              <button type="button" className="button ghost" onClick={() => setOpen(false)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {open ? createPortal(modal, document.body) : null}
     </>
   );
 }

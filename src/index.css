@@ -501,7 +501,7 @@ a.button[aria-disabled="true"]{
 .donate-modal-layer{
   position:fixed;
   inset:0;
-  z-index:1600;
+  z-index:10000;
   display:grid;
   place-items:center;
   padding:18px;
@@ -511,6 +511,7 @@ a.button[aria-disabled="true"]{
 
 .donate-modal-panel{
   position:relative;
+  z-index:1;
   width:min(460px, 100%);
   display:grid;
   gap:14px;
