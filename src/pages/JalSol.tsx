@@ -331,6 +331,37 @@ export default function JalSolPage() {
             </div>
           </section>
 
+          <section className="jal-bay jal-bay-wide jal-support-build" aria-label="Support The Build">
+            <div className="jal-support-copy">
+              <div className="home-kicker">Support The Build</div>
+              <h2 className="home-modules-title">{JAL_COIN.supportBoundaryCopy.title}</h2>
+              <p className="home-modules-lead">{JAL_COIN.supportBoundaryCopy.lead}</p>
+              <ul className="jal-support-list">
+                {JAL_COIN.supportBoundaryCopy.bullets.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <div className="jal-links">
+                <JalCoinActions />
+                <Link className="button ghost" to="/app/disclaimer">
+                  Read The Details
+                </Link>
+              </div>
+            </div>
+
+            <div className="jal-support-terminal" aria-label="Support wallet">
+              <div className="jal-terminal-kicker">Support Wallet</div>
+              <div className="jal-terminal-address">{shortAddress(JAL_COIN.liquiditySupportWallet)}</div>
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => copyValue("support-wallet", JAL_COIN.liquiditySupportWallet)}
+              >
+                {copiedItemId === "support-wallet" ? "Wallet Copied" : "Copy Support Wallet"}
+              </button>
+            </div>
+          </section>
+
           <section className="jal-bay jal-bay-wide jal-arcade-preview" aria-label="JALSOL Arcade">
             <div className="jal-bay-head">
               <div>
@@ -373,37 +404,6 @@ export default function JalSolPage() {
               <Link className="button gold jal-coin-action" to="/app/jal-sol/arcade">
                 Enter Arcade
               </Link>
-            </div>
-          </section>
-
-          <section className="jal-bay jal-bay-wide jal-support-build" aria-label="Support The Build">
-            <div className="jal-support-copy">
-              <div className="home-kicker">Support The Build</div>
-              <h2 className="home-modules-title">{JAL_COIN.supportBoundaryCopy.title}</h2>
-              <p className="home-modules-lead">{JAL_COIN.supportBoundaryCopy.lead}</p>
-              <ul className="jal-support-list">
-                {JAL_COIN.supportBoundaryCopy.bullets.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-              <div className="jal-links">
-                <JalCoinActions />
-                <Link className="button ghost" to="/app/disclaimer">
-                  Read The Details
-                </Link>
-              </div>
-            </div>
-
-            <div className="jal-support-terminal" aria-label="Support wallet">
-              <div className="jal-terminal-kicker">Support Wallet</div>
-              <div className="jal-terminal-address">{shortAddress(JAL_COIN.liquiditySupportWallet)}</div>
-              <button
-                type="button"
-                className="button ghost"
-                onClick={() => copyValue("support-wallet", JAL_COIN.liquiditySupportWallet)}
-              >
-                {copiedItemId === "support-wallet" ? "Wallet Copied" : "Copy Support Wallet"}
-              </button>
             </div>
           </section>
 
