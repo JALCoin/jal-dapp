@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { JalCoinActions } from "../components/JalCoinPanel";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { arcadeCopy, arcadeModuleItems } from "../lib/jalArcade";
 import { JAL_COIN, shortAddress } from "../lib/jalCoin";
 
 type RouteTo =
@@ -327,6 +328,51 @@ export default function JalSolPage() {
                   <p>{signal.summary}</p>
                 </article>
               ))}
+            </div>
+          </section>
+
+          <section className="jal-bay jal-bay-wide jal-arcade-preview" aria-label="JALSOL Arcade">
+            <div className="jal-bay-head">
+              <div>
+                <div className="jal-bay-title">{arcadeCopy.title}</div>
+                <div className="jal-bay-note">Browser terminal</div>
+              </div>
+              <div className="jal-proof-timestamp">Crown Scan live</div>
+            </div>
+
+            <div className="jal-arcade-preview-copy">
+              <h2>{arcadeCopy.line}</h2>
+              <p>{arcadeCopy.lead}</p>
+            </div>
+
+            <div className="jal-arcade-module-grid" role="list" aria-label="JALSOL Arcade modules">
+              {arcadeModuleItems.map((item) => (
+                <article
+                  className={`jal-arcade-module-card ${item.available ? "is-live" : "is-coming-soon"}`}
+                  key={item.id}
+                  role="listitem"
+                >
+                  <div className="jal-arcade-card-top">
+                    <span>{item.eyebrow}</span>
+                    <span className="jal-arcade-status">{item.status}</span>
+                  </div>
+                  <h2>{item.title}</h2>
+                  <p>{item.summary}</p>
+                  <div className="jal-arcade-command">{item.command}</div>
+                  <div className="jal-arcade-card-actions">
+                    <Link className={item.available ? "button gold" : "button ghost"} to={item.route}>
+                      {item.available ? "Start Scan" : "Coming Soon"}
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="jal-practice-footer">
+              <p>Enter the terminal, clear the scan, then come back to the public record.</p>
+              <Link className="button gold jal-coin-action" to="/app/jal-sol/arcade">
+                Enter Arcade
+              </Link>
             </div>
           </section>
 

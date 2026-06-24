@@ -15,6 +15,10 @@ import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Engine from "./pages/Engine";
 import JalSolPage, { JalSolLockedGate } from "./pages/JalSol";
+import JalSolArcadePage, {
+  JalSolArcadeComingSoonPage,
+  JalSolCrownScanPage,
+} from "./pages/JalSolArcade";
 import ShopPage from "./pages/Shop";
 import AuthPage from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
@@ -921,6 +925,20 @@ function AppShell({
         <Route path="track" element={<TrackPage />} />
 
         <Route path="jal-sol" element={<JalSolPage />} />
+        <Route path="jal-sol/arcade" element={<JalSolArcadePage />} />
+        <Route path="jal-sol/arcade/check-first" element={<JalSolCrownScanPage />} />
+        <Route
+          path="jal-sol/arcade/pool-compass"
+          element={<JalSolArcadeComingSoonPage moduleId="pool-compass" />}
+        />
+        <Route
+          path="jal-sol/arcade/link-runner"
+          element={<JalSolArcadeComingSoonPage moduleId="link-runner" />}
+        />
+        <Route
+          path="jal-sol/arcade/signal-sprint"
+          element={<JalSolArcadeComingSoonPage moduleId="signal-sprint" />}
+        />
         <Route path="jal-sol/observe" element={<JalSolLockedGate gate="observe" />} />
         <Route path="jal-sol/enter" element={<JalSolLockedGate gate="enter" />} />
         <Route path="jal-sol/build" element={<JalSolLockedGate gate="build" />} />

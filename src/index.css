@@ -4351,6 +4351,10 @@ a.button[aria-disabled="true"]{
 .jal-proof-board,
 .jal-swap-practice,
 .jal-signal-log,
+.jal-arcade-preview,
+.jal-arcade-module-terminal,
+.jal-arcade-scan-terminal,
+.jal-arcade-coming-soon,
 .jal-support-build,
 .jal-builder-path{
   overflow:hidden;
@@ -4587,6 +4591,264 @@ a.button[aria-disabled="true"]{
   line-height:1.25;
 }
 
+.jal-arcade-terminal{
+  gap:clamp(18px, 2.2vw, 26px);
+}
+
+.jal-arcade-hero{
+  overflow:hidden;
+  margin-bottom:0;
+  padding-bottom:clamp(38px, 5vw, 60px);
+}
+
+.jal-arcade-preview-copy{
+  position:relative;
+  z-index:1;
+  max-width:760px;
+  display:grid;
+  gap:8px;
+  margin-bottom:16px;
+}
+
+.jal-arcade-preview-copy h2{
+  margin:0;
+  color:rgba(231,255,247,.96);
+  font-size:clamp(1.35rem, 2.5vw, 2.05rem);
+  line-height:1.12;
+}
+
+.jal-arcade-preview-copy p{
+  margin:0;
+  color:rgba(185,205,220,.82);
+  line-height:1.58;
+}
+
+.jal-arcade-module-grid{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:1.25fr repeat(3, minmax(0, 1fr));
+  gap:12px;
+}
+
+.jal-arcade-module-card{
+  min-width:0;
+  min-height:250px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:16px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(560px 160px at 50% 0%, rgba(244,200,106,.08), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.24));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 14px 28px rgba(0,0,0,.18);
+}
+
+.jal-arcade-module-card.is-live{
+  border-color:rgba(244,200,106,.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 0 22px rgba(244,200,106,.08),
+    0 18px 34px rgba(0,0,0,.20);
+}
+
+.jal-arcade-module-card.is-coming-soon{
+  opacity:.78;
+}
+
+.jal-arcade-card-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  color:rgba(244,200,106,.88);
+  font-family:var(--mono-font);
+  font-size:.68rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.jal-arcade-status{
+  color:rgba(17,241,167,.88);
+}
+
+.jal-arcade-module-card.is-coming-soon .jal-arcade-status{
+  color:rgba(255,226,156,.86);
+}
+
+.jal-arcade-module-card h2,
+.jal-arcade-result-panel h2,
+.jal-arcade-coming-panel h2{
+  margin:0;
+  color:rgba(231,255,247,.96);
+  line-height:1.12;
+}
+
+.jal-arcade-module-card h2{
+  font-size:clamp(1.15rem, 1.7vw, 1.5rem);
+  text-transform:uppercase;
+}
+
+.jal-arcade-module-card p,
+.jal-arcade-scan-card p,
+.jal-arcade-result-panel p,
+.jal-arcade-coming-panel p{
+  margin:0;
+  color:rgba(185,205,220,.82);
+  line-height:1.58;
+  font-size:.9rem;
+}
+
+.jal-arcade-command{
+  margin-top:auto;
+  color:rgba(231,255,247,.84);
+  font-family:var(--mono-font);
+  font-size:.72rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.jal-arcade-card-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.jal-arcade-card-actions .button{
+  width:100%;
+  justify-content:center;
+}
+
+.jal-arcade-scan-grid{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:12px;
+}
+
+.jal-arcade-scan-card{
+  position:relative;
+  overflow:hidden;
+  min-width:0;
+  min-height:240px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:16px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(420px 160px at 50% 0%, rgba(255,255,255,.045), transparent 64%),
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(0,0,0,.24));
+  color:rgba(231,255,247,.92);
+  text-align:left;
+  cursor:pointer;
+  transition:
+    transform var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    opacity var(--t-fast);
+}
+
+.jal-arcade-scan-card:hover{
+  transform:translateY(-3px);
+  border-color:rgba(244,200,106,.30);
+  box-shadow:0 0 20px rgba(244,200,106,.08);
+}
+
+.jal-arcade-scan-card.is-official{
+  border-color:rgba(17,241,167,.34);
+  box-shadow:0 0 22px rgba(17,241,167,.12);
+}
+
+.jal-arcade-scan-card.is-mismatch{
+  border-color:rgba(255,98,98,.34);
+  box-shadow:0 0 22px rgba(255,98,98,.10);
+}
+
+.jal-arcade-scan-card.is-muted{
+  opacity:.58;
+}
+
+.jal-arcade-seal-mark{
+  display:grid;
+  place-items:center;
+  width:88px;
+  aspect-ratio:1;
+  margin:4px auto 2px;
+  border-radius:50%;
+  border:1px solid rgba(244,200,106,.30);
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.72), rgba(244,200,106,.32) 22%, rgba(35,22,8,.88) 70%),
+    rgba(0,0,0,.28);
+  color:rgba(255,226,156,.96);
+  font-family:var(--mono-font);
+  font-size:1.1rem;
+  font-weight:900;
+  letter-spacing:.16em;
+  box-shadow:
+    inset 0 1px 8px rgba(255,255,255,.16),
+    0 0 24px rgba(244,200,106,.14);
+}
+
+.jal-arcade-fragments{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+}
+
+.jal-arcade-fragments span{
+  min-width:0;
+  display:flex;
+  justify-content:center;
+  padding:8px 6px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.22);
+  color:rgba(231,255,247,.92);
+  font-family:var(--mono-font);
+  font-size:.8rem;
+  letter-spacing:.08em;
+}
+
+.jal-arcade-result-panel,
+.jal-arcade-coming-panel{
+  position:relative;
+  z-index:1;
+  display:grid;
+  gap:12px;
+  margin-top:16px;
+  padding:18px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(620px 180px at 50% 0%, rgba(17,241,167,.07), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(0,0,0,.20));
+}
+
+.jal-arcade-result-panel.is-clear{
+  border-color:rgba(17,241,167,.28);
+  box-shadow:0 0 24px rgba(17,241,167,.10);
+}
+
+.jal-arcade-result-panel.is-mismatch{
+  border-color:rgba(255,98,98,.26);
+  box-shadow:0 0 24px rgba(255,98,98,.08);
+}
+
+.jal-arcade-result-kicker{
+  color:rgba(244,200,106,.88);
+  font-family:var(--mono-font);
+  font-size:.7rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+
 .jal-support-build{
   display:grid;
   grid-template-columns:minmax(0, 1.15fr) minmax(280px, .85fr);
@@ -4643,6 +4905,10 @@ a.button[aria-disabled="true"]{
 :root[data-theme="light"] .jal-proof-card,
 :root[data-theme="light"] .jal-practice-step,
 :root[data-theme="light"] .jal-signal-card,
+:root[data-theme="light"] .jal-arcade-module-card,
+:root[data-theme="light"] .jal-arcade-scan-card,
+:root[data-theme="light"] .jal-arcade-result-panel,
+:root[data-theme="light"] .jal-arcade-coming-panel,
 :root[data-theme="light"] .jal-support-list li,
 :root[data-theme="light"] .jal-support-terminal{
   border-color:rgba(77,58,29,.12);
@@ -4656,6 +4922,11 @@ a.button[aria-disabled="true"]{
 :root[data-theme="light"] .jal-proof-card p,
 :root[data-theme="light"] .jal-practice-step p,
 :root[data-theme="light"] .jal-signal-card p,
+:root[data-theme="light"] .jal-arcade-preview-copy p,
+:root[data-theme="light"] .jal-arcade-module-card p,
+:root[data-theme="light"] .jal-arcade-scan-card p,
+:root[data-theme="light"] .jal-arcade-result-panel p,
+:root[data-theme="light"] .jal-arcade-coming-panel p,
 :root[data-theme="light"] .jal-practice-footer p,
 :root[data-theme="light"] .jal-support-list li{
   color:rgba(52,43,31,.74);
@@ -4665,8 +4936,17 @@ a.button[aria-disabled="true"]{
 :root[data-theme="light"] .jal-proof-value,
 :root[data-theme="light"] .jal-practice-step h2,
 :root[data-theme="light"] .jal-signal-card h2,
+:root[data-theme="light"] .jal-arcade-preview-copy h2,
+:root[data-theme="light"] .jal-arcade-module-card h2,
+:root[data-theme="light"] .jal-arcade-result-panel h2,
+:root[data-theme="light"] .jal-arcade-coming-panel h2,
 :root[data-theme="light"] .jal-terminal-address{
   color:rgba(28,24,19,.92);
+}
+
+:root[data-theme="light"] .jal-arcade-command,
+:root[data-theme="light"] .jal-arcade-fragments span{
+  color:rgba(28,24,19,.84);
 }
 
 :root[data-theme="light"] .jal-proof-tech{
@@ -4880,7 +5160,9 @@ a.button[aria-disabled="true"]{
   .jal-explorer-points,
   .jal-proof-grid,
   .jal-practice-steps,
-  .jal-signal-grid{
+  .jal-signal-grid,
+  .jal-arcade-module-grid,
+  .jal-arcade-scan-grid{
     grid-template-columns:repeat(2, minmax(0, 1fr));
   }
 
@@ -4922,14 +5204,18 @@ a.button[aria-disabled="true"]{
   .jal-explorer-points,
   .jal-proof-grid,
   .jal-practice-steps,
-  .jal-signal-grid{
+  .jal-signal-grid,
+  .jal-arcade-module-grid,
+  .jal-arcade-scan-grid{
     grid-template-columns:1fr;
   }
 
   .jal-explorer-point,
   .jal-proof-card,
   .jal-practice-step,
-  .jal-signal-card{
+  .jal-signal-card,
+  .jal-arcade-module-card,
+  .jal-arcade-scan-card{
     min-height:0;
   }
 
