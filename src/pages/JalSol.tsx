@@ -85,19 +85,19 @@ const LOCKED_GATE_META: Record<LockedGateKind, { eyebrow: string; title: string;
 
 const EXPLORER_POINTS = [
   {
-    label: "Verify",
-    value: "Proof Board",
-    copy: "Check official addresses before you act.",
+    label: "Check",
+    value: "Official Links",
+    copy: "Use the links on this page before you leave JALSOL.",
   },
   {
-    label: "Practice",
-    value: "Swap Path",
-    copy: "Understand the Raydium steps before leaving JALSOL.",
+    label: "Try",
+    value: "The Path",
+    copy: "See the steps before opening Raydium.",
   },
   {
-    label: "Support",
-    value: "Voluntary",
-    copy: "Use the public wallet only if you choose to support the build.",
+    label: "Follow",
+    value: "The Build",
+    copy: "Watch simple signals as JAL/SOL grows.",
   },
 ];
 
@@ -172,7 +172,7 @@ export default function JalSolPage() {
 
   usePageMeta(
     "JAL/SOL",
-    "Official JAL Coin public hub with a proof board, Raydium practice path, liquidity support wallet, and locked builder path."
+    "Official JAL Coin public hub with official links, a simple Raydium path, build signals, support wallet, and locked future paths."
   );
 
   useEffect(() => {
@@ -198,22 +198,21 @@ export default function JalSolPage() {
     >
       <div className="home-wrap">
         <section className="card machine-surface panel-frame jal-window jal-explorer-window">
-          <section className="jal-hero jal-world-hero jal-world-hub-minimal jal-explorer-hero" aria-label="Explore JAL Coin">
+          <section className="jal-hero jal-world-hero jal-world-hub-minimal jal-explorer-hero" aria-label="Start Here">
             <div className="jal-hero-center jal-world-hub-center">
-              <p className="jal-world-pretitle">Explorer + Proof Board</p>
-              <h1 className="home-title jal-world-hub-title">Explore JAL Coin</h1>
+              <p className="jal-world-pretitle">Simple JAL/SOL Start</p>
+              <h1 className="home-title jal-world-hub-title">Start Here</h1>
               <p className="jal-world-hub-subtitle">JAL Coin on Solana</p>
               <p className="home-lead">
-                A simple public map for checking official links, practicing the Raydium path, and
-                choosing whether to support the JALSOL build.
+                Check the links. Try the path. Follow the build.
               </p>
               <div className="jal-links">
                 <JalCoinActions />
                 <a className="button ghost" href="#jal-proof-board">
-                  View Proof Board
+                  Check Official Links
                 </a>
                 <Link className="button ghost" to="/app/legal">
-                  Read Legal Context
+                  Read The Details
                 </Link>
               </div>
             </div>
@@ -229,11 +228,11 @@ export default function JalSolPage() {
             </div>
           </section>
 
-          <section id="jal-proof-board" className="jal-bay jal-bay-wide jal-proof-board" aria-label="Proof Board">
+          <section id="jal-proof-board" className="jal-bay jal-bay-wide jal-proof-board" aria-label="Official Links">
             <div className="jal-bay-head">
               <div>
-                <div className="jal-bay-title">Proof Board</div>
-                <div className="jal-bay-note">Verify before you act</div>
+                <div className="jal-bay-title">Official Links</div>
+                <div className="jal-bay-note">Check first</div>
               </div>
               <div className="jal-proof-timestamp">Last checked: {JAL_COIN.lastVerifiedOn}</div>
             </div>
@@ -245,6 +244,7 @@ export default function JalSolPage() {
                     <span>{item.label}</span>
                     <span className="jal-proof-state">Verified</span>
                   </div>
+                  <div className="jal-proof-tech">{item.technicalLabel}</div>
                   <div className="jal-proof-value">
                     {item.copyable ? shortAddress(item.value) : item.value}
                   </div>
@@ -273,11 +273,11 @@ export default function JalSolPage() {
             </div>
           </section>
 
-          <section className="jal-bay jal-bay-wide jal-swap-practice" aria-label="Swap Practice">
+          <section className="jal-bay jal-bay-wide jal-swap-practice" aria-label="Try The Path">
             <div className="jal-bay-head">
               <div>
-                <div className="jal-bay-title">Swap Practice</div>
-                <div className="jal-bay-note">Practice the path first</div>
+                <div className="jal-bay-title">Try The Path</div>
+                <div className="jal-bay-note">Practice first</div>
               </div>
               <div className="jal-proof-timestamp">No wallet connection here</div>
             </div>
@@ -293,21 +293,46 @@ export default function JalSolPage() {
             </div>
 
             <div className="jal-practice-footer">
-              <p>Crypto is optional and volatile. Raydium opens outside JALSOL.</p>
+              <p>Open Raydium only when you choose to leave JALSOL.</p>
               <a
                 className="button gold jal-coin-action"
                 href={JAL_COIN.raydiumSwapUrl}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Buy $JAL On Raydium
+                Open Raydium
               </a>
+            </div>
+          </section>
+
+          <section className="jal-bay jal-bay-wide jal-signal-log" aria-label="Follow The Signals">
+            <div className="jal-bay-head">
+              <div>
+                <div className="jal-bay-title">Follow The Signals</div>
+                <div className="jal-bay-note">Simple public build updates</div>
+              </div>
+              <div className="jal-proof-timestamp">Public build log</div>
+            </div>
+
+            <div className="jal-signal-grid" role="list" aria-label="JAL/SOL build signals">
+              {JAL_COIN.signalLogItems.map((signal) => (
+                <article className="jal-signal-card" key={signal.id} role="listitem">
+                  <div className="jal-signal-top">
+                    <span className="jal-signal-code">{signal.id}</span>
+                    <span className={`jal-signal-status is-${signal.status.toLowerCase()}`}>
+                      {signal.status}
+                    </span>
+                  </div>
+                  <h2>{signal.title}</h2>
+                  <p>{signal.summary}</p>
+                </article>
+              ))}
             </div>
           </section>
 
           <section className="jal-bay jal-bay-wide jal-support-build" aria-label="Support The Build">
             <div className="jal-support-copy">
-              <div className="home-kicker">SUPPORT THE BUILD</div>
+              <div className="home-kicker">Support The Build</div>
               <h2 className="home-modules-title">{JAL_COIN.supportBoundaryCopy.title}</h2>
               <p className="home-modules-lead">{JAL_COIN.supportBoundaryCopy.lead}</p>
               <ul className="jal-support-list">
@@ -318,31 +343,31 @@ export default function JalSolPage() {
               <div className="jal-links">
                 <JalCoinActions />
                 <Link className="button ghost" to="/app/disclaimer">
-                  Read Legal Context
+                  Read The Details
                 </Link>
               </div>
             </div>
 
-            <div className="jal-support-terminal" aria-label="Liquidity support wallet">
-              <div className="jal-terminal-kicker">Official Wallet</div>
+            <div className="jal-support-terminal" aria-label="Support wallet">
+              <div className="jal-terminal-kicker">Support Wallet</div>
               <div className="jal-terminal-address">{shortAddress(JAL_COIN.liquiditySupportWallet)}</div>
               <button
                 type="button"
                 className="button ghost"
                 onClick={() => copyValue("support-wallet", JAL_COIN.liquiditySupportWallet)}
               >
-                {copiedItemId === "support-wallet" ? "Wallet Copied" : "Copy Liquidity Wallet"}
+                {copiedItemId === "support-wallet" ? "Wallet Copied" : "Copy Support Wallet"}
               </button>
             </div>
           </section>
 
-          <section className="jal-bay jal-bay-wide jal-builder-path" aria-label="Builder Path Coming Later">
+          <section className="jal-bay jal-bay-wide jal-builder-path" aria-label="More Coming Soon">
             <div className="jal-bay-head">
               <div>
-                <div className="jal-bay-title">Builder Path: Coming Later</div>
-                <div className="jal-bay-note">Advanced content remains locked</div>
+                <div className="jal-bay-title">More Coming Soon</div>
+                <div className="jal-bay-note">Future public tools stay locked until ready</div>
               </div>
-              <div className="jal-proof-timestamp">Readiness Arcade: coming later</div>
+              <div className="jal-proof-timestamp">Arcade Coming Soon</div>
             </div>
 
             <div className="jal-gate-grid">
@@ -362,7 +387,7 @@ export default function JalSolPage() {
                       onClick={() => beginRoute(gate.route)}
                       disabled={loading}
                     >
-                      View Coming Later
+                      View Coming Soon
                     </button>
                   </div>
                 </article>

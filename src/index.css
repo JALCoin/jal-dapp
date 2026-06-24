@@ -1095,6 +1095,15 @@ a.button[aria-disabled="true"]{
   text-transform:uppercase;
 }
 
+.jal-coin-address-tech{
+  margin-top:4px;
+  color:rgba(185,205,220,.70);
+  font-family:var(--mono-font);
+  font-size:.66rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
 .jal-coin-address-value{
   margin-top:5px;
   font-size:1.02rem;
@@ -1194,6 +1203,10 @@ a.button[aria-disabled="true"]{
 
 :root[data-theme="light"] .jal-coin-address-note{
   color:rgba(62,74,82,.82);
+}
+
+:root[data-theme="light"] .jal-coin-address-tech{
+  color:rgba(62,74,82,.68);
 }
 
 :root[data-theme="light"] .jal-coin-copy-button,
@@ -4337,6 +4350,7 @@ a.button[aria-disabled="true"]{
 
 .jal-proof-board,
 .jal-swap-practice,
+.jal-signal-log,
 .jal-support-build,
 .jal-builder-path{
   overflow:hidden;
@@ -4407,6 +4421,14 @@ a.button[aria-disabled="true"]{
   color:rgba(17,241,167,.9);
 }
 
+.jal-proof-tech{
+  color:rgba(185,205,220,.70);
+  font-family:var(--mono-font);
+  font-size:.68rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
 .jal-proof-value{
   min-height:34px;
   display:flex;
@@ -4420,6 +4442,7 @@ a.button[aria-disabled="true"]{
 
 .jal-proof-card p,
 .jal-practice-step p,
+.jal-signal-card p,
 .jal-practice-footer p{
   margin:0;
   color:rgba(185,205,220,.82);
@@ -4498,6 +4521,72 @@ a.button[aria-disabled="true"]{
   background:rgba(244,200,106,.045);
 }
 
+.jal-signal-grid{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+}
+
+.jal-signal-card{
+  min-width:0;
+  min-height:178px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:16px;
+  border-radius:18px;
+  border:1px solid rgba(17,241,167,.14);
+  background:
+    radial-gradient(560px 160px at 50% 0%, rgba(17,241,167,.065), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(0,0,0,.20));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 14px 28px rgba(0,0,0,.18);
+}
+
+.jal-signal-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  color:rgba(244,200,106,.88);
+  font-family:var(--mono-font);
+  font-size:.68rem;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.jal-signal-code{
+  min-width:0;
+}
+
+.jal-signal-status{
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  padding:5px 8px;
+  border-radius:999px;
+  border:1px solid rgba(17,241,167,.18);
+  background:rgba(17,241,167,.06);
+  color:rgba(196,255,230,.9);
+  white-space:nowrap;
+}
+
+.jal-signal-status.is-planned{
+  border-color:rgba(244,200,106,.20);
+  background:rgba(244,200,106,.06);
+  color:rgba(255,226,156,.9);
+}
+
+.jal-signal-card h2{
+  margin:0;
+  color:rgba(231,255,247,.96);
+  font-size:1.08rem;
+  line-height:1.25;
+}
+
 .jal-support-build{
   display:grid;
   grid-template-columns:minmax(0, 1.15fr) minmax(280px, .85fr);
@@ -4553,6 +4642,7 @@ a.button[aria-disabled="true"]{
 :root[data-theme="light"] .jal-explorer-point,
 :root[data-theme="light"] .jal-proof-card,
 :root[data-theme="light"] .jal-practice-step,
+:root[data-theme="light"] .jal-signal-card,
 :root[data-theme="light"] .jal-support-list li,
 :root[data-theme="light"] .jal-support-terminal{
   border-color:rgba(77,58,29,.12);
@@ -4565,6 +4655,7 @@ a.button[aria-disabled="true"]{
 :root[data-theme="light"] .jal-explorer-point p,
 :root[data-theme="light"] .jal-proof-card p,
 :root[data-theme="light"] .jal-practice-step p,
+:root[data-theme="light"] .jal-signal-card p,
 :root[data-theme="light"] .jal-practice-footer p,
 :root[data-theme="light"] .jal-support-list li{
   color:rgba(52,43,31,.74);
@@ -4573,8 +4664,13 @@ a.button[aria-disabled="true"]{
 :root[data-theme="light"] .jal-explorer-point-value,
 :root[data-theme="light"] .jal-proof-value,
 :root[data-theme="light"] .jal-practice-step h2,
+:root[data-theme="light"] .jal-signal-card h2,
 :root[data-theme="light"] .jal-terminal-address{
   color:rgba(28,24,19,.92);
+}
+
+:root[data-theme="light"] .jal-proof-tech{
+  color:rgba(62,74,82,.68);
 }
 
 :root[data-theme="light"] .jal-proof-timestamp{
@@ -4783,7 +4879,8 @@ a.button[aria-disabled="true"]{
 @media (max-width:1180px){
   .jal-explorer-points,
   .jal-proof-grid,
-  .jal-practice-steps{
+  .jal-practice-steps,
+  .jal-signal-grid{
     grid-template-columns:repeat(2, minmax(0, 1fr));
   }
 
@@ -4824,13 +4921,15 @@ a.button[aria-disabled="true"]{
 
   .jal-explorer-points,
   .jal-proof-grid,
-  .jal-practice-steps{
+  .jal-practice-steps,
+  .jal-signal-grid{
     grid-template-columns:1fr;
   }
 
   .jal-explorer-point,
   .jal-proof-card,
-  .jal-practice-step{
+  .jal-practice-step,
+  .jal-signal-card{
     min-height:0;
   }
 

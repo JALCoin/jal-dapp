@@ -36,14 +36,14 @@ export function JalCoinActions({ className = "", compact = false }: JalCoinActio
         target="_blank"
         rel="noopener noreferrer"
       >
-        Buy $JAL On Raydium
+        Open Raydium
       </a>
       <button
         type="button"
         className="button ghost jal-coin-action"
         onClick={copyLiquidityWallet}
       >
-        {copied ? "Wallet Copied" : "Copy Liquidity Wallet"}
+        {copied ? "Wallet Copied" : "Copy Support Wallet"}
       </button>
     </div>
   );
@@ -75,16 +75,16 @@ export default function JalCoinPanel() {
     >
       <div className="jal-coin-panel-copy">
         <div className="home-kicker">JAL COIN | PUBLIC LINKS</div>
-        <h2 className="home-modules-title">Explore JAL Coin, verify the proof, then choose your path.</h2>
+        <h2 className="home-modules-title">Check the links. Try the path. Follow the build.</h2>
         <p className="home-modules-lead">
-          JAL Coin is part of the JALSOL build on Solana. Use the official links below, compare
-          addresses before acting, and only use crypto tools you understand.
+          Start with the official links, compare what you see, and only open outside tools when
+          the path makes sense to you.
         </p>
 
         <JalCoinActions className="jal-coin-panel-actions" />
 
         <div className="jal-coin-liquidity-guide" aria-label="How to support JAL liquidity">
-          <div className="jal-coin-guide-title">Support the build</div>
+          <div className="jal-coin-guide-title">Support is optional</div>
           <ol>
             {JAL_COIN.supportBoundaryCopy.bullets.map((item) => (
               <li key={item}>{item}</li>
@@ -94,18 +94,18 @@ export default function JalCoinPanel() {
         </div>
 
         <div className="jal-coin-risk-note" role="note">
-          Crypto tokens and voluntary wallet support are optional, volatile, and may lose value.
-          This is not financial advice, a token sale, equity, or a promise of future benefit.
+          Crypto is optional and can lose value. This is not financial advice, a token sale,
+          equity, or a promise.
         </div>
       </div>
 
       <div className="jal-coin-verification" aria-label="Verified JAL Coin addresses">
         <div className="jal-coin-verification-head">
           <div>
-            <div className="jal-coin-verification-kicker">Verify Before You Act</div>
-            <div className="jal-coin-verification-title">Official addresses</div>
+            <div className="jal-coin-verification-kicker">Check First</div>
+            <div className="jal-coin-verification-title">Official links</div>
           </div>
-          <div className="jal-coin-status-pill">Freeze Authority: {JAL_COIN.freezeAuthorityStatus}</div>
+          <div className="jal-coin-status-pill">Freeze Status: {JAL_COIN.freezeAuthorityStatus}</div>
         </div>
 
         <div className="jal-coin-address-list">
@@ -113,6 +113,7 @@ export default function JalCoinPanel() {
             <div className={`jal-coin-address-row tone-${row.tone}`} key={row.id}>
               <div className="jal-coin-address-main">
                 <div className="jal-coin-address-label">{row.label}</div>
+                <div className="jal-coin-address-tech">{row.technicalLabel}</div>
                 <div className="jal-coin-address-value">
                   {row.copyable ? shortAddress(row.value) : row.value}
                 </div>
