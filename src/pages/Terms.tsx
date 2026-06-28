@@ -15,7 +15,7 @@ export default function Terms() {
       kicker="Site Terms"
       updated={LEGAL_REVIEWED_ON}
       lead="These terms explain who operates the JALSOL public business domain, what the current public offer includes, and which Australian consumer rights continue to apply."
-      badges={["Founder domain", "Sole trader", "ABN identified", "Physical merch", "Source-backed"]}
+      badges={["Founder domain", "Sole trader", "ABN identified", "Read-only Flowboard", "Source-backed"]}
       facts={LEGAL_OPERATOR_FACTS}
       sections={[
         {
@@ -39,7 +39,7 @@ export default function Terms() {
         {
           title: "Current Site Activities",
           bullets: JALSOL_ACTIVITY_BULLETS,
-          note: "The current public shop is narrowed to physical merch and physical commissions while interactive features remain paused.",
+          note: "The current public crypto-facing surface is narrowed to read-only explanation, public records, external links and static previews. It is not a functional wallet, exchange, account dashboard or managed asset service.",
         },
         {
           title: "Orders, Payments And Site Use",
@@ -49,8 +49,21 @@ export default function Terms() {
           ],
           bullets: [
             "Third-party providers may apply their own terms, policies, fees and operational limits.",
-            "Interactive onboarding, wallet, builder and engine pages may be paused, redirected or unavailable while registrations and legal settings are reviewed.",
+            "Interactive onboarding, wallet-style, builder and engine pages may be paused, redirected or unavailable while registrations and legal settings are reviewed.",
             "General site content is not a promise of market outcome, profit or regulatory approval.",
+          ],
+        },
+        {
+          title: "JAL/SOL And Flowboard Use",
+          paragraphs: [
+            "JAL/SOL and JALSOL Flowboard are currently public information and preview pages only. They are provided so visitors can check official links, read public references, understand the external path, and follow the build.",
+            "The Flowboard preview does not collect addresses, store API credentials, connect to exchange accounts, calculate live personal portfolio values, send transfer instructions, or let visitors move assets.",
+            "Raydium, Solscan and any other external services linked from JALSOL are separate third-party services with their own terms, interfaces and risks.",
+          ],
+          bullets: [
+            "Do not enter private keys, seed phrases, withdrawal-enabled API keys or sensitive account credentials into JALSOL.",
+            "JALSOL does not ask visitors to sign transactions, transfer assets, stake tokens, or connect a wallet on the public JAL/SOL or Flowboard pages.",
+            "Any voluntary support remains optional and does not create ownership, repayment, managed-asset rights or a future claim.",
           ],
         },
         {
@@ -94,7 +107,7 @@ export default function Terms() {
         {
           title: "Regulatory Boundary",
           bullets: JALSOL_BOUNDARY_BULLETS,
-          note: "If site activities later expand into exchange, custody, arranging trades, copy-trading, pooled capital or token-sale financial services, a different legal review may be needed.",
+          note: "If site activities later expand into exchange, custody, arranging trades, payment functionality, transfer instructions, copy-trading, pooled capital, live account imports, API-key storage or token-sale financial services, a different legal review may be needed before launch.",
         },
       ]}
       sources={[
@@ -115,6 +128,7 @@ export default function Terms() {
         OFFICIAL_SOURCES.productLabelling,
         OFFICIAL_SOURCES.digitalAssets,
         OFFICIAL_SOURCES.discussingOnline,
+        OFFICIAL_SOURCES.austracVirtualAssets,
         OFFICIAL_SOURCES.austracVaspOverview,
       ]}
     />

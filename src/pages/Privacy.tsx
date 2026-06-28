@@ -12,8 +12,8 @@ export default function Privacy() {
       title="Privacy"
       kicker="Privacy And Information Handling"
       updated={LEGAL_REVIEWED_ON}
-      lead="This page explains what personal information the JALSOL public business domain may handle through the merch store, support channels, account access, and technical operations, and how requests can be made."
-      badges={["Founder domain", "Orders", "Support", "Access requests", "OAIC-guided"]}
+      lead="This page explains what personal information the JALSOL public business domain may handle through the merch store, support channels, account access, technical operations, and current read-only previews."
+      badges={["Founder domain", "Orders", "Support", "Read-only previews", "OAIC-guided"]}
       facts={LEGAL_OPERATOR_FACTS}
       sections={[
         {
@@ -22,7 +22,7 @@ export default function Privacy() {
             "This page applies to the current public site, merch store, support contact, temporary compliance pages and related technical operations operated by Jeremy Aaron Lugg under ABN 35 780 648 234.",
             "OAIC guidance says many small businesses with annual turnover of $3 million or less are not covered by the Privacy Act 1988 unless an exception applies. This page is published for transparency regardless, and because privacy expectations can change if business activities change.",
           ],
-          note: "If the site later becomes a reporting entity under AML/CTF law, trades in personal information, or otherwise falls within a Privacy Act exception, privacy obligations may expand.",
+          note: "If the site later becomes a reporting entity under AML/CTF law, trades in personal information, starts storing read-only account credentials, or otherwise falls within a Privacy Act exception, privacy obligations may expand.",
         },
         {
           title: "What Information May Be Collected",
@@ -34,6 +34,18 @@ export default function Privacy() {
             "Support messages, feedback and other correspondence you send to the operator.",
           ],
           note: "OAIC guidance says personal information collection should be limited to what is reasonably necessary for the activity being carried out.",
+        },
+        {
+          title: "Flowboard Preview",
+          paragraphs: [
+            "The current JALSOL Flowboard is a static watch-only preview. It does not currently collect public wallet addresses from visitors, connect to exchanges, store API credentials, import live account data, or calculate visitor-specific portfolio values.",
+            "If Flowboard later adds read-only watchlists, account imports, encrypted read-only API credentials, AUD valuation, transaction history or CSV export features, this privacy page should be updated before those features go live.",
+          ],
+          bullets: [
+            "Do not submit seed phrases, private keys or withdrawal-enabled API keys through JALSOL.",
+            "Do not submit unnecessary sensitive information through support channels.",
+            "Future read-only features should collect only the data reasonably needed for the selected view or export.",
+          ],
         },
         {
           title: "Why Information Is Used",

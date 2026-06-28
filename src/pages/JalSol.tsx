@@ -4,6 +4,7 @@ import { JalCoinActions } from "../components/JalCoinPanel";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { arcadeCopy } from "../lib/jalArcade";
 import { JAL_COIN, shortAddress } from "../lib/jalCoin";
+import { flowboardBoundaryItems, flowboardCopy, flowboardPreviewItems } from "../lib/jalFlowboard";
 
 type RouteTo =
   | "/app/home"
@@ -149,7 +150,7 @@ export function JalSolLockedGate({ gate }: { gate: LockedGateKind }) {
               <p className="home-lead">{meta.body}</p>
               <p className="jal-sublead">
                 Current public access is limited to JAL Coin verification, Raydium discovery, and
-                the official liquidity support wallet.
+                the official liquidity support address.
               </p>
               <div className="jal-links">
                 <Link className="button gold" to="/app/jal-sol">
@@ -173,7 +174,7 @@ export default function JalSolPage() {
 
   usePageMeta(
     "JAL/SOL",
-    "Official JAL Coin public hub with official links, a simple Raydium path, build signals, support wallet, and locked future paths."
+    "Official JAL Coin public hub with official links, a simple Raydium path, build signals, support address, Flowboard preview, and locked future paths."
   );
 
   useEffect(() => {
@@ -207,11 +208,14 @@ export default function JalSolPage() {
               <p className="home-lead">
                 Check the links. Try the path. Follow the build.
               </p>
+              <p className="jal-readonly-hero-note">No keys. No custody. No promises.</p>
               <div className="jal-links">
-                <JalCoinActions />
-                <a className="button ghost" href="#jal-proof-board">
+                <a className="button gold" href="#jal-proof-board">
                   Check Official Links
                 </a>
+                <Link className="button ghost" to="/app/jal-sol/flowboard">
+                  Preview Flowboard
+                </Link>
                 <Link className="button ghost" to="/app/legal">
                   Read The Details
                 </Link>
@@ -224,6 +228,26 @@ export default function JalSolPage() {
                   <div className="jal-explorer-point-label">{point.label}</div>
                   <div className="jal-explorer-point-value">{point.value}</div>
                   <p>{point.copy}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="jal-bay jal-bay-wide jal-readonly-zone" aria-label="Read-Only Zone">
+            <div className="jal-bay-head">
+              <div>
+                <div className="jal-bay-title">Read-Only Zone</div>
+                <div className="jal-bay-note">Check first, watch only</div>
+              </div>
+              <div className="jal-proof-timestamp">No transaction flow</div>
+            </div>
+
+            <p className="jal-readonly-copy">{flowboardCopy.boundary}</p>
+            <div className="jal-boundary-grid" role="list" aria-label="JAL/SOL read-only boundaries">
+              {flowboardBoundaryItems.map((item) => (
+                <article className="jal-boundary-card" key={item.id} role="listitem">
+                  <h2>{item.title}</h2>
+                  <p>{item.body}</p>
                 </article>
               ))}
             </div>
@@ -294,7 +318,7 @@ export default function JalSolPage() {
             </div>
 
             <div className="jal-practice-footer">
-              <p>Open Raydium only when you choose to leave JALSOL.</p>
+              <p>Raydium opens outside JALSOL. Check the official address first.</p>
               <a
                 className="button gold jal-coin-action"
                 href={JAL_COIN.raydiumSwapUrl}
@@ -331,6 +355,46 @@ export default function JalSolPage() {
             </div>
           </section>
 
+          <section className="jal-bay jal-bay-wide jal-flowboard-preview" aria-label="JALSOL Flowboard">
+            <div className="jal-bay-head">
+              <div>
+                <div className="jal-bay-title">{flowboardCopy.title}</div>
+                <div className="jal-bay-note">{flowboardCopy.subtitle}</div>
+              </div>
+              <div className="jal-proof-timestamp">Static preview</div>
+            </div>
+
+            <div className="jal-flowboard-preview-shell">
+              <div className="jal-arcade-preview-copy">
+                <h2>{flowboardCopy.line}</h2>
+                <p>{flowboardCopy.lead}</p>
+                <div className="jal-arcade-enter-status" aria-label="Flowboard status">
+                  <span>No Keys</span>
+                  <span>No Custody</span>
+                  <span>Watch-Only</span>
+                </div>
+              </div>
+
+              <div className="jal-flowboard-preview-grid" role="list" aria-label="Flowboard preview panels">
+                {flowboardPreviewItems.slice(0, 3).map((item) => (
+                  <article className="jal-flowboard-mini-card" key={item.id} role="listitem">
+                    <div className="jal-flowboard-card-top">
+                      <span>{item.label}</span>
+                      <span>{item.value}</span>
+                    </div>
+                    <p>{item.note}</p>
+                  </article>
+                ))}
+              </div>
+
+              <div className="jal-flowboard-preview-actions">
+                <Link className="button gold jal-coin-action" to="/app/jal-sol/flowboard">
+                  Open Flowboard Preview
+                </Link>
+              </div>
+            </div>
+          </section>
+
           <section className="jal-bay jal-bay-wide jal-support-build" aria-label="Support The Build">
             <div className="jal-support-copy">
               <div className="home-kicker">Support The Build</div>
@@ -342,22 +406,22 @@ export default function JalSolPage() {
                 ))}
               </ul>
               <div className="jal-links">
-                <JalCoinActions />
+                <JalCoinActions showRaydium={false} />
                 <Link className="button ghost" to="/app/disclaimer">
                   Read The Details
                 </Link>
               </div>
             </div>
 
-            <div className="jal-support-terminal" aria-label="Support wallet">
-              <div className="jal-terminal-kicker">Support Wallet</div>
+            <div className="jal-support-terminal" aria-label="Support address">
+              <div className="jal-terminal-kicker">Support Address</div>
               <div className="jal-terminal-address">{shortAddress(JAL_COIN.liquiditySupportWallet)}</div>
               <button
                 type="button"
                 className="button ghost"
-                onClick={() => copyValue("support-wallet", JAL_COIN.liquiditySupportWallet)}
+                onClick={() => copyValue("support-address", JAL_COIN.liquiditySupportWallet)}
               >
-                {copiedItemId === "support-wallet" ? "Wallet Copied" : "Copy Support Wallet"}
+                {copiedItemId === "support-address" ? "Address Copied" : "Copy Support Address"}
               </button>
             </div>
           </section>

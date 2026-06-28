@@ -14,7 +14,7 @@ export default function Disclaimer() {
       kicker="General Information And Risk Boundary"
       updated={LEGAL_REVIEWED_ON}
       lead="This page explains the current public boundary of the JALSOL business domain, including what the site does and does not present to visitors at this time."
-      badges={["No personal advice", "Founder domain", "Not an exchange", "Public boundary", "Source-backed"]}
+      badges={["No personal advice", "Founder domain", "Read-only Flowboard", "Not an exchange", "Source-backed"]}
       facts={LEGAL_OPERATOR_FACTS}
       sections={[
         {
@@ -32,7 +32,16 @@ export default function Disclaimer() {
         {
           title: "What The Public Site Currently Is Not",
           bullets: JALSOL_BOUNDARY_BULLETS,
-          note: "No statement on this site should be read as an invitation to place trades, complete wallet actions, or use a public trading account through the site.",
+          note: "No statement on this site should be read as an invitation to place trades, complete wallet actions, transfer assets, provide private keys, use a public trading account through the site, or expect JALSOL to manage assets.",
+        },
+        {
+          title: "JAL/SOL And Flowboard Boundary",
+          paragraphs: [
+            "The JAL/SOL page is a public explorer for official links, a simple external-path explanation, build signals, optional support-address information, JALSOL Arcade, and the static Flowboard preview.",
+            "The Flowboard preview is watch-only. It does not collect public addresses, connect to exchange accounts, store API credentials, show live portfolio data, provide account-specific valuation, or allow a visitor to move assets.",
+            "The Raydium link on JAL/SOL is an external output-only link. Any decision to use Raydium or another third-party tool happens outside JALSOL and under that provider's own interface, terms, risks and controls.",
+          ],
+          note: "This boundary is deliberate because ASIC and AUSTRAC guidance can treat wallet, payment, exchange, safekeeping, transfer-instruction and arranging services differently from read-only public information.",
         },
         {
           title: "Third-Party And Service Risk",
@@ -54,10 +63,11 @@ export default function Disclaimer() {
         {
           title: "Regulatory Boundary",
           paragraphs: [
-            "ASIC guidance says some digital asset activities may trigger financial services obligations depending on the rights and benefits involved and the real-world activity being carried on, including dealing, arranging, providing advice, market making or custody.",
-            "AUSTRAC guidance says some virtual asset services can fall within registration and AML/CTF obligations.",
+            "ASIC guidance says digital asset arrangements must be assessed by their rights, benefits, features and how they are promoted or used in practice. ASIC also says digital asset wallets, custodial or non-custodial, may be non-cash payment facilities where users can make payments to third parties.",
+            "AUSTRAC guidance for virtual asset designated services includes exchange, arranging exchange, safekeeping, private-key control, transfer and related virtual asset services when provided in the course of carrying on a business as a virtual asset service provider.",
+            "JALSOL therefore keeps the public JAL/SOL and Flowboard surfaces static and read-only at this stage.",
           ],
-          note: "This disclaimer describes the current site boundary only. If the site later expands into customer trading, custody, exchange services, wallet verification workflows, pooled funds or token-offer financial services, a new legal review should be done before those features go live.",
+          note: "This disclaimer describes the current site boundary only. If the site later expands into customer trading, custody, exchange services, payment features, wallet verification workflows, live account imports, pooled funds, API-key storage or token-offer financial services, a new legal review should be done before those features go live.",
         },
         {
           title: "Responsibility For Use",

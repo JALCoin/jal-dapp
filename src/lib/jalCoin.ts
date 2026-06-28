@@ -60,10 +60,10 @@ const verificationItems: JalCoinVerificationItem[] = [
   },
   {
     id: "liquidity-wallet",
-    label: "Support Wallet",
+    label: "Support Address",
     technicalLabel: "Liquidity wallet",
     value: LIQUIDITY_SUPPORT_WALLET,
-    note: "The official wallet for optional support.",
+    note: "The official address for optional support.",
     href: solscanAuthorityUrl,
     hrefLabel: "Solscan",
     copyable: true,
@@ -74,7 +74,7 @@ const verificationItems: JalCoinVerificationItem[] = [
     label: "Public Record",
     technicalLabel: "Reserve account",
     value: RESERVE_TOKEN_ACCOUNT,
-    note: "A public account connected to the support wallet.",
+    note: "A public account connected to the support address.",
     href: solscanReserveUrl,
     hrefLabel: "Solscan",
     copyable: true,
@@ -131,9 +131,9 @@ const signalLogItems: JalSignalLogItem[] = [
   },
   {
     id: "Signal 003",
-    title: "Support Wallet Published",
+    title: "Support Address Published",
     status: "Live",
-    summary: "The official support wallet is visible and easy to copy.",
+    summary: "The official support address is visible and easy to copy.",
   },
   {
     id: "Signal 004",
@@ -177,10 +177,10 @@ export const JAL_COIN = {
   signalLogItems,
   supportBoundaryCopy: {
     title: "Support is optional.",
-    lead: "Use the official support wallet only if you choose to help the build.",
+    lead: "Use the official support address only if you choose to help the build.",
     bullets: [
       "Support is voluntary.",
-      "Use the official support wallet only if you choose to help the build.",
+      "Use the official support address only if you choose to help the build.",
       "No ownership, repayment, or future claim is created.",
     ],
   },

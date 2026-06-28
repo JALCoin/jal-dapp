@@ -19,6 +19,7 @@ import JalSolArcadePage, {
   JalSolArcadeComingSoonPage,
   JalSolCrownScanPage,
 } from "./pages/JalSolArcade";
+import JalSolFlowboardPage from "./pages/JalSolFlowboard";
 import ShopPage from "./pages/Shop";
 import AuthPage from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
@@ -507,6 +508,11 @@ function LegalHubPage() {
             business identity, privacy handling, terms, disclaimers, and the current public-site
             settings that support that story.
           </p>
+          <p className="home-lead">
+            The current JAL/SOL and Flowboard surfaces are covered here as read-only public
+            information and preview pages, not as wallet, exchange, custody, payment or managed
+            asset services.
+          </p>
           <div className="home-links">
             <a className="chip" href="/terms">
               Terms
@@ -538,7 +544,7 @@ function LegalHubPage() {
           <ul className="home-identity-points">
             <li>Terms of use, consumer-law boundaries, and public business identity.</li>
             <li>Privacy practices, contact points, and information handling.</li>
-            <li>Disclaimer language around current site activity and market context.</li>
+            <li>Disclaimer language around current site activity, JAL/SOL, Flowboard and market context.</li>
             <li>ABN identity, public operator details, and current site settings.</li>
           </ul>
         </section>
@@ -925,6 +931,7 @@ function AppShell({
         <Route path="track" element={<TrackPage />} />
 
         <Route path="jal-sol" element={<JalSolPage />} />
+        <Route path="jal-sol/flowboard" element={<JalSolFlowboardPage />} />
         <Route path="jal-sol/arcade" element={<JalSolArcadePage />} />
         <Route path="jal-sol/arcade/check-first" element={<JalSolCrownScanPage />} />
         <Route

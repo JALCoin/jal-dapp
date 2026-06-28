@@ -16,7 +16,7 @@ export type LegalSource = {
   href: string;
 };
 
-export const LEGAL_REVIEWED_ON = "10 April 2026";
+export const LEGAL_REVIEWED_ON = "28 June 2026";
 export const LEGAL_OPERATOR_NAME = "Jeremy Aaron Lugg";
 export const LEGAL_ABN = "35 780 648 234";
 export const LEGAL_CONTACT_EMAIL = "358jal@gmail.com";
@@ -78,7 +78,7 @@ export const OFFICIAL_SOURCES = {
   },
   privacySmallBusiness: {
     label: "OAIC - Small business",
-    href: "https://www.oaic.gov.au/_old/privacy/privacy-for-organisations/small-business",
+    href: "https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/small-business",
   },
   privacyRightsResponsibilities: {
     label: "OAIC - Rights and responsibilities under the Privacy Act",
@@ -133,12 +133,12 @@ export const OFFICIAL_SOURCES = {
     href: "https://www.asic.gov.au/regulatory-resources/financial-services/giving-financial-product-advice/discussing-financial-products-and-services-online",
   },
   austracVirtualAssets: {
-    label: "AUSTRAC - Virtual asset services (Reform)",
-    href: "https://www.austrac.gov.au/amlctf-reform/reforms-guidance/before-you-start/new-industries-and-services-be-regulated-reform/virtual-asset-services-reform",
+    label: "AUSTRAC - Virtual asset designated services",
+    href: "https://www.austrac.gov.au/new-austrac/designated-services-newly-regulated-entities/virtual-asset-designated-services",
   },
   austracVaspOverview: {
-    label: "AUSTRAC - Virtual asset service providers overview",
-    href: "https://www.austrac.gov.au/industry-and-business/your-industry/virtual-asset-service-providers/virtual-asset-service-providers-overview",
+    label: "AUSTRAC - Register as a remittance or virtual asset service provider",
+    href: "https://www.austrac.gov.au/new-austrac/enrol-or-register/register-us-remittance-or-virtual-asset-service-provider",
   },
 };
 
@@ -180,12 +180,14 @@ export const LEGAL_OPERATOR_FACTS: LegalFact[] = [
 export const JALSOL_ACTIVITY_BULLETS = [
   "A physical merch store with home-dispatched orders and made-to-order physical commissions.",
   "Operator identity, contact details, and source-backed legal information about the current site boundary.",
-  "A temporary compliance notice while interactive site features are paused for review.",
+  "A public JAL/SOL explorer that shows official JAL Coin links, a Raydium output-only link, build signals, and a watch-only Flowboard preview.",
+  "JALSOL Arcade modules that teach public-record checking without wallet connection, transaction handling or token rewards.",
   "General business and support information published by Jeremy Aaron Lugg under ABN 35 780 648 234.",
 ];
 
 export const JALSOL_BOUNDARY_BULLETS = [
-  "This site is not currently presented as a public exchange, brokerage, custodian, managed trading service, or live interactive onboarding product.",
-  "Interactive site features are temporarily unavailable while registrations and legal settings are reviewed.",
-  "If future features move into exchange, custody, brokerage, copy-trading, pooled capital, wallet verification flows, or other regulated financial services, these pages will need to be updated and further legal review may be required.",
+  "This site is not currently presented as a public exchange, brokerage, custodian, payment facility, managed trading service, staking or yield service, token sale platform, or live interactive onboarding product.",
+  "The public JAL/SOL and Flowboard pages are read-only. They do not create private keys, store seed phrases, connect wallets, sign transactions, send crypto, run swaps, stake tokens, custody assets, import live accounts, or manage assets for visitors.",
+  "External services such as Solscan and Raydium are separate third-party tools. JALSOL does not process swaps, arrange exchanges, hold user assets, or receive transfer instructions through the public site.",
+  "If future features move into exchange, custody, brokerage, copy-trading, pooled capital, wallet verification flows, payment functionality, live account imports, API-key storage, or other regulated financial services, these pages will need to be updated and further legal review may be required before launch.",
 ];

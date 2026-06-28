@@ -4,9 +4,14 @@ import { JAL_COIN, shortAddress } from "../lib/jalCoin";
 type JalCoinActionsProps = {
   className?: string;
   compact?: boolean;
+  showRaydium?: boolean;
 };
 
-export function JalCoinActions({ className = "", compact = false }: JalCoinActionsProps) {
+export function JalCoinActions({
+  className = "",
+  compact = false,
+  showRaydium = true,
+}: JalCoinActionsProps) {
   const [copied, setCopied] = useState(false);
   const classes = ["jal-coin-actions", compact ? "jal-coin-actions--compact" : "", className]
     .filter(Boolean)
@@ -19,7 +24,7 @@ export function JalCoinActions({ className = "", compact = false }: JalCoinActio
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  async function copyLiquidityWallet() {
+  async function copySupportAddress() {
     try {
       await navigator.clipboard.writeText(JAL_COIN.liquiditySupportWallet);
       setCopied(true);
@@ -30,20 +35,22 @@ export function JalCoinActions({ className = "", compact = false }: JalCoinActio
 
   return (
     <div className={classes} aria-label="JAL Coin actions">
-      <a
-        className="button gold jal-coin-action"
-        href={JAL_COIN.raydiumSwapUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Open Raydium
-      </a>
+      {showRaydium ? (
+        <a
+          className="button gold jal-coin-action"
+          href={JAL_COIN.raydiumSwapUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open Raydium
+        </a>
+      ) : null}
       <button
         type="button"
         className="button ghost jal-coin-action"
-        onClick={copyLiquidityWallet}
+        onClick={copySupportAddress}
       >
-        {copied ? "Wallet Copied" : "Copy Support Wallet"}
+        {copied ? "Address Copied" : "Copy Support Address"}
       </button>
     </div>
   );
@@ -95,7 +102,7 @@ export default function JalCoinPanel() {
 
         <div className="jal-coin-risk-note" role="note">
           Crypto is optional and can lose value. This is not financial advice, a token sale,
-          equity, or a promise.
+          equity, custody, or a promise.
         </div>
       </div>
 

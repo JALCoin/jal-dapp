@@ -65,7 +65,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "JAL/SOL",
     to: "/app/jal-sol",
     contextTitle: "JAL Coin",
-    contextBody: "Official links, simple path, build signals, and support wallet.",
+    contextBody: "Official links, simple path, build signals, and support address.",
   },
   {
     id: "shop",
