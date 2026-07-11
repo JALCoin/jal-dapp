@@ -8,6 +8,9 @@ type BooksAction =
   | "export"
   | "lender-report"
   | "lender-report-csv"
+  | "cgt-review"
+  | "cgt-disposals-csv"
+  | "cgt-pack-csv"
   | "evidence"
   | "import"
   | "sync"
@@ -19,6 +22,9 @@ const VALID_BOOKS_ACTIONS: BooksAction[] = [
   "export",
   "lender-report",
   "lender-report-csv",
+  "cgt-review",
+  "cgt-disposals-csv",
+  "cgt-pack-csv",
   "evidence",
   "import",
   "sync",
@@ -116,6 +122,9 @@ function targetFor(action: BooksAction, fy: string, req: VercelRequest) {
   if (action === "export") return { method: "GET", path: `/api/operator/books/export.csv${query}` };
   if (action === "lender-report") return { method: "GET", path: `/api/operator/books/lender-report${query}` };
   if (action === "lender-report-csv") return { method: "GET", path: `/api/operator/books/lender-report.csv${query}` };
+  if (action === "cgt-review") return { method: "GET", path: `/api/operator/books/cgt-review${query}` };
+  if (action === "cgt-disposals-csv") return { method: "GET", path: `/api/operator/books/cgt-disposals.csv${query}` };
+  if (action === "cgt-pack-csv") return { method: "GET", path: `/api/operator/books/cgt-pack.csv${query}` };
   if (action === "evidence") return { method: req.method === "POST" ? "POST" : "GET", path: `/api/operator/books/evidence${query}` };
   if (action === "import") return { method: "POST", path: "/api/operator/books/import/coinspot-history" };
   if (action === "sync") return { method: "POST", path: "/api/operator/books/sync/coinspot-readonly" };
@@ -148,7 +157,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const base = (env("ENGINE_SERVICE_URL") || DEFAULT_ENGINE_SERVICE).replace(/\/+$/, "");
   const body = target.method === "POST" ? JSON.stringify(await readJson(req)) : undefined;
-  const csvAction = action === "export" || action === "lender-report-csv";
+  const csvAction = action === "export" || action === "lender-report-csv" || action === "cgt-disposals-csv" || action === "cgt-pack-csv";
   const upstream = await fetch(`${base}${target.path}`, {
     method: target.method,
     headers: {
@@ -167,6 +176,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const filename =
       action === "lender-report-csv"
         ? `jeremy-aaron-lugg-lender-report-${fy || "current"}.csv`
+        : action === "cgt-disposals-csv"
+        ? `coinspot-cgt-${fy || "current"}-disposals.csv`
+        : action === "cgt-pack-csv"
+        ? `jalsol-ato-cgt-review-pack-${fy || "current"}.csv`
         : `jalsol-books-${fy || "current"}.csv`;
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.end(text);

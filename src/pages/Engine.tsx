@@ -1678,6 +1678,99 @@ type LenderReport = {
   redaction?: { secretsIncluded?: boolean; note?: string };
 };
 
+type CgtAtoField = {
+  key?: string;
+  label?: string;
+  value?: string | number | null;
+  valueAud?: number | null;
+  source?: string | null;
+};
+
+type CgtDisposal = {
+  id?: string;
+  transactionAt?: string;
+  fy?: string;
+  eventType?: string;
+  asset?: string;
+  market?: string;
+  quantity?: number | null;
+  proceedsAud?: number | null;
+  costBaseAud?: number | null;
+  feeAud?: number | null;
+  capitalGainAud?: number | null;
+  capitalLossAud?: number | null;
+  discountEligibleGainAud?: number | null;
+  missingQty?: number | null;
+  status?: string;
+};
+
+type CgtReviewPack = {
+  ok?: boolean;
+  error?: string;
+  generatedAt?: string;
+  fy?: string;
+  sourceStatus?: {
+    dataSource?: string;
+    importedTradeCount?: number | null;
+    filteredTradeCount?: number | null;
+    apiSyncAt?: string | null;
+    method?: BooksSummary["method"];
+  };
+  atoFields?: CgtAtoField[];
+  totals?: {
+    disposalCount?: number | null;
+    capitalProceedsAud?: number | null;
+    costBaseAud?: number | null;
+    feeAud?: number | null;
+    grossCapitalGainsAud?: number | null;
+    currentYearCapitalLossesAud?: number | null;
+    discountEligibleGainAud?: number | null;
+    capitalLossesAppliedAud?: number | null;
+    cgtDiscountAppliedAud?: number | null;
+    netCapitalGainAud?: number | null;
+    netCapitalLossesCarriedForwardAud?: number | null;
+  };
+  sourceReview?: {
+    rawRowsObserved?: number | null;
+    insertedRows?: number | null;
+    duplicateRowsIgnored?: number | null;
+    storedDedupedTradeRows?: number | null;
+    storedDedupedFyRows?: number | null;
+    importRecordsReviewed?: number | null;
+    rawRowsStored?: boolean | null;
+    dedupeMethod?: string | null;
+    note?: string | null;
+  };
+  openingBalanceReview?: {
+    corrections?: Array<{
+      asset?: string;
+      quantity?: number | null;
+      costBaseAud?: number | null;
+      acquiredAt?: string | null;
+      note?: string | null;
+    }>;
+    missingAssets?: Array<{
+      asset?: string;
+      missingQty?: number | null;
+      firstDisposalAt?: string | null;
+      count?: number | null;
+    }>;
+    workflow?: string | null;
+  };
+  disposals?: CgtDisposal[];
+  warnings?: Array<{
+    code?: string;
+    asset?: string;
+    amount?: number | null;
+    missingQty?: number | null;
+    transactionAt?: string | null;
+    note?: string | null;
+  }>;
+  accountantPack?: {
+    disclaimer?: string | null;
+  };
+};
+
 type EngineData = {
   rowsAll: MarketRow[];
   rowsAud: MarketRow[];
@@ -6559,6 +6652,28 @@ async function engineBooksFetch<T>(
   return (await response.json()) as T;
 }
 
+async function downloadEngineBooksCsv(action: string, fy: string, filename: string) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Engineer sign-in required for Books export.");
+  const params = new URLSearchParams({ action, fy });
+  const response = await fetch(`/api/engine-books?${params.toString()}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error(`${action} HTTP ${response.status}`);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function useBooksData() {
   const [fy, setFy] = useState(() => currentAustralianFyLabel());
   const [summary, setSummary] = useState<BooksSummary | null>(null);
@@ -6568,6 +6683,9 @@ function useBooksData() {
   const [importResult, setImportResult] = useState<BooksImportResponse | null>(null);
   const [syncing, setSyncing] = useState<"selected_fy" | "all_since_start" | null>(null);
   const [syncResult, setSyncResult] = useState<BooksSyncResponse | null>(null);
+  const [cgtReview, setCgtReview] = useState<CgtReviewPack | null>(null);
+  const [cgtLoading, setCgtLoading] = useState(false);
+  const [cgtErr, setCgtErr] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -6587,6 +6705,24 @@ function useBooksData() {
     void refresh();
   }, [refresh]);
 
+  const refreshCgt = useCallback(async () => {
+    setCgtLoading(true);
+    setCgtErr(null);
+    try {
+      const next = await engineBooksFetch<CgtReviewPack>("cgt-review", { fy });
+      setCgtReview(next);
+    } catch (error) {
+      setCgtErr(error instanceof Error ? error.message : String(error));
+      setCgtReview(null);
+    } finally {
+      setCgtLoading(false);
+    }
+  }, [fy]);
+
+  useEffect(() => {
+    void refreshCgt();
+  }, [refreshCgt]);
+
   const importHistory = useCallback(
     async (text: string) => {
       setImporting(true);
@@ -6599,25 +6735,35 @@ function useBooksData() {
         });
         setImportResult(result);
         await refresh();
+        await refreshCgt();
       } catch (error) {
         setErr(error instanceof Error ? error.message : String(error));
       } finally {
         setImporting(false);
       }
     },
-    [refresh]
+    [refresh, refreshCgt]
   );
 
   const addEntry = useCallback(
-    async (entry: { type: string; amountAud?: string; note?: string }) => {
+    async (entry: {
+      type: string;
+      amountAud?: string;
+      note?: string;
+      asset?: string;
+      quantity?: string;
+      acquiredAt?: string;
+      costBaseAud?: string;
+    }) => {
       setErr(null);
       await engineBooksFetch("entry", {
         method: "POST",
         body: entry,
       });
       await refresh();
+      await refreshCgt();
     },
-    [refresh]
+    [refresh, refreshCgt]
   );
 
   const syncReadOnly = useCallback(
@@ -6632,35 +6778,26 @@ function useBooksData() {
         });
         setSyncResult(result);
         await refresh();
+        await refreshCgt();
       } catch (error) {
         setErr(error instanceof Error ? error.message : String(error));
       } finally {
         setSyncing(null);
       }
     },
-    [fy, refresh]
+    [fy, refresh, refreshCgt]
   );
 
   const downloadExport = useCallback(async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) throw new Error("Engineer sign-in required for Books export.");
-    const params = new URLSearchParams({ action: "export", fy });
-    const response = await fetch(`/api/engine-books?${params.toString()}`, {
-      headers: { authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) throw new Error(`export HTTP ${response.status}`);
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `jalsol-books-${fy}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    await downloadEngineBooksCsv("export", fy, `jalsol-books-${fy}.csv`);
+  }, [fy]);
+
+  const downloadCgtDisposals = useCallback(async () => {
+    await downloadEngineBooksCsv("cgt-disposals-csv", fy, `coinspot-cgt-${fy}-disposals.csv`);
+  }, [fy]);
+
+  const downloadCgtPack = useCallback(async () => {
+    await downloadEngineBooksCsv("cgt-pack-csv", fy, `jalsol-ato-cgt-review-pack-${fy}.csv`);
   }, [fy]);
 
   return {
@@ -6678,6 +6815,12 @@ function useBooksData() {
     syncResult,
     addEntry,
     downloadExport,
+    cgtReview,
+    cgtLoading,
+    cgtErr,
+    refreshCgt,
+    downloadCgtDisposals,
+    downloadCgtPack,
   };
 }
 
@@ -9642,6 +9785,8 @@ const BooksPanel = React.memo(function BooksPanel(props: {
         </div>
       </div>
 
+      <CgtReviewPackPanel books={books} />
+
       <div className="books-grid books-grid--two">
         <section className="books-card books-card--form">
           <div className="engine-telemetry-title">Import CoinSpot History</div>
@@ -9764,6 +9909,324 @@ function evidenceStatusLabel(value: string | null | undefined) {
   if (value === "not_applicable") return "Not Applicable";
   return "Missing";
 }
+
+function isoDateLabel(value: string | null | undefined) {
+  if (!value) return "-";
+  const ms = Date.parse(value);
+  if (!Number.isFinite(ms)) return value;
+  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
+}
+
+function cgtStatusLabel(value: string | null | undefined) {
+  if (value === "opening_balance_required") return "Opening Balance Required";
+  if (value === "ready_for_review") return "Ready for Review";
+  return value || "Review";
+}
+
+const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
+  books: ReturnType<typeof useBooksData>;
+}) {
+  const { books } = props;
+  const cgt = books.cgtReview;
+  const [view, setView] = useState<"ato" | "source">("ato");
+  const [assetFilter, setAssetFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [correctionAsset, setCorrectionAsset] = useState("");
+  const [correctionQty, setCorrectionQty] = useState("");
+  const [correctionCost, setCorrectionCost] = useState("");
+  const [correctionAcquiredAt, setCorrectionAcquiredAt] = useState("");
+  const [correctionNote, setCorrectionNote] = useState("");
+  const [savingCorrection, setSavingCorrection] = useState(false);
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const missingAssets = cgt?.openingBalanceReview?.missingAssets || [];
+  const disposalRows = useMemo(() => cgt?.disposals || [], [cgt?.disposals]);
+  const assets = useMemo(
+    () => ["ALL", ...Array.from(new Set(disposalRows.map((row) => row.asset).filter(Boolean) as string[])).sort()],
+    [disposalRows]
+  );
+  const statuses = useMemo(
+    () => ["ALL", ...Array.from(new Set(disposalRows.map((row) => row.status).filter(Boolean) as string[])).sort()],
+    [disposalRows]
+  );
+  const filteredDisposals = useMemo(
+    () =>
+      disposalRows
+        .filter((row) => assetFilter === "ALL" || row.asset === assetFilter)
+        .filter((row) => statusFilter === "ALL" || row.status === statusFilter)
+        .slice(0, 40),
+    [assetFilter, disposalRows, statusFilter]
+  );
+
+  const applyMissingAsset = (row: { asset?: string; missingQty?: number | null; firstDisposalAt?: string | null; count?: number | null }) => {
+    setCorrectionAsset(row.asset || "");
+    setCorrectionQty(row.missingQty == null ? "" : String(row.missingQty));
+    setCorrectionNote(`Opening balance support for ${row.asset || "asset"} before ${isoDateLabel(row.firstDisposalAt)}.`);
+  };
+
+  const submitCorrection = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSavingCorrection(true);
+    try {
+      await books.addEntry({
+        type: "OPENING_BALANCE_CORRECTION",
+        asset: correctionAsset,
+        quantity: correctionQty,
+        amountAud: correctionCost,
+        costBaseAud: correctionCost,
+        acquiredAt: correctionAcquiredAt,
+        note: correctionNote,
+      });
+      setCorrectionAsset("");
+      setCorrectionQty("");
+      setCorrectionCost("");
+      setCorrectionAcquiredAt("");
+      setCorrectionNote("");
+      await books.refreshCgt();
+    } finally {
+      setSavingCorrection(false);
+    }
+  };
+
+  const runDownload = async (kind: "disposals" | "pack") => {
+    setExporting(kind);
+    try {
+      if (kind === "disposals") await books.downloadCgtDisposals();
+      else await books.downloadCgtPack();
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  return (
+    <section className="books-card books-card--form cgt-pack" aria-label="ATO CGT review pack">
+      <div className="cgt-pack-head">
+        <div>
+          <div className="engine-telemetry-title">ATO CGT Review Pack</div>
+          <div className="engine-telemetry-note">
+            Tax-prep estimate from saved Books records for ATO capital gains fields, disposal review, and accountant export.
+          </div>
+        </div>
+        <div className="books-actions">
+          <button type="button" className="button ghost" onClick={() => void books.refreshCgt()} disabled={books.cgtLoading}>
+            {books.cgtLoading ? "Refreshing..." : "Refresh CGT"}
+          </button>
+          <button type="button" className="button ghost" onClick={() => void runDownload("disposals")} disabled={Boolean(exporting)}>
+            {exporting === "disposals" ? "Exporting..." : "Disposals CSV"}
+          </button>
+          <button type="button" className="button ghost" onClick={() => void runDownload("pack")} disabled={Boolean(exporting)}>
+            {exporting === "pack" ? "Exporting..." : "Pack CSV"}
+          </button>
+          <button type="button" className="button ghost" onClick={() => window.print()}>
+            Print / Save PDF
+          </button>
+        </div>
+      </div>
+
+      {books.cgtErr ? (
+        <div className="engine-log" role="status">
+          <div className="engine-log-title">CGT pack unavailable</div>
+          <pre>{books.cgtErr}</pre>
+        </div>
+      ) : null}
+
+      <div className="cgt-toggle" role="tablist" aria-label="CGT review mode">
+        <button type="button" className={view === "ato" ? "active" : ""} onClick={() => setView("ato")}>
+          ATO Fields
+        </button>
+        <button type="button" className={view === "source" ? "active" : ""} onClick={() => setView("source")}>
+          Raw vs Deduped
+        </button>
+      </div>
+
+      {view === "ato" ? (
+        <div className="books-grid cgt-field-grid">
+          {(cgt?.atoFields || []).map((field) => (
+            <div className="books-card cgt-field-card" key={field.key || field.label}>
+              <div className="slot-k">{field.label || "ATO field"}</div>
+              <div className="books-value">{field.value != null ? field.value : moneyAud(field.valueAud)}</div>
+              <div className="books-sub">{field.source || "Generated from disposal rows"}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="books-grid cgt-field-grid">
+          <div className="books-card cgt-field-card">
+            <div className="slot-k">Raw Rows Observed</div>
+            <div className="books-value">{cgt?.sourceReview?.rawRowsObserved ?? "-"}</div>
+            <div className="books-sub">From import/sync summaries, not retained raw files</div>
+          </div>
+          <div className="books-card cgt-field-card">
+            <div className="slot-k">Deduped FY Rows</div>
+            <div className="books-value">{cgt?.sourceReview?.storedDedupedFyRows ?? "-"}</div>
+            <div className="books-sub">All deduped rows {cgt?.sourceReview?.storedDedupedTradeRows ?? "-"}</div>
+          </div>
+          <div className="books-card cgt-field-card">
+            <div className="slot-k">Duplicates Ignored</div>
+            <div className="books-value">{cgt?.sourceReview?.duplicateRowsIgnored ?? "-"}</div>
+            <div className="books-sub">{cgt?.sourceReview?.dedupeMethod || "Books dedupe hash"}</div>
+          </div>
+          <div className="books-card cgt-field-card">
+            <div className="slot-k">Import Records Reviewed</div>
+            <div className="books-value">{cgt?.sourceReview?.importRecordsReviewed ?? "-"}</div>
+            <div className="books-sub">{cgt?.sourceReview?.note || "Saved Books source review"}</div>
+          </div>
+        </div>
+      )}
+
+      <div className="books-grid cgt-total-grid">
+        <div className="books-card">
+          <div className="slot-k">Disposals</div>
+          <div className="books-value">{cgt?.totals?.disposalCount ?? "-"}</div>
+          <div className="books-sub">Capital proceeds {moneyAud(cgt?.totals?.capitalProceedsAud)}</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Cost Base / Fees</div>
+          <div className="books-value">{moneyAud(cgt?.totals?.costBaseAud)}</div>
+          <div className="books-sub">Fees {moneyAud(cgt?.totals?.feeAud)}</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Losses Applied</div>
+          <div className="books-value">{moneyAud(cgt?.totals?.capitalLossesAppliedAud)}</div>
+          <div className="books-sub">Current losses {moneyAud(cgt?.totals?.currentYearCapitalLossesAud)}</div>
+        </div>
+        <div className="books-card">
+          <div className="slot-k">Discount Estimate</div>
+          <div className="books-value">{moneyAud(cgt?.totals?.cgtDiscountAppliedAud)}</div>
+          <div className="books-sub">Eligible gains {moneyAud(cgt?.totals?.discountEligibleGainAud)}</div>
+        </div>
+      </div>
+
+      <div className="cgt-disposal-controls">
+        <label className="books-fy">
+          <span>Asset</span>
+          <select value={assetFilter} onChange={(event) => setAssetFilter(event.target.value)}>
+            {assets.map((asset) => (
+              <option key={asset} value={asset}>
+                {asset === "ALL" ? "All" : asset}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="books-fy">
+          <span>Status</span>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            {statuses.map((status) => (
+              <option key={status} value={status}>
+                {status === "ALL" ? "All" : cgtStatusLabel(status)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="cgt-table-wrap" role="region" aria-label="CGT disposal explorer">
+        <table className="cgt-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Asset</th>
+              <th>Qty</th>
+              <th>Proceeds</th>
+              <th>Cost Base</th>
+              <th>Gain</th>
+              <th>Loss</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredDisposals.length ? (
+              filteredDisposals.map((row) => (
+                <tr key={row.id || `${row.transactionAt}-${row.asset}-${row.quantity}`}>
+                  <td>{isoDateLabel(row.transactionAt)}</td>
+                  <td>{row.asset || "-"}</td>
+                  <td>{fmt(row.quantity)}</td>
+                  <td>{moneyAud(row.proceedsAud)}</td>
+                  <td>{moneyAud(row.costBaseAud)}</td>
+                  <td>{moneyAud(row.capitalGainAud)}</td>
+                  <td>{moneyAud(row.capitalLossAud)}</td>
+                  <td>{cgtStatusLabel(row.status)}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8}>No disposal rows for the selected financial year.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {missingAssets.length ? (
+        <div className="books-warning-panel cgt-opening-panel">
+          <div className="engine-telemetry-title">Opening-Balance Corrections</div>
+          <div className="engine-telemetry-note">
+            Missing lots make the CGT estimate incomplete. Add cost-basis evidence, then refresh the pack.
+          </div>
+          <div className="books-warning-list">
+            {missingAssets.map((row) => (
+              <div key={`${row.asset}-${row.firstDisposalAt}`} className="books-warning-row">
+                <strong>{row.asset || "ASSET"}</strong>
+                <span>
+                  Missing {fmt(row.missingQty)} before {isoDateLabel(row.firstDisposalAt)} across {row.count ?? 1} disposal rows.
+                </span>
+                <button type="button" className="button ghost" onClick={() => applyMissingAsset(row)}>
+                  Use
+                </button>
+              </div>
+            ))}
+          </div>
+          <form className="books-entry-form cgt-correction-form" onSubmit={submitCorrection}>
+            <input value={correctionAsset} onChange={(event) => setCorrectionAsset(event.target.value.toUpperCase())} placeholder="Asset" />
+            <input value={correctionQty} onChange={(event) => setCorrectionQty(event.target.value)} placeholder="Quantity" inputMode="decimal" />
+            <input value={correctionCost} onChange={(event) => setCorrectionCost(event.target.value)} placeholder="Cost base AUD" inputMode="decimal" />
+            <input
+              value={correctionAcquiredAt}
+              onChange={(event) => setCorrectionAcquiredAt(event.target.value)}
+              placeholder="Acquired date"
+              type="date"
+            />
+            <textarea
+              className="books-note"
+              value={correctionNote}
+              onChange={(event) => setCorrectionNote(event.target.value)}
+              placeholder="Evidence note"
+            />
+            <button
+              type="submit"
+              className="button gold"
+              disabled={savingCorrection || !correctionAsset.trim() || !correctionQty.trim() || !correctionCost.trim() || !correctionAcquiredAt}
+            >
+              {savingCorrection ? "Saving..." : "Add Correction"}
+            </button>
+          </form>
+        </div>
+      ) : null}
+
+      <div className="books-warning-panel">
+        <div className="engine-telemetry-title">CGT Review Warnings</div>
+        <div className="engine-telemetry-note">
+          {cgt?.accountantPack?.disclaimer || "Tax-prep estimate only. Accountant review required before lodgement."}
+        </div>
+        {cgt?.warnings?.length ? (
+          <div className="books-warning-list">
+            {cgt.warnings.slice(0, 10).map((warning, index) => (
+              <div key={`${warning.code}-${warning.asset}-${index}`} className="books-warning-row">
+                <strong>{warning.code || "WARNING"}</strong>
+                <span>
+                  {warning.asset ? `${warning.asset}: ` : ""}
+                  {warning.note || "Review this CGT item."}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="ledger-empty">No CGT warnings for the selected financial year.</div>
+        )}
+      </div>
+    </section>
+  );
+});
 
 const BankReportsPanel = React.memo(function BankReportsPanel(props: {
   books: ReturnType<typeof useBooksData>;
