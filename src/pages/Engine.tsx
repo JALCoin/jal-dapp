@@ -1514,9 +1514,20 @@ type BooksImportResponse = {
   error?: string;
   inserted?: number;
   duplicate?: number;
+  enriched?: number;
   totalStored?: number;
+  rawRowsStored?: boolean;
+  rawRowsInserted?: number;
+  rawArchiveReused?: boolean;
+  duplicateCandidates?: number;
+  economicReviewCandidates?: number;
   parsed?: {
     validRows?: number;
+    uniqueRows?: number;
+    uniqueFingerprints?: number;
+    skippedLines?: number;
+    duplicateCandidateRows?: number;
+    economicReviewRows?: number;
     buys?: number;
     sells?: number;
     audMarket?: number;
@@ -1697,15 +1708,27 @@ type CgtDisposal = {
   transactionAt?: string;
   fy?: string;
   eventType?: string;
+  eventId?: string | null;
+  componentIndex?: number | null;
+  componentCount?: number | null;
+  reason?: string;
+  type?: string;
+  sourceLine?: number | null;
   asset?: string;
   market?: string;
   quantity?: number | null;
+  qty?: number | null;
   proceedsAud?: number | null;
   costBaseAud?: number | null;
   feeAud?: number | null;
+  gainLossAud?: number | null;
   capitalGainAud?: number | null;
   capitalLossAud?: number | null;
   discountEligibleGainAud?: number | null;
+  discountEligible?: boolean | null;
+  acquiredAt?: string | null;
+  rowHash?: string | null;
+  lotHash?: string | null;
   missingQty?: number | null;
   status?: string;
 };
@@ -1725,6 +1748,8 @@ type CgtReviewPack = {
   atoFields?: CgtAtoField[];
   totals?: {
     disposalCount?: number | null;
+    disposalEventCount?: number | null;
+    disposalComponentCount?: number | null;
     capitalProceedsAud?: number | null;
     costBaseAud?: number | null;
     feeAud?: number | null;
@@ -1737,13 +1762,30 @@ type CgtReviewPack = {
     netCapitalLossesCarriedForwardAud?: number | null;
   };
   sourceReview?: {
+    source?: string | null;
     rawRowsObserved?: number | null;
     insertedRows?: number | null;
     duplicateRowsIgnored?: number | null;
     storedDedupedTradeRows?: number | null;
     storedDedupedFyRows?: number | null;
+    storedEconomicFyRows?: number | null;
+    economicReviewRows?: number | null;
     importRecordsReviewed?: number | null;
     rawRowsStored?: boolean | null;
+    rawStoredTradeRows?: number | null;
+    rawStoredFyRows?: number | null;
+    rawBackedImportRecords?: number | null;
+    legacyOrSummaryImportRecords?: number | null;
+    rawStorageCoverageComplete?: boolean | null;
+    generatedDisposalEvents?: number | null;
+    generatedDisposalRows?: number | null;
+    swapDisposalRows?: number | null;
+    audSellDisposalRows?: number | null;
+    missingBasisDisposalRows?: number | null;
+    unresolvedCrossQuoteQuantityRows?: number | null;
+    zeroAmountCrossAcquisitionRows?: number | null;
+    firstSourceLine?: number | null;
+    lastSourceLine?: number | null;
     dedupeMethod?: string | null;
     note?: string | null;
   };
@@ -6793,8 +6835,10 @@ async function engineBooksFetch<T>(
   if (!response.ok) {
     let detail = `${action} HTTP ${response.status}`;
     try {
-      const json = (await response.json()) as { error?: string };
-      if (json?.error) detail = json.error;
+      const json = (await response.json()) as { error?: string; detail?: string; warnings?: string[] };
+      if (json?.detail) detail = json.detail;
+      else if (json?.error) detail = json.error;
+      else if (json?.warnings?.[0]) detail = json.warnings[0];
     } catch {
       detail = `${action} HTTP ${response.status}`;
     }
@@ -6885,6 +6929,10 @@ function useBooksData() {
           method: "POST",
           body: { text },
         });
+        if (result.ok === false) {
+          throw new Error(result.error || result.warnings?.[0] || "CoinSpot trade history import failed.");
+        }
+
         setImportResult(result);
         await refresh();
         await refreshCgt();
@@ -6908,12 +6956,18 @@ function useBooksData() {
       costBaseAud?: string;
     }) => {
       setErr(null);
-      await engineBooksFetch("entry", {
-        method: "POST",
-        body: entry,
-      });
-      await refresh();
-      await refreshCgt();
+      try {
+        await engineBooksFetch("entry", {
+          method: "POST",
+          body: entry,
+        });
+        await refresh();
+        await refreshCgt();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setErr(message);
+        throw error instanceof Error ? error : new Error(message);
+      }
     },
     [refresh, refreshCgt]
   );
@@ -9801,7 +9855,7 @@ const BooksPanel = React.memo(function BooksPanel(props: {
       setEntryAmount("");
       setEntryNote("");
     } catch {
-      await books.refresh();
+      // addEntry keeps the backend error visible in the shared Books status.
     } finally {
       setEntrySaving(false);
     }
@@ -9949,7 +10003,8 @@ const BooksPanel = React.memo(function BooksPanel(props: {
         <section className="books-card books-card--form">
           <div className="engine-telemetry-title">Import CoinSpot History</div>
           <div className="engine-telemetry-note">
-            Paste the copied CoinSpot trade-history table. Duplicates are ignored by row hash.
+            Paste the copied CoinSpot trade-history table. Exact reimports are ignored; repeated
+            same-minute fingerprints remain separate ledger rows and are flagged for review.
           </div>
           <textarea
             className="books-textarea"
@@ -9966,9 +10021,28 @@ const BooksPanel = React.memo(function BooksPanel(props: {
             {books.importing ? "Importing..." : "Import History"}
           </button>
           {books.importResult ? (
-            <div className="books-sub">
-              Inserted {books.importResult.inserted ?? 0} | Duplicates {books.importResult.duplicate ?? 0} | Stored{" "}
-              {books.importResult.totalStored ?? "-"}
+            <div className="books-sync-status" role="status">
+              <div className="books-sub">
+                Inserted {books.importResult.inserted ?? 0} | Enriched {books.importResult.enriched ?? 0} | Duplicates {books.importResult.duplicate ?? 0} | Stored{" "}
+                {books.importResult.totalStored ?? "-"}
+              </div>
+              <div className="books-sub">
+                Observed {books.importResult.parsed?.validRows ?? "-"} | Ledger rows{" "}
+                {books.importResult.parsed?.uniqueRows ?? books.importResult.parsed?.validRows ?? "-"} | Fingerprints{" "}
+                {books.importResult.parsed?.uniqueFingerprints ?? "-"} | Repeated-fingerprint candidates{" "}
+                {books.importResult.parsed?.duplicateCandidateRows ?? books.importResult.duplicateCandidates ?? 0}
+              </div>
+              <div className="books-sub books-sub--warn">
+                Economic review candidates {books.importResult.parsed?.economicReviewRows ?? books.importResult.economicReviewCandidates ?? 0}
+              </div>
+              <div className="books-sub">
+                Normalized source archive{" "}
+                {books.importResult.rawRowsStored
+                  ? books.importResult.rawArchiveReused
+                    ? "reused"
+                    : `${books.importResult.rawRowsInserted ?? 0} rows added`
+                  : "not persisted"}
+              </div>
             </div>
           ) : null}
         </section>
@@ -10095,10 +10169,36 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
   const [correctionAcquiredAt, setCorrectionAcquiredAt] = useState("");
   const [correctionNote, setCorrectionNote] = useState("");
   const [savingCorrection, setSavingCorrection] = useState(false);
+  const [correctionError, setCorrectionError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
 
   const missingAssets = cgt?.openingBalanceReview?.missingAssets || [];
   const disposalRows = useMemo(() => cgt?.disposals || [], [cgt?.disposals]);
+  const sourceReview = cgt?.sourceReview;
+  const rawStoredFyRows = sourceReview?.rawStoredFyRows;
+  const hasNormalizedRawRows =
+    rawStoredFyRows != null ? rawStoredFyRows > 0 : sourceReview?.rawRowsStored === true;
+  const rawCoverageMessage = !hasNormalizedRawRows
+    ? "No normalized source rows are persisted for this FY; the observed count comes from import/sync summaries."
+    : sourceReview?.rawStorageCoverageComplete === true
+      ? `${rawStoredFyRows ?? sourceReview?.rawRowsObserved ?? "-"} normalized rows persisted; all reviewed pasted imports have source archives.`
+      : sourceReview?.rawStorageCoverageComplete === false
+        ? `${rawStoredFyRows ?? sourceReview?.rawRowsObserved ?? "-"} normalized rows persisted; ${sourceReview?.legacyOrSummaryImportRecords ?? 0} legacy or summary-only import records remain.`
+        : `${rawStoredFyRows ?? sourceReview?.rawRowsObserved ?? "-"} normalized rows persisted for the selected FY.`;
+  const inferredDisposalEventCount = cgt
+    ? new Set(
+        disposalRows.map(
+          (row) =>
+            row.eventId ||
+            row.rowHash ||
+            row.id ||
+            `${row.transactionAt || ""}:${row.eventType || row.reason || ""}`
+        )
+      ).size
+    : null;
+  const disposalEventCount = cgt?.totals?.disposalEventCount ?? inferredDisposalEventCount;
+  const disposalComponentCount =
+    cgt?.totals?.disposalComponentCount ?? sourceReview?.generatedDisposalRows ?? (cgt ? disposalRows.length : null);
   const assets = useMemo(
     () => ["ALL", ...Array.from(new Set(disposalRows.map((row) => row.asset).filter(Boolean) as string[])).sort()],
     [disposalRows]
@@ -10117,6 +10217,7 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
   );
 
   const applyMissingAsset = (row: { asset?: string; missingQty?: number | null; firstDisposalAt?: string | null; count?: number | null }) => {
+    setCorrectionError(null);
     setCorrectionAsset(row.asset || "");
     setCorrectionQty(row.missingQty == null ? "" : String(row.missingQty));
     setCorrectionNote(`Opening balance support for ${row.asset || "asset"} before ${isoDateLabel(row.firstDisposalAt)}.`);
@@ -10125,6 +10226,7 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
   const submitCorrection = async (event: React.FormEvent) => {
     event.preventDefault();
     setSavingCorrection(true);
+    setCorrectionError(null);
     try {
       await books.addEntry({
         type: "OPENING_BALANCE_CORRECTION",
@@ -10141,6 +10243,8 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
       setCorrectionAcquiredAt("");
       setCorrectionNote("");
       await books.refreshCgt();
+    } catch (error) {
+      setCorrectionError(error instanceof Error ? error.message : String(error));
     } finally {
       setSavingCorrection(false);
     }
@@ -10210,17 +10314,20 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
       ) : (
         <div className="books-grid cgt-field-grid">
           <div className="books-card cgt-field-card">
-            <div className="slot-k">Raw Rows Observed</div>
+            <div className="slot-k">Source Rows Observed</div>
             <div className="books-value">{cgt?.sourceReview?.rawRowsObserved ?? "-"}</div>
-            <div className="books-sub">From import/sync summaries, not retained raw files</div>
+            <div className="books-sub">{rawCoverageMessage}</div>
           </div>
           <div className="books-card cgt-field-card">
-            <div className="slot-k">Deduped FY Rows</div>
+            <div className="slot-k">Ledger FY Rows</div>
             <div className="books-value">{cgt?.sourceReview?.storedDedupedFyRows ?? "-"}</div>
-            <div className="books-sub">All deduped rows {cgt?.sourceReview?.storedDedupedTradeRows ?? "-"}</div>
+            <div className="books-sub">All ledger rows {cgt?.sourceReview?.storedDedupedTradeRows ?? "-"}</div>
+            <div className="books-sub">
+              Economic rows {sourceReview?.storedEconomicFyRows ?? "-"} | Review candidates {sourceReview?.economicReviewRows ?? 0}
+            </div>
           </div>
           <div className="books-card cgt-field-card">
-            <div className="slot-k">Duplicates Ignored</div>
+            <div className="slot-k">Rows Not Reinserted</div>
             <div className="books-value">{cgt?.sourceReview?.duplicateRowsIgnored ?? "-"}</div>
             <div className="books-sub">{cgt?.sourceReview?.dedupeMethod || "Books dedupe hash"}</div>
           </div>
@@ -10229,14 +10336,25 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
             <div className="books-value">{cgt?.sourceReview?.importRecordsReviewed ?? "-"}</div>
             <div className="books-sub">{cgt?.sourceReview?.note || "Saved Books source review"}</div>
           </div>
+          <div className="books-card cgt-field-card">
+            <div className="slot-k">FIFO Components</div>
+            <div className="books-value">{disposalComponentCount ?? "-"}</div>
+            <div className="books-sub">Swaps {sourceReview?.swapDisposalRows ?? 0} | Missing basis {sourceReview?.missingBasisDisposalRows ?? 0}</div>
+            <div className="books-sub books-sub--warn">
+              Unresolved cross quantities {sourceReview?.unresolvedCrossQuoteQuantityRows ?? 0} | Zero-amount
+              quote acquisitions {sourceReview?.zeroAmountCrossAcquisitionRows ?? 0}
+            </div>
+          </div>
         </div>
       )}
 
       <div className="books-grid cgt-total-grid">
         <div className="books-card">
-          <div className="slot-k">Disposals</div>
-          <div className="books-value">{cgt?.totals?.disposalCount ?? "-"}</div>
-          <div className="books-sub">Capital proceeds {moneyAud(cgt?.totals?.capitalProceedsAud)}</div>
+          <div className="slot-k">Disposal Events</div>
+          <div className="books-value">{disposalEventCount ?? "-"}</div>
+          <div className="books-sub">
+            FIFO components {disposalComponentCount ?? "-"} | Proceeds {moneyAud(cgt?.totals?.capitalProceedsAud)}
+          </div>
         </div>
         <div className="books-card">
           <div className="slot-k">Cost Base / Fees</div>
@@ -10255,6 +10373,9 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
         </div>
       </div>
 
+      <div className="engine-telemetry-note">
+        Each table row is a FIFO component. One disposal event can span multiple acquisition lots.
+      </div>
       <div className="cgt-disposal-controls">
         <label className="books-fy">
           <span>Asset</span>
@@ -10278,7 +10399,7 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
         </label>
       </div>
 
-      <div className="cgt-table-wrap" role="region" aria-label="CGT disposal explorer">
+      <div className="cgt-table-wrap" role="region" aria-label="CGT FIFO disposal component explorer">
         <table className="cgt-table">
           <thead>
             <tr>
@@ -10298,7 +10419,7 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
                 <tr key={row.id || `${row.transactionAt}-${row.asset}-${row.quantity}`}>
                   <td>{isoDateLabel(row.transactionAt)}</td>
                   <td>{row.asset || "-"}</td>
-                  <td>{fmt(row.quantity)}</td>
+                  <td>{fmt(row.quantity ?? row.qty)}</td>
                   <td>{moneyAud(row.proceedsAud)}</td>
                   <td>{moneyAud(row.costBaseAud)}</td>
                   <td>{moneyAud(row.capitalGainAud)}</td>
@@ -10308,7 +10429,7 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
               ))
             ) : (
               <tr>
-                <td colSpan={8}>No disposal rows for the selected financial year.</td>
+                <td colSpan={8}>No disposal components for the selected financial year.</td>
               </tr>
             )}
           </tbody>
@@ -10358,6 +10479,11 @@ const CgtReviewPackPanel = React.memo(function CgtReviewPackPanel(props: {
               {savingCorrection ? "Saving..." : "Add Correction"}
             </button>
           </form>
+          {correctionError ? (
+            <div className="books-sub books-sub--warn" role="status">
+              Correction not saved: {correctionError}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
