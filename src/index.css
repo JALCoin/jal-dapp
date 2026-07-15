@@ -13999,10 +13999,12 @@ button.home-route-band{
   align-items:center;
   justify-content:space-between;
   gap:10px;
+  min-width:0;
 }
 
 .entry-progress-label,
 .entry-progress-meta{
+  min-width:0;
   font-size:.72rem;
   letter-spacing:.08em;
   text-transform:uppercase;
@@ -14010,9 +14012,12 @@ button.home-route-band{
 }
 
 .entry-progress-value{
+  min-width:0;
   font-size:.76rem;
   font-weight:700;
   color:rgba(237,255,248,.86);
+  overflow-wrap:anywhere;
+  text-align:right;
 }
 
 .entry-progress-bar{
@@ -14043,7 +14048,31 @@ button.home-route-band{
 }
 
 .entry-progress-meta{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) max-content;
+  align-items:start;
   margin-top:9px;
+}
+
+.entry-progress-meta span{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+.entry-progress-meta-count{
+  justify-self:end;
+  text-align:right;
+}
+
+@media (max-width:720px){
+  .entry-progress-meta{
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .entry-progress-meta-count{
+    justify-self:start;
+    text-align:left;
+  }
 }
 
 .exit-progress-rail{

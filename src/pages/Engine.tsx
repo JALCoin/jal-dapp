@@ -730,6 +730,8 @@ type SlotRow = {
   candidateAudAvailable?: number | null;
   candidateAllocationState?: string | null;
   candidateAllocationBlockedReason?: string | null;
+  candidateAllocationReserveMode?: string | null;
+  candidateAllocationReserveAdvisoryReason?: string | null;
   candidatePrimarySpendableAud?: number | null;
   candidateSecondaryReserveAud?: number | null;
 
@@ -1354,6 +1356,10 @@ type EntryAllocation = {
   blockReason?: string | null;
   primaryBlockReason?: string | null;
   secondaryBlockReason?: string | null;
+  firstSecondaryReserveMode?: string | null;
+  firstSecondaryReserveHard?: boolean | null;
+  firstSecondaryReserveAdvisory?: boolean | null;
+  primaryReserveAdvisoryReason?: string | null;
   primaryPoolAud?: number | null;
   primaryPoolRemainingAud?: number | null;
   primarySlotsMax?: number | null;
@@ -1844,7 +1850,7 @@ const PRIMARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Primary Performance Memory",
     summary:
-      "Recent primaries are scored over the last 8 trades. After 3 straight losses the affected coin cools down for 30 minutes.",
+      "Recent primaries are scored over the last 8 trades. After 3 straight losses the affected coin enters a 15-minute cooldown.",
     detail:
       "Negative-EV half-sizing is OFF for primaries in this profile, so the engine prefers either full-size entries or temporary disablement instead of soft clipping.",
   },
@@ -1854,9 +1860,9 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Jrd Secondary Mission",
     summary:
-      "Secondaries harvest volatility inside a live primary instead of replacing it. Base sizing, forced caps, and cycle depth now follow the live configuration rendered below rather than a hard-coded profile card.",
+      "Secondaries harvest volatility inside a live primary instead of replacing it. Each entry is a static AUD 1,000 unit, with up to 8 tactical secondary slots available per active Primary.",
     detail:
-      "Accounting stays separate during the hold and merges only when the parent returns to WAITING_ENTRY. Performance memory, pacing, and trigger-band reuse now shape how quickly this layer can recycle.",
+      "Accounting stays separate during the hold and merges only when the parent returns to WAITING_ENTRY. Entry pacing is ON; performance reuse and trigger-band reuse are OFF.",
   },
   {
     title: "Trigger And Cost Gate",
@@ -1868,7 +1874,7 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Exit Order Manager",
     summary:
-      "Primary locks and active secondaries now calculate first-class target sell orders from their own net-gain basis, with dry-run state shown before live order management is enabled.",
+      "Primary locks and active secondaries calculate first-class target sell orders from their own net-gain basis. Live exit-order mutation is enabled and dry-run mode is OFF.",
     detail:
       "When a Primary floor breach is blocked by its tracked resting sell order, the engine clears that order first and retries the guarded executable exit on the next tick. Secondary entry remains governed by its own gross/net/spread gates rather than being stopped just because a Primary exit trigger is active.",
   },
@@ -1899,16 +1905,16 @@ const ENGINE_GUARDRAIL_CARDS: BehaviorCard[] = [
   {
     title: "Live Quote Discipline",
     summary:
-      "Quote guard is required. Global drift tolerance is 1.25% with a 10 second timeout; ETH, SOL, and XRP can widen to 2.75% on live buy quotes.",
+      "Quote guard is required with a 10 second timeout. Global drift tolerance is 1.25%; BTC uses 1.75%, while ETH, XRP, SOL, ADA, and LTC use 2.75% on live buy quotes.",
     detail:
       "Market history and trade telemetry are both enabled, so the UI is backed by replayable quote history plus live submission diagnostics.",
   },
   {
     title: "What Is Disabled",
     summary:
-      "Rotation behavior follows live gate state; the engine surface should not assume rotation or top-up are permanently OFF.",
+      "Rotation policy and the rotation executor are OFF. Waiting-slot top-up remains ON and restores eligible waiting rails to the configured AUD 50 target.",
     detail:
-      "This view is still primarily a fixed-slot primary-plus-secondary machine, but the live gates above are the source of truth for whether rotation and waiting-slot top-up are currently active.",
+      "The live system is a fixed eight-slot primary-plus-secondary engine; the Railway telemetry above remains the source of truth for current worker and gate state.",
   },
 ];
 
@@ -1917,19 +1923,19 @@ const ENGINE_COIN_BEHAVIOR_PROFILES: BehaviorCoinProfile[] = [
     coin: "BTC",
     personality: "Tightest spread and cleanest secondary filter; the benchmark leader.",
     executor:
-      "Primary entry allows spread up to 1.40%, drawdown 0.40%-8.00%, bounce at least 0.15%, and continuation EMA gap >= 0.005%, all with 1-tick confirmation.",
+      "Primary entry allows spread up to 1.40%, drawdown 0.35%-8.00%, bounce at least 0.08%, and continuation EMA gap >= 0.005%, all with 1-tick confirmation.",
     primary:
       "Primary exits want at least 0.12% net or AUD 0.25. Trail rails keep 40%, 48%, and 58% of move after arming at 0.25%, 0.20%, and 0.25%. Adaptive vol trail is enabled but arm multiplier is 0.00, capped at 0.35%, with 28% minimum retain.",
     secondary:
-      "Secondaries only fire in very clean conditions: spread <= 0.45%, bounce >= 0.35%, expected edge >= 0.10%, post-cost net >= 0.05%, and min exit AUD 0.08. Parent-trigger ladder is effectively disabled here.",
+      "Secondaries use the global parent trigger-band ladder with strict filters: spread <= 0.45%, bounce >= 0.35%, expected edge >= 0.10%, post-cost net >= 0.05%, and min exit AUD 0.08.",
     safeguards:
-      "BTC is the most selective coin in the book, favoring thinner spread and continuation clarity over deep oversold harvesting.",
+      "BTC is the most selective coin in the book, favoring thinner spread and continuation clarity over deep oversold harvesting. Its live buy quote-drift ceiling is 1.75%.",
   },
   {
     coin: "ETH",
     personality: "Balanced leader with fast continuation tolerance and moderately tight exits.",
     executor:
-      "Primary entry allows spread up to 1.80%, drawdown 0.30%-10.00%, bounce >= 0.15%, continuation drawdown >= 0.04%, EMA gap >= 0.002%, and 1-tick confirmation.",
+      "Primary entry allows spread up to 1.80%, drawdown 0.25%-10.00%, bounce >= 0.12%, continuation drawdown >= 0.04%, EMA gap >= 0.002%, and 1-tick confirmation.",
     primary:
       "Primary exits want 0.15% net or AUD 0.30. Trail rails arm at 0.15%, 0.20%, and 0.25%, then keep 42%, 50%, and 60%. Adaptive vol trail is ON with 0.95 arm mult, 0.40 max arm, and 30% minimum retain.",
     secondary:
@@ -1941,7 +1947,7 @@ const ENGINE_COIN_BEHAVIOR_PROFILES: BehaviorCoinProfile[] = [
     coin: "XRP",
     personality: "Momentum-friendly and continuation-tolerant, but still spread-aware.",
     executor:
-      "Primary entry allows spread up to 1.80%, drawdown 0.50%-10.00%, bounce >= 0.15%, continuation drawdown >= 0.01%, EMA gap >= 0.0004%, and 1-tick confirmation.",
+      "Primary entry allows spread up to 1.80%, drawdown 0.40%-10.00%, bounce >= 0.12%, continuation drawdown >= 0.01%, EMA gap >= 0.0004%, and 1-tick confirmation.",
     primary:
       "Primary exits want 0.15% net or AUD 0.30. Trail rails match ETH at 0.15% / 42%, 0.20% / 50%, and 0.25% / 60%. Adaptive vol trail is ON with 0.95 arm mult, 0.40 max arm, and 30% minimum retain.",
     secondary:
@@ -1953,7 +1959,7 @@ const ENGINE_COIN_BEHAVIOR_PROFILES: BehaviorCoinProfile[] = [
     coin: "SOL",
     personality: "Fast beta breakout coin with explicit lock rails and no adaptive vol trail.",
     executor:
-      "Primary entry allows spread up to 2.40%, drawdown 0.30%-10.00%, bounce >= 0.12%, continuation drawdown >= 0.08%, EMA gap >= 0.002%, and 1-tick confirmation.",
+      "Primary entry allows spread up to 2.40%, drawdown 0.25%-10.00%, bounce >= 0.10%, continuation drawdown >= 0.08%, EMA gap >= 0.002%, and 1-tick confirmation.",
     primary:
       "Primary exits want 0.20% net or AUD 0.35. Locks step up to 0.95%, 1.75%, and 3.00%, while trails arm at 0.12%, 0.18%, and 0.24% and retain 50%, 60%, and 70%. Adaptive vol trail is OFF.",
     secondary:
@@ -1965,11 +1971,11 @@ const ENGINE_COIN_BEHAVIOR_PROFILES: BehaviorCoinProfile[] = [
     coin: "ADA",
     personality: "Slowest primary trigger, deepest recovery ladder, and staged band-driven harvesting.",
     executor:
-      "Primary entry allows spread up to 2.20%, drawdown 0.60%-12.00%, bounce >= 0.18%, and 1-tick confirmation with no EMA-up requirement.",
+      "Primary entry allows spread up to 2.80%, drawdown 0.45%-12.00%, bounce >= 0.14%, and 1-tick confirmation with no EMA-up requirement.",
     primary:
       "Primary exits want 0.24% net or AUD 0.38. Trail rails arm at 0.22%, 0.30%, and 0.38% and keep 34%, 42%, and 52%. Adaptive vol trail is ON with 1.10 arm mult, 0.65 max arm, and 20% minimum retain.",
     secondary:
-      "Secondaries are band-only: -1.5%, -3.0%, -4.75%, -6.5%, -7.75%, -9.75%, -11.75%, and -14.0%. Core filters are spread <= 2.20%, bounce >= 0.25%, EMA gap 0.02, expected edge >= 0.10%, post-cost >= 0.10%, and min exit AUD 0.14. Consolidation spreads can stretch to 2.6% with bull edge 0.12 and bear edge 0.14.",
+      "Secondaries are band-only: -1.5%, -3.0%, -4.75%, -6.5%, -7.75%, -9.75%, -11.75%, and -14.0%. Core filters are spread <= 2.20%, bounce >= 0.25%, EMA gap 0.02, expected edge >= 0.10%, post-cost >= 0.10%, and min exit AUD 0.14. Consolidation spreads can stretch to 3.00% with bull edge 0.12 and bear edge 0.14.",
     safeguards:
       "ADA is tuned for staged underwater recovery rather than shallow noise. The extra banding makes it one of the most deliberate rebound harvesters in the set.",
   },
@@ -1977,11 +1983,11 @@ const ENGINE_COIN_BEHAVIOR_PROFILES: BehaviorCoinProfile[] = [
     coin: "DOGE",
     personality: "Loose spread tolerance and aggressive lock floors for meme-volatility harvesting.",
     executor:
-      "Primary entry allows spread up to 3.00%, drawdown 0.40%-12.00%, bounce >= 0.12%, and 1-tick confirmation.",
+      "Primary entry allows spread up to 3.00%, drawdown 0.35%-12.00%, bounce >= 0.10%, and 1-tick confirmation.",
     primary:
       "Primary exits want 0.32% net or AUD 0.45. Hard locks are 1.00%, 1.85%, and 3.10%, while trails arm at 0.14%, 0.20%, and 0.26% and retain 52%, 62%, and 72%. Adaptive vol trail is OFF.",
     secondary:
-      "Secondaries can stay negative on structure: EMA gap -0.20, downtrend EMA gap -0.20, spread <= 3.00%, bounce >= 0.20%, expected edge >= 0.10%, post-cost >= 0.12%, and min exit AUD 0.16. Consolidation lanes allow 3.2% spread with bull edge 0.12 and bear edge 0.14.",
+      "Secondaries can stay negative on structure: EMA gap -0.20, downtrend EMA gap -0.20, spread <= 3.00%, bounce >= 0.20%, expected edge >= 0.10%, post-cost >= 0.12%, and min exit AUD 0.16. Consolidation lanes allow 3.50% spread with bull edge 0.12 and bear edge 0.14.",
     safeguards:
       "The parent band ladder runs from -1.5% to -14.0%, making DOGE a deep-recovery specialist rather than a neat-trend coin.",
   },
@@ -1989,11 +1995,11 @@ const ENGINE_COIN_BEHAVIOR_PROFILES: BehaviorCoinProfile[] = [
     coin: "LTC",
     personality: "Middle-weight mean-reversion coin with wider secondary spread tolerance.",
     executor:
-      "Primary entry allows spread up to 2.60%, drawdown 0.60%-12.00%, bounce >= 0.18%, and 1-tick confirmation.",
+      "Primary entry allows spread up to 3.00%, drawdown 0.45%-12.00%, bounce >= 0.14%, and 1-tick confirmation.",
     primary:
       "Primary exits want 0.22% net or AUD 0.35. Trail rails arm at 0.18%, 0.24%, and 0.30% and keep 38%, 46%, and 56%. Adaptive vol trail is ON with 1.05 arm mult, 0.50 max arm, and 24% minimum retain.",
     secondary:
-      "Secondaries allow EMA gap 0.00, spread <= 3.50%, bounce >= 0.25%, expected edge >= 0.10%, post-cost >= 0.10%, and min exit AUD 0.12.",
+      "Secondaries allow EMA gap 0.00, spread <= 2.20%, bounce >= 0.25%, expected edge >= 0.10%, post-cost >= 0.10%, and min exit AUD 0.12.",
     safeguards:
       "LTC is less fussy than BTC or ETH on spread, but it still demands clean net-after-cost recovery before a secondary is worth keeping.",
   },
@@ -2001,11 +2007,11 @@ const ENGINE_COIN_BEHAVIOR_PROFILES: BehaviorCoinProfile[] = [
     coin: "TRX",
     personality: "High-lock, high-noise book end tuned for thinner-market rebounds.",
     executor:
-      "Primary entry allows spread up to 3.40%, drawdown 0.40%-12.00%, bounce >= 0.12%, and 1-tick confirmation.",
+      "Primary entry allows spread up to 4.00%, drawdown 0.35%-12.00%, bounce >= 0.10%, and 1-tick confirmation.",
     primary:
       "Primary exits want 0.36% net or AUD 0.45. Locks step to 1.05%, 1.95%, and 3.20%, while trails arm at 0.14%, 0.20%, and 0.26% and retain 54%, 64%, and 74%. Adaptive vol trail is OFF.",
     secondary:
-      "Secondaries use EMA gap 0.015, spread <= 2.80%, bounce >= 0.20%, expected edge >= 0.08%, post-cost >= 0.12%, and min exit AUD 0.16. Consolidation lanes allow 3.4% spread with bull edge 0.10 and bear edge 0.12.",
+      "Secondaries use EMA gap 0.015, spread <= 2.80%, bounce >= 0.20%, expected edge >= 0.08%, post-cost >= 0.12%, and min exit AUD 0.16. Consolidation lanes allow 3.80% spread with bull edge 0.10 and bear edge 0.12.",
     safeguards:
       "TRX is one of the most profit-demanding parents in the book, so it waits longer before releasing green than the majors do.",
   },
@@ -2570,11 +2576,28 @@ function reasonLabel(reason: string | null | undefined) {
     too_profitable_to_rotate: "Source is too profitable to rotate",
     realized_loss_exit_disabled: "Loss exit disabled by policy",
     max_realized_loss_exceeded: "Maximum realized loss exceeded",
+    primary_requires_secondary_reserve: "Primary requires secondary reserve",
+    first_secondary_reserve_pending: "First secondary reserve pending",
+    primary_aud_unavailable: "Primary AUD unavailable",
+    primary_pool_exhausted: "Primary pool exhausted",
+    primary_pool_blocked: "Primary pool blocked",
+    pair_floor_not_funded: "Pair floor not funded",
+    pair_secondary_reserve_held: "Secondary reserve held",
+    secondary_parent_not_active: "Secondary parent not active",
+    secondary_aud_unavailable: "Secondary AUD unavailable",
   };
 
   if (mapped[normalized]) return mapped[normalized];
   return enumLabel(reason);
 }
+
+function reserveAdvisoryLabel(reason: string | null | undefined) {
+  const normalized = String(reason || "").trim().toLowerCase();
+  if (normalized === "primary_requires_secondary_reserve") return "First-secondary funding is below its advisory target";
+  if (normalized === "first_secondary_reserve_pending") return "First-secondary funding is still pending (advisory)";
+  return reasonLabel(reason);
+}
+
 
 function yesNo(v: boolean | null | undefined) {
   if (v == null) return "-";
@@ -3067,22 +3090,130 @@ function primaryEntryRequestedAudValue(slot: SlotRow | null | undefined) {
   return null;
 }
 
-function primaryEntryFundingLabel(slot: SlotRow | null | undefined) {
+type PrimaryEntryFundingState = "done" | "pending" | "blocked";
+
+type PrimaryEntryFundingStatus = {
+  label: string;
+  milestoneLabel: string;
+  state: PrimaryEntryFundingState;
+  rawReason?: string | null;
+  title?: string | null;
+};
+
+function primaryEntryFundingStatus(slot: SlotRow | null | undefined): PrimaryEntryFundingStatus {
   const allocationState = String(slot?.candidateAllocationState || "").toUpperCase();
-  const allocationBlocked = String(slot?.candidateAllocationBlockedReason || "").trim();
-  if (allocationState === "PRIMARY_ALLOWED") return "Primary allowed";
-  if (allocationState === "SECONDARY_RESERVE_HELD") return "Secondary reserve held";
-  if (allocationBlocked) return `Blocked: ${allocationBlocked}`;
-  if (allocationState === "PAIR_FLOOR_NOT_FUNDED") return "Blocked: pair_floor_not_funded";
+  const explicitAllocationBlocked = String(slot?.candidateAllocationBlockedReason || "").trim();
+  const priorityBlocked = String(slot?.candidatePriorityBlockedReason || "").trim();
+  const priorityAllocationBlocked = [
+    "primary_requires_secondary_reserve",
+    "first_secondary_reserve_pending",
+    "primary_aud_unavailable",
+    "primary_pool_exhausted",
+    "primary_pool_blocked",
+    "pair_floor_not_funded",
+    "pair_secondary_reserve_held",
+  ].includes(priorityBlocked.toLowerCase())
+    ? priorityBlocked
+    : "";
+  const allocationBlocked = explicitAllocationBlocked || priorityAllocationBlocked;
+  const reserveMode = String(slot?.candidateAllocationReserveMode || "").trim().toUpperCase();
+  const reserveAdvisory = String(slot?.candidateAllocationReserveAdvisoryReason || "").trim();
+  const titleParts = [
+    allocationState ? `allocation=${allocationState}` : null,
+    allocationBlocked ? `blocked=${allocationBlocked}` : null,
+    reserveMode ? `reserveMode=${reserveMode}` : null,
+    reserveAdvisory ? `reserveAdvisory=${reserveAdvisory}` : null,
+  ].filter(Boolean);
+  const title = titleParts.length ? titleParts.join(" | ") : null;
+
+  if (allocationBlocked) {
+    return {
+      label: `Blocked: ${reasonLabel(allocationBlocked)}`,
+      milestoneLabel: "Capital blocked",
+      state: "blocked",
+      rawReason: allocationBlocked,
+      title,
+    };
+  }
+  if (allocationState === "PAIR_FLOOR_NOT_FUNDED" || allocationState === "PRIMARY_POOL_BLOCKED") {
+    const rawReason = allocationState === "PAIR_FLOOR_NOT_FUNDED" ? "pair_floor_not_funded" : "primary_pool_blocked";
+    return {
+      label: `Blocked: ${reasonLabel(rawReason)}`,
+      milestoneLabel: "Capital blocked",
+      state: "blocked",
+      rawReason,
+      title: title || rawReason,
+    };
+  }
+  if (allocationState === "SECONDARY_RESERVE_HELD") {
+    return {
+      label: "Secondary reserve held",
+      milestoneLabel: "Capital blocked",
+      state: "blocked",
+      rawReason: "pair_secondary_reserve_held",
+      title: title || "pair_secondary_reserve_held",
+    };
+  }
+  if (allocationState === "PRIMARY_ALLOWED") {
+    if (reserveAdvisory) {
+      return {
+        label: `Primary allowed; ${reserveAdvisoryLabel(reserveAdvisory)}`,
+        milestoneLabel: "Capital allowed",
+        state: "done",
+        rawReason: reserveAdvisory,
+        title,
+      };
+    }
+    return {
+      label: "Primary allowed",
+      milestoneLabel: "Capital allowed",
+      state: "done",
+      rawReason: null,
+      title,
+    };
+  }
 
   const state = String(slot?.candidateFundingState || "").toUpperCase();
   const needed = Number(slot?.candidateAudNeeded);
   const available = Number(slot?.candidateAudAvailable);
   if (state === "INSUFFICIENT" && Number.isFinite(needed) && Number.isFinite(available)) {
-    return `${moneyAud(available)} free / ${moneyAud(needed)} needed`;
+    return {
+      label: `${moneyAud(available)} free / ${moneyAud(needed)} needed`,
+      milestoneLabel: "Funding blocked",
+      state: "blocked",
+      rawReason: "insufficient_aud_for_entry_target",
+      title: title || "insufficient_aud_for_entry_target",
+    };
   }
-  if (state) return enumLabel(state);
-  return "Funding not checked yet";
+  if (["INVALID", "UNKNOWN", "INSUFFICIENT"].includes(state)) {
+    return {
+      label: state ? reasonLabel(state.toLowerCase()) : "Funding blocked",
+      milestoneLabel: "Funding blocked",
+      state: "blocked",
+      rawReason: state.toLowerCase(),
+      title: title || state,
+    };
+  }
+  if (state) {
+    return {
+      label: enumLabel(state),
+      milestoneLabel: "Funding ready",
+      state: "done",
+      rawReason: null,
+      title,
+    };
+  }
+  return {
+    label: "Funding not checked yet",
+    milestoneLabel: "Funding pending",
+    state: "pending",
+    rawReason: null,
+    title,
+  };
+}
+
+function primaryEntryFundingLabel(slot: SlotRow | null | undefined) {
+  return primaryEntryFundingStatus(slot).label;
 }
 
 function entryAllocationModeLabel(allocation: EntryAllocation | null | undefined) {
@@ -3091,6 +3222,17 @@ function entryAllocationModeLabel(allocation: EntryAllocation | null | undefined
   return allocation.enabled ? mode : `${mode} inactive`;
 }
 
+
+function isAdvisoryFirstSecondaryReserve(allocation: EntryAllocation | null | undefined) {
+  return (
+    allocation?.firstSecondaryReserveAdvisory === true ||
+    String(allocation?.firstSecondaryReserveMode || "").trim().toUpperCase() === "ADVISORY"
+  );
+}
+
+function secondaryReserveMetricLabel(allocation: EntryAllocation | null | undefined, hardLabel: string) {
+  return isAdvisoryFirstSecondaryReserve(allocation) ? "Advisory Coverage Need" : hardLabel;
+}
 function entryAllocationAllowedLabel(value: boolean | null | undefined) {
   if (value === true) return "YES";
   if (value === false) return "NO";
@@ -4544,6 +4686,7 @@ function primaryEntryMilestones(slot: SlotRow): EntryMilestone[] {
   const bounceReady = drawdownReady && blockedReason !== "bounce_not_ready";
   const trendReady = bounceReady && blockedReason !== "trend_not_ready";
   const confirm = primaryEntryConfirmProgress(slot);
+  const funding = primaryEntryFundingStatus(slot);
 
   const milestones: EntryMilestone[] = [
     {
@@ -4575,6 +4718,11 @@ function primaryEntryMilestones(slot: SlotRow): EntryMilestone[] {
   }
 
   milestones.push({
+    label: funding.milestoneLabel,
+    state: funding.state,
+  });
+
+  milestones.push({
     label: confirm.ready ? "Confirm ready" : `Confirm ${confirm.current}/${confirm.total || 0}`,
     state: confirm.ready ? "done" : "pending",
   });
@@ -4593,6 +4741,8 @@ function primaryEntryProgressModel(slot: SlotRow): EntryProgressModel {
       if (item.label.startsWith("Trend")) return "Trend";
       if (item.label.startsWith("Spread")) return item.label;
       if (item.label.startsWith("Market")) return "Market read";
+      if (item.label.startsWith("Capital")) return item.state === "blocked" ? "Capital" : item.label;
+      if (item.label.startsWith("Funding")) return item.state === "blocked" ? "Funding" : item.label;
       if (item.label.startsWith("Confirm")) return item.label;
       return item.label;
     });
@@ -4612,6 +4762,8 @@ function primaryEntryCountdownLabel(slot: SlotRow) {
   const confirm = primaryEntryConfirmProgress(slot);
 
   if (progress.remainingCount <= 0) return "Entry ready";
+  if (progress.blocked && progress.waitingLabels.includes("Capital")) return "Capital blocked";
+  if (progress.blocked && progress.waitingLabels.includes("Funding")) return "Funding blocked";
   if (!confirm.ready && progress.remainingCount === 1 && confirm.total > 0) {
     return `Confirm ${confirm.current}/${confirm.total} remaining`;
   }
@@ -4630,7 +4782,7 @@ function primaryEntryProgressBlock(slot: SlotRow) {
   const fillPct = progress.totalCount > 0 ? Math.max(8, (progress.readyCount / progress.totalCount) * 100) : 0;
   const toneClass = progress.remainingCount <= 0 ? "is-ready" : progress.blocked ? "is-blocked" : "is-active";
   const targetAud = primaryEntryTargetAudValue(slot);
-  const fundingLabel = primaryEntryFundingLabel(slot);
+  const funding = primaryEntryFundingStatus(slot);
 
   return (
     <div className={`entry-progress ${toneClass}`} aria-label="Primary entry progress">
@@ -4644,8 +4796,8 @@ function primaryEntryProgressBlock(slot: SlotRow) {
         <span style={{ width: `${fillPct}%` }} />
       </div>
       <div className="entry-progress-meta">
-        <span>{progress.readyCount}/{progress.totalCount} gates | {fundingLabel}</span>
-        <span>{primaryEntryCountdownLabel(slot)}</span>
+        <span className="entry-progress-meta-main" title={funding.title || funding.rawReason || undefined}>{progress.readyCount}/{progress.totalCount} gates | {funding.label}</span>
+        <span className="entry-progress-meta-count">{primaryEntryCountdownLabel(slot)}</span>
       </div>
     </div>
   );
@@ -8661,7 +8813,9 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">EMA Gap</div><div className="slot-v">{pctNum(slot.candidateEmaGapPct)}</div></div>
               <div><div className="slot-k">Reversal Ticks</div><div className="slot-v">{slot.candidateReversalTicks != null ? slot.candidateReversalTicks : "-"}</div></div>
               <div><div className="slot-k">Score</div><div className="slot-v">{slot.candidateScore != null ? slot.candidateScore.toFixed(3) : "-"}</div></div>
-              <div><div className="slot-k">Funding</div><div className="slot-v">{primaryEntryFundingLabel(slot)}</div></div>
+              <div><div className="slot-k">Funding</div><div className="slot-v" title={slot.candidateAllocationBlockedReason || slot.candidateAllocationReserveAdvisoryReason || undefined}>{primaryEntryFundingLabel(slot)}</div></div>
+              <div><div className="slot-k">Reserve Mode</div><div className="slot-v">{slot.candidateAllocationReserveMode ?? "-"}</div></div>
+              <div><div className="slot-k">Reserve Advisory</div><div className="slot-v">{reserveAdvisoryLabel(slot.candidateAllocationReserveAdvisoryReason)}</div></div>
               <div><div className="slot-k">Sizing Mode</div><div className="slot-v">{slot.candidateEntrySizingMode ?? "-"}</div></div>
               <div><div className="slot-k">Tracked Peak</div><div className="slot-v">{fmt(slot.candidatePeakMid)}</div></div>
               <div><div className="slot-k">Tracked Low</div><div className="slot-v">{fmt(slot.candidateLowMid)}</div></div>
@@ -9368,7 +9522,7 @@ const CapitalRailsPanel = React.memo(function CapitalRailsPanel(props: {
             <div><span>Target</span><strong>{moneyAud(allocation.secondaryTargetAud)}</strong></div>
             <div><span>Available AUD</span><strong>{moneyAud(availableAud)}</strong></div>
             <div><span>Committed AUD</span><strong>{moneyAud(secondaryCommittedAud)}</strong></div>
-            <div><span>Reserved Now</span><strong>{moneyAud(allocation.secondaryReservedAud)}</strong></div>
+            <div><span>{secondaryReserveMetricLabel(allocation, "Reserved Now")}</span><strong>{moneyAud(allocation.secondaryReservedAud)}</strong></div>
             <div><span>Spendable Now</span><strong>{moneyAud(allocation.secondarySpendableAud)}</strong></div>
             <div><span>Unlocked Available</span><strong>{countLabel(allocation.secondaryRailSlotsAvailable ?? allocation.secondarySlotsAvailable)}</strong></div>
           </div>
@@ -9380,6 +9534,8 @@ const CapitalRailsPanel = React.memo(function CapitalRailsPanel(props: {
             <div><span>Next Primary</span><strong>{entryAllocationGateLabel(allocation.nextPrimaryAllowed, allocation.primaryBlockReason)}</strong></div>
             <div><span>Next Secondary</span><strong>{entryAllocationGateLabel(allocation.nextSecondaryAllowed, allocation.secondaryBlockReason)}</strong></div>
             <div><span>Blocked Reason</span><strong>{blockedReason ? reasonLabel(blockedReason) : "None published"}</strong></div>
+            <div><span>Reserve Mode</span><strong>{allocation.firstSecondaryReserveMode ?? "-"}</strong></div>
+            <div><span>Reserve Advisory</span><strong>{reserveAdvisoryLabel(allocation.primaryReserveAdvisoryReason)}</strong></div>
             <div><span>Capital Basis</span><strong>{moneyAud(allocation.capitalBaseAud)}</strong></div>
           </div>
         </div>
@@ -9434,6 +9590,8 @@ const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
         {railPool ? (
           <div className="secondary-grid capital-summary-grid">
             <div><div className="slot-k">Allocation Mode</div><div className="slot-v">{entryAllocationModeLabel(allocation)}</div></div>
+            <div><div className="slot-k">Reserve Mode</div><div className="slot-v">{allocation?.firstSecondaryReserveMode ?? "-"}</div></div>
+            <div><div className="slot-k">Reserve Advisory</div><div className="slot-v">{reserveAdvisoryLabel(allocation?.primaryReserveAdvisoryReason)}</div></div>
             <div><div className="slot-k">Primary Pool</div><div className="slot-v">{moneyAud(primaryPoolUsedAud)} / {moneyAud(allocation?.primaryPoolAud)} used</div></div>
             <div><div className="slot-k">Primary Spendable</div><div className="slot-v">{moneyAud(allocation?.primarySpendableAud)}</div></div>
             <div><div className="slot-k">Primary Slots</div><div className="slot-v">{allocation?.primarySlotsCommitted ?? allocation?.primaryCommittedCount ?? 0} / {allocation?.primarySlotsMax ?? "-"}</div></div>
@@ -9441,10 +9599,10 @@ const EntryAllocationPanel = React.memo(function EntryAllocationPanel(props: {
             <div><div className="slot-k">Total Secondary Capacity</div><div className="slot-v">{countLabel(totalSecondaryRailCapacity, "Not published")}</div></div>
             <div><div className="slot-k">Secondary Committed</div><div className="slot-v">{moneyAud(secondaryCommittedAud)}</div></div>
             <div><div className="slot-k">Secondary Spendable</div><div className="slot-v">{moneyAud(allocation?.secondarySpendableAud)}</div></div>
-            <div><div className="slot-k">Protected Reserve</div><div className="slot-v">{moneyAud(allocation?.secondaryReservedAud)}</div></div>
+            <div><div className="slot-k">{secondaryReserveMetricLabel(allocation, "Protected Reserve")}</div><div className="slot-v">{moneyAud(allocation?.secondaryReservedAud)}</div></div>
             <div><div className="slot-k">Unlocked Secondary Rails</div><div className="slot-v">{countLabel(secondaryRailUsed)} / {countLabel(secondaryRailTotal)} used</div></div>
             <div><div className="slot-k">Secondary Max / Primary</div><div className="slot-v">{allocation?.secondaryMaxPerPrimary ?? "-"}</div></div>
-            <div><div className="slot-k">First Secondary Pending</div><div className="slot-v">{allocation?.firstSecondaryDeficitCount ?? 0}</div></div>
+            <div><div className="slot-k">{isAdvisoryFirstSecondaryReserve(allocation) ? "First Secondary Advisory" : "First Secondary Pending"}</div><div className="slot-v">{allocation?.firstSecondaryDeficitCount ?? 0}</div></div>
             <div><div className="slot-k">Secondary Slots Available</div><div className="slot-v">{allocation?.secondarySlotsAvailable ?? "-"}</div></div>
             <div><div className="slot-k">Capital Basis</div><div className="slot-v">{moneyAud(allocation?.capitalBaseAud)}</div></div>
             <div><div className="slot-k">Next Primary</div><div className="slot-v">{entryAllocationAllowedLabel(allocation?.nextPrimaryAllowed)}</div></div>
