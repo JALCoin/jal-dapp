@@ -2609,6 +2609,9 @@ function reasonLabel(reason: string | null | undefined) {
     bidask_unresolved: "Bid/ask unavailable",
     live_bidask_required: "Live bid/ask required",
     drawdown_not_ready: "Drawdown not ready",
+    max_drawdown_context_rebase: "Fresh context started after deep move",
+    tracking_age_context_rebase: "Fresh context started after old setup expired",
+    tracking_context_rebased: "Fresh entry context started",
     bounce_not_ready: "Bounce not ready",
     trend_not_ready: "Trend not ready",
     priority_score_below_min: "Priority score below minimum",
@@ -3417,6 +3420,7 @@ function isTrackingFamilyState(state: string | null | undefined) {
   const s = String(state || "").toUpperCase();
   return (
     s === "TRACKING" ||
+    s === "TRACKING_REBASED" ||
     s === "ARMED" ||
     s === "DRAWDOWN_SEEN" ||
     s === "REVERSAL_CONFIRMING" ||
@@ -4724,7 +4728,10 @@ function primaryEntryMilestones(slot: SlotRow): EntryMilestone[] {
     !["spread_blowout", "spread_unresolved", "live_bidask_required", "bidask_unresolved"].includes(
       blockedReason
     );
-  const drawdownReady = blockedReason !== "drawdown_not_ready";
+  const contextRebased =
+    tracking === "TRACKING_REBASED" ||
+    ["max_drawdown_context_rebase", "tracking_age_context_rebase"].includes(blockedReason);
+  const drawdownReady = !contextRebased && blockedReason !== "drawdown_not_ready";
   const bounceReady = drawdownReady && blockedReason !== "bounce_not_ready";
   const trendReady = bounceReady && blockedReason !== "trend_not_ready";
   const confirm = primaryEntryConfirmProgress(slot);
@@ -5641,6 +5648,7 @@ function primarySetupStateLabel(slot: SlotRow) {
   const state = String(slot.state || "").toUpperCase();
 
   if (state === "DEPLOYING") return "Entry submitting";
+  if (tracking === "TRACKING_REBASED") return "Fresh context started";
   if (tracking === "REVERSAL_CONFIRMING") return "Reversal confirming";
   if (tracking === "DRAWDOWN_SEEN") return "Drawdown ready";
   if (tracking === "SPREAD_BLOCKED") return "Spread blocked";
@@ -5749,6 +5757,7 @@ function nextActionLabel(s: SlotRow) {
   if (state === "DEPLOYING") return "Confirming entry fill";
 
   if (state === "WAITING_ENTRY") {
+    if (tracking === "TRACKING_REBASED") return "Fresh context started; waiting for a new pullback and bounce";
     if (tracking === "REVERSAL_CONFIRMING") return "Reversal confirming";
     if (tracking === "DRAWDOWN_SEEN") return "Drawdown ready";
     if (tracking === "SPREAD_BLOCKED") return "Spread blocking entry";
