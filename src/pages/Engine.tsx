@@ -1327,6 +1327,11 @@ type PublicCapitalCoin = {
   primaryTrackedAud?: number | null;
   secondaryTrackedAud?: number | null;
   trackedAud?: number | null;
+  trackedCoinQty?: number | null;
+  quantityDriftCoin?: number | null;
+  quantityDriftAud?: number | null;
+  quantityDriftAttention?: boolean | null;
+  valueVsTrackedCostAud?: number | null;
   untrackedAudApprox?: number | null;
   exposureAttention?: boolean | null;
   secondaryWalletCoverage?: SecondaryWalletCoverage | null;
@@ -1403,6 +1408,9 @@ type PublicCapitalResponse = {
     attentionCount?: number | null;
     attentionCoins?: string[] | null;
     untrackedAudApprox?: number | null;
+    valueVsTrackedCostAud?: number | null;
+    quantityDriftCoin?: number | null;
+    quantityDriftAud?: number | null;
   } | null;
   cacheMs?: number | null;
   stale?: boolean | null;
@@ -2847,8 +2855,8 @@ function capitalExposureAttentionRows(capital: PublicCapitalResponse | null | un
   return list
     .filter((coin) => coin.exposureAttention === true)
     .sort((a, b) => {
-      const aSeverity = Math.max(Math.abs(a.untrackedAudApprox ?? 0), Math.abs(a.secondaryWalletCoverage?.shortageAud ?? 0));
-      const bSeverity = Math.max(Math.abs(b.untrackedAudApprox ?? 0), Math.abs(b.secondaryWalletCoverage?.shortageAud ?? 0));
+      const aSeverity = Math.max(Math.abs(a.quantityDriftAud ?? 0), Math.abs(a.secondaryWalletCoverage?.shortageAud ?? 0));
+      const bSeverity = Math.max(Math.abs(b.quantityDriftAud ?? 0), Math.abs(b.secondaryWalletCoverage?.shortageAud ?? 0));
       return bSeverity - aSeverity;
     });
 }
@@ -2868,10 +2876,18 @@ function capitalCoinForSlot(
   return (capital?.coins ?? []).find((row) => String(row.coin || "").toUpperCase() === coin) ?? null;
 }
 
-function exposureDeltaLabel(delta: number | null | undefined) {
-  if (delta == null || !Number.isFinite(delta)) return "balanced";
-  if (Math.abs(delta) < 0.01) return "balanced";
-  return delta > 0 ? `${moneyAud(delta)} untracked` : `${moneyAud(Math.abs(delta))} overtracked`;
+function quantityDriftLabel(delta: number | null | undefined) {
+  if (delta == null || !Number.isFinite(delta) || Math.abs(delta) < 0.01) return "balanced";
+  return delta > 0 ? `${moneyAud(delta)} surplus` : `${moneyAud(Math.abs(delta))} short`;
+}
+
+function valueVsCostLabel(delta: number | null | undefined) {
+  if (delta == null || !Number.isFinite(delta) || Math.abs(delta) < 0.01) return "at cost";
+  return delta > 0 ? `${moneyAud(delta)} above cost` : `${moneyAud(Math.abs(delta))} below cost`;
+}
+
+function coinValueVsCost(coin: PublicCapitalCoin | null | undefined) {
+  return coin?.valueVsTrackedCostAud ?? coin?.untrackedAudApprox ?? null;
 }
 
 function secondaryCoverageAttentionLabel(coverage: SecondaryWalletCoverage | null | undefined) {
@@ -7775,16 +7791,17 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                   >
                     <div className="dashboard-row-top">
                       <div className="dashboard-row-coin">{coin.coin ?? "-"}</div>
-                      <div className="dashboard-row-badge">{coverageLabel ? "Secondary Coverage" : "Wallet Drift"}</div>
+                      <div className="dashboard-row-badge">{coverageLabel ? "Secondary Coverage" : "Quantity Drift"}</div>
                     </div>
                     <div className="dashboard-row-copy">
                       {coverageLabel
                         ? `CoinSpot wallet coverage mismatch: ${coverageLabel}.`
-                        : `CoinSpot wallet is ${exposureDeltaLabel(coin.untrackedAudApprox)} versus tracked primary and secondary exposure.`}
+                        : `CoinSpot wallet quantity is ${quantityDriftLabel(coin.quantityDriftAud)} versus tracked primary and secondary coin quantities.`}
                     </div>
                     <div className="dashboard-row-meta">
                       <span>Wallet {moneyAud(coin.audValue)}</span>
                       <span>Tracked {moneyAud(coin.trackedAud)}</span>
+                      <span>Value vs cost {valueVsCostLabel(coinValueVsCost(coin))}</span>
                       {coin.secondaryWalletCoverage?.shortageAud ? (
                         <span>Secondary short {moneyAud(coin.secondaryWalletCoverage.shortageAud)}</span>
                       ) : null}
@@ -7854,7 +7871,7 @@ const OverviewTable = React.memo(function OverviewTable(props: {
                     ) : null}
                     <span>{primaryProtectionLabel(slot)}</span>
                     {capitalCoin ? (
-                      <span>Wallet {exposureDeltaLabel(capitalCoin.untrackedAudApprox)}</span>
+                      <span>Qty drift {quantityDriftLabel(capitalCoin.quantityDriftAud)}</span>
                     ) : null}
                     {secondaryWarning ? <span>Secondary mismatch</span> : null}
                   </div>
@@ -9732,8 +9749,9 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
             <div><div className="slot-k">AUD Balance</div><div className="slot-v">{moneyAud(props.capital?.audBalance)}</div></div>
             <div><div className="slot-k">Wallet Value</div><div className="slot-v">{moneyAud(props.capital?.walletAudValue)}</div></div>
             <div><div className="slot-k">Movable AUD</div><div className="slot-v">{moneyAud(props.capital?.movableAudEstimate)}</div></div>
-            <div><div className="slot-k">Wallet Drift</div><div className="slot-v">{capitalExposureAttentionCount(props.capital)} watched</div></div>
-            <div><div className="slot-k">Net Drift</div><div className="slot-v">{exposureDeltaLabel(props.capital?.exposure?.untrackedAudApprox)}</div></div>
+            <div><div className="slot-k">Quantity Drift</div><div className="slot-v">{capitalExposureAttentionCount(props.capital)} watched</div></div>
+            <div><div className="slot-k">Net Quantity Drift</div><div className="slot-v">{quantityDriftLabel(props.capital?.exposure?.quantityDriftAud)}</div></div>
+            <div><div className="slot-k">Value vs Cost</div><div className="slot-v">{valueVsCostLabel(props.capital?.exposure?.valueVsTrackedCostAud ?? props.capital?.exposure?.untrackedAudApprox)}</div></div>
             <div><div className="slot-k">Wallet Sources</div><div className="slot-v">{props.capital?.walletSourceEnabled ? "ENABLED" : "DISABLED"}</div></div>
             <div><div className="slot-k">Rotation Mode</div><div className="slot-v">{rotationModeLabel(props.capital)}</div></div>
             <div><div className="slot-k">Require Waiting Eligible</div><div className="slot-v">{yesNo(props.capital?.rotation?.requireWaitingEligible)}</div></div>
@@ -9749,7 +9767,7 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
         ) : null}
 
         <div className="ledger-empty">
-          Wallet readiness shows available capital. Rotation recommendation shows whether the policy currently wants to use it.
+          Quantity drift reconciles CoinSpot coin balances with tracked quantities. Value vs cost is market movement, not an action alert. Wallet readiness shows available capital; rotation recommendation shows whether policy currently wants to use it.
         </div>
 
         <div className="slot-section">Top Wallet Coins</div>
@@ -9762,7 +9780,8 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
                   <div><div className="slot-k">Source Type</div><div className="slot-v">{coin.rotationSourceType ?? "-"}</div></div>
                   <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
                   <div><div className="slot-k">Tracked AUD</div><div className="slot-v">{moneyAud(coin.trackedAud)}</div></div>
-                  <div><div className="slot-k">Wallet Drift</div><div className={`slot-v ${coin.exposureAttention ? "is-warn" : ""}`}>{exposureDeltaLabel(coin.untrackedAudApprox)}</div></div>
+                  <div><div className="slot-k">Quantity Drift</div><div className={`slot-v ${coin.exposureAttention ? "is-warn" : ""}`}>{quantityDriftLabel(coin.quantityDriftAud)}</div></div>
+                  <div><div className="slot-k">Value vs Cost</div><div className="slot-v">{valueVsCostLabel(coinValueVsCost(coin))}</div></div>
                   <div><div className="slot-k">Secondary Coverage</div><div className={`slot-v ${coin.secondaryWalletCoverage?.attention ? "is-warn" : ""}`}>{secondaryCoverageAttentionLabel(coin.secondaryWalletCoverage) ?? "OK"}</div></div>
                   <div><div className="slot-k">Treasury Ready</div><div className="slot-v">{yesNo(coin.walletSourceReady)}</div></div>
                   <div><div className="slot-k">Policy Ready</div><div className="slot-v">{yesNo(coin.rotationWalletReady)}</div></div>
@@ -9798,7 +9817,8 @@ const CapitalMobilityPanel = React.memo(function CapitalMobilityPanel(props: {
                   <div><div className="slot-k">Source Type</div><div className="slot-v">{coin.rotationSourceType ?? "-"}</div></div>
                   <div><div className="slot-k">Wallet AUD</div><div className="slot-v">{moneyAud(coin.audValue)}</div></div>
                   <div><div className="slot-k">Tracked AUD</div><div className="slot-v">{moneyAud(coin.trackedAud)}</div></div>
-                  <div><div className="slot-k">Wallet Drift</div><div className={`slot-v ${coin.exposureAttention ? "is-warn" : ""}`}>{exposureDeltaLabel(coin.untrackedAudApprox)}</div></div>
+                  <div><div className="slot-k">Quantity Drift</div><div className={`slot-v ${coin.exposureAttention ? "is-warn" : ""}`}>{quantityDriftLabel(coin.quantityDriftAud)}</div></div>
+                  <div><div className="slot-k">Value vs Cost</div><div className="slot-v">{valueVsCostLabel(coinValueVsCost(coin))}</div></div>
                   <div><div className="slot-k">Secondary Coverage</div><div className={`slot-v ${coin.secondaryWalletCoverage?.attention ? "is-warn" : ""}`}>{secondaryCoverageAttentionLabel(coin.secondaryWalletCoverage) ?? "OK"}</div></div>
                   <div><div className="slot-k">Wallet Movable AUD</div><div className="slot-v">{moneyAud(coin.rotationWalletMovableAud ?? coin.movableAudEstimate)}</div></div>
                   <div><div className="slot-k">Treasury Ready</div><div className="slot-v">{yesNo(coin.walletSourceReady)}</div></div>
