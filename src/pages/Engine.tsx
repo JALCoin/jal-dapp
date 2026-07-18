@@ -5606,9 +5606,12 @@ function subslotExitGateBlock(
 
   const compactMetrics = [
     { label: "Protection", value: protection.basisConfidence ? "NON-NEGATIVE EXIT PROTECTED" : gateState },
+    { label: "Live Net", value: pctNum(subslot.subslotNetPct) },
+    { label: "Required Net", value: subslotExitNeedsLabel(subslot) },
+    { label: "Executable Net", value: subslotExecutableExitLabel(subslot) },
+    { label: "Peak Executable Net", value: subslotBestExecutableExitLabel(subslot) },
     { label: "Safe Rate", value: fmt(protection.minimumSafeRate) },
     { label: "Trail Arm", value: pctNum(protection.adaptiveArmNetPct) },
-    { label: "Exec Exit", value: subslotExecutableExitLabel(subslot) },
   ];
 
   const fullMetrics = [
@@ -7736,6 +7739,26 @@ const CarouselPanel = React.memo(function CarouselPanel(props: {
                     </div>
 
                     <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Live Net</div>
+                      <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotNetPct)}</div>
+                    </div>
+
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Executable Net</div>
+                      <div className="engine-subslot-v">{subslotExecutableExitLabel(carouselPrimary)}</div>
+                    </div>
+
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Required Net</div>
+                      <div className="engine-subslot-v">{subslotExitNeedsLabel(carouselPrimary)}</div>
+                    </div>
+
+                    <div className="engine-subslot-item">
+                      <div className="engine-subslot-k">Peak Executable Net</div>
+                      <div className="engine-subslot-v">{subslotBestExecutableExitLabel(carouselPrimary)}</div>
+                    </div>
+
+                    <div className="engine-subslot-item">
                       <div className="engine-subslot-k">Bounce</div>
                       <div className="engine-subslot-v">{pctNum(carouselPrimary.subslotBouncePct)}</div>
                     </div>
@@ -8919,8 +8942,10 @@ const SlotModal = React.memo(function SlotModal(props: {
                     <div><div className="slot-k">Current Exit Gate</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExitGateStateLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
                     <div><div className="slot-k">Current Exit Order</div><div className="slot-v">{exitOrderSummaryLabel(subslotExitOrderData(getPrimarySecondarySnapshot(slot)))}</div></div>
                     <div><div className="slot-k">Current Order Target</div><div className="slot-v">{exitOrderTargetLabel(subslotExitOrderData(getPrimarySecondarySnapshot(slot)))}</div></div>
+                    <div><div className="slot-k">Current Live Net</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? pctNum((getPrimarySecondarySnapshot(slot) as SubslotRow).subslotNetPct) : "-"}</div></div>
                     <div><div className="slot-k">Current Needs</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExitNeedsLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
                     <div><div className="slot-k">Current Exec Exit</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotExecutableExitLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
+                    <div><div className="slot-k">Current Peak Exec Net</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotBestExecutableExitLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
                     <div><div className="slot-k">Current Quote Quality</div><div className="slot-v">{getPrimarySecondarySnapshot(slot) ? subslotEntryQuoteStatusLabel(getPrimarySecondarySnapshot(slot) as SubslotRow) : "-"}</div></div>
                   </>
               ) : null}
