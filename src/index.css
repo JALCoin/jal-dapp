@@ -14285,6 +14285,11 @@ button.home-route-band{
   border-radius:10px;
   background:rgba(255,255,255,.025);
 }
+.secondary-rail-live-metric.is-amended{
+  border-color:rgba(244,200,106,.28);
+  background:linear-gradient(135deg, rgba(244,200,106,.07), rgba(0,240,255,.035));
+}
+
 
 .secondary-rail-live-metric span{
   display:block;
@@ -14318,6 +14323,15 @@ button.home-route-band{
   line-height:1.55;
   color:rgba(231,255,247,.76);
 }
+.secondary-rail-summary.is-amended{
+  padding:8px 10px;
+  border:1px solid rgba(244,200,106,.24);
+  border-radius:10px;
+  background:rgba(244,200,106,.055);
+  color:rgba(255,228,163,.92);
+  font-weight:750;
+}
+
 
 .execution-breakdown{
   border-color:rgba(255,255,255,.1);
@@ -14658,6 +14672,17 @@ button.home-route-band{
 :root[data-theme="light"] .secondary-rail-live-metric{
   border-color:rgba(19,35,30,.08);
   background:rgba(255,255,255,.68);
+}
+
+:root[data-theme="light"] .secondary-rail-live-metric.is-amended{
+  border-color:rgba(160,112,12,.24);
+  background:rgba(244,200,106,.13);
+}
+
+:root[data-theme="light"] .secondary-rail-summary.is-amended{
+  border-color:rgba(160,112,12,.24);
+  background:rgba(244,200,106,.14);
+  color:rgba(92,61,0,.92);
 }
 
 :root[data-theme="light"] .secondary-rail-live-title,

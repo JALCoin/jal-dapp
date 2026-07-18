@@ -421,6 +421,17 @@ type SubslotRow = {
   subslotEntryBasisEvidenceFingerprint?: string | null;
   subslotEntryBasisVerifiedAt?: number | null;
   subslotEntryBasisBackfillVersion?: string | null;
+  subslotHistoryAmendmentStatus?: string | null;
+  subslotHistoryAmendmentLastFingerprint?: string | null;
+  subslotHistoryAmendmentLastAt?: number | null;
+  subslotHistoryAmendmentAllocatedCoinQty?: number | null;
+  subslotHistoryAmendmentAllocatedNetProceedsAud?: number | null;
+  subslotHistoryAmendmentAllocatedFeeAud?: number | null;
+  subslotHistoryAmendmentReleasedBasisAud?: number | null;
+  subslotHistoryAmendmentRemainingBasisAud?: number | null;
+  subslotHistoryAmendmentCumulativeCoinQty?: number | null;
+  subslotHistoryAmendmentCumulativeNetProceedsAud?: number | null;
+  subslotExternalRealizedProfitAud?: number | null;
   comparison?: ExecutionComparison | null;
   triggerAssessment?: SecondaryTriggerAssessment | null;
   decision?: ExitDecision | null;
@@ -534,6 +545,13 @@ type SlotRow = {
   // Legacy flat `subslot*` fields remain as a fallback for older rows.
   // `subslots[]` is the authoritative tactical model when present.
   subslots?: SubslotRow[] | null;
+  secondaryHistoryAmendmentStatus?: string | null;
+  secondaryHistoryAmendmentLastFingerprint?: string | null;
+  secondaryHistoryAmendmentLastAt?: number | null;
+  secondaryHistoryAmendmentLastCoinQty?: number | null;
+  secondaryHistoryAmendmentLastNetProceedsAud?: number | null;
+  secondaryHistoryAmendmentReleasedBasisAud?: number | null;
+  secondaryHistoryAmendmentAvailableRailCount?: number | null;
 
   subslotActive?: boolean | null;
   subslotCount?: number | null;
@@ -5215,6 +5233,11 @@ type SecondaryRailTracking = {
   entryProtectedBasisAud: number | null;
   entryBasisEvidenceSource: string | null;
   entryBrokerOrderCount: number | null;
+  amendmentStatus: string | null;
+  amendmentAllocatedCoinQty: number | null;
+  amendmentAllocatedNetProceedsAud: number | null;
+  amendmentReleasedBasisAud: number | null;
+  amendmentRemainingBasisAud: number | null;
   statusLabel: "BASIS UNVERIFIED" | "EXIT PROTECTED" | "EXIT READY" | "SELL SUBMITTED";
   toneClass: "is-warning" | "is-positive" | "is-negative" | "is-protected";
 };
@@ -5292,6 +5315,11 @@ function secondaryRailTracking(subslot: SubslotRow | null | undefined): Secondar
     entryProtectedBasisAud: protection.entryProtectedBasisAud,
     entryBasisEvidenceSource: protection.entryBasisEvidenceSource,
     entryBrokerOrderCount: protection.entryBrokerOrderCount,
+    amendmentStatus: String(subslot?.subslotHistoryAmendmentStatus || "").trim().toUpperCase() || null,
+    amendmentAllocatedCoinQty: finiteMetric(subslot?.subslotHistoryAmendmentAllocatedCoinQty),
+    amendmentAllocatedNetProceedsAud: finiteMetric(subslot?.subslotHistoryAmendmentAllocatedNetProceedsAud),
+    amendmentReleasedBasisAud: finiteMetric(subslot?.subslotHistoryAmendmentReleasedBasisAud),
+    amendmentRemainingBasisAud: finiteMetric(subslot?.subslotHistoryAmendmentRemainingBasisAud),
     toneClass,
   };
 }
@@ -5310,6 +5338,10 @@ function secondaryRailMetricPair(
 
 function secondaryRailEntryPositionLabel(tracking: SecondaryRailTracking | null) {
   if (!tracking) return null;
+  if (tracking.amendmentStatus === "PARTIAL_EXTERNAL") {
+    const remaining = tracking.amendmentRemainingBasisAud != null ? moneyAud(tracking.amendmentRemainingBasisAud) : "recalculated";
+    return `Remaining protected basis ${remaining} after CoinSpot history amendment`;
+  }
   if (tracking.basisConfidence === "HISTORY_PROTECTED") {
     const observed = tracking.entryObservedAllInAud != null ? `Observed ${moneyAud(tracking.entryObservedAllInAud)}` : "Observed CoinSpot history";
     const ceiling = tracking.entryProtectedBasisAud != null ? `protected at ${moneyAud(tracking.entryProtectedBasisAud)}` : "upper-bound protected";
@@ -5325,6 +5357,9 @@ function secondaryRailEntryPositionLabel(tracking: SecondaryRailTracking | null)
 }
 
 function secondaryRailProtectionCopy(tracking: SecondaryRailTracking) {
+  if (tracking.amendmentStatus === "PARTIAL_EXTERNAL") {
+    return "COINSPOT HISTORY AMENDED. The remaining quantity and protected basis were reduced proportionally; future exits still require the retained-profit floor.";
+  }
   if (tracking.basisConfidence !== "EXACT") {
   if (tracking.basisConfidence === "HISTORY_PROTECTED") {
     return "EXIT PROTECTED - COINSPOT HISTORY UPPER BOUND. Executable profit uses the conservative protected basis, not the lower observed cash.";
@@ -5609,6 +5644,9 @@ function primarySecondaryRail(
   const counts = secondaryRailVisualCounts(items);
   const activeItems = items.filter((item) => item.isActive && item.tracking);
   const reconciliationWarning = secondaryReconciliationWarningLabel(slot, capitalCoin);
+  const amendmentSummary = String(slot.secondaryHistoryAmendmentStatus || "").toUpperCase() === "APPLIED"
+    ? `CoinSpot history amended | ${fmt(slot.secondaryHistoryAmendmentLastCoinQty)} ${slot.coin ?? "coin"} sold | ${moneyAud(slot.secondaryHistoryAmendmentReleasedBasisAud)} secondary basis released | ${slot.secondaryHistoryAmendmentAvailableRailCount ?? 0} rail(s) reopened`
+    : null;
   const railValue =
     counts.open > counts.active ? `${counts.open}/${slotCapacity} open` : `${counts.active}/${slotCapacity} live`;
 
@@ -5710,6 +5748,18 @@ function primarySecondaryRail(
                     <span>Entry Cash</span>
                     <strong>{entryCashLabel}</strong>
                   </div>
+                  {tracking.amendmentStatus === "PARTIAL_EXTERNAL" ? (
+                    <>
+                      <div className="secondary-rail-live-metric is-amended">
+                        <span>CoinSpot History Amendment</span>
+                        <strong>{fmt(tracking.amendmentAllocatedCoinQty)} sold | {moneyAud(tracking.amendmentAllocatedNetProceedsAud)} net</strong>
+                      </div>
+                      <div className="secondary-rail-live-metric is-amended">
+                        <span>Released / Remaining Basis</span>
+                        <strong>{moneyAud(tracking.amendmentReleasedBasisAud)} | {moneyAud(tracking.amendmentRemainingBasisAud)}</strong>
+                      </div>
+                    </>
+                  ) : null}
                   {tracking.basisConfidence === "HISTORY_PROTECTED" ? (
                     <div className="secondary-rail-live-metric">
                       <span>Protected Upper-Bound Basis</span>
@@ -5736,6 +5786,9 @@ function primarySecondaryRail(
         </div>
       ) : null}
       <div className="secondary-rail-summary">{secondaryRailSummary(slot, items, subslotConfig)}</div>
+      {amendmentSummary ? (
+        <div className="secondary-rail-summary is-amended">{amendmentSummary}</div>
+      ) : null}
       {reconciliationWarning ? (
         <div className="secondary-rail-summary is-warn">{reconciliationWarning}</div>
       ) : null}
