@@ -5163,12 +5163,40 @@ function primaryExitProgressBlock(
   );
 }
 
+type SecondaryRailTracking = {
+  liveNetPct: number | null;
+  liveNetLabel: "Indicative Net" | "Live Net";
+  executableNetPct: number | null;
+  executableProfitAud: number | null;
+  peakExecutableNetPct: number | null;
+  peakExecutableProfitAud: number | null;
+  requiredNetPct: number | null;
+  requiredProfitAud: number | null;
+  safeRate: number | null;
+  basisConfidence: string;
+  gateState: string | null;
+  gateReason: string | null;
+  protectedTrailProfitAud: number | null;
+  adaptiveArmNetPct: number | null;
+  adaptiveArmSource: string | null;
+  entryTargetCashAud: number | null;
+  entryAllInAud: number | null;
+  entryFillQuality: string | null;
+  entryFillCount: number | null;
+  entryFeeAud: number | null;
+  entryFeeGstAud: number | null;
+  statusLabel: "BASIS UNVERIFIED" | "EXIT PROTECTED" | "EXIT READY" | "SELL SUBMITTED";
+  toneClass: "is-warning" | "is-positive" | "is-negative" | "is-protected";
+};
+
 type SecondaryRailItem = {
   key: string;
   label: string;
   stateLabel: string;
   counterLabel: string;
   toneClass: string;
+  subslot: SubslotRow | null;
+  tracking: SecondaryRailTracking | null;
   plannedAud?: number | null;
   plannedLabel?: string | null;
   isActive: boolean;
@@ -5176,6 +5204,95 @@ type SecondaryRailItem = {
   isPendingSell: boolean;
   isOpen: boolean;
 };
+
+function subslotLiveNetPct(subslot: SubslotRow | null | undefined) {
+  return finiteMetric(subslotDecisionData(subslot)?.liveNetPct ?? subslot?.subslotNetPct);
+}
+
+function secondaryRailTracking(subslot: SubslotRow | null | undefined): SecondaryRailTracking | null {
+  const state = String(subslot?.subslotState || "").toUpperCase();
+  if (!subslot || !["ACTIVE", "SELL_SUBMITTED"].includes(state)) return null;
+
+  const protection = subslotProtectionData(subslot);
+  const basisConfidence = protection.basisConfidence ?? "UNVERIFIED";
+  const basisExact = basisConfidence === "EXACT";
+  const liveNetPct = subslotLiveNetPct(subslot);
+  const gateState = String(subslotExitGateState(subslot) || "").trim().toUpperCase() || null;
+  const executableNetPct = subslotExecutableExitNetPct(subslot);
+  const statusLabel = state === "SELL_SUBMITTED"
+    ? "SELL SUBMITTED"
+    : !basisExact
+    ? "BASIS UNVERIFIED"
+    : gateState === "READY"
+      ? "EXIT READY"
+      : "EXIT PROTECTED";
+  const toneClass = !basisExact
+    ? "is-warning"
+    : executableNetPct != null && executableNetPct >= 0
+      ? "is-positive"
+      : liveNetPct != null && liveNetPct < 0
+        ? "is-negative"
+        : "is-protected";
+
+  return {
+    liveNetPct,
+    liveNetLabel: basisExact ? "Live Net" : "Indicative Net",
+    executableNetPct,
+    executableProfitAud: subslotExecutableExitProfitAud(subslot),
+    peakExecutableNetPct: subslotBestExecutableExitNetPct(subslot),
+    peakExecutableProfitAud: subslotBestExecutableExitProfitAud(subslot),
+    requiredNetPct: subslotExitRequiredNetPct(subslot),
+    requiredProfitAud: subslotExitRequiredProfitAud(subslot),
+    safeRate: protection.minimumSafeRate,
+    basisConfidence,
+    gateState,
+    gateReason: subslotExitGateReason(subslot),
+    protectedTrailProfitAud: protection.protectedTrailProfitAud,
+    adaptiveArmNetPct: protection.adaptiveArmNetPct,
+    adaptiveArmSource: protection.adaptiveArmSource,
+    entryTargetCashAud: protection.entryTargetCashAud,
+    entryAllInAud: protection.entryAllInAud,
+    entryFillQuality: protection.entryFillQuality,
+    entryFillCount: protection.entryFillCount,
+    entryFeeAud: protection.entryFeeAud,
+    entryFeeGstAud: protection.entryFeeGstAud,
+    statusLabel,
+    toneClass,
+  };
+}
+
+function secondaryRailMetricPair(
+  pct: number | null | undefined,
+  aud: number | null | undefined,
+  emptyLabel = "Unavailable"
+) {
+  const parts = [
+    pct != null && Number.isFinite(pct) ? pctNum(pct) : null,
+    aud != null && Number.isFinite(aud) ? moneyAud(aud) : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" | ") : emptyLabel;
+}
+
+function secondaryRailEntryPositionLabel(tracking: SecondaryRailTracking | null) {
+  if (!tracking) return null;
+  if (tracking.basisConfidence !== "EXACT") return "Entry basis awaiting verification";
+  if (tracking.entryAllInAud != null) {
+    const quality = tracking.entryFillQuality ? ` | ${enumLabel(tracking.entryFillQuality)}` : "";
+    return `Entry ${moneyAud(tracking.entryAllInAud)}${quality}`;
+  }
+  if (tracking.entryTargetCashAud != null) return `Entry target ${moneyAud(tracking.entryTargetCashAud)}`;
+  return "Exact entry basis recorded";
+}
+
+function secondaryRailProtectionCopy(tracking: SecondaryRailTracking) {
+  if (tracking.basisConfidence !== "EXACT") {
+    return "EXIT HELD - BASIS UNVERIFIED. Live net is indicative only; executable profit remains unavailable until exact fee-inclusive basis is proven.";
+  }
+  if (tracking.statusLabel === "EXIT READY") {
+    return "Protected exit is executable and has cleared the configured retained-profit contract.";
+  }
+  return "NON-NEGATIVE EXIT PROTECTED. The engine will hold until an executable sell clears the fee-inclusive retained-profit floor.";
+}
 
 function secondaryRailBandContextLabel(
   subslot: SubslotRow | null | undefined,
@@ -5228,21 +5345,24 @@ function secondaryRailCounterLabel(
 ) {
   const state = String(subslot?.subslotState || "").toUpperCase();
   if (state === "ACTIVE") {
+    const tracking = secondaryRailTracking(subslot);
+    const liveNetLabel = tracking?.liveNetPct != null
+      ? `${tracking.liveNetLabel} ${pctNum(tracking.liveNetPct)}`
+      : "Live net unavailable";
     const executableNetPct = subslotExecutableExitNetPct(subslot);
     const requiredNetPct = subslotExitRequiredNetPct(subslot);
     const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
-    const netLabel = executableNetPct != null ? `Now net ${pctNum(executableNetPct)}` : "Now net unavailable";
+    const netLabel = executableNetPct != null ? `Exec net ${pctNum(executableNetPct)}` : liveNetLabel;
+    if (tracking?.basisConfidence !== "EXACT") {
+      return `${liveNetLabel} | basis unverified`;
+    }
     if (gateState === "WAIT_GREEN" && requiredNetPct != null) {
       return `${netLabel} | waiting for green sell >= +${pctNum(Math.abs(requiredNetPct))}`;
     }
-    if (gateState === "WAIT_CONFIRM") {
-      return `${netLabel} | green sell confirming`;
-    }
-    if (gateState === "READY") {
-      return `${netLabel} | green sell ready`;
-    }
+    if (gateState === "WAIT_CONFIRM") return `${netLabel} | green sell confirming`;
+    if (gateState === "READY") return `${netLabel} | green sell ready`;
     if (executableNetPct != null) return `${netLabel} | monitoring`;
-    return "Live trade | monitoring";
+    return `${liveNetLabel} | exit protected`;
   }
   if (state === "BUY_SUBMITTED") return "Band reached | buy submitted, awaiting fill";
   if (state === "SELL_SUBMITTED") return "Green sell submitted | awaiting fill";
@@ -5386,13 +5506,16 @@ function secondaryRailItems(
         subslotTriggerParentNetPct: triggerPct,
       } as SubslotRow);
     const distancePct = subslotLiveDistancePct(subslot, slot, subslotConfig, index);
+    const tracking = secondaryRailTracking(liveSubslot);
     items.push({
       key: liveSubslot?.subslotId ?? `${slot.id}-secondary-band-${index + 1}`,
       label: `S${index + 1}`,
       stateLabel: secondaryRailItemStateLabel(subslot, slot, subslotConfig, index),
       counterLabel: secondaryRailCounterLabel(subslot, slot, subslotConfig, index),
+      subslot: liveSubslot,
+      tracking,
       plannedAud,
-      plannedLabel,
+      plannedLabel: tracking ? secondaryRailEntryPositionLabel(tracking) : plannedLabel,
       toneClass: liveSubslot
         ? subslotToneClass(liveSubslot)
         : distancePct === 0
@@ -5426,6 +5549,8 @@ function secondaryRailSummary(
   if (counts.active > 0) parts.push(`${counts.active} live`);
   if (counts.pendingBuy > 0) parts.push("entry pending");
   if (counts.pendingSell > 0) parts.push("exit pending");
+  const unverifiedCount = items.filter((item) => item.tracking != null && item.tracking.basisConfidence !== "EXACT").length;
+  if (unverifiedCount > 0) parts.push(`${unverifiedCount} basis unverified`);
   if (realizedAud != null) parts.push(`realized ${moneyAud(realizedAud)}`);
 
   return parts.length ? parts.join(" | ") : "Secondary rail idle.";
@@ -5439,6 +5564,7 @@ function primarySecondaryRail(
   const slotCapacity = secondaryRailSlotCapacity(slot, subslotConfig);
   const items = secondaryRailItems(slot, subslotConfig);
   const counts = secondaryRailVisualCounts(items);
+  const activeItems = items.filter((item) => item.isActive && item.tracking);
   const reconciliationWarning = secondaryReconciliationWarningLabel(slot, capitalCoin);
   const railValue =
     counts.open > counts.active ? `${counts.open}/${slotCapacity} open` : `${counts.active}/${slotCapacity} live`;
@@ -5455,12 +5581,107 @@ function primarySecondaryRail(
             <div className="secondary-rail-slot-label">{item.label}</div>
             <div className="secondary-rail-slot-state">{item.stateLabel}</div>
             <div className="secondary-rail-slot-counter">{item.counterLabel}</div>
+            {item.tracking ? (
+              <div className={`secondary-rail-slot-status ${item.tracking.toneClass}`}>
+                {item.tracking.statusLabel}
+              </div>
+            ) : null}
             {item.plannedLabel ? (
               <div className="secondary-rail-slot-planned">{item.plannedLabel}</div>
             ) : null}
           </div>
         ))}
       </div>
+      {activeItems.length ? (
+        <div className="secondary-rail-live-list" aria-label="Live secondary position tracking">
+          {activeItems.map((item) => {
+            const tracking = item.tracking;
+            if (!tracking) return null;
+            const executableLabel = tracking.basisConfidence !== "EXACT"
+              ? "Unavailable - basis unverified"
+              : secondaryRailMetricPair(
+                  tracking.executableNetPct,
+                  tracking.executableProfitAud,
+                  "Unavailable - awaiting executable quote"
+                );
+            const entryCashLabel = tracking.entryAllInAud != null
+              ? moneyAud(tracking.entryAllInAud)
+              : tracking.entryTargetCashAud != null
+                ? `Target ${moneyAud(tracking.entryTargetCashAud)}`
+                : "Awaiting exact entry basis";
+            const fillLabel = tracking.entryFillQuality
+              ? `${enumLabel(tracking.entryFillQuality)} | ${tracking.entryFillCount ?? "-"} fill(s)`
+              : "Not verified";
+            const entryFeeParts = [
+              tracking.entryFeeAud != null ? `Fee ${moneyAud(tracking.entryFeeAud)}` : null,
+              tracking.entryFeeGstAud != null ? `GST ${moneyAud(tracking.entryFeeGstAud)}` : null,
+            ].filter(Boolean);
+
+            return (
+              <div key={`${item.key}-live-tracking`} className={`secondary-rail-live-card ${tracking.toneClass}`}>
+                <div className="secondary-rail-live-head">
+                  <div>
+                    <div className="secondary-rail-live-title">{item.label} Current Secondary</div>
+                    <div className="secondary-rail-live-id">{item.subslot?.subslotId ?? "Legacy position"}</div>
+                  </div>
+                  <div className={`secondary-rail-live-badge ${tracking.toneClass}`}>{tracking.statusLabel}</div>
+                </div>
+                <div className="secondary-rail-live-grid">
+                  <div className="secondary-rail-live-metric">
+                    <span>{tracking.liveNetLabel}</span>
+                    <strong>{pctNum(tracking.liveNetPct)}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Executable Net</span>
+                    <strong>{executableLabel}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Retained Profit Floor</span>
+                    <strong>{secondaryRailMetricPair(tracking.requiredNetPct, tracking.requiredProfitAud)}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>{tracking.basisConfidence === "EXACT" ? "Minimum Safe Rate" : "Conservative Safe Rate"}</span>
+                    <strong>{fmt(tracking.safeRate)}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Basis / Exit Gate</span>
+                    <strong>{enumLabel(tracking.basisConfidence)} | {reasonLabel(tracking.gateState)}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Exit Gate Reason</span>
+                    <strong>{reasonLabel(tracking.gateReason)}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Peak Executable</span>
+                    <strong>{secondaryRailMetricPair(tracking.peakExecutableNetPct, tracking.peakExecutableProfitAud)}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Protected Trail</span>
+                    <strong>{moneyAud(tracking.protectedTrailProfitAud)}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Frozen Adaptive Arm</span>
+                    <strong>{pctNum(tracking.adaptiveArmNetPct)} | {enumLabel(tracking.adaptiveArmSource)}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Entry Cash</span>
+                    <strong>{entryCashLabel}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Fill Quality</span>
+                    <strong>{fillLabel}</strong>
+                  </div>
+                  <div className="secondary-rail-live-metric">
+                    <span>Entry Fees / GST</span>
+                    <strong>{entryFeeParts.length ? entryFeeParts.join(" | ") : "Not published"}</strong>
+                  </div>
+                </div>
+                <div className="secondary-rail-live-copy">{secondaryRailProtectionCopy(tracking)}</div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
       <div className="secondary-rail-summary">{secondaryRailSummary(slot, items, subslotConfig)}</div>
       {reconciliationWarning ? (
         <div className="secondary-rail-summary is-warn">{reconciliationWarning}</div>

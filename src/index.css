@@ -14193,6 +14193,125 @@ button.home-route-band{
   color:rgba(17,241,167,.86);
 }
 
+.secondary-rail-slot-status{
+  display:inline-flex;
+  margin-top:7px;
+  padding:3px 6px;
+  border:1px solid currentColor;
+  border-radius:999px;
+  font-size:.58rem;
+  font-weight:900;
+  letter-spacing:.06em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+
+.secondary-rail-slot-status.is-warning{ color:rgba(244,200,106,.94); }
+.secondary-rail-slot-status.is-positive{ color:rgba(17,241,167,.94); }
+.secondary-rail-slot-status.is-negative{ color:rgba(255,139,139,.94); }
+.secondary-rail-slot-status.is-protected{ color:rgba(115,196,255,.94); }
+
+.secondary-rail-live-list{
+  display:grid;
+  gap:10px;
+  margin-top:12px;
+}
+
+.secondary-rail-live-card{
+  min-width:0;
+  padding:12px;
+  border:1px solid rgba(115,196,255,.18);
+  border-left-width:3px;
+  border-radius:14px;
+  background:rgba(5,12,15,.58);
+  text-align:left;
+}
+
+.secondary-rail-live-card.is-warning{ border-color:rgba(244,200,106,.32); }
+.secondary-rail-live-card.is-positive{ border-color:rgba(17,241,167,.3); }
+.secondary-rail-live-card.is-negative{ border-color:rgba(255,108,108,.3); }
+.secondary-rail-live-card.is-protected{ border-color:rgba(115,196,255,.3); }
+
+.secondary-rail-live-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.secondary-rail-live-title{
+  font-size:.82rem;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:rgba(237,255,248,.94);
+}
+
+.secondary-rail-live-id{
+  margin-top:3px;
+  font-size:.66rem;
+  color:rgba(231,255,247,.58);
+  overflow-wrap:anywhere;
+}
+
+.secondary-rail-live-badge{
+  flex:0 0 auto;
+  padding:4px 7px;
+  border:1px solid currentColor;
+  border-radius:999px;
+  font-size:.6rem;
+  font-weight:900;
+  letter-spacing:.06em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+
+.secondary-rail-live-badge.is-warning{ color:rgba(244,200,106,.96); }
+.secondary-rail-live-badge.is-positive{ color:rgba(17,241,167,.96); }
+.secondary-rail-live-badge.is-negative{ color:rgba(255,139,139,.96); }
+.secondary-rail-live-badge.is-protected{ color:rgba(115,196,255,.96); }
+
+.secondary-rail-live-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:7px;
+  margin-top:10px;
+}
+
+.secondary-rail-live-metric{
+  min-width:0;
+  padding:8px;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:10px;
+  background:rgba(255,255,255,.025);
+}
+
+.secondary-rail-live-metric span{
+  display:block;
+  font-size:.6rem;
+  font-weight:800;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:rgba(231,255,247,.55);
+}
+
+.secondary-rail-live-metric strong{
+  display:block;
+  margin-top:4px;
+  font-size:.72rem;
+  line-height:1.35;
+  color:rgba(237,255,248,.92);
+  overflow-wrap:anywhere;
+}
+
+.secondary-rail-live-copy{
+  margin-top:10px;
+  font-size:.69rem;
+  font-weight:700;
+  line-height:1.5;
+  color:rgba(231,255,247,.74);
+}
+
 .secondary-rail-summary{
   margin-top:10px;
   font-size:.78rem;
@@ -14532,6 +14651,26 @@ button.home-route-band{
   color:rgba(12,127,90,.9);
 }
 
+:root[data-theme="light"] .secondary-rail-live-card{
+  background:rgba(255,255,255,.76);
+}
+
+:root[data-theme="light"] .secondary-rail-live-metric{
+  border-color:rgba(19,35,30,.08);
+  background:rgba(255,255,255,.68);
+}
+
+:root[data-theme="light"] .secondary-rail-live-title,
+:root[data-theme="light"] .secondary-rail-live-metric strong{
+  color:rgba(16,28,27,.92);
+}
+
+:root[data-theme="light"] .secondary-rail-live-id,
+:root[data-theme="light"] .secondary-rail-live-metric span,
+:root[data-theme="light"] .secondary-rail-live-copy{
+  color:rgba(31,54,51,.68);
+}
+
 :root[data-theme="light"] .execution-breakdown{
   border-color:rgba(19,35,30,.08);
   background:rgba(255,255,255,.72);
@@ -14592,6 +14731,20 @@ button.home-route-band{
 
   .execution-breakdown-grid{
     grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width:640px){
+  .secondary-rail-live-grid{
+    grid-template-columns:1fr;
+  }
+
+  .secondary-rail-live-head{
+    flex-direction:column;
+  }
+
+  .secondary-rail-live-badge{
+    align-self:flex-start;
   }
 }
 
