@@ -114,6 +114,13 @@ type ExitDecision = {
   entryFeeExGstAud?: number | null;
   entryFeeGstAud?: number | null;
   adaptationEligible?: boolean | null;
+  entryBasisEvidenceSource?: string | null;
+  entryBasisVerifiedAt?: number | null;
+  entryObservedAllInAud?: number | null;
+  entryProtectedBasisAud?: number | null;
+  entryObservedCoinQty?: number | null;
+  entryBasisEvidenceVersion?: string | null;
+  entryBrokerOrderCount?: number | null;
   exitNoLossPeakGivebackPct?: number | null;
   exitNoLossGivebackPct?: number | null;
   exitOrder?: ExitOrderState | null;
@@ -405,6 +412,15 @@ type SubslotRow = {
   subslotEntryFeeExGstAud?: number | null;
   subslotEntryFeeGstAud?: number | null;
   subslotAdaptationEligible?: boolean | null;
+  subslotEntryObservedGrossAud?: number | null;
+  subslotEntryObservedCoinQty?: number | null;
+  subslotEntryObservedAllInAud?: number | null;
+  subslotEntryProtectedBasisAud?: number | null;
+  subslotEntryBrokerOrderIds?: string[] | null;
+  subslotEntryBasisEvidenceSource?: string | null;
+  subslotEntryBasisEvidenceFingerprint?: string | null;
+  subslotEntryBasisVerifiedAt?: number | null;
+  subslotEntryBasisBackfillVersion?: string | null;
   comparison?: ExecutionComparison | null;
   triggerAssessment?: SecondaryTriggerAssessment | null;
   decision?: ExitDecision | null;
@@ -4148,6 +4164,16 @@ function subslotProtectionData(subslot: SubslotRow | null | undefined) {
     entryFeeAud: finiteMetric(decision?.entryFeeAud ?? subslot?.subslotEntryFeeAud),
     entryFeeGstAud: finiteMetric(decision?.entryFeeGstAud ?? subslot?.subslotEntryFeeGstAud),
     adaptationEligible: decision?.adaptationEligible ?? subslot?.subslotAdaptationEligible ?? null,
+    entryObservedAllInAud: finiteMetric(
+      decision?.entryObservedAllInAud ?? subslot?.subslotEntryObservedAllInAud
+    ),
+    entryProtectedBasisAud: finiteMetric(
+      decision?.entryProtectedBasisAud ?? subslot?.subslotEntryProtectedBasisAud
+    ),
+    entryBasisEvidenceSource:
+      String(decision?.entryBasisEvidenceSource ?? subslot?.subslotEntryBasisEvidenceSource ?? "").trim().toUpperCase() || null,
+    entryBasisVerifiedAt: finiteMetric(decision?.entryBasisVerifiedAt ?? subslot?.subslotEntryBasisVerifiedAt),
+    entryBrokerOrderCount: finiteMetric(decision?.entryBrokerOrderCount ?? subslot?.subslotEntryBrokerOrderIds?.length),
   };
 }
 
@@ -5185,6 +5211,10 @@ type SecondaryRailTracking = {
   entryFillCount: number | null;
   entryFeeAud: number | null;
   entryFeeGstAud: number | null;
+  entryObservedAllInAud: number | null;
+  entryProtectedBasisAud: number | null;
+  entryBasisEvidenceSource: string | null;
+  entryBrokerOrderCount: number | null;
   statusLabel: "BASIS UNVERIFIED" | "EXIT PROTECTED" | "EXIT READY" | "SELL SUBMITTED";
   toneClass: "is-warning" | "is-positive" | "is-negative" | "is-protected";
 };
@@ -5216,17 +5246,18 @@ function secondaryRailTracking(subslot: SubslotRow | null | undefined): Secondar
   const protection = subslotProtectionData(subslot);
   const basisConfidence = protection.basisConfidence ?? "UNVERIFIED";
   const basisExact = basisConfidence === "EXACT";
+  const basisProtected = basisExact || basisConfidence === "HISTORY_PROTECTED";
   const liveNetPct = subslotLiveNetPct(subslot);
   const gateState = String(subslotExitGateState(subslot) || "").trim().toUpperCase() || null;
   const executableNetPct = subslotExecutableExitNetPct(subslot);
   const statusLabel = state === "SELL_SUBMITTED"
     ? "SELL SUBMITTED"
-    : !basisExact
+    : !basisProtected
     ? "BASIS UNVERIFIED"
     : gateState === "READY"
       ? "EXIT READY"
       : "EXIT PROTECTED";
-  const toneClass = !basisExact
+  const toneClass = !basisProtected
     ? "is-warning"
     : executableNetPct != null && executableNetPct >= 0
       ? "is-positive"
@@ -5257,6 +5288,10 @@ function secondaryRailTracking(subslot: SubslotRow | null | undefined): Secondar
     entryFeeAud: protection.entryFeeAud,
     entryFeeGstAud: protection.entryFeeGstAud,
     statusLabel,
+    entryObservedAllInAud: protection.entryObservedAllInAud,
+    entryProtectedBasisAud: protection.entryProtectedBasisAud,
+    entryBasisEvidenceSource: protection.entryBasisEvidenceSource,
+    entryBrokerOrderCount: protection.entryBrokerOrderCount,
     toneClass,
   };
 }
@@ -5275,6 +5310,11 @@ function secondaryRailMetricPair(
 
 function secondaryRailEntryPositionLabel(tracking: SecondaryRailTracking | null) {
   if (!tracking) return null;
+  if (tracking.basisConfidence === "HISTORY_PROTECTED") {
+    const observed = tracking.entryObservedAllInAud != null ? `Observed ${moneyAud(tracking.entryObservedAllInAud)}` : "Observed CoinSpot history";
+    const ceiling = tracking.entryProtectedBasisAud != null ? `protected at ${moneyAud(tracking.entryProtectedBasisAud)}` : "upper-bound protected";
+    return `${observed} | ${ceiling}`;
+  }
   if (tracking.basisConfidence !== "EXACT") return "Entry basis awaiting verification";
   if (tracking.entryAllInAud != null) {
     const quality = tracking.entryFillQuality ? ` | ${enumLabel(tracking.entryFillQuality)}` : "";
@@ -5286,6 +5326,9 @@ function secondaryRailEntryPositionLabel(tracking: SecondaryRailTracking | null)
 
 function secondaryRailProtectionCopy(tracking: SecondaryRailTracking) {
   if (tracking.basisConfidence !== "EXACT") {
+  if (tracking.basisConfidence === "HISTORY_PROTECTED") {
+    return "EXIT PROTECTED - COINSPOT HISTORY UPPER BOUND. Executable profit uses the conservative protected basis, not the lower observed cash.";
+  }
     return "EXIT HELD - BASIS UNVERIFIED. Live net is indicative only; executable profit remains unavailable until exact fee-inclusive basis is proven.";
   }
   if (tracking.statusLabel === "EXIT READY") {
@@ -5353,7 +5396,7 @@ function secondaryRailCounterLabel(
     const requiredNetPct = subslotExitRequiredNetPct(subslot);
     const gateState = String(subslotExitGateState(subslot) || "").toUpperCase();
     const netLabel = executableNetPct != null ? `Exec net ${pctNum(executableNetPct)}` : liveNetLabel;
-    if (tracking?.basisConfidence !== "EXACT") {
+    if (!["EXACT", "HISTORY_PROTECTED"].includes(tracking?.basisConfidence || "")) {
       return `${liveNetLabel} | basis unverified`;
     }
     if (gateState === "WAIT_GREEN" && requiredNetPct != null) {
@@ -5549,7 +5592,7 @@ function secondaryRailSummary(
   if (counts.active > 0) parts.push(`${counts.active} live`);
   if (counts.pendingBuy > 0) parts.push("entry pending");
   if (counts.pendingSell > 0) parts.push("exit pending");
-  const unverifiedCount = items.filter((item) => item.tracking != null && item.tracking.basisConfidence !== "EXACT").length;
+  const unverifiedCount = items.filter((item) => item.tracking != null && !["EXACT", "HISTORY_PROTECTED"].includes(item.tracking.basisConfidence)).length;
   if (unverifiedCount > 0) parts.push(`${unverifiedCount} basis unverified`);
   if (realizedAud != null) parts.push(`realized ${moneyAud(realizedAud)}`);
 
@@ -5597,7 +5640,7 @@ function primarySecondaryRail(
           {activeItems.map((item) => {
             const tracking = item.tracking;
             if (!tracking) return null;
-            const executableLabel = tracking.basisConfidence !== "EXACT"
+            const executableLabel = !["EXACT", "HISTORY_PROTECTED"].includes(tracking.basisConfidence)
               ? "Unavailable - basis unverified"
               : secondaryRailMetricPair(
                   tracking.executableNetPct,
@@ -5640,7 +5683,7 @@ function primarySecondaryRail(
                     <strong>{secondaryRailMetricPair(tracking.requiredNetPct, tracking.requiredProfitAud)}</strong>
                   </div>
                   <div className="secondary-rail-live-metric">
-                    <span>{tracking.basisConfidence === "EXACT" ? "Minimum Safe Rate" : "Conservative Safe Rate"}</span>
+                    <span>{tracking.basisConfidence === "EXACT" ? "Minimum Safe Rate" : tracking.basisConfidence === "HISTORY_PROTECTED" ? "History-Protected Safe Rate" : "Conservative Safe Rate"}</span>
                     <strong>{fmt(tracking.safeRate)}</strong>
                   </div>
                   <div className="secondary-rail-live-metric">
@@ -5666,6 +5709,16 @@ function primarySecondaryRail(
                   <div className="secondary-rail-live-metric">
                     <span>Entry Cash</span>
                     <strong>{entryCashLabel}</strong>
+                  </div>
+                  {tracking.basisConfidence === "HISTORY_PROTECTED" ? (
+                    <div className="secondary-rail-live-metric">
+                      <span>Protected Upper-Bound Basis</span>
+                      <strong>{moneyAud(tracking.entryProtectedBasisAud)}</strong>
+                    </div>
+                  ) : null}
+                  <div className="secondary-rail-live-metric">
+                    <span>Basis Evidence</span>
+                    <strong>{enumLabel(tracking.entryBasisEvidenceSource)}{tracking.entryBrokerOrderCount != null ? ` | ${tracking.entryBrokerOrderCount} broker order(s)` : ""}</strong>
                   </div>
                   <div className="secondary-rail-live-metric">
                     <span>Fill Quality</span>
@@ -5824,9 +5877,14 @@ function subslotExitGateBlock(
   const waitSince = subslotExitWaitGreenSince(subslot);
   const triggerAt = subslotExitTriggerAt(subslot);
   const protection = subslotProtectionData(subslot);
+  const exitProtected = ["EXACT", "HISTORY_PROTECTED"].includes(protection.basisConfidence || "");
+  const protectionLabel = protection.basisConfidence === "HISTORY_PROTECTED"
+    ? "EXIT PROTECTED - COINSPOT HISTORY UPPER BOUND"
+    : exitProtected ? "NON-NEGATIVE EXIT PROTECTED" : gateState;
+
 
   const compactMetrics = [
-    { label: "Protection", value: protection.basisConfidence ? "NON-NEGATIVE EXIT PROTECTED" : gateState },
+    { label: "Protection", value: protectionLabel },
     { label: "Live Net", value: pctNum(subslot.subslotNetPct) },
     { label: "Required Net", value: subslotExitNeedsLabel(subslot) },
     { label: "Executable Net", value: subslotExecutableExitLabel(subslot) },
@@ -5836,7 +5894,7 @@ function subslotExitGateBlock(
   ];
 
   const fullMetrics = [
-    { label: "Protection", value: protection.basisConfidence ? "NON-NEGATIVE EXIT PROTECTED" : gateState },
+    { label: "Protection", value: protectionLabel },
     { label: "Gate", value: gateState },
     { label: "Basis Confidence", value: protection.basisConfidence ?? "UNVERIFIED" },
     { label: "Minimum Safe Rate", value: fmt(protection.minimumSafeRate) },
@@ -5860,7 +5918,7 @@ function subslotExitGateBlock(
   ];
 
   const copyParts = [
-    protection.basisConfidence
+    exitProtected
       ? "NON-NEGATIVE EXIT PROTECTED: the engine will hold this secondary indefinitely unless a fee-inclusive limit sell can retain the configured profit floor."
       : null,
     protection.adaptiveArmNetPct != null
@@ -5883,7 +5941,7 @@ function subslotExitGateBlock(
     <div className="entry-progress execution-breakdown" aria-label="Secondary exit gate">
       <div className="entry-progress-top">
         <span className="entry-progress-label">Secondary Exit Gate</span>
-        <span className="entry-progress-value">{protection.basisConfidence ? "NON-NEGATIVE EXIT PROTECTED" : gateState}</span>
+        <span className="entry-progress-value">{protectionLabel}</span>
       </div>
       <div className="execution-breakdown-grid">
         {(variant === "compact" ? compactMetrics : fullMetrics).map((metric) => (
