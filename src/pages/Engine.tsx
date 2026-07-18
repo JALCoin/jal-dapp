@@ -97,6 +97,23 @@ type ExitDecision = {
   exitBestExecutableProfitAud?: number | null;
   exitRequiredNetPct?: number | null;
   exitRequiredProfitAud?: number | null;
+  exitMinimumSafeRate?: number | null;
+  exitMinimumNetProceedsAud?: number | null;
+  exitExecutionReserveAud?: number | null;
+  exitBasisConfidence?: string | null;
+  protectedTrailProfitAud?: number | null;
+  adaptiveTrailArmNetPct?: number | null;
+  adaptiveTrailArmSource?: string | null;
+  adaptiveSampleCount?: number | null;
+  entryTargetCashAud?: number | null;
+  entryAllInAud?: number | null;
+  entryCashVarianceAud?: number | null;
+  entryFillQuality?: string | null;
+  entryFillCount?: number | null;
+  entryFeeAud?: number | null;
+  entryFeeExGstAud?: number | null;
+  entryFeeGstAud?: number | null;
+  adaptationEligible?: boolean | null;
   exitNoLossPeakGivebackPct?: number | null;
   exitNoLossGivebackPct?: number | null;
   exitOrder?: ExitOrderState | null;
@@ -371,6 +388,23 @@ type SubslotRow = {
   subslotExitRequiredProfitAud?: number | null;
   subslotEffectiveTakeProfitNetPct?: number | null;
   subslotGreenStallTicks?: number | null;
+  subslotExitMinimumSafeRate?: number | null;
+  subslotExitMinimumNetProceedsAud?: number | null;
+  subslotExitExecutionReserveAud?: number | null;
+  subslotExitBasisConfidence?: string | null;
+  subslotProtectedTrailProfitAud?: number | null;
+  subslotAdaptiveTrailArmNetPct?: number | null;
+  subslotAdaptiveTrailArmSource?: string | null;
+  subslotAdaptiveSampleCount?: number | null;
+  subslotEntryTargetCashAud?: number | null;
+  subslotEntryAllInAud?: number | null;
+  subslotEntryCashVarianceAud?: number | null;
+  subslotEntryFillQuality?: string | null;
+  subslotEntryFillCount?: number | null;
+  subslotEntryFeeAud?: number | null;
+  subslotEntryFeeExGstAud?: number | null;
+  subslotEntryFeeGstAud?: number | null;
+  subslotAdaptationEligible?: boolean | null;
   comparison?: ExecutionComparison | null;
   triggerAssessment?: SecondaryTriggerAssessment | null;
   decision?: ExitDecision | null;
@@ -581,6 +615,23 @@ type SlotRow = {
   subslotExitRequiredProfitAud?: number | null;
   subslotEffectiveTakeProfitNetPct?: number | null;
   subslotGreenStallTicks?: number | null;
+  subslotExitMinimumSafeRate?: number | null;
+  subslotExitMinimumNetProceedsAud?: number | null;
+  subslotExitExecutionReserveAud?: number | null;
+  subslotExitBasisConfidence?: string | null;
+  subslotProtectedTrailProfitAud?: number | null;
+  subslotAdaptiveTrailArmNetPct?: number | null;
+  subslotAdaptiveTrailArmSource?: string | null;
+  subslotAdaptiveSampleCount?: number | null;
+  subslotEntryTargetCashAud?: number | null;
+  subslotEntryAllInAud?: number | null;
+  subslotEntryCashVarianceAud?: number | null;
+  subslotEntryFillQuality?: string | null;
+  subslotEntryFillCount?: number | null;
+  subslotEntryFeeAud?: number | null;
+  subslotEntryFeeExGstAud?: number | null;
+  subslotEntryFeeGstAud?: number | null;
+  subslotAdaptationEligible?: boolean | null;
   subslotSignalState?: string | null;
   subslotSignalReason?: string | null;
   subslotEntryMode?: string | null;
@@ -1910,9 +1961,9 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
   {
     title: "Jrd Secondary Mission",
     summary:
-      "Secondaries harvest volatility inside a live primary instead of replacing it. Each entry is a static AUD 1,000 unit, with up to 8 tactical secondary slots available per active Primary.",
+      "Secondaries harvest volatility inside a live primary. Each opportunity requests one approximately AUD 1,000 all-in order; the engine does not add incremental top-up orders after an underfill.",
     detail:
-      "Accounting stays separate during the hold and merges only when the parent returns to WAITING_ENTRY. Entry pacing is ON; performance reuse and trigger-band reuse are OFF.",
+      "Completed fills from 98.5% through 101% are accepted and classified. Accounting stays separate during the hold; entry pacing is ON, while performance reuse and trigger-band reuse are OFF.",
   },
   {
     title: "Trigger And Cost Gate",
@@ -1922,18 +1973,18 @@ const SECONDARY_BEHAVIOR_CARDS: BehaviorCard[] = [
       "Trigger-touch mode can still skip signal confirmation, EMA gap, expected edge, and net-after-cost checks, but it does not skip live market, spread, wallet exposure, parent-collapse, band availability, executable-net confirmation, or the final cheaper-entry quote fence.",
   },
   {
-    title: "Exit Order Manager",
+    title: "Non-Negative Exit Contract",
     summary:
-      "Primary locks and active secondaries calculate first-class target sell orders from their own net-gain basis. Live exit-order mutation is enabled and dry-run mode is OFF.",
+      "Every engine-controlled secondary exit is held behind an exact fee-inclusive floor. The normal retained-profit contract is the greater of AUD 10 or 1% of all-in basis, plus execution allowance.",
     detail:
-      "When a Primary floor breach is blocked by its tracked resting sell order, the engine clears that order first and retries the guarded executable exit on the next tick. Secondary entry remains governed by its own gross/net/spread gates rather than being stopped just because a Primary exit trigger is active.",
+      "Unknown basis, stale quotes, uncertain fees, or a price below the safe limit block selling. A secondary can remain open indefinitely; manual or external broker activity is outside this engine guarantee.",
   },
   {
-    title: "Directional Playbooks",
+    title: "Adaptive Profit Capture",
     summary:
-      "Regime profiles still shape entry size, spread ceilings, EMA floors, bounce requirements, and exit target behavior, while the final sell readiness remains executable-green.",
+      "The default trail arms at the greater of AUD 15 or 1.5% net, then protects the hard floor or 80% of peak net profit. Two executable quotes must confirm an authorized exit.",
     detail:
-      "That makes the dashboard distinction cleaner: structure chooses the setup, executable economics decide whether the wallet can safely enter or exit.",
+      "After enough exact completed samples, the arm adapts by coin and regime up to 12%. Twelve percent is an arm ceiling, not a forced exit or profit ceiling, so stronger gains can continue to run.",
   },
   {
     title: "Regime Engine",
@@ -3620,6 +3671,23 @@ function getSubslots(slot: SlotRow): SubslotRow[] {
       subslotExitRequiredProfitAud: slot.subslotExitRequiredProfitAud,
       subslotEffectiveTakeProfitNetPct: slot.subslotEffectiveTakeProfitNetPct,
       subslotGreenStallTicks: slot.subslotGreenStallTicks,
+      subslotExitMinimumSafeRate: slot.subslotExitMinimumSafeRate,
+      subslotExitMinimumNetProceedsAud: slot.subslotExitMinimumNetProceedsAud,
+      subslotExitExecutionReserveAud: slot.subslotExitExecutionReserveAud,
+      subslotExitBasisConfidence: slot.subslotExitBasisConfidence,
+      subslotProtectedTrailProfitAud: slot.subslotProtectedTrailProfitAud,
+      subslotAdaptiveTrailArmNetPct: slot.subslotAdaptiveTrailArmNetPct,
+      subslotAdaptiveTrailArmSource: slot.subslotAdaptiveTrailArmSource,
+      subslotAdaptiveSampleCount: slot.subslotAdaptiveSampleCount,
+      subslotEntryTargetCashAud: slot.subslotEntryTargetCashAud,
+      subslotEntryAllInAud: slot.subslotEntryAllInAud,
+      subslotEntryCashVarianceAud: slot.subslotEntryCashVarianceAud,
+      subslotEntryFillQuality: slot.subslotEntryFillQuality,
+      subslotEntryFillCount: slot.subslotEntryFillCount,
+      subslotEntryFeeAud: slot.subslotEntryFeeAud,
+      subslotEntryFeeExGstAud: slot.subslotEntryFeeExGstAud,
+      subslotEntryFeeGstAud: slot.subslotEntryFeeGstAud,
+      subslotAdaptationEligible: slot.subslotAdaptationEligible,
     },
   ];
 }
@@ -4050,6 +4118,39 @@ function subslotExitRequiredProfitAud(subslot: SubslotRow | null | undefined) {
   );
 }
 
+function subslotProtectionData(subslot: SubslotRow | null | undefined) {
+  const decision = subslotDecisionData(subslot);
+  return {
+    minimumSafeRate: finiteMetric(decision?.exitMinimumSafeRate ?? subslot?.subslotExitMinimumSafeRate),
+    minimumNetProceedsAud: finiteMetric(
+      decision?.exitMinimumNetProceedsAud ?? subslot?.subslotExitMinimumNetProceedsAud
+    ),
+    executionReserveAud: finiteMetric(
+      decision?.exitExecutionReserveAud ?? subslot?.subslotExitExecutionReserveAud
+    ),
+    basisConfidence:
+      String(decision?.exitBasisConfidence ?? subslot?.subslotExitBasisConfidence ?? "").trim().toUpperCase() || null,
+    protectedTrailProfitAud: finiteMetric(
+      decision?.protectedTrailProfitAud ?? subslot?.subslotProtectedTrailProfitAud
+    ),
+    adaptiveArmNetPct: finiteMetric(
+      decision?.adaptiveTrailArmNetPct ?? subslot?.subslotAdaptiveTrailArmNetPct
+    ),
+    adaptiveArmSource:
+      String(decision?.adaptiveTrailArmSource ?? subslot?.subslotAdaptiveTrailArmSource ?? "").trim().toUpperCase() || null,
+    adaptiveSampleCount: finiteMetric(decision?.adaptiveSampleCount ?? subslot?.subslotAdaptiveSampleCount),
+    entryTargetCashAud: finiteMetric(decision?.entryTargetCashAud ?? subslot?.subslotEntryTargetCashAud),
+    entryAllInAud: finiteMetric(decision?.entryAllInAud ?? subslot?.subslotEntryAllInAud),
+    entryCashVarianceAud: finiteMetric(decision?.entryCashVarianceAud ?? subslot?.subslotEntryCashVarianceAud),
+    entryFillQuality:
+      String(decision?.entryFillQuality ?? subslot?.subslotEntryFillQuality ?? "").trim().toUpperCase() || null,
+    entryFillCount: finiteMetric(decision?.entryFillCount ?? subslot?.subslotEntryFillCount),
+    entryFeeAud: finiteMetric(decision?.entryFeeAud ?? subslot?.subslotEntryFeeAud),
+    entryFeeGstAud: finiteMetric(decision?.entryFeeGstAud ?? subslot?.subslotEntryFeeGstAud),
+    adaptationEligible: decision?.adaptationEligible ?? subslot?.subslotAdaptationEligible ?? null,
+  };
+}
+
 function subslotEffectiveTakeProfitNetPct(subslot: SubslotRow | null | undefined) {
   return finiteMetric(subslot?.subslotEffectiveTakeProfitNetPct);
 }
@@ -4088,7 +4189,8 @@ function subslotHasExitGateData(subslot: SubslotRow | null | undefined) {
       subslotExitRequiredNetPct(subslot) != null ||
       subslotExitRequiredProfitAud(subslot) != null ||
       subslotEffectiveTakeProfitNetPct(subslot) != null ||
-      subslotGreenStallTicks(subslot) != null
+      subslotGreenStallTicks(subslot) != null ||
+      subslotProtectionData(subslot).minimumSafeRate != null
   );
 }
 
@@ -5500,16 +5602,28 @@ function subslotExitGateBlock(
   const greenStallTicks = subslotGreenStallTicks(subslot);
   const waitSince = subslotExitWaitGreenSince(subslot);
   const triggerAt = subslotExitTriggerAt(subslot);
+  const protection = subslotProtectionData(subslot);
 
   const compactMetrics = [
-    { label: "Gate", value: gateState },
-    { label: "Needs", value: subslotExitNeedsLabel(subslot) },
+    { label: "Protection", value: protection.basisConfidence ? "NON-NEGATIVE EXIT PROTECTED" : gateState },
+    { label: "Safe Rate", value: fmt(protection.minimumSafeRate) },
+    { label: "Trail Arm", value: pctNum(protection.adaptiveArmNetPct) },
     { label: "Exec Exit", value: subslotExecutableExitLabel(subslot) },
-    { label: "Best Seen", value: subslotBestExecutableExitLabel(subslot) },
   ];
 
   const fullMetrics = [
+    { label: "Protection", value: protection.basisConfidence ? "NON-NEGATIVE EXIT PROTECTED" : gateState },
     { label: "Gate", value: gateState },
+    { label: "Basis Confidence", value: protection.basisConfidence ?? "UNVERIFIED" },
+    { label: "Minimum Safe Rate", value: fmt(protection.minimumSafeRate) },
+    { label: "Minimum Proceeds", value: moneyAud(protection.minimumNetProceedsAud) },
+    { label: "Execution Reserve", value: moneyAud(protection.executionReserveAud) },
+    { label: "Adaptive Arm", value: `${pctNum(protection.adaptiveArmNetPct)} | ${enumLabel(protection.adaptiveArmSource)}` },
+    { label: "Adaptive Samples", value: protection.adaptiveSampleCount != null ? `${protection.adaptiveSampleCount}` : "-" },
+    { label: "Protected Trail", value: moneyAud(protection.protectedTrailProfitAud) },
+    { label: "Entry Fill", value: `${enumLabel(protection.entryFillQuality)} | ${protection.entryFillCount ?? "-"} fill(s)` },
+    { label: "Entry Cash", value: `${moneyAud(protection.entryAllInAud)} / ${moneyAud(protection.entryTargetCashAud)}` },
+    { label: "Entry Fees / GST", value: `${moneyAud(protection.entryFeeAud)} / ${moneyAud(protection.entryFeeGstAud)}` },
     { label: "Needs", value: subslotExitNeedsLabel(subslot) },
     { label: "Exec Exit", value: subslotExecutableExitLabel(subslot) },
     { label: "Exit AUD", value: moneyAud(executableExitAud) },
@@ -5522,10 +5636,16 @@ function subslotExitGateBlock(
   ];
 
   const copyParts = [
+    protection.basisConfidence
+      ? "NON-NEGATIVE EXIT PROTECTED: the engine will hold this secondary indefinitely unless a fee-inclusive limit sell can retain the configured profit floor."
+      : null,
+    protection.adaptiveArmNetPct != null
+      ? `The frozen adaptive arm is ${pctNum(protection.adaptiveArmNetPct)}; 12% is an arm ceiling, not a forced-sale or profit ceiling.`
+      : null,
     gateReason ? `Gate reason: ${reasonLabel(gateReason)}.` : null,
     triggerReason ? `Trigger: ${reasonLabel(triggerReason)}.` : null,
     requiredNetPct != null || requiredProfitAud != null
-      ? `Green requirement stays at ${pctNum(requiredNetPct)} and ${moneyAud(requiredProfitAud)}.`
+      ? `Retained-profit floor is the greater of ${pctNum(requiredNetPct)} and ${moneyAud(requiredProfitAud)}.`
       : null,
     executableNetPct != null || executableProfitAud != null
       ? `Executable exit is currently ${pctNum(executableNetPct)} and ${moneyAud(executableProfitAud)}.`
@@ -5539,7 +5659,7 @@ function subslotExitGateBlock(
     <div className="entry-progress execution-breakdown" aria-label="Secondary exit gate">
       <div className="entry-progress-top">
         <span className="entry-progress-label">Secondary Exit Gate</span>
-        <span className="entry-progress-value">{gateState}</span>
+        <span className="entry-progress-value">{protection.basisConfidence ? "NON-NEGATIVE EXIT PROTECTED" : gateState}</span>
       </div>
       <div className="execution-breakdown-grid">
         {(variant === "compact" ? compactMetrics : fullMetrics).map((metric) => (
