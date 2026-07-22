@@ -99,10 +99,21 @@ type ExitDecision = {
   exitRequiredProfitAud?: number | null;
   exitMinimumSafeRate?: number | null;
   exitMinimumNetProceedsAud?: number | null;
-  exitExecutionReserveAud?: number | null;  actualAllInCostAud?: number | null;
+  exitExecutionReserveAud?: number | null;
+  exitReentryCostReserveAud?: number | null;
+  actualAllInCostAud?: number | null;
   entryTargetAud?: number | null;
   recoveryBasisAud?: number | null;
   recoveryTargetSource?: string | null;
+  protectedProfitPolicyMode?: string | null;
+  protectedProfitPolicyState?: string | null;
+  protectedReentrySourceId?: string | null;
+  protectedReentrySourceVerified?: boolean | null;
+  protectedReentryCapitalAud?: number | null;
+  protectedReentryTargetAsk?: number | null;
+  protectedCashProjectedCreditAud?: number | null;
+  protectedCashCreditAud?: number | null;
+  protectedCashReserveTotalAud?: number | null;
   exitBasisConfidence?: string | null;
   protectedTrailProfitAud?: number | null;
   adaptiveTrailArmNetPct?: number | null;
@@ -405,10 +416,21 @@ type SubslotRow = {
   subslotGreenStallTicks?: number | null;
   subslotExitMinimumSafeRate?: number | null;
   subslotExitMinimumNetProceedsAud?: number | null;
-  subslotExitExecutionReserveAud?: number | null;  subslotExitActualAllInCostAud?: number | null;
+  subslotExitExecutionReserveAud?: number | null;
+  subslotExitReentryCostReserveAud?: number | null;
+  subslotExitActualAllInCostAud?: number | null;
   subslotExitEntryTargetAud?: number | null;
   subslotExitRecoveryBasisAud?: number | null;
   subslotExitRecoveryTargetSource?: string | null;
+  subslotProtectedReentryPolicyState?: string | null;
+  subslotProtectedReentrySourceId?: string | null;
+  subslotProtectedReentryVerified?: boolean | null;
+  subslotProtectedReentryConsumed?: boolean | null;
+  subslotProtectedReentryCapitalAud?: number | null;
+  subslotProtectedReentryTargetAsk?: number | null;
+  subslotProtectedCashReserveProjectedCreditAud?: number | null;
+  subslotProtectedCashReserveCreditAud?: number | null;
+  subslotProtectedCashReserveTotalAud?: number | null;
   subslotExitBasisConfidence?: string | null;
   subslotProtectedTrailProfitAud?: number | null;
   subslotAdaptiveTrailArmNetPct?: number | null;
@@ -538,6 +560,17 @@ type SlotRow = {
   parentExitRecoveryTargetSource?: string | null;
   parentExitMinimumNetProceedsAud?: number | null;
   parentExitExecutionReserveAud?: number | null;
+  parentExitReentryCostReserveAud?: number | null;
+  entryCapitalMode?: string | null;
+  protectedProfitPolicyMode?: string | null;
+  protectedReentryPolicyState?: string | null;
+  protectedReentrySourceId?: string | null;
+  protectedReentrySourceVerified?: boolean | null;
+  protectedReentryCapitalAud?: number | null;
+  reentryCostReserveAud?: number | null;
+  protectedCashReserveProjectedCreditAud?: number | null;
+  protectedCashReserveLastCreditAud?: number | null;
+  protectedCashReserveAudTotal?: number | null;
   parentExitNoLossPeakGivebackPct?: number | null;
   parentExitNoLossGivebackPct?: number | null;
   parentExitOrderState?: string | null;
@@ -1298,6 +1331,17 @@ type PublicMetaResponse = {
         };
       };
     };
+    protectedProfit?: {
+      entryCapitalMode?: string | null;
+      mode?: string | null;
+      selected?: boolean;
+      observing?: boolean;
+      enforcing?: boolean;
+      primaryAud?: number | null;
+      secondaryAud?: number | null;
+      totalAud?: number | null;
+      creditCount?: number | null;
+    };
     tradeTelemetry?: {
       [key: string]: unknown;
     };
@@ -1505,6 +1549,18 @@ type PublicCapitalResponse = {
   ok?: boolean;
   ts?: number;
   audAvailable?: number | null;
+  tradableAud?: number | null;
+  protectedProfit?: {
+    entryCapitalMode?: string | null;
+    mode?: string | null;
+    selected?: boolean;
+    observing?: boolean;
+    enforcing?: boolean;
+    primaryAud?: number | null;
+    secondaryAud?: number | null;
+    totalAud?: number | null;
+    creditCount?: number | null;
+  } | null;
   audBalance?: number | null;
   walletAudValue?: number | null;
   movableAudEstimate?: number | null;
@@ -4178,6 +4234,28 @@ function subslotProtectionData(subslot: SubslotRow | null | undefined) {
     executionReserveAud: finiteMetric(
       decision?.exitExecutionReserveAud ?? subslot?.subslotExitExecutionReserveAud
     ),
+    reentryCostReserveAud: finiteMetric(
+      decision?.exitReentryCostReserveAud ?? subslot?.subslotExitReentryCostReserveAud
+    ),
+    protectedProfitPolicyState:
+      String(decision?.protectedProfitPolicyState ?? subslot?.subslotProtectedReentryPolicyState ?? "").trim().toUpperCase() || null,
+    protectedReentrySourceVerified:
+      decision?.protectedReentrySourceVerified ?? subslot?.subslotProtectedReentryVerified ?? null,
+    protectedReentryCapitalAud: finiteMetric(
+      decision?.protectedReentryCapitalAud ?? subslot?.subslotProtectedReentryCapitalAud
+    ),
+    protectedReentryTargetAsk: finiteMetric(
+      decision?.protectedReentryTargetAsk ?? subslot?.subslotProtectedReentryTargetAsk
+    ),
+    protectedCashProjectedCreditAud: finiteMetric(
+      decision?.protectedCashProjectedCreditAud ?? subslot?.subslotProtectedCashReserveProjectedCreditAud
+    ),
+    protectedCashCreditAud: finiteMetric(
+      decision?.protectedCashCreditAud ?? subslot?.subslotProtectedCashReserveCreditAud
+    ),
+    protectedCashReserveTotalAud: finiteMetric(
+      decision?.protectedCashReserveTotalAud ?? subslot?.subslotProtectedCashReserveTotalAud
+    ),
     actualAllInCostAud: finiteMetric(
       decision?.actualAllInCostAud ?? subslot?.subslotExitActualAllInCostAud
     ),
@@ -5987,7 +6065,16 @@ function subslotExitGateBlock(
     { label: "Entry Target", value: moneyAud(protection.entryTargetAud) },
     { label: "Recovery Basis", value: moneyAud(protection.recoveryBasisAud) },
     { label: "Recovery Source", value: enumLabel(protection.recoveryTargetSource) },
-    { label: "Minimum Proceeds", value: moneyAud(protection.minimumNetProceedsAud) },    { label: "Execution Reserve", value: moneyAud(protection.executionReserveAud) },
+    { label: "Minimum Proceeds", value: moneyAud(protection.minimumNetProceedsAud) },
+    { label: "Execution Reserve", value: moneyAud(protection.executionReserveAud) },
+    { label: "Re-entry Cost Reserve", value: moneyAud(protection.reentryCostReserveAud) },
+    { label: "Protected Policy", value: enumLabel(protection.protectedProfitPolicyState) },
+    { label: "Protected Source", value: protection.protectedReentrySourceVerified === true ? "Verified" : protection.protectedReentrySourceVerified === false ? "Unverified" : "-" },
+    { label: "Redeploy Capital", value: moneyAud(protection.protectedReentryCapitalAud) },
+    { label: "Re-entry Ask Target", value: fmt(protection.protectedReentryTargetAsk) },
+    { label: "Projected Cash Bank", value: moneyAud(protection.protectedCashProjectedCreditAud) },
+    { label: "Protected Cash Banked", value: moneyAud(protection.protectedCashCreditAud) },
+    { label: "Protected Reserve Total", value: moneyAud(protection.protectedCashReserveTotalAud) },
     { label: "Adaptive Arm", value: `${pctNum(protection.adaptiveArmNetPct)} | ${enumLabel(protection.adaptiveArmSource)}` },
     { label: "Adaptive Samples", value: protection.adaptiveSampleCount != null ? `${protection.adaptiveSampleCount}` : "-" },
     { label: "Protected Trail", value: moneyAud(protection.protectedTrailProfitAud) },
@@ -7575,6 +7662,12 @@ const EngineHealthStrip = React.memo(function EngineHealthStrip(props: {
   const capitalOk = props.capital != null && !props.capital.refreshError;
   const writeGate = writeGateLabel(props.meta);
   const lastPoll = compactAgeLabel(props.snapshotAgeMs);
+  const protectedProfit = props.capital?.protectedProfit ?? props.meta?.runtime?.protectedProfit;
+  const protectedReserveLabel = protectedProfit?.enforcing
+    ? `${moneyAud(protectedProfit.totalAud)} banked · ${moneyAud(props.capital?.tradableAud)} tradable`
+    : protectedProfit?.observing
+    ? "Observe"
+    : "Off";
 
   return (
     <div className="engine-health-strip" aria-label="Engine health">
@@ -7597,6 +7690,10 @@ const EngineHealthStrip = React.memo(function EngineHealthStrip(props: {
       <div className={`engine-health-pill ${capitalOk ? "ok" : "warn"}`}>
         <span>Capital</span>
         <strong>{capitalOk ? "Published" : "Endpoint Unavailable"}</strong>
+      </div>
+      <div className={`engine-health-pill ${protectedProfit?.enforcing ? "ok" : protectedProfit?.observing ? "" : "warn"}`}>
+        <span>Profit Reserve</span>
+        <strong>{protectedReserveLabel}</strong>
       </div>
       <div className="engine-health-pill">
         <span>Last Poll</span>
@@ -9263,6 +9360,13 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Recovery Basis</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.recoveryBasisAud ?? slot.parentExitRecoveryBasisAud)}</div></div>
               <div><div className="slot-k">Minimum Proceeds</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.exitMinimumNetProceedsAud ?? slot.parentExitMinimumNetProceedsAud)}</div></div>
               <div><div className="slot-k">Recovery Source</div><div className="slot-v">{enumLabel(primaryDecision(slot)?.recoveryTargetSource ?? slot.parentExitRecoveryTargetSource)}</div></div>
+              <div><div className="slot-k">Re-entry Cost Reserve</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.exitReentryCostReserveAud ?? slot.parentExitReentryCostReserveAud ?? slot.reentryCostReserveAud)}</div></div>
+              <div><div className="slot-k">Protected Policy</div><div className="slot-v">{enumLabel(primaryDecision(slot)?.protectedProfitPolicyState ?? slot.protectedReentryPolicyState ?? primaryDecision(slot)?.protectedProfitPolicyMode ?? slot.protectedProfitPolicyMode)}</div></div>
+              <div><div className="slot-k">Protected Source</div><div className="slot-v">{(primaryDecision(slot)?.protectedReentrySourceVerified ?? slot.protectedReentrySourceVerified) === true ? "Verified" : (primaryDecision(slot)?.protectedReentrySourceVerified ?? slot.protectedReentrySourceVerified) === false ? "Unverified" : "-"}</div></div>
+              <div><div className="slot-k">Redeploy Capital</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.protectedReentryCapitalAud ?? slot.protectedReentryCapitalAud)}</div></div>
+              <div><div className="slot-k">Projected Cash Bank</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.protectedCashProjectedCreditAud ?? slot.protectedCashReserveProjectedCreditAud)}</div></div>
+              <div><div className="slot-k">Protected Cash Banked</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.protectedCashCreditAud ?? slot.protectedCashReserveLastCreditAud)}</div></div>
+              <div><div className="slot-k">Protected Reserve Total</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.protectedCashReserveTotalAud ?? slot.protectedCashReserveAudTotal)}</div></div>
               <div><div className="slot-k">Requested Buy</div><div className="slot-v">{moneyAud(primaryEntryRequestedAudValue(slot))}</div></div>
               <div><div className="slot-k">Live Deployed</div><div className="slot-v">{moneyAud(primaryDeployedUnitAud(slot))}</div></div>
               <div><div className="slot-k">Cycles</div><div className="slot-v">{slot.cycles ?? 0}</div></div>
