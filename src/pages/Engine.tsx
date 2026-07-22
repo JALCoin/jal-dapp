@@ -1162,6 +1162,20 @@ type PublicReadinessResponse = {
     rotationExecutorEnabled?: boolean;
     topupEnabled?: boolean;
   };
+  protectedProfit?: {
+    entryCapitalMode?: string | null;
+    mode?: string | null;
+    selected?: boolean;
+    observing?: boolean;
+    enforcing?: boolean;
+    runtimeReady?: boolean;
+    cutoverStatus?: string | null;
+    epochId?: string | null;
+    cutoverAt?: number | null;
+    openingReserveAud?: number | null;
+    currentReserveAud?: number | null;
+    strictReadiness?: string | null;
+  };
   blockers?: unknown[];
 };
 
@@ -7653,6 +7667,7 @@ const EngineHealthStrip = React.memo(function EngineHealthStrip(props: {
   snap: Snapshot | null;
   meta: PublicMetaResponse | null;
   capital: PublicCapitalResponse | null;
+  readiness: PublicReadinessResponse | null;
   executionMode: string;
   snapshotAgeMs: number | null;
   snapshotFresh: boolean;
@@ -7663,6 +7678,11 @@ const EngineHealthStrip = React.memo(function EngineHealthStrip(props: {
   const writeGate = writeGateLabel(props.meta);
   const lastPoll = compactAgeLabel(props.snapshotAgeMs);
   const protectedProfit = props.capital?.protectedProfit ?? props.meta?.runtime?.protectedProfit;
+  const protectedCutover = props.readiness?.protectedProfit;
+  const protectedRuntimeReady = protectedCutover?.runtimeReady !== false;
+  const protectedCutoverLabel = protectedCutover?.enforcing
+    ? `${protectedRuntimeReady ? "ACTIVE" : "BLOCKED"} | ${enumLabel(protectedCutover?.cutoverStatus)}`
+    : `OBSERVE | ${enumLabel(protectedCutover?.cutoverStatus ?? "CUTOVER_PENDING")}`;
   const protectedReserveLabel = protectedProfit?.enforcing
     ? `${moneyAud(protectedProfit.totalAud)} banked · ${moneyAud(props.capital?.tradableAud)} tradable`
     : protectedProfit?.observing
@@ -7694,6 +7714,10 @@ const EngineHealthStrip = React.memo(function EngineHealthStrip(props: {
       <div className={`engine-health-pill ${protectedProfit?.enforcing ? "ok" : protectedProfit?.observing ? "" : "warn"}`}>
         <span>Profit Reserve</span>
         <strong>{protectedReserveLabel}</strong>
+      </div>
+      <div className={`engine-health-pill ${protectedRuntimeReady ? (protectedCutover?.enforcing ? "ok" : "") : "warn"}`}>
+        <span>Profit Cutover</span>
+        <strong>{protectedCutoverLabel}</strong>
       </div>
       <div className="engine-health-pill">
         <span>Last Poll</span>
@@ -8770,6 +8794,26 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
     props.managerStatus?.mode ?? manager?.mode ?? "-"
   }`;
 
+  const protectedStatus = props.readiness?.protectedProfit;
+  const protectedPolicyLabel = `${enumLabel(protectedStatus?.mode)} | ${enumLabel(protectedStatus?.strictReadiness)}`;
+  const protectedEpochLabel = protectedStatus?.epochId
+    ? `${String(protectedStatus.epochId).slice(0, 8)} | ${protectedStatus.cutoverAt ? new Date(protectedStatus.cutoverAt).toLocaleString() : "prepared"}`
+    : "Not prepared";
+  const readinessBlockerLabel =
+    (Array.isArray(props.readiness?.blockers) ? props.readiness.blockers : [])
+      .map((blocker) => {
+        if (typeof blocker === "string") return enumLabel(blocker);
+        if (blocker && typeof blocker === "object") {
+          const row = blocker as { code?: unknown; key?: unknown };
+          const code = row.code ?? row.key;
+          return typeof code === "string" ? enumLabel(code) : null;
+        }
+        return null;
+      })
+      .filter((value): value is string => Boolean(value))
+      .slice(0, 4)
+      .join(" | ") || "None";
+
   const secondarySizeMode = String(
     subslot?.entrySizeMode ?? capitalConfig?.subslotEntrySizeMode ?? "PCT_OF_PARENT"
   ).toUpperCase();
@@ -8911,6 +8955,20 @@ const TradingBehaviorPanel = React.memo(function TradingBehaviorPanel(props: {
             <div className="slot-v">
               {subslot?.enabled === false ? "OFF" : "ON"} | {secondarySizeMode} | {secondaryBaseSize}
             </div>
+          <div>
+            <div className="slot-k">Protected-Profit Policy</div>
+            <div className="slot-v">{protectedPolicyLabel}</div>
+          </div>
+          <div>
+            <div className="slot-k">Cutover Epoch</div>
+            <div className="slot-v">
+              {protectedEpochLabel} | opening {moneyAud(protectedStatus?.openingReserveAud)} | current {moneyAud(protectedStatus?.currentReserveAud)}
+            </div>
+          </div>
+          <div>
+            <div className="slot-k">Reconciliation Blockers</div>
+            <div className="slot-v">{readinessBlockerLabel}</div>
+          </div>
           </div>
           <div>
             <div className="slot-k">Secondary Minimums</div>
@@ -11751,6 +11809,7 @@ export default function Engine() {
                 snap={snap}
                 meta={meta}
                 capital={capital}
+                readiness={readiness}
                 executionMode={executionMode}
                 snapshotAgeMs={snapshotAgeMs}
                 snapshotFresh={snapshotFresh}
