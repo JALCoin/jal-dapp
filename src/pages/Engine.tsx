@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /* =========================
    Types
@@ -388,6 +388,10 @@ type SubslotRow = {
   subslotExitTriggerReason?: string | null;
   subslotExitGateState?: string | null;
   subslotExitGateReason?: string | null;
+  subslotExecutionState?: string | null;
+  subslotExecutionReason?: string | null;
+  subslotExecutionRetryAt?: number | null;
+  subslotExecutionRetryAttempts?: number | null;
   subslotExitWaitGreenSince?: number | null;
   subslotBestExecutableExitNetPct?: number | null;
   subslotBestExecutableExitProfitAud?: number | null;
@@ -482,6 +486,8 @@ type SlotRow = {
 
   exitMid?: number | null;
   reentryDropPct?: number | null;
+  exitFillRate?: number | null;
+  reentryTargetAsk?: number | null;
   reentryTargetMid?: number | null;
 
   feeBps?: number | null;
@@ -514,6 +520,10 @@ type SlotRow = {
   parentExecutableExitNetPct?: number | null;
   parentExitGateState?: string | null;
   parentExitGateReason?: string | null;
+  parentExecutionState?: string | null;
+  parentExecutionReason?: string | null;
+  parentExecutionRetryAt?: number | null;
+  parentExecutionRetryAttempts?: number | null;
   parentExitRequiredNetPct?: number | null;
   parentExitRequiredProfitAud?: number | null;
   parentExitNoLossPeakGivebackPct?: number | null;
@@ -2273,12 +2283,6 @@ function effectiveNowLabel(s: SlotRow) {
   return "-";
 }
 
-function effectiveNowMid(s: SlotRow) {
-  if (s.nowMid != null && Number.isFinite(s.nowMid)) return s.nowMid;
-  if (s.candidateMidPrev != null && Number.isFinite(s.candidateMidPrev)) return s.candidateMidPrev;
-  return null;
-}
-
 function bpsPctLabel(bps: number | null | undefined) {
   if (bps == null || !Number.isFinite(bps)) return "-";
   return `${(Number(bps) / 100).toFixed(2)}%`;
@@ -2382,15 +2386,15 @@ function comparisonNowMid(comparison: ExecutionComparison | null | undefined, fa
 }
 
 function reentryTargetHit(s: SlotRow) {
+  const targetAsk = s.reentryTargetAsk ?? s.reentryTargetMid;
   return (
-    s.reentryTargetMid != null &&
-    Number.isFinite(s.reentryTargetMid) &&
-    effectiveNowMid(s) != null &&
-    Number.isFinite(effectiveNowMid(s)) &&
-    Number(effectiveNowMid(s)) <= Number(s.reentryTargetMid)
+    targetAsk != null &&
+    Number.isFinite(targetAsk) &&
+    s.nowAsk != null &&
+    Number.isFinite(s.nowAsk) &&
+    Number(s.nowAsk) <= Number(targetAsk)
   );
 }
-
 function primaryExitFloorPct(slot: SlotRow) {
   const lockPct = slot.lockPct;
   const trailFloorPct = slot.levelTrailFloorPct;
@@ -5917,6 +5921,9 @@ function subslotExitGateBlock(
 
   const gateState = subslotExitGateStateLabel(subslot);
   const gateReason = subslotExitGateReason(subslot);
+  const executionState = String(subslot.subslotExecutionState || "").trim().toUpperCase() || null;
+  const executionReason = subslot.subslotExecutionReason ?? null;
+  const retryAt = subslot.subslotExecutionRetryAt ?? null;
   const triggerReason = subslotExitTriggerReason(subslot);
   const executableNetPct = subslotExecutableExitNetPct(subslot);
   const executableProfitAud = subslotExecutableExitProfitAud(subslot);
@@ -5938,6 +5945,7 @@ function subslotExitGateBlock(
 
   const compactMetrics = [
     { label: "Protection", value: protectionLabel },
+    { label: "Execution", value: executionState ? enumLabel(executionState) : "-" },
     { label: "Live Net", value: pctNum(subslot.subslotNetPct) },
     { label: "Required Net", value: subslotExitNeedsLabel(subslot) },
     { label: "Executable Net", value: subslotExecutableExitLabel(subslot) },
@@ -5949,6 +5957,8 @@ function subslotExitGateBlock(
   const fullMetrics = [
     { label: "Protection", value: protectionLabel },
     { label: "Gate", value: gateState },
+    { label: "Execution", value: executionState ? enumLabel(executionState) : "-" },
+    { label: "Retry", value: retryAt != null ? ageLabel(retryAt - nowMs) : "-" },
     { label: "Basis Confidence", value: protection.basisConfidence ?? "UNVERIFIED" },
     { label: "Minimum Safe Rate", value: fmt(protection.minimumSafeRate) },
     { label: "Minimum Proceeds", value: moneyAud(protection.minimumNetProceedsAud) },
@@ -5978,6 +5988,9 @@ function subslotExitGateBlock(
       ? `The frozen adaptive arm is ${pctNum(protection.adaptiveArmNetPct)}; 12% is an arm ceiling, not a forced-sale or profit ceiling.`
       : null,
     gateReason ? `Gate reason: ${reasonLabel(gateReason)}.` : null,
+    executionState
+      ? `Execution: ${reasonLabel(executionState)}${executionReason ? ` (${reasonLabel(executionReason)})` : ""}.`
+      : null,
     triggerReason ? `Trigger: ${reasonLabel(triggerReason)}.` : null,
     requiredNetPct != null || requiredProfitAud != null
       ? `Retained-profit floor is the greater of ${pctNum(requiredNetPct)} and ${moneyAud(requiredProfitAud)}.`
@@ -6726,6 +6739,16 @@ function primaryExitGateReason(slot: SlotRow | null | undefined) {
   }
   const raw = primaryDecision(slot)?.exitGateReason ?? slot?.parentExitGateReason;
   return raw ? String(raw) : null;
+}
+
+function primaryExecutionState(slot: SlotRow | null | undefined) {
+  const state = String(slot?.parentExecutionState || "").trim().toUpperCase();
+  return state || null;
+}
+
+function primaryExecutionReason(slot: SlotRow | null | undefined) {
+  const reason = String(slot?.parentExecutionReason || "").trim();
+  return reason || null;
 }
 
 function primaryExitGateStateLabel(slot: SlotRow | null | undefined) {
@@ -9228,6 +9251,9 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Executable Sell</div><div className="slot-v">{primaryExecutableExitLabel(slot)}</div></div>
               <div><div className="slot-k">Exit Gate</div><div className="slot-v">{primaryExitGateStateLabel(slot)}</div></div>
               <div><div className="slot-k">Exit Gate Reason</div><div className="slot-v">{primaryExitGateReason(slot) ?? "-"}</div></div>
+              <div><div className="slot-k">Execution</div><div className="slot-v">{primaryExecutionState(slot) ? enumLabel(primaryExecutionState(slot)) : "-"}</div></div>
+              <div><div className="slot-k">Execution Reason</div><div className="slot-v">{primaryExecutionReason(slot) ?? "-"}</div></div>
+              <div><div className="slot-k">Retry</div><div className="slot-v">{slot.parentExecutionRetryAt != null ? ageLabel(slot.parentExecutionRetryAt - nowMs) : "-"}</div></div>
               <div><div className="slot-k">Lifetime Net</div><div className="slot-v">{pctNum(primaryTotalGainPct(slot))}</div></div>
               <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "-"}</div></div>
               <div><div className="slot-k">Protection</div><div className="slot-v">{primaryProtectionLabel(slot)}</div></div>
@@ -9237,7 +9263,7 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Fee / Friction</div><div className="slot-v">{primaryFeeFrictionLabel(slot)}</div></div>
               <div><div className="slot-k">Drawdown</div><div className="slot-v">{pctNum(slot.drawdownPct)}</div></div>
               <div><div className="slot-k">Secondary Trades</div><div className="slot-v">{secondaryTradesLabel(slot)}</div></div>
-              <div><div className="slot-k">Reference From Last Exit</div><div className="slot-v">{fmt(slot.reentryTargetMid)}</div></div>
+              <div><div className="slot-k">Re-entry Max Ask</div><div className="slot-v">{fmt(slot.reentryTargetAsk ?? slot.reentryTargetMid)}</div></div>
               <div><div className="slot-k">Exit reason</div><div className="slot-v">{slot.exitReason ?? "-"}</div></div>
               <div><div className="slot-k">Created</div><div className="slot-v">{ageLabel(nowMs - slot.createdAt)}</div></div>
               <div><div className="slot-k">Updated</div><div className="slot-v">{slotHeartbeatLabel(slot, nowMs)}</div></div>
