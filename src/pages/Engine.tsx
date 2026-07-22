@@ -99,7 +99,10 @@ type ExitDecision = {
   exitRequiredProfitAud?: number | null;
   exitMinimumSafeRate?: number | null;
   exitMinimumNetProceedsAud?: number | null;
-  exitExecutionReserveAud?: number | null;
+  exitExecutionReserveAud?: number | null;  actualAllInCostAud?: number | null;
+  entryTargetAud?: number | null;
+  recoveryBasisAud?: number | null;
+  recoveryTargetSource?: string | null;
   exitBasisConfidence?: string | null;
   protectedTrailProfitAud?: number | null;
   adaptiveTrailArmNetPct?: number | null;
@@ -338,6 +341,7 @@ type SubslotRow = {
   subslotEntryMarketMaxAgeMs?: number | null;
 
   subslotRequestedAud?: number | null;
+  subslotEntryTargetAud?: number | null;
   subslotRequestedCoinQty?: number | null;
   subslotSubmittedRate?: number | null;
   subslotActualAud?: number | null;
@@ -401,7 +405,10 @@ type SubslotRow = {
   subslotGreenStallTicks?: number | null;
   subslotExitMinimumSafeRate?: number | null;
   subslotExitMinimumNetProceedsAud?: number | null;
-  subslotExitExecutionReserveAud?: number | null;
+  subslotExitExecutionReserveAud?: number | null;  subslotExitActualAllInCostAud?: number | null;
+  subslotExitEntryTargetAud?: number | null;
+  subslotExitRecoveryBasisAud?: number | null;
+  subslotExitRecoveryTargetSource?: string | null;
   subslotExitBasisConfidence?: string | null;
   subslotProtectedTrailProfitAud?: number | null;
   subslotAdaptiveTrailArmNetPct?: number | null;
@@ -525,7 +532,12 @@ type SlotRow = {
   parentExecutionRetryAt?: number | null;
   parentExecutionRetryAttempts?: number | null;
   parentExitRequiredNetPct?: number | null;
-  parentExitRequiredProfitAud?: number | null;
+  parentExitRequiredProfitAud?: number | null;  parentExitActualAllInCostAud?: number | null;
+  parentExitEntryTargetAud?: number | null;
+  parentExitRecoveryBasisAud?: number | null;
+  parentExitRecoveryTargetSource?: string | null;
+  parentExitMinimumNetProceedsAud?: number | null;
+  parentExitExecutionReserveAud?: number | null;
   parentExitNoLossPeakGivebackPct?: number | null;
   parentExitNoLossGivebackPct?: number | null;
   parentExitOrderState?: string | null;
@@ -4166,7 +4178,17 @@ function subslotProtectionData(subslot: SubslotRow | null | undefined) {
     executionReserveAud: finiteMetric(
       decision?.exitExecutionReserveAud ?? subslot?.subslotExitExecutionReserveAud
     ),
-    basisConfidence:
+    actualAllInCostAud: finiteMetric(
+      decision?.actualAllInCostAud ?? subslot?.subslotExitActualAllInCostAud
+    ),
+    entryTargetAud: finiteMetric(
+      decision?.entryTargetAud ?? subslot?.subslotExitEntryTargetAud ?? subslot?.subslotEntryTargetAud
+    ),
+    recoveryBasisAud: finiteMetric(
+      decision?.recoveryBasisAud ?? subslot?.subslotExitRecoveryBasisAud
+    ),
+    recoveryTargetSource:
+      String(decision?.recoveryTargetSource ?? subslot?.subslotExitRecoveryTargetSource ?? "").trim().toUpperCase() || null,    basisConfidence:
       String(decision?.exitBasisConfidence ?? subslot?.subslotExitBasisConfidence ?? "").trim().toUpperCase() || null,
     protectedTrailProfitAud: finiteMetric(
       decision?.protectedTrailProfitAud ?? subslot?.subslotProtectedTrailProfitAud
@@ -5961,8 +5983,11 @@ function subslotExitGateBlock(
     { label: "Retry", value: retryAt != null ? ageLabel(retryAt - nowMs) : "-" },
     { label: "Basis Confidence", value: protection.basisConfidence ?? "UNVERIFIED" },
     { label: "Minimum Safe Rate", value: fmt(protection.minimumSafeRate) },
-    { label: "Minimum Proceeds", value: moneyAud(protection.minimumNetProceedsAud) },
-    { label: "Execution Reserve", value: moneyAud(protection.executionReserveAud) },
+    { label: "Actual All-In", value: moneyAud(protection.actualAllInCostAud) },
+    { label: "Entry Target", value: moneyAud(protection.entryTargetAud) },
+    { label: "Recovery Basis", value: moneyAud(protection.recoveryBasisAud) },
+    { label: "Recovery Source", value: enumLabel(protection.recoveryTargetSource) },
+    { label: "Minimum Proceeds", value: moneyAud(protection.minimumNetProceedsAud) },    { label: "Execution Reserve", value: moneyAud(protection.executionReserveAud) },
     { label: "Adaptive Arm", value: `${pctNum(protection.adaptiveArmNetPct)} | ${enumLabel(protection.adaptiveArmSource)}` },
     { label: "Adaptive Samples", value: protection.adaptiveSampleCount != null ? `${protection.adaptiveSampleCount}` : "-" },
     { label: "Protected Trail", value: moneyAud(protection.protectedTrailProfitAud) },
@@ -9234,6 +9259,10 @@ const SlotModal = React.memo(function SlotModal(props: {
             <div className="slot-modal-grid">
               <div><div className="slot-k">Capital Lane</div><div className="slot-v">{moneyAud(primaryCapitalLaneAud(slot))}</div></div>
               <div><div className="slot-k">Entry Target</div><div className="slot-v">{moneyAud(primaryEntryTargetAudValue(slot))}</div></div>
+              <div><div className="slot-k">Actual All-In</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.actualAllInCostAud ?? slot.parentExitActualAllInCostAud)}</div></div>
+              <div><div className="slot-k">Recovery Basis</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.recoveryBasisAud ?? slot.parentExitRecoveryBasisAud)}</div></div>
+              <div><div className="slot-k">Minimum Proceeds</div><div className="slot-v">{moneyAud(primaryDecision(slot)?.exitMinimumNetProceedsAud ?? slot.parentExitMinimumNetProceedsAud)}</div></div>
+              <div><div className="slot-k">Recovery Source</div><div className="slot-v">{enumLabel(primaryDecision(slot)?.recoveryTargetSource ?? slot.parentExitRecoveryTargetSource)}</div></div>
               <div><div className="slot-k">Requested Buy</div><div className="slot-v">{moneyAud(primaryEntryRequestedAudValue(slot))}</div></div>
               <div><div className="slot-k">Live Deployed</div><div className="slot-v">{moneyAud(primaryDeployedUnitAud(slot))}</div></div>
               <div><div className="slot-k">Cycles</div><div className="slot-v">{slot.cycles ?? 0}</div></div>
