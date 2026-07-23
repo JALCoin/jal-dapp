@@ -89,6 +89,14 @@ type ExitDecision = {
   executableExitAud?: number | null;
   exitGateState?: string | null;
   exitGateReason?: string | null;
+  decisionStage?: string | null;
+  executionState?: string | null;
+  executionReason?: string | null;
+  openOrderAgeMs?: number | null;
+  cancelRequestedAt?: number | null;
+  cancelConfirmedAt?: number | null;
+  cancelAttempts?: number | null;
+  cancelRetryAt?: number | null;
   exitTriggerAt?: number | null;
   exitTriggerReason?: string | null;
   exitWaitGreenSince?: number | null;
@@ -135,6 +143,11 @@ type ExitDecision = {
   entryObservedCoinQty?: number | null;
   entryBasisEvidenceVersion?: string | null;
   entryBrokerOrderCount?: number | null;
+  entryPriorBasisConfidence?: string | null;
+  entryPriorActualAud?: number | null;
+  entryPriorActualCoinQty?: number | null;
+  entryBasisDiscrepancyCount?: number | null;
+  entryContractBreach?: boolean | null;
   exitNoLossPeakGivebackPct?: number | null;
   exitNoLossGivebackPct?: number | null;
   exitOrder?: ExitOrderState | null;
@@ -384,6 +397,11 @@ type SubslotRow = {
   subslotExitActualCoinQty?: number | null;
   subslotExitActualRate?: number | null;
   subslotExitFilledAt?: number | null;
+  subslotExitOpenAgeMs?: number | null;
+  subslotExitCancelRequestedAt?: number | null;
+  subslotExitCancelConfirmedAt?: number | null;
+  subslotExitCancelAttempts?: number | null;
+  subslotExitCancelRetryAt?: number | null;
   subslotRealizedAt?: number | null;
   subslotPendingMergeAud?: number | null;
   subslotLastMergedAud?: number | null;
@@ -422,6 +440,11 @@ type SubslotRow = {
   subslotExitEntryTargetAud?: number | null;
   subslotExitRecoveryBasisAud?: number | null;
   subslotExitRecoveryTargetSource?: string | null;
+  subslotEntryPriorBasisConfidence?: string | null;
+  subslotEntryPriorActualAud?: number | null;
+  subslotEntryPriorActualCoinQty?: number | null;
+  subslotEntryBasisDiscrepancyCount?: number | null;
+  subslotEntryContractBreach?: boolean | null;
   subslotProtectedReentryPolicyState?: string | null;
   subslotProtectedReentrySourceId?: string | null;
   subslotProtectedReentryVerified?: boolean | null;
@@ -596,6 +619,11 @@ type SlotRow = {
   liveExitActualCoinQty?: number | null;
   liveExitActualRate?: number | null;
   liveExitFilledAt?: number | null;
+  liveExitOpenAgeMs?: number | null;
+  liveExitCancelRequestedAt?: number | null;
+  liveExitCancelConfirmedAt?: number | null;
+  liveExitCancelAttempts?: number | null;
+  liveExitCancelRetryAt?: number | null;
 
   // Legacy flat `subslot*` fields remain as a fallback for older rows.
   // `subslots[]` is the authoritative tactical model when present.
@@ -1357,7 +1385,14 @@ type PublicMetaResponse = {
       creditCount?: number | null;
     };
     tradeTelemetry?: {
-      [key: string]: unknown;
+      enabled?: boolean;
+      durableEnabled?: boolean;
+      historyLimit?: number | null;
+      lastAt?: number | null;
+      storedRecent?: number | null;
+      persistentStored?: number | null;
+      suppressedDuplicates?: number | null;
+      heartbeatMs?: number | null;
     };
     eventCompression?: {
       enabled?: boolean;
@@ -6072,8 +6107,18 @@ function subslotExitGateBlock(
     { label: "Protection", value: protectionLabel },
     { label: "Gate", value: gateState },
     { label: "Execution", value: executionState ? enumLabel(executionState) : "-" },
+    { label: "Decision Stage", value: enumLabel(subslot.decision?.decisionStage ?? gateState) },
+    { label: "Execution Reason", value: executionReason ? reasonLabel(executionReason) : "-" },
+    { label: "Open Order Age", value: (subslot.decision?.openOrderAgeMs ?? subslot.subslotExitOpenAgeMs) != null ? msToCountdown((subslot.decision?.openOrderAgeMs ?? subslot.subslotExitOpenAgeMs) as number) : "-" },
+    { label: "Cancel Requested", value: formatDateTime(subslot.decision?.cancelRequestedAt ?? subslot.subslotExitCancelRequestedAt) },
+    { label: "Cancel Confirmed", value: formatDateTime(subslot.decision?.cancelConfirmedAt ?? subslot.subslotExitCancelConfirmedAt) },
+    { label: "Cancel Attempts", value: String(subslot.decision?.cancelAttempts ?? subslot.subslotExitCancelAttempts ?? 0) },
     { label: "Retry", value: retryAt != null ? ageLabel(retryAt - nowMs) : "-" },
     { label: "Basis Confidence", value: protection.basisConfidence ?? "UNVERIFIED" },
+    { label: "Prior Basis", value: enumLabel(subslot.decision?.entryPriorBasisConfidence ?? subslot.subslotEntryPriorBasisConfidence) },
+    { label: "Prior Observed AUD", value: moneyAud(subslot.decision?.entryPriorActualAud ?? subslot.subslotEntryPriorActualAud) },
+    { label: "Basis Differences", value: String(subslot.decision?.entryBasisDiscrepancyCount ?? subslot.subslotEntryBasisDiscrepancyCount ?? 0) },
+    { label: "Entry Contract", value: (subslot.decision?.entryContractBreach ?? subslot.subslotEntryContractBreach) === true ? "BREACH - EXACT COST RETAINED" : "OK" },
     { label: "Minimum Safe Rate", value: fmt(protection.minimumSafeRate) },
     { label: "Actual All-In", value: moneyAud(protection.actualAllInCostAud) },
     { label: "Entry Target", value: moneyAud(protection.entryTargetAud) },
@@ -9443,7 +9488,12 @@ const SlotModal = React.memo(function SlotModal(props: {
               <div><div className="slot-k">Exit Gate</div><div className="slot-v">{primaryExitGateStateLabel(slot)}</div></div>
               <div><div className="slot-k">Exit Gate Reason</div><div className="slot-v">{primaryExitGateReason(slot) ?? "-"}</div></div>
               <div><div className="slot-k">Execution</div><div className="slot-v">{primaryExecutionState(slot) ? enumLabel(primaryExecutionState(slot)) : "-"}</div></div>
+              <div><div className="slot-k">Decision Stage</div><div className="slot-v">{enumLabel(primaryDecision(slot)?.decisionStage ?? slot.parentExitGateState)}</div></div>
               <div><div className="slot-k">Execution Reason</div><div className="slot-v">{primaryExecutionReason(slot) ?? "-"}</div></div>
+              <div><div className="slot-k">Open Order Age</div><div className="slot-v">{(primaryDecision(slot)?.openOrderAgeMs ?? slot.liveExitOpenAgeMs) != null ? msToCountdown((primaryDecision(slot)?.openOrderAgeMs ?? slot.liveExitOpenAgeMs) as number) : "-"}</div></div>
+              <div><div className="slot-k">Cancel Requested</div><div className="slot-v">{formatDateTime(primaryDecision(slot)?.cancelRequestedAt ?? slot.liveExitCancelRequestedAt)}</div></div>
+              <div><div className="slot-k">Cancel Confirmed</div><div className="slot-v">{formatDateTime(primaryDecision(slot)?.cancelConfirmedAt ?? slot.liveExitCancelConfirmedAt)}</div></div>
+              <div><div className="slot-k">Cancel Attempts</div><div className="slot-v">{primaryDecision(slot)?.cancelAttempts ?? slot.liveExitCancelAttempts ?? 0}</div></div>
               <div><div className="slot-k">Retry</div><div className="slot-v">{slot.parentExecutionRetryAt != null ? ageLabel(slot.parentExecutionRetryAt - nowMs) : "-"}</div></div>
               <div><div className="slot-k">Lifetime Net</div><div className="slot-v">{pctNum(primaryTotalGainPct(slot))}</div></div>
               <div><div className="slot-k">Level</div><div className="slot-v">{slot.level ? `LVL${slot.level}` : "-"}</div></div>
@@ -9760,6 +9810,7 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
   const manager = props.meta?.manager;
   const telemetry = runtime?.telemetry;
   const compression = runtime?.eventCompression;
+  const executionTelemetry = runtime?.tradeTelemetry;
   const rotationSummary = runtime?.rotationDashboard?.summary ?? runtime?.rotationDashboard;
   const snapshot = props.meta?.market?.snapshot ?? null;
   const serverGate = telemetry?.lastWorkerAction?.server;
@@ -10013,6 +10064,22 @@ const SummaryPanel = React.memo(function SummaryPanel(props: {
               {compression?.enabled
                 ? `${compression.totalSuppressed ?? 0} suppressed | ${compression.trackedKeys ?? 0} keys`
                 : "OFF"}
+            </div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Execution Journal</div>
+            <div className="mini-v">
+              {executionTelemetry?.durableEnabled
+                ? String(executionTelemetry.persistentStored ?? 0) + " durable | " + String(executionTelemetry.storedRecent ?? 0) + " loaded"
+                : "OFF"}
+            </div>
+          </div>
+
+          <div className="engine-mini-row">
+            <div className="mini-k">Execution Dedupe</div>
+            <div className="mini-v">
+              {String(executionTelemetry?.suppressedDuplicates ?? 0) + " suppressed | heartbeat " + (executionTelemetry?.heartbeatMs != null ? msToCountdown(executionTelemetry.heartbeatMs) : "-")}
             </div>
           </div>
 
